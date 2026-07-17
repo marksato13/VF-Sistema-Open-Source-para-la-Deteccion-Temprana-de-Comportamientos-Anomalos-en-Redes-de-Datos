@@ -93,9 +93,11 @@ Recursos:
 |---|---:|
 | vCPU | 2 |
 | RAM | 4 GB |
-| Disco | 60 GB thin |
+| Disco | 120 GB thin |
 | Interfaces | 1 en `PPI-DMZ` |
 | IP propuesta | 10.30.0.10/24 |
+
+El disco de 120 GB permite mantener el sistema operativo, servicios, archivos de prueba de distintos tamaños, cargas y descargas simultáneas, copias temporales y registros del servidor. Durante cada campaña se controlará el espacio libre y se eliminarán solamente los artefactos temporales que ya hayan sido recolectados por la VM administrativa.
 
 ### VM04 — Kali Linux
 
@@ -147,17 +149,17 @@ Recursos:
 |---|---:|---:|---:|
 | VM01 Administración/Ansible | 2 | 8 GB | 80 GB |
 | VM02 Sensor Suricata/ML | 6 | 16 GB | 160 GB |
-| VM03 Servidor protegido | 2 | 4 GB | 60 GB |
+| VM03 Servidor protegido | 2 | 4 GB | 120 GB |
 | VM04 Kali Linux | 2 | 6 GB | 60 GB |
 | VM05 Cliente legítimo | 4 | 8 GB | 100 GB |
-| **Total** | **16 vCPU** | **42 GB** | **460 GB** |
+| **Total** | **16 vCPU** | **42 GB** | **520 GB** |
 
 ### Margen conservado
 
 | Recurso | Capacidad del host | Asignación planificada | Margen aproximado |
 |---|---:|---:|---:|
 | RAM | 63.63 GB | 42 GB | 21.63 GB |
-| Almacenamiento | 825.75 GB | 460 GB thin | 365.75 GB lógicos |
+| Almacenamiento | 825.75 GB | 520 GB thin | 305.75 GB lógicos |
 
 Los 16 vCPU representan sobreasignación controlada respecto de la capacidad física expresada en GHz. Es aceptable para este laboratorio siempre que no todas las VMs utilicen el 100 % de CPU simultáneamente. Durante ataques de alta tasa se detendrán tareas no esenciales y se registrará `CPU ready` del hipervisor para comprobar que la contención no invalide los resultados. No se aumentará nuevamente el total de vCPU hasta confirmar el número de sockets, núcleos e hilos físicos del host.
 
