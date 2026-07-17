@@ -50,8 +50,9 @@ Recursos:
 | vCPU | 2 |
 | RAM | 8 GB |
 | Disco | 80 GB thin |
-| Interfaces | 1 en `PPI-MGMT` |
-| IP propuesta | 10.10.10.10/24 |
+| Interfaces | 2: red actual y `PPI-MGMT` |
+| IP externa propuesta | 172.17.25.20/24 |
+| IP de gestión del laboratorio | 10.10.10.10/24 |
 
 ### VM02 — Sensor Suricata y motor ML
 
@@ -94,8 +95,9 @@ Recursos:
 | vCPU | 2 |
 | RAM | 4 GB |
 | Disco | 120 GB thin |
-| Interfaces | 1 en `PPI-DMZ` |
-| IP propuesta | 10.30.0.10/24 |
+| Interfaces | 2: gestión y `PPI-DMZ` |
+| IP de gestión | 10.10.10.30/24 |
+| IP de servicio | 10.30.0.10/24 |
 
 El disco de 120 GB permite mantener el sistema operativo, servicios, archivos de prueba de distintos tamaños, cargas y descargas simultáneas, copias temporales y registros del servidor. Durante cada campaña se controlará el espacio libre y se eliminarán solamente los artefactos temporales que ya hayan sido recolectados por la VM administrativa.
 
@@ -115,8 +117,9 @@ Recursos:
 | vCPU | 2 |
 | RAM | 6 GB |
 | Disco | 60 GB thin |
-| Interfaces | 1 en `PPI-LAN` |
-| IP propuesta | 10.20.0.100/24 |
+| Interfaces | 2: gestión y `PPI-LAN` |
+| IP de gestión | 10.10.10.40/24 |
+| IP de ataque | 10.20.0.100/24 |
 
 La VM debe operar preferentemente sin escritorio durante las corridas para dedicar sus recursos a la generación de tráfico.
 
@@ -140,8 +143,9 @@ Recursos:
 | vCPU | 4 |
 | RAM | 8 GB |
 | Disco | 100 GB thin |
-| Interfaces | 1 en `PPI-LAN` |
-| IP propuesta | 10.20.0.20/24 |
+| Interfaces | 2: gestión y `PPI-LAN` |
+| IP de gestión | 10.10.10.50/24 |
+| IP de tráfico legítimo | 10.20.0.20/24 |
 
 ## 5. Resumen de recursos asignados
 
@@ -165,13 +169,65 @@ Los 16 vCPU representan sobreasignación controlada respecto de la capacidad fí
 
 ## 6. Segmentos virtuales
 
-| Port group | Red propuesta | Máquinas | Finalidad |
-|---|---|---|---|
-| `PPI-MGMT` | 10.10.10.0/24 | Admin y NIC de gestión del sensor | Ansible, SSH, Git y administración |
-| `PPI-LAN` | 10.20.0.0/24 | Cliente, Kali y NIC LAN del sensor | Origen del tráfico experimental |
-| `PPI-DMZ` | 10.30.0.0/24 | Servidor y NIC DMZ del sensor | Servicios protegidos |
+| Port group | Red propuesta | Gateway | Uplink físico | Finalidad |
+|---|---|---|---|---|
+| Red actual de ESXi | 172.17.25.0/24 | Gateway actual de la red | Sí | ESXi, Internet, GitHub y RustDesk |
+| `PPI-MGMT` | 10.10.10.0/24 | Sin gateway por defecto | No requerido | Ansible, SSH y administración interna |
+| `PPI-LAN` | 10.20.0.0/24 | 10.20.0.1 | No requerido | Origen del tráfico normal y de ataque |
+| `PPI-DMZ` | 10.30.0.0/24 | 10.30.0.1 | No requerido | Red del servidor protegido |
 
 El sensor se colocará entre `PPI-LAN` y `PPI-DMZ`. El tráfico administrativo no debe formar parte del dataset de entrenamiento ni de las mediciones operativas.
+
+### 6.1 Matriz de interfaces e IP
+
+Los nombres `ens160`, `ens192` y `ens224` son la convención prevista para Ubuntu. Después de crear cada VM se confirmarán con `ip link`, porque VMware y el sistema operativo pueden asignar nombres diferentes.
+
+| VM | NIC | Interfaz prevista | Port group | Dirección | Gateway predeterminado | Uso |
+|---|---:|---|---|---|---|---|
+| VM01 Admin/Ansible | 1 | `ens160` | Red actual de ESXi | 172.17.25.20/24 | Gateway actual de 172.17.25.0/24 | Internet, GitHub, RustDesk y acceso al host |
+| VM01 Admin/Ansible | 2 | `ens192` | `PPI-MGMT` | 10.10.10.10/24 | Ninguno | Administración de las VMs |
+| VM02 Sensor | 1 | `ens160` | `PPI-MGMT` | 10.10.10.20/24 | Ninguno | Ansible, SSH, dashboard y registros |
+| VM02 Sensor | 2 | `ens192` | `PPI-LAN` | 10.20.0.1/24 | Ninguno | Entrada desde cliente y Kali |
+| VM02 Sensor | 3 | `ens224` | `PPI-DMZ` | 10.30.0.1/24 | Ninguno | Salida hacia el servidor protegido |
+| VM03 Servidor | 1 | `ens160` | `PPI-MGMT` | 10.10.10.30/24 | Ninguno | Ansible y SSH administrativo |
+| VM03 Servidor | 2 | `ens192` | `PPI-DMZ` | 10.30.0.10/24 | 10.30.0.1 | HTTP/HTTPS, SSH y transferencias de prueba |
+| VM04 Kali | 1 | `eth0` | `PPI-MGMT` | 10.10.10.40/24 | Ninguno | Administración entrante desde Ansible |
+| VM04 Kali | 2 | `eth1` | `PPI-LAN` | 10.20.0.100/24 | 10.20.0.1 | Generación controlada de ataques |
+| VM05 Cliente | 1 | `ens160` o adaptador Windows | `PPI-MGMT` | 10.10.10.50/24 | Ninguno | Ansible, SSH o WinRM |
+| VM05 Cliente | 2 | `ens192` o adaptador Windows | `PPI-LAN` | 10.20.0.20/24 | 10.20.0.1 | Generación de tráfico legítimo |
+
+La dirección `172.17.25.28` observada en la captura pertenece al host ESXi y no debe asignarse a ninguna VM. Antes de utilizar `172.17.25.20` en VM01 se comprobará que no exista otro equipo con esa dirección. Si está ocupada, se seleccionará una IP libre de la misma red o se conservará la configuración actual por DHCP.
+
+### 6.2 Administración con Ansible
+
+Ansible utilizará exclusivamente las direcciones de `PPI-MGMT`:
+
+| Grupo Ansible | Host | IP de administración |
+|---|---|---|
+| `sensor` | VM02 | 10.10.10.20 |
+| `servidores` | VM03 | 10.10.10.30 |
+| `atacantes` | VM04 | 10.10.10.40 |
+| `clientes` | VM05 | 10.10.10.50 |
+
+La VM01 accede directamente a esta red mediante `10.10.10.10`. Las interfaces de gestión de VM02–VM05 no tendrán gateway predeterminado, evitando que el tráfico experimental o de Internet utilice accidentalmente `PPI-MGMT`.
+
+### 6.3 Recorrido del tráfico experimental
+
+```text
+Cliente 10.20.0.20  ─┐
+                       ├─► Sensor 10.20.0.1 / 10.30.0.1 ─► Servidor 10.30.0.10
+Kali    10.20.0.100 ─┘
+```
+
+El sensor habilitará el reenvío entre `PPI-LAN` y `PPI-DMZ`. Cliente y Kali utilizarán `10.20.0.1` como gateway, mientras que el servidor utilizará `10.30.0.1`. Esto obliga a que las conexiones experimentales atraviesen Suricata.
+
+### 6.4 Controles de seguridad de gestión
+
+- VM01 podrá iniciar SSH o WinRM hacia todas las IP de `PPI-MGMT`.
+- VM04 Kali aceptará administración desde `10.10.10.10`, pero no podrá iniciar conexiones hacia las otras IP administrativas.
+- No se ejecutarán ataques contra `10.10.10.0/24` ni `172.17.25.0/24`.
+- La red de gestión no se incluirá en las capturas utilizadas por el modelo.
+- Las llaves SSH y secretos de Ansible se gestionarán fuera del repositorio.
 
 ## 7. Relación con las observaciones del jurado
 
