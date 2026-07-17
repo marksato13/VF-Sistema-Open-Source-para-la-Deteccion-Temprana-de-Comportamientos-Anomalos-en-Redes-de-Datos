@@ -221,7 +221,71 @@ Kali    10.20.0.100 ─┘
 
 El sensor habilitará el reenvío entre `PPI-LAN` y `PPI-DMZ`. Cliente y Kali utilizarán `10.20.0.1` como gateway, mientras que el servidor utilizará `10.30.0.1`. Esto obliga a que las conexiones experimentales atraviesen Suricata.
 
-### 6.4 Controles de seguridad de gestión
+### 6.4 El sensor como router y gateway
+
+No se desplegará una VM router adicional en la primera versión del laboratorio. La VM02 Sensor asumirá simultáneamente las funciones de:
+
+- Router entre `PPI-LAN` y `PPI-DMZ`.
+- Gateway de los equipos experimentales.
+- Sensor Suricata.
+- Punto de aplicación de las decisiones `PERMIT`, `LIMIT` y `BLOCK`.
+
+Los dos gateways pertenecen a interfaces diferentes de la misma VM:
+
+| Segmento | Interfaz del sensor | IP usada como gateway |
+|---|---|---|
+| `PPI-LAN` | `ens192` prevista | 10.20.0.1 |
+| `PPI-DMZ` | `ens224` prevista | 10.30.0.1 |
+
+El recorrido lógico será:
+
+```text
+PPI-LAN                                            PPI-DMZ
+10.20.0.0/24                                       10.30.0.0/24
+
+Cliente 10.20.0.20 ─┐                           ┌─ Servidor 10.30.0.10
+                     ├─► Sensor/Router ─────────┘
+Kali 10.20.0.100  ─┘   .20.0.1 / .30.0.1
+```
+
+Cuando un equipo de `PPI-LAN` intenta llegar a `10.30.0.10`, entrega el paquete a `10.20.0.1`. El sensor lo analiza y, si la política lo permite, lo reenvía por `10.30.0.1`. La respuesta del servidor utiliza `10.30.0.1` y vuelve a atravesar el sensor.
+
+#### Gateway predeterminado por máquina
+
+Cada sistema tendrá como máximo un gateway predeterminado. Las interfaces de `PPI-MGMT` no configurarán gateway.
+
+| VM | Gateway predeterminado | Motivo |
+|---|---|---|
+| VM01 Admin/Ansible | Gateway actual de `172.17.25.0/24` | Internet, GitHub, ESXi y RustDesk |
+| VM02 Sensor | Ninguno durante la prueba aislada | LAN y DMZ están conectadas directamente |
+| VM03 Servidor | 10.30.0.1 | Salida y respuestas mediante el sensor |
+| VM04 Kali | 10.20.0.1 | Ataques controlados mediante el sensor |
+| VM05 Cliente | 10.20.0.1 | Tráfico legítimo mediante el sensor |
+
+No se configurará un segundo gateway predeterminado en las NIC de gestión. Esto evita rutas ambiguas y asegura que el tráfico experimental no evada Suricata.
+
+#### Reenvío IPv4
+
+El sensor deberá habilitar el enrutamiento IPv4 de Linux. La configuración persistente prevista es:
+
+```text
+net.ipv4.ip_forward=1
+```
+
+La implementación con Ansible deberá:
+
+1. Aplicar el parámetro mediante `sysctl`.
+2. Comprobar que continúa activo después de reiniciar.
+3. Permitir en el firewall solamente el tráfico requerido entre LAN y DMZ.
+4. Permitir el retorno de conexiones establecidas.
+5. Registrar y bloquear tráfico no autorizado.
+6. Confirmar que el servidor deja de ser alcanzable si se detiene el enrutamiento del sensor.
+
+#### Acceso temporal a Internet
+
+Durante la instalación puede habilitarse temporalmente una ruta de salida, NAT o proxy para descargar paquetes. Durante las capturas y pruebas finales esa salida se desactivará o controlará para que el tráfico externo no contamine el dataset.
+
+### 6.5 Controles de seguridad de gestión
 
 - VM01 podrá iniciar SSH o WinRM hacia todas las IP de `PPI-MGMT`.
 - VM04 Kali aceptará administración desde `10.10.10.10`, pero no podrá iniciar conexiones hacia las otras IP administrativas.
