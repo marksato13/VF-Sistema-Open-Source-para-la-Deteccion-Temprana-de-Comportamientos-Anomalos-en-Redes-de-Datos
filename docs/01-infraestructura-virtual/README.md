@@ -48,8 +48,8 @@ Recursos:
 | Recurso | Asignación |
 |---|---:|
 | vCPU | 2 |
-| RAM | 6 GB |
-| Disco | 60 GB thin |
+| RAM | 8 GB |
+| Disco | 80 GB thin |
 | Interfaces | 1 en `PPI-MGMT` |
 | IP propuesta | 10.10.10.10/24 |
 
@@ -70,13 +70,13 @@ Recursos:
 
 | Recurso | Asignación |
 |---|---:|
-| vCPU | 4 |
-| RAM | 12 GB |
-| Disco | 120 GB thin |
+| vCPU | 6 |
+| RAM | 16 GB |
+| Disco | 160 GB thin |
 | Interfaces | 3: gestión, LAN experimental y DMZ |
 | IP de gestión propuesta | 10.10.10.20/24 |
 
-El sensor tendrá prioridad durante las pruebas. Si Suricata registra pérdida de paquetes sostenida, el primer ajuste será elevarlo a 6 vCPU sin aumentar inicialmente los recursos de las otras VMs.
+El sensor tendrá prioridad durante las pruebas. La asignación de 6 vCPU y 16 GB permite procesar eventos multicapa y mantener ventanas temporales. Si Suricata registra pérdida de paquetes sostenida, se revisará primero la configuración de captura, `CPU ready` y afinidad de hilos antes de asignar más vCPU.
 
 ### VM03 — Servidor protegido
 
@@ -93,7 +93,7 @@ Recursos:
 |---|---:|
 | vCPU | 2 |
 | RAM | 4 GB |
-| Disco | 50 GB thin |
+| Disco | 60 GB thin |
 | Interfaces | 1 en `PPI-DMZ` |
 | IP propuesta | 10.30.0.10/24 |
 
@@ -111,8 +111,8 @@ Recursos:
 | Recurso | Asignación |
 |---|---:|
 | vCPU | 2 |
-| RAM | 4 GB |
-| Disco | 50 GB thin |
+| RAM | 6 GB |
+| Disco | 60 GB thin |
 | Interfaces | 1 en `PPI-LAN` |
 | IP propuesta | 10.20.0.100/24 |
 
@@ -135,9 +135,9 @@ Recursos:
 
 | Recurso | Asignación |
 |---|---:|
-| vCPU | 2 |
-| RAM | 6 GB |
-| Disco | 80 GB thin |
+| vCPU | 4 |
+| RAM | 8 GB |
+| Disco | 100 GB thin |
 | Interfaces | 1 en `PPI-LAN` |
 | IP propuesta | 10.20.0.20/24 |
 
@@ -145,21 +145,21 @@ Recursos:
 
 | Máquina | vCPU | RAM | Disco thin |
 |---|---:|---:|---:|
-| VM01 Administración/Ansible | 2 | 6 GB | 60 GB |
-| VM02 Sensor Suricata/ML | 4 | 12 GB | 120 GB |
-| VM03 Servidor protegido | 2 | 4 GB | 50 GB |
-| VM04 Kali Linux | 2 | 4 GB | 50 GB |
-| VM05 Cliente legítimo | 2 | 6 GB | 80 GB |
-| **Total** | **12 vCPU** | **32 GB** | **360 GB** |
+| VM01 Administración/Ansible | 2 | 8 GB | 80 GB |
+| VM02 Sensor Suricata/ML | 6 | 16 GB | 160 GB |
+| VM03 Servidor protegido | 2 | 4 GB | 60 GB |
+| VM04 Kali Linux | 2 | 6 GB | 60 GB |
+| VM05 Cliente legítimo | 4 | 8 GB | 100 GB |
+| **Total** | **16 vCPU** | **42 GB** | **460 GB** |
 
 ### Margen conservado
 
 | Recurso | Capacidad del host | Asignación planificada | Margen aproximado |
 |---|---:|---:|---:|
-| RAM | 63.63 GB | 32 GB | 31.63 GB |
-| Almacenamiento | 825.75 GB | 360 GB thin | 465.75 GB lógicos |
+| RAM | 63.63 GB | 42 GB | 21.63 GB |
+| Almacenamiento | 825.75 GB | 460 GB thin | 365.75 GB lógicos |
 
-Los 12 vCPU representan sobreasignación controlada respecto de la capacidad física expresada en GHz. Es aceptable para este laboratorio porque no todas las VMs usarán el 100 % de CPU simultáneamente. Durante ataques de alta tasa se detendrán tareas no esenciales y se registrará `CPU ready` del hipervisor para comprobar que la contención no invalide los resultados.
+Los 16 vCPU representan sobreasignación controlada respecto de la capacidad física expresada en GHz. Es aceptable para este laboratorio siempre que no todas las VMs utilicen el 100 % de CPU simultáneamente. Durante ataques de alta tasa se detendrán tareas no esenciales y se registrará `CPU ready` del hipervisor para comprobar que la contención no invalide los resultados. No se aumentará nuevamente el total de vCPU hasta confirmar el número de sockets, núcleos e hilos físicos del host.
 
 ## 6. Segmentos virtuales
 
