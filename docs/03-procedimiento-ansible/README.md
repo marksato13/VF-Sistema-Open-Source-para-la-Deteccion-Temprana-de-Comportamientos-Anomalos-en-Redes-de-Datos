@@ -853,6 +853,8 @@ nmcli connection up 'Conexión cableada 2'
 
 ### 22.5 Ruta persistente de Kali
 
+Kali usa `ifupdown` (sus interfaces aparecen como unmanaged para NetworkManager). Por ello la ruta se declaró en `/etc/network/interfaces`, dentro de `iface eth1 inet static`, mediante `up ip route replace 10.30.0.0/24 via 10.20.0.1 dev eth1` y su línea `down` correspondiente. La ruta fue comprobada después de dos reinicios de Kali.
+
 La conexión de `eth1` se denomina `eth1`:
 
 ```bash
@@ -1156,4 +1158,4 @@ detect.alert_queue_overflow: 0
 rules_loaded: 52044
 ```
 
-Estado: **persistencia de Sensor, Suricata, firewall, offloading y ruta de retorno del Servidor validada después de reinicios reales; Cliente y Kali aún no fueron reiniciados**.
+Estado: **persistencia de Sensor, Suricata, firewall, offloading y rutas de Servidor, Cliente y Kali validada después de reinicios reales. Kali aún requiere recuperar sincronización NTP (`Packet count: 0`) antes de la captura final.**

@@ -20,7 +20,7 @@ Claude revisó `CLAUDE.md`, `configs/suricata/` y las modificaciones documentale
 | H-06 | Baja | Tipos EVE afirmados sin evidencia específica | Corregida: se separaron observados de solamente configurados |
 | H-07a | Informativa | Kernel del Sensor pendiente | Cerrada; kernel nuevo cargado después del reinicio |
 | H-07b | Media | Métrica de pérdida limitada a tráfico liviano | Abierta; debe repetirse bajo carga representativa |
-| H-08 | Media | Persistencia de rutas en Cliente y Kali sin prueba de reinicio | Abierta; configuración persistente declarada, reinicio pendiente |
+| H-08 | Media | Persistencia de rutas en Cliente y Kali sin prueba de reinicio | Cerrada; ambos fueron reiniciados y conservaron la ruta experimental |
 
 ## Correcciones reproducidas
 
@@ -49,7 +49,7 @@ Después se validó nuevamente la configuración con `suricata -T` y se reinici�
 
 ## Validación posterior
 
-VM02 Sensor arrancó con kernel `7.0.0-27-generic` y conservó DNS, NTP, `ip_forward`, nftables, offloading deshabilitado y Suricata con 52,044 reglas. VM03 Servidor conservó la ruta `10.20.0.0/24 via 10.30.0.1` después de su reinicio. Esta evidencia cubre Sensor y Servidor; no demuestra todavía la persistencia posterior al reinicio de Cliente y Kali.
+VM02 Sensor arrancó con kernel `7.0.0-27-generic` y conservó DNS, NTP, `ip_forward`, nftables, offloading deshabilitado y Suricata con 52,044 reglas. VM03 Servidor conservó la ruta `10.20.0.0/24 via 10.30.0.1` después de su reinicio. Posteriormente VM05 Cliente y VM04 Kali fueron reiniciadas: ambas conservaron la ruta `10.30.0.0/24 via 10.20.0.1` y mantuvieron conectividad ICMP hacia la DMZ.
 
 La prueba conjunta posterior obtuvo 5 de 5 respuestas ICMP, TCP/22 correcto y 5 de 5 alertas locales, con cero descartes del kernel, paquetes inválidos y desbordamientos de alertas.
 
@@ -57,7 +57,7 @@ La prueba conjunta posterior obtuvo 5 de 5 respuestas ICMP, TCP/22 correcto y 5 
 
 - Falta ejecutar escenarios controlados de ataque desde Kali y comprobar cobertura ET.
 - Falta una campaña de tráfico legítimo pesado para medir falsos positivos y pérdida de paquetes.
-- Falta reiniciar de forma controlada Cliente y Kali para validar sus rutas persistentes.
+- Kali conserva la ruta tras reinicio, pero al cierre de esta sesión `systemd-timesyncd` aún reporta `Packet count: 0`; debe corregirse antes de capturar el dataset final.
 - Falta validar eventos DNS, TLS, SSH y anomalías con pruebas dedicadas.
 - Las NIC externas todavía deben aislarse antes del dataset definitivo.
 
