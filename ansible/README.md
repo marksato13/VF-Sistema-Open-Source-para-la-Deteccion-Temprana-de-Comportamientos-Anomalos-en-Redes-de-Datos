@@ -66,6 +66,17 @@ cd ansible
 
 El playbook solamente espera SSH, ejecuta `ansible.builtin.ping` y consulta `id`. No instala paquetes, no cambia red y no usa `sudo`.
 
+## Auditar recursos reales
+
+Después de validar la autenticación se ejecuta:
+
+```bash
+cd ansible
+../.venv/bin/ansible-playbook playbooks/02-auditar-recursos.yml
+```
+
+El playbook recopila facts sin `sudo`, comprueba la IP de gestión y guarda un resumen no sensible por VM en `artifacts/preflight/`. Este directorio no se publica en Git porque representa evidencia runtime del laboratorio.
+
 ## Primera validación registrada
 
 El 19 de julio de 2026 se validó esta base en VM01:

@@ -631,3 +631,42 @@ Resultado final:
 | `ppi-client` | 4 | 0 | 0 | 0 |
 
 La etapa de conectividad y autenticación por clave queda **VALIDADA**. Ninguna tarea utilizó `sudo` ni modificó configuración remota durante este playbook.
+
+## 18. Auditoría automática de recursos
+
+Se incorporó y ejecutó:
+
+```text
+ansible/playbooks/02-auditar-recursos.yml
+```
+
+El playbook:
+
+1. Recopila facts de Ansible sin `sudo`.
+2. Verifica Linux y Python 3.
+3. Comprueba que la IP `PPI-MGMT` del inventario exista realmente.
+4. Registra CPU, RAM, disco, interfaces e IP.
+5. Guarda resúmenes no sensibles en `artifacts/preflight/`.
+
+Resultado de ejecución:
+
+```text
+ppi-sensor : unreachable=0 failed=0
+ppi-server : unreachable=0 failed=0
+ppi-kali   : unreachable=0 failed=0
+ppi-client : unreachable=0 failed=0
+```
+
+Hallazgos principales:
+
+- Sensor, servidor y cliente utilizan Ubuntu 26.04 con Python 3.14.4.
+- Kali utiliza Kali 2026.2 con Python 3.13.12.
+- Las cuatro IP de `PPI-MGMT` coinciden con el inventario.
+- Sensor ya dispone de 6 vCPU y aproximadamente 16 GB de RAM.
+- Cliente todavía tiene 2 vCPU y aproximadamente 3.4 GB visibles.
+- Los discos raíz de sensor, servidor y cliente son menores que el diseño final.
+- VM02–VM05 conservan una interfaz externa temporal en `172.17.25.0/24`.
+
+La tabla completa de recursos, interfaces y diferencias se mantiene en `docs/01-infraestructura-virtual/README.md`.
+
+Estado: **auditoría validada; ajustes de hardware en ESXi pendientes antes de las pruebas de carga**.

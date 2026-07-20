@@ -1,0 +1,90 @@
+---
+- name: Auditar recursos e interfaces sin realizar cambios remotos
+  hosts: ppi_lab
+  gather_facts: true
+  become: false
+  tasks:
+    - name: Verificar que el nodo es Linux y dispone de Python 3
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.system == 'Linux'
+          - ansible_facts.python.version.major == 3
+        fail_msg: >-
+          {{ inventory_hostname }} no cumple los requisitos base de Linux y Python 3.
+        success_msg: >-
+          {{ inventory_hostname }} utiliza {{ ansible_facts.distribution }}
+          {{ ansible_facts.distribution_version }} y Python
+          {{ ansible_facts.python_version }}.
+
+    - name: Verificar que la IP de gestión está presente
+      ansible.builtin.assert:
+        that:
+          - ansible_host in ansible_facts.all_ipv4_addresses
+        fail_msg: >-
+          La IP de inventario {{ ansible_host }} no aparece en las interfaces
+          de {{ inventory_hostname }}.
+        success_msg: >-
+          La IP de gestión {{ ansible_host }} está configurada en
+          {{ inventory_hostname }}.
+
+    - name: Construir resumen no sensible del nodo
+      ansible.builtin.set_fact:
+        ppi_node_summary:
+          inventory_hostname: "{{ inventory_hostname }}"
+          hostname: "{{ ansible_facts.hostname }}"
+          fqdn: "{{ ansible_facts.fqdn }}"
+          distribution: "{{ ansible_facts.distribution }}"
+          distribution_version: "{{ ansible_facts.distribution_version }}"
+          kernel: "{{ ansible_facts.kernel }}"
+          architecture: "{{ ansible_facts.architecture }}"
+          python_version: "{{ ansible_facts.python_version }}"
+          vcpus: "{{ ansible_facts.processor_vcpus }}"
+          memory_mb: "{{ ansible_facts.memtotal_mb }}"
+          interfaces: "{{ ansible_facts.interfaces | sort }}"
+          ipv4_addresses: "{{ ansible_facts.all_ipv4_addresses | sort }}"
+          default_ipv4: "{{ ansible_facts.default_ipv4 | default({}) }}"
+          root_disk_total_gb: >-
+            {{ ((ansible_facts.mounts
+                 | selectattr('mount', 'equalto', '/')
+                 | first).size_total / 1073741824) | round(1) }}
+          root_disk_free_gb: >-
+            {{ ((ansible_facts.mounts
+                 | selectattr('mount', 'equalto', '/')
+                 | first).size_available / 1073741824) | round(1) }}
+          mounts: >-
+            {{ ansible_facts.mounts
+               | map(attribute='mount')
+               | list
+               | sort }}
+
+    - name: Crear directorio local de evidencias
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../artifacts/preflight"
+        state: directory
+        mode: '0700'
+      delegate_to: localhost
+      run_once: true
+
+    - name: Guardar resumen local por nodo
+      ansible.builtin.copy:
+        content: "{{ ppi_node_summary | to_nice_json }}\n"
+        dest: "{{ playbook_dir }}/../../artifacts/preflight/{{ inventory_hostname }}.json"
+        mode: '0600'
+      delegate_to: localhost
+
+    - name: Mostrar recursos detectados
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ ansible_facts.hostname }}"
+          - "SO: {{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }}"
+          - "vCPU: {{ ansible_facts.processor_vcpus }}"
+          - "RAM: {{ ansible_facts.memtotal_mb }} MB"
+          - >-
+            Disco raíz: {{ ((ansible_facts.mounts
+            | selectattr('mount', 'equalto', '/')
+            | first).size_total / 1073741824) | round(1) }} GB total,
+            {{ ((ansible_facts.mounts
+            | selectattr('mount', 'equalto', '/')
+            | first).size_available / 1073741824) | round(1) }} GB libres
+          - "Interfaces: {{ ansible_facts.interfaces | sort | join(', ') }}"
+          - "IPv4: {{ ansible_facts.all_ipv4_addresses | sort | join(', ') }}"

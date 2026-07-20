@@ -317,3 +317,49 @@ Antes de declarar definitivos los recursos se ejecutará una prueba piloto y se 
 - Servidor protegido capaz de mantener tráfico legítimo pesado concurrente.
 
 Si estos criterios no se cumplen, los recursos se ajustarán usando mediciones reales y el cambio quedará registrado en este documento.
+
+## 9. Inventario real detectado con Ansible
+
+El 19 de julio de 2026 se ejecutó una auditoría sin privilegios sobre las cuatro VMs administradas. Los valores de RAM y disco corresponden a lo visible dentro del sistema invitado; pueden ser ligeramente inferiores a la asignación mostrada por ESXi debido a memoria reservada, particiones y formato del sistema de archivos.
+
+| VM | Sistema | vCPU detectadas | RAM visible | Disco raíz visible | Espacio libre |
+|---|---|---:|---:|---:|---:|
+| VM02 Sensor | Ubuntu 26.04 | 6 | 15,474 MB | 76.7 GB | 65.9 GB |
+| VM03 Servidor | Ubuntu 26.04 | 2 | 3,398 MB | 57.3 GB | 47.3 GB |
+| VM04 Kali | Kali 2026.2 | 4 | 5,927 MB | 55.7 GB | 38.3 GB |
+| VM05 Cliente | Ubuntu 26.04 | 2 | 3,398 MB | 57.7 GB | 44.8 GB |
+
+### 9.1 Interfaces reales
+
+| VM | Red externa temporal | PPI-MGMT | PPI-LAN | PPI-DMZ |
+|---|---|---|---|---|
+| Sensor | `ens34` — 172.17.25.111 | `ens39` — 10.10.10.20 | `ens35` — 10.20.0.1 | `ens38` — 10.30.0.1 |
+| Servidor | `ens34` — 172.17.25.112 | `ens35` — 10.10.10.30 | — | `ens38` — 10.30.0.10 |
+| Kali | `eth0` — 172.17.25.113 | `eth2` — 10.10.10.40 | `eth1` — 10.20.0.100 | — |
+| Cliente | `ens34` — 172.17.25.114 | `ens35` — 10.10.10.50 | `ens38` — 10.20.0.20 | — |
+
+### 9.2 Diferencias respecto del diseño
+
+| VM | Recurso | Planificado | Detectado | Acción |
+|---|---|---:|---:|---|
+| Sensor | Disco | 160 GB | 76.7 GB raíz | Ampliar disco virtual y sistema de archivos |
+| Servidor | Disco | 120 GB | 57.3 GB raíz | Ampliar disco virtual y sistema de archivos |
+| Kali | vCPU | 2 | 4 | Aceptar 4 o reducir después de medir contención |
+| Kali | Disco | 60 GB | 55.7 GB raíz | Sin cambio urgente; verificar tamaño virtual |
+| Cliente | vCPU | 4 | 2 | Aumentar a 4 antes de tráfico pesado |
+| Cliente | RAM | 8 GB | 3,398 MB visibles | Aumentar asignación antes de tráfico pesado |
+| Cliente | Disco | 100 GB | 57.7 GB raíz | Ampliar disco virtual y sistema de archivos |
+
+### 9.3 Interfaces externas temporales
+
+Sensor, servidor, Kali y cliente conservan una NIC en `172.17.25.0/24`. Estas interfaces son útiles para instalar paquetes durante el aprovisionamiento, pero constituyen una ruta alternativa que puede evitar el sensor y contaminar las capturas.
+
+Antes de la validación experimental final se deberá:
+
+1. Confirmar que todas las dependencias están instaladas.
+2. Desconectar en ESXi las NIC externas de VM02–VM05, o eliminar sus rutas e IP.
+3. Mantener la red externa solamente en VM01 Admin.
+4. Confirmar que Cliente y Kali llegan al servidor exclusivamente mediante `10.20.0.1`.
+5. Confirmar que el servidor responde exclusivamente mediante `10.30.0.1`.
+
+No se retirarán las NIC externas mediante automatización remota hasta disponer de acceso confirmado por `PPI-MGMT` y un procedimiento de recuperación por consola ESXi.
