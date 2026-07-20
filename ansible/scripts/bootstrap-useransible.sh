@@ -1,10 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BOOTSTRAP_USER="${BOOTSTRAP_USER:-m4rk}"
 ANSIBLE_PUBLIC_KEY='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB4FMAbIxw5Ddov41uYfLo3vYayyXhrTV/uHhCx8RM76 ppi-ansible-controller'
 ANSIBLE_PRIVATE_KEY='/home/m4rk/.ssh/id_ed25519_ppi_ansible'
 HOSTS=(10.10.10.20 10.10.10.30 10.10.10.40 10.10.10.50)
+declare -A BOOTSTRAP_USERS=(
+  [10.10.10.20]='sensor_motor'
+  [10.10.10.30]='server'
+  [10.10.10.40]='m4rk'
+  [10.10.10.50]='m4rk'
+)
+
+if [[ "$#" -gt 0 ]]; then
+  HOSTS=("$@")
+fi
+
+for host in "${HOSTS[@]}"; do
+  if [[ -z "${BOOTSTRAP_USERS[$host]:-}" ]]; then
+    echo "ERROR: host no permitido: $host" >&2
+    exit 2
+  fi
+done
 
 remote_command=$(printf '%q' "
 set -e
@@ -25,11 +41,12 @@ echo
 
 failed=0
 for host in "${HOSTS[@]}"; do
-  echo "=== $host ==="
+  bootstrap_user="${BOOTSTRAP_USERS[$host]}"
+  echo "=== $host ($bootstrap_user) ==="
   if ssh -tt \
       -o StrictHostKeyChecking=yes \
       -o ConnectTimeout=10 \
-      "${BOOTSTRAP_USER}@${host}" \
+      "${bootstrap_user}@${host}" \
       "sudo bash -c ${remote_command}"; then
     if ssh \
         -o BatchMode=yes \

@@ -23,17 +23,17 @@ Estados utilizados:
 | Conectividad IP con servidor | VALIDADO | 10.10.10.30 responde, 0 % de pérdida |
 | Verificar SSH remoto | VALIDADO | Puerto 22 abierto en sensor y servidor |
 | Crear clave del controlador | COMPLETADO | Clave Ed25519 exclusiva disponible |
-| Crear `useransible` en sensor | PENDIENTE DE VALIDACIÓN | Comandos entregados para consola ESXi |
-| Crear `useransible` en servidor | PENDIENTE DE VALIDACIÓN | Comandos entregados para consola ESXi |
+| Crear `useransible` en sensor | VALIDADO | Autenticación por clave y playbook correctos |
+| Crear `useransible` en servidor | VALIDADO | Autenticación por clave y playbook correctos |
 | Conectividad IP con Kali | VALIDADO | 10.10.10.40 responde, 0 % de pérdida |
 | Habilitar SSH en Kali | VALIDADO | Puerto 22 abierto el 19 de julio de 2026 |
-| Crear `useransible` en Kali | PENDIENTE DE VALIDACIÓN | SSH activo; falta comprobar autenticación por clave |
+| Crear `useransible` en Kali | VALIDADO | Autenticación por clave y playbook correctos |
 | Conectividad IP con VM05 Cliente | VALIDADO | 10.10.10.50 responde, 0 % de pérdida |
 | Habilitar SSH en VM05 Cliente | VALIDADO | Puerto 22 abierto el 19 de julio de 2026 |
-| Crear `useransible` en VM05 Cliente | PENDIENTE DE VALIDACIÓN | SSH activo; falta comprobar autenticación por clave |
+| Crear `useransible` en VM05 Cliente | VALIDADO | Autenticación por clave y playbook correctos |
 | Registrar huellas en VM01 | COMPLETADO | TOFU controlado sobre `PPI-MGMT` aislada |
-| Autenticación por clave en las cuatro VMs | FALLÓ | `Permission denied (publickey,password)` |
-| Ejecutar ping de Ansible remoto | PENDIENTE | Requiere cuenta y clave instaladas |
+| Autenticación por clave en las cuatro VMs | VALIDADO | Clave Ed25519 aceptada por todos los nodos |
+| Ejecutar ping de Ansible remoto | VALIDADO | 4 nodos, 0 inalcanzables y 0 fallos |
 | Configurar privilegios limitados | PENDIENTE | Se hará después del acceso sin privilegios |
 
 ## 3. Controlador utilizado
@@ -328,14 +328,14 @@ El playbook no usa `sudo` ni modifica configuración. Ejecuta ping de Ansible y 
 
 ## 14. Criterio de finalización de esta etapa
 
-La etapa se cerrará cuando sensor y servidor reporten:
+La etapa se cerró el 19 de julio de 2026 cuando los cuatro nodos reportaron:
 
 ```text
 unreachable=0
 failed=0
 ```
 
-Después se diseñará un rol de privilegios mínimos y se automatizará la configuración de interfaces, enrutamiento y Suricata.
+El siguiente paso es diseñar un rol de privilegios mínimos y automatizar la configuración de interfaces, enrutamiento y Suricata.
 
 ## 15. Incorporación de Kali Linux
 
@@ -562,7 +562,16 @@ Se agregó el script:
 ansible/scripts/bootstrap-useransible.sh
 ```
 
-El script utiliza temporalmente una cuenta administrativa existente, por defecto `m4rk`, y solicita sus credenciales directamente en una terminal interactiva. En cada VM realiza de forma idempotente:
+El script utiliza temporalmente una cuenta administrativa existente por VM y solicita sus credenciales directamente en una terminal interactiva. Las cuentas iniciales confirmadas son:
+
+| VM | IP | Usuario inicial |
+|---|---|---|
+| Sensor | 10.10.10.20 | `sensor_motor` |
+| Servidor | 10.10.10.30 | `server` |
+| Kali | 10.10.10.40 | `m4rk` |
+| Cliente | 10.10.10.50 | `m4rk` |
+
+Las contraseñas no se incorporan al script ni al repositorio. En cada VM el script realiza de forma idempotente:
 
 1. Crear `useransible` si no existe.
 2. Crear `/home/useransible/.ssh` con modo 700.
@@ -581,4 +590,44 @@ El primer intento interactivo no consiguió completar la autorización remota. U
 Permission denied (publickey,password)
 ```
 
-Estado: **script preparado y validado sintácticamente; ejecución remota pendiente de credenciales introducidas por el propietario**.
+Estado en ese momento: **script preparado y validado sintácticamente; primera ejecución remota incompleta**. Este estado fue superado por el bootstrap descrito a continuación.
+
+### 17.3 Bootstrap completado
+
+El script se actualizó con las cuentas iniciales diferentes de cada VM y se ejecutó nuevamente. Tres nodos quedaron configurados en la primera corrida correcta; el servidor se reparó en una segunda corrida limitada a `10.10.10.30`.
+
+El script acepta opcionalmente una o varias IP autorizadas, por ejemplo:
+
+```bash
+./ansible/scripts/bootstrap-useransible.sh 10.10.10.30
+```
+
+Resultado final de autenticación:
+
+| Host Ansible | IP | Hostname remoto | Identidad |
+|---|---|---|---|
+| `ppi-sensor` | 10.10.10.20 | `sensormotor` | `uid=1001(useransible)` |
+| `ppi-server` | 10.10.10.30 | `server` | `uid=1001(useransible)` |
+| `ppi-kali` | 10.10.10.40 | `kali` | `uid=1001(useransible)` |
+| `ppi-client` | 10.10.10.50 | `m4rk-VMware20-1` | `uid=1001(useransible)` |
+
+### 17.4 Primera validación completa con Ansible
+
+Se ejecutó:
+
+```bash
+cd ansible
+../.venv/bin/ansible-playbook \
+  playbooks/01-comprobar-conectividad.yml
+```
+
+Resultado final:
+
+| Host | ok | changed | unreachable | failed |
+|---|---:|---:|---:|---:|
+| `ppi-sensor` | 4 | 0 | 0 | 0 |
+| `ppi-server` | 4 | 0 | 0 | 0 |
+| `ppi-kali` | 4 | 0 | 0 | 0 |
+| `ppi-client` | 4 | 0 | 0 | 0 |
+
+La etapa de conectividad y autenticación por clave queda **VALIDADA**. Ninguna tarea utilizó `sudo` ni modificó configuración remota durante este playbook.

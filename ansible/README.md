@@ -77,7 +77,7 @@ El 19 de julio de 2026 se validó esta base en VM01:
 - Comprobación sintáctica: PASS en los dos playbooks.
 - Preflight local: 5 tareas `ok`, 0 cambios, 0 fallos.
 
-La conectividad remota queda pendiente hasta que las cuatro VMs administradas hayan sido creadas y conectadas a `PPI-MGMT`.
+La conectividad remota de las cuatro VMs fue validada el 19 de julio de 2026 mediante autenticación Ed25519 con `useransible`.
 
 ## Cuenta técnica del laboratorio
 
