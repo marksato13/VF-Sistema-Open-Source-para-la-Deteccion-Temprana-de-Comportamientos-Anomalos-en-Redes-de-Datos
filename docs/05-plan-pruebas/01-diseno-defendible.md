@@ -41,3 +41,18 @@ Se guardan PCAP/EVE, manifiesto, hashes, timestamps, configuración y etiqueta p
 ## Reglas de seguridad
 
 Solo se usan las IP de esta topología, sin spoofing, explotación destructiva ni ataques hacia Internet. Se conserva una ventana de recuperación y se documenta cualquier reinicio o cambio de configuración.
+
+## Puertas de decisión y reestructuración
+
+Las fases son una hipótesis de trabajo, no una secuencia inmutable. Cada una tiene una puerta de decisión:
+
+| Puerta | Evidencia requerida | Acción si no cumple |
+|---|---|---|
+| G0 | NTP, rutas y aislamiento correctos | detener; corregir infraestructura y repetir F0 |
+| G1 | F0 sin pérdida ni eventos inexplicables | depurar Suricata, firewall o servicio antes de F1 |
+| G2 | F1 cubre protocolos, tamaños 500–1500 bytes y variación legítima | ampliar escenarios normales antes de entrenar |
+| G3 | F2 mantiene disponibilidad y pérdida dentro del umbral definido | reducir bitrate/concurrencia o ampliar recursos; no ejecutar F3 |
+| G4 | F3 produce etiquetas y evidencia EVE correlacionable | ajustar una técnica por vez y repetir; no mezclar ataques |
+| G5 | F4 separa congestión legítima de anomalía | revisar features, ventanas y particiones antes de publicar métricas |
+
+Se puede dividir una fase, repetirla o introducir una fase intermedia de calibración cuando la evidencia lo exija. El producto final debe reportar tanto los resultados favorables como los límites, repeticiones y escenarios descartados.
