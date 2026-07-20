@@ -26,11 +26,11 @@ Estados utilizados:
 | Crear `useransible` en sensor | PENDIENTE DE VALIDACIÓN | Comandos entregados para consola ESXi |
 | Crear `useransible` en servidor | PENDIENTE DE VALIDACIÓN | Comandos entregados para consola ESXi |
 | Conectividad IP con Kali | VALIDADO | 10.10.10.40 responde, 0 % de pérdida |
-| Habilitar SSH en Kali | PENDIENTE | Puerto 22 rechazó la conexión |
-| Crear `useransible` en Kali | PENDIENTE | Requiere instalar y activar OpenSSH |
+| Habilitar SSH en Kali | VALIDADO | Puerto 22 abierto el 19 de julio de 2026 |
+| Crear `useransible` en Kali | PENDIENTE DE VALIDACIÓN | SSH activo; falta comprobar autenticación por clave |
 | Conectividad IP con VM05 Cliente | VALIDADO | 10.10.10.50 responde, 0 % de pérdida |
-| Habilitar SSH en VM05 Cliente | PENDIENTE | Puerto 22 rechazó la conexión |
-| Crear `useransible` en VM05 Cliente | PENDIENTE | Requiere instalar y activar OpenSSH |
+| Habilitar SSH en VM05 Cliente | VALIDADO | Puerto 22 abierto el 19 de julio de 2026 |
+| Crear `useransible` en VM05 Cliente | PENDIENTE DE VALIDACIÓN | SSH activo; falta comprobar autenticación por clave |
 | Ejecutar ping de Ansible remoto | PENDIENTE | Requiere cuenta y clave instaladas |
 | Configurar privilegios limitados | PENDIENTE | Se hará después del acceso sin privilegios |
 
@@ -407,7 +407,18 @@ La huella ED25519 mostrada por Kali se comparará con `ssh-keyscan` desde VM01 a
 - Posteriormente el firewall de Kali permitirá SSH administrativo desde `10.10.10.10` y bloqueará conexiones iniciadas desde Kali hacia otros nodos de `PPI-MGMT`.
 - Las herramientas de ataque utilizarán la NIC de `PPI-LAN`, no la de gestión.
 
-Estado actual de Kali: **conectividad IP validada; SSH y cuenta técnica pendientes**.
+### 15.5 Validación posterior de SSH
+
+El 19 de julio de 2026 se repitió la comprobación desde VM01:
+
+```text
+Puerto 22: abierto
+Huella ED25519 observada: SHA256:iEAn7Mbd+mP0tepxP8xkEQXSyyh6F9Gp/OB6SG5FGrU
+```
+
+La huella permanece pendiente de comparación con la salida local de Kali. La autenticación de `useransible` tampoco se declara validada hasta ejecutar el playbook remoto.
+
+Estado actual de Kali: **conectividad IP y SSH validados; huella y cuenta técnica pendientes de validación**.
 
 ## 16. Incorporación de VM05 Cliente Desktop
 
@@ -480,4 +491,15 @@ Una vez administrable, VM05 producirá tráfico legítimo reproducible:
 
 La NIC de `PPI-MGMT` se utilizará para Ansible. La NIC de `PPI-LAN`, con IP planificada `10.20.0.20/24`, generará exclusivamente el tráfico experimental.
 
-Estado actual de VM05: **conectividad IP validada; SSH, sistema exacto y cuenta técnica pendientes**.
+### 16.5 Validación posterior de SSH
+
+El 19 de julio de 2026 se repitió la comprobación desde VM01:
+
+```text
+Puerto 22: abierto
+Huella ED25519 observada: SHA256:Bf4kznuAqHYEHj3pEUYMgrGP1bF173n5KJHKS4mZyu4
+```
+
+La huella permanece pendiente de comparación con la salida local del cliente. La distribución exacta y la autenticación de `useransible` se confirmarán mediante Ansible.
+
+Estado actual de VM05: **conectividad IP y SSH validados; huella, sistema exacto y cuenta técnica pendientes de validación**.

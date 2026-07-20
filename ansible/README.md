@@ -110,8 +110,8 @@ El 19 de julio de 2026 se comprobó desde VM01:
 | VM01 Admin | `ens37` — 10.10.10.10/24 | Local | Local | — |
 | VM02 Sensor | 10.10.10.20/24 | 0 % de pérdida | Puerto 22 abierto | `SHA256:s1CuoCRHEeT82iJqoZ2pupT4A5u6tH58TDXevghZG68` |
 | VM03 Servidor | 10.10.10.30/24 | 0 % de pérdida | Puerto 22 abierto | `SHA256:vCo7DpwfQbD7KczXGskpmPzpqwDgfPtO1Pdj133Uh2o` |
-| VM04 Kali | 10.10.10.40/24 | 0 % de pérdida | Puerto 22 cerrado | Pendiente de instalar OpenSSH |
-| VM05 Cliente Desktop | 10.10.10.50/24 | 0 % de pérdida | Puerto 22 cerrado | Pendiente de instalar OpenSSH |
+| VM04 Kali | 10.10.10.40/24 | 0 % de pérdida | Puerto 22 abierto | `SHA256:iEAn7Mbd+mP0tepxP8xkEQXSyyh6F9Gp/OB6SG5FGrU` |
+| VM05 Cliente Desktop | 10.10.10.50/24 | 0 % de pérdida | Puerto 22 abierto | `SHA256:Bf4kznuAqHYEHj3pEUYMgrGP1bF173n5KJHKS4mZyu4` |
 
 Latencia ICMP observada:
 
