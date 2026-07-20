@@ -31,6 +31,8 @@ Estados utilizados:
 | Conectividad IP con VM05 Cliente | VALIDADO | 10.10.10.50 responde, 0 % de pérdida |
 | Habilitar SSH en VM05 Cliente | VALIDADO | Puerto 22 abierto el 19 de julio de 2026 |
 | Crear `useransible` en VM05 Cliente | PENDIENTE DE VALIDACIÓN | SSH activo; falta comprobar autenticación por clave |
+| Registrar huellas en VM01 | COMPLETADO | TOFU controlado sobre `PPI-MGMT` aislada |
+| Autenticación por clave en las cuatro VMs | FALLÓ | `Permission denied (publickey,password)` |
 | Ejecutar ping de Ansible remoto | PENDIENTE | Requiere cuenta y clave instaladas |
 | Configurar privilegios limitados | PENDIENTE | Se hará después del acceso sin privilegios |
 
@@ -503,3 +505,51 @@ Huella ED25519 observada: SHA256:Bf4kznuAqHYEHj3pEUYMgrGP1bF173n5KJHKS4mZyu4
 La huella permanece pendiente de comparación con la salida local del cliente. La distribución exacta y la autenticación de `useransible` se confirmarán mediante Ansible.
 
 Estado actual de VM05: **conectividad IP y SSH validados; huella, sistema exacto y cuenta técnica pendientes de validación**.
+
+## 17. Primer intento de autenticación remota
+
+Para continuar sin detener la preparación, el 19 de julio de 2026 se aplicó confianza en el primer uso (TOFU) exclusivamente sobre la red virtual aislada `PPI-MGMT`. SSH agregó las claves ED25519 observadas de las cuatro VMs al `known_hosts` de VM01.
+
+Se intentó ejecutar `id` y `hostname` con:
+
+```text
+Usuario: useransible
+Clave: ~/.ssh/id_ed25519_ppi_ansible
+Autenticación interactiva: desactivada para la prueba
+```
+
+Resultado por nodo:
+
+| IP | Huella registrada | Autenticación |
+|---|---|---|
+| 10.10.10.20 | Sí | FALLÓ |
+| 10.10.10.30 | Sí | FALLÓ |
+| 10.10.10.40 | Sí | FALLÓ |
+| 10.10.10.50 | Sí | FALLÓ |
+
+Mensaje común:
+
+```text
+Permission denied (publickey,password)
+```
+
+### Diagnóstico
+
+La conectividad, SSH y reconocimiento de host funcionan. El bloqueo se limita a la autenticación de la cuenta. Las causas probables son:
+
+1. `useransible` todavía no existe en las VMs.
+2. La clave pública no está en `authorized_keys`.
+3. El propietario o los permisos de `.ssh` no son correctos.
+
+### Condición para continuar con cambios remotos
+
+En cada VM debe cumplirse:
+
+```text
+Cuenta: useransible
+Directorio .ssh: useransible:useransible, modo 700
+authorized_keys: useransible:useransible, modo 600
+Clave pública: ppi-ansible-controller
+```
+
+Mientras no se cumpla, pueden prepararse roles y playbooks localmente, pero no se declarará ninguna configuración remota como aplicada o validada.
