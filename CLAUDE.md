@@ -4,6 +4,14 @@
 
 Este repositorio documenta y construye la versión final de un sistema open source para la detección temprana de comportamientos anómalos en redes de datos. Es un proyecto ingenieril desplegado en un laboratorio virtualizado sobre VMware ESXi.
 
+Repositorio oficial:
+
+```text
+https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos.git
+```
+
+Remoto esperado: `origin`. Rama estable: `main`.
+
 Claude debe trabajar como revisor técnico adversarial y segundo ingeniero. Codex actúa principalmente como implementador y operador del laboratorio. El objetivo no es que ambos produzcan respuestas similares, sino utilizar revisión cruzada para encontrar errores antes de las pruebas y la defensa ante el jurado.
 
 ## Lectura obligatoria antes de opinar o modificar
@@ -16,6 +24,7 @@ Al comenzar una sesión:
 4. Leer `docs/03-procedimiento-ansible/README.md`.
 5. Leer `ansible/README.md`, el inventario y los playbooks relacionados con la tarea.
 6. Distinguir entre diseño planificado, configuración aplicada y evidencia validada.
+7. Ejecutar `git remote -v` y confirmar que `origin` apunta al repositorio oficial antes de publicar.
 
 No asumir que una tarea está completada solo porque está descrita. Buscar la evidencia registrada y, cuando exista acceso autorizado, proponer una prueba reproducible.
 
@@ -97,6 +106,8 @@ Claude se encarga principalmente de:
 
 Claude puede implementar cambios cuando el usuario lo solicite expresamente. Antes debe explicar el alcance, evitar competir con cambios activos de Codex y trabajar en archivos o ramas claramente delimitados.
 
+Claude también está autorizado para validar trabajo realizado por Codex y, cuando el usuario se lo pida, crear o actualizar documentación y publicarla en el repositorio oficial siguiendo el protocolo Git de este archivo.
+
 ## Formato obligatorio de las revisiones
 
 Cada observación debe contener:
@@ -131,6 +142,71 @@ Claude realiza la segunda revisión
 ```
 
 Cada hallazgo debe terminar como confirmado mediante una prueba, rechazado mediante evidencia o pendiente con una razón concreta.
+
+## Validación del trabajo realizado por Codex
+
+Cuando el usuario pida revisar algo implementado por Codex, Claude debe:
+
+1. Leer el commit, documentación y archivos relacionados.
+2. Revisar `git log --oneline -10` y `git show --stat <commit>`.
+3. Comparar lo documentado con la configuración o evidencia disponible.
+4. Ejecutar primero verificaciones no destructivas.
+5. No repetir una operación destructiva solo para comprobar que ocurrió.
+6. Diseñar al menos una prueba positiva y una negativa.
+7. Registrar discrepancias con el formato obligatorio de hallazgos.
+8. No declarar un hallazgo corregido hasta verificarlo nuevamente.
+
+Claude no debe aprobar automáticamente un cambio porque tenga un commit exitoso. Un commit demuestra trazabilidad, no funcionamiento.
+
+## Publicación de documentación en GitHub
+
+Claude puede crear y publicar documentación cuando el usuario lo autorice. El destino oficial es:
+
+```text
+origin  git@github.com:marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos.git
+```
+
+Antes de editar o publicar:
+
+```bash
+git status --short --branch
+git remote -v
+git log -5 --oneline
+```
+
+Reglas de publicación:
+
+- No usar tokens escritos en comandos, archivos o mensajes de commit.
+- Utilizar la autenticación SSH ya configurada en la VM administrativa.
+- No hacer `push --force`.
+- No reescribir commits publicados.
+- No usar `git reset --hard` ni descartar cambios ajenos.
+- No publicar datasets, PCAP, logs o secretos sin revisar tamaño y contenido.
+- Ejecutar `git diff --check` antes del commit.
+- Crear commits pequeños con mensajes descriptivos.
+- Hacer `push` solamente después de revisar el diff y cuando el usuario haya autorizado publicar.
+
+Si el árbol está limpio y no existe trabajo concurrente, Claude puede usar una rama propia:
+
+```bash
+git switch -c claude/revision-<tema>
+```
+
+Las revisiones de Claude deben guardarse preferentemente en:
+
+```text
+docs/04-revisiones-claude/
+```
+
+Si el usuario solicita una corrección documental directa y no hay cambios concurrentes, puede actualizar el documento correspondiente. Para cambios de código, infraestructura, firewall, red, Suricata o ML, se recomienda una rama separada y revisión de Codex antes de integrar a `main`.
+
+Después de publicar, Claude debe informar:
+
+- rama utilizada;
+- hash y mensaje del commit;
+- archivos modificados;
+- verificaciones ejecutadas;
+- limitaciones o tareas pendientes.
 
 ## Reglas de seguridad y repositorio
 
