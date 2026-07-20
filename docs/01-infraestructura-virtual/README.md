@@ -47,9 +47,9 @@ Recursos:
 
 | Recurso | Asignación |
 |---|---:|
-| vCPU | 2 |
-| RAM | 8 GB |
-| Disco | 80 GB thin |
+| vCPU | 4 |
+| RAM | 12 GB asignados; aproximadamente 11 GiB visibles |
+| Disco | 70 GiB thin; raíz ext4 ampliada a 67.6 GiB |
 | Interfaces | 2: red actual y `PPI-MGMT` |
 | IP externa propuesta | 172.17.25.20/24 |
 | IP de gestión del laboratorio | 10.10.10.10/24 |
@@ -151,18 +151,18 @@ Recursos:
 
 | Máquina | vCPU | RAM | Disco thin |
 |---|---:|---:|---:|
-| VM01 Administración/Ansible | 2 | 8 GB | 80 GB |
+| VM01 Administración/Ansible | 4 | 12 GB | 70 GB |
 | VM02 Sensor Suricata/ML | 6 | 16 GB | 160 GB |
 | VM03 Servidor protegido | 2 | 4 GB | 120 GB |
-| VM04 Kali Linux | 2 | 6 GB | 60 GB |
+| VM04 Kali Linux | 4 | 6 GB | 60 GB |
 | VM05 Cliente legítimo | 4 | 8 GB | 100 GB |
-| **Total** | **16 vCPU** | **42 GB** | **520 GB** |
+| **Total** | **20 vCPU** | **46 GB** | **510 GB** |
 
 ### Margen conservado
 
 | Recurso | Capacidad del host | Asignación planificada | Margen aproximado |
 |---|---:|---:|---:|
-| RAM | 63.63 GB | 42 GB | 21.63 GB |
+| RAM | 63.63 GB | 46 GB | 17.63 GB |
 | Almacenamiento | 825.75 GB | 520 GB thin | 305.75 GB lógicos |
 
 Los 16 vCPU representan sobreasignación controlada respecto de la capacidad física expresada en GHz. Es aceptable para este laboratorio siempre que no todas las VMs utilicen el 100 % de CPU simultáneamente. Durante ataques de alta tasa se detendrán tareas no esenciales y se registrará `CPU ready` del hipervisor para comprobar que la contención no invalide los resultados. No se aumentará nuevamente el total de vCPU hasta confirmar el número de sockets, núcleos e hilos físicos del host.

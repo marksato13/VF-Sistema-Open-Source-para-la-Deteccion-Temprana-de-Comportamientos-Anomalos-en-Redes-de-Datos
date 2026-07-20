@@ -885,3 +885,33 @@ El contador de la regla LAN→DMZ del Sensor aumentó a 7 paquetes y 1,932 bytes
 Las NIC de `172.17.25.0/24` siguen conectadas temporalmente para instalación y recuperación. Aunque las pruebas dirigidas a `10.30.0.10` ya atraviesan obligatoriamente el Sensor, antes de recolectar el dataset final se deberán desconectar en ESXi las NIC externas de Servidor, Kali y Cliente, o bloquear su uso experimental. La interfaz externa del Sensor puede mantenerse mientras sea necesaria para paquetes y NTP.
 
 Estado: **enrutamiento LAN–DMZ, firewall y rutas persistentes configurados y validados**.
+
+## 23. Actualización de recursos de VM01 Administración
+
+Después de aumentar los recursos de la máquina administrativa en ESXi, se verificó el sistema invitado:
+
+| Recurso | Detectado | Estado |
+|---|---:|---|
+| vCPU | 4 | Utilizadas por Ubuntu, CPU 0–3 en línea |
+| RAM | Aproximadamente 11 GiB utilizables de 12 GB asignados | Utilizada por Ubuntu |
+| Disco virtual | 70 GiB | Detectado por el sistema invitado |
+| Swap | 3.8 GiB | Activo, 0 bytes usados durante la validación |
+
+Inicialmente `/dev/sda2` y la raíz ext4 conservaban aproximadamente 48 GiB. Se utilizó el espacio adicional del disco mediante:
+
+```bash
+growpart /dev/sda 2
+resize2fs /dev/sda2
+```
+
+Validación posterior:
+
+```text
+/dev/sda2  ext4  67.6 GiB
+raíz mostrada por df: 68 GiB
+espacio disponible: aproximadamente 51 GiB
+```
+
+La partición y ext4 fueron ampliados en línea sin reiniciar la VM.
+
+Estado: **CPU, RAM y disco actualizados y aprovechados por VM01**.
