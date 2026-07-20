@@ -672,4 +672,32 @@ Hallazgos principales:
 
 La tabla completa de recursos, interfaces y diferencias se mantiene en `docs/01-infraestructura-virtual/README.md`.
 
-Estado: **auditoría validada; quedan pendientes la ampliación de LVM en Sensor y Servidor, y los ajustes de CPU, RAM y disco del Cliente antes de las pruebas de carga**.
+Estado: **auditoría validada; quedan pendientes los ajustes de CPU, RAM y disco del Cliente antes de las pruebas de carga**.
+
+## 19. Ampliación de LVM en Sensor y Servidor
+
+La verificación de bloques confirmó que el Sensor ya tenía un disco virtual de 160 GiB y el Servidor uno de 120 GiB. El espacio faltante en `/` estaba libre dentro de `ubuntu-vg`, por lo que no se modificó el hardware virtual en ESXi.
+
+Antes de la ampliación:
+
+| VM | Tamaño del LV | Espacio libre del VG |
+|---|---:|---:|
+| Sensor | 78.47 GiB | 78.47 GiB |
+| Servidor | 58.47 GiB | 58.47 GiB |
+
+Se ejecutó mediante Ansible y con privilegios administrativos:
+
+```bash
+lvextend -l +100%FREE -r /dev/ubuntu-vg/ubuntu-lv
+```
+
+La opción `-r` amplió también el sistema de archivos ext4 mientras estaba montado, sin reiniciar las VMs. La validación posterior registró:
+
+| VM | LV final | Raíz visible | Libre en raíz | VG libre |
+|---|---:|---:|---:|---:|
+| Sensor | 156.95 GiB | 153.9 GiB | 140 GiB | 0 GiB |
+| Servidor | 116.95 GiB | 114.8 GiB | 102.5 GiB | 0 GiB |
+
+Para ejecutar la operación se concedió temporalmente `sudo` sin contraseña a `useransible`. El archivo temporal `/etc/sudoers.d/useransible-ansible` fue eliminado de ambas VMs inmediatamente después de validar la ampliación.
+
+Estado: **ampliación de LVM completada y validada en Sensor y Servidor**.

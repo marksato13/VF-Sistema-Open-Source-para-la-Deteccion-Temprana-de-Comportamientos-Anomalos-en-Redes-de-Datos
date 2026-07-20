@@ -324,12 +324,12 @@ El 19 de julio de 2026 se ejecutó una auditoría sin privilegios sobre las cuat
 
 | VM | Sistema | vCPU | RAM visible | Disco virtual real | Raíz visible | Libre en raíz |
 |---|---|---:|---:|---:|---:|---:|
-| VM02 Sensor | Ubuntu 26.04 | 6 | 15,474 MB | 160 GiB | 76.7 GiB | 65.9 GiB |
-| VM03 Servidor | Ubuntu 26.04 | 2 | 3,398 MB | 120 GiB | 57.3 GiB | 47.3 GiB |
+| VM02 Sensor | Ubuntu 26.04 | 6 | 15,474 MB | 160 GiB | 153.9 GiB | 140 GiB |
+| VM03 Servidor | Ubuntu 26.04 | 2 | 3,398 MB | 120 GiB | 114.8 GiB | 102.5 GiB |
 | VM04 Kali | Kali 2026.2 | 4 | 5,927 MB | 60 GiB | 55.7 GiB | 38.3 GiB |
 | VM05 Cliente | Ubuntu 26.04 | 2 | 3,398 MB | 60 GiB | 57.7 GiB | 44.8 GiB |
 
-En Sensor y Servidor, ESXi ya presenta el disco planificado completo. La raíz ocupa solo una parte porque el volumen lógico `ubuntu-vg/ubuntu-lv` no fue extendido al llenar el grupo LVM. Por tanto, no se debe volver a aumentar esos dos discos virtuales: se debe ampliar el volumen lógico y el sistema de archivos usando el espacio libre que ya existe dentro de LVM.
+En Sensor y Servidor, ESXi ya presentaba el disco planificado completo. El 19 de julio de 2026 se extendió en línea el volumen `ubuntu-vg/ubuntu-lv` y su sistema de archivos ext4 para utilizar el 100 % del espacio libre del grupo LVM. No fue necesario aumentar los discos virtuales ni reiniciar las VMs.
 
 ### 9.1 Interfaces reales
 
@@ -344,8 +344,8 @@ En Sensor y Servidor, ESXi ya presenta el disco planificado completo. La raíz o
 
 | VM | Recurso | Planificado | Detectado | Acción |
 |---|---|---:|---:|---|
-| Sensor | Disco | 160 GiB | 160 GiB virtual / 76.7 GiB raíz | Conservar disco ESXi; extender LVM y sistema de archivos |
-| Servidor | Disco | 120 GiB | 120 GiB virtual / 57.3 GiB raíz | Conservar disco ESXi; extender LVM y sistema de archivos |
+| Sensor | Disco | 160 GiB | 160 GiB virtual / 153.9 GiB raíz | Cumplido; LVM y ext4 ampliados |
+| Servidor | Disco | 120 GiB | 120 GiB virtual / 114.8 GiB raíz | Cumplido; LVM y ext4 ampliados |
 | Kali | vCPU | 2 | 4 | Aceptar 4 o reducir después de medir contención |
 | Kali | Disco | 60 GiB | 60 GiB virtual / 55.7 GiB raíz | Sin cambio; asignación correcta |
 | Cliente | vCPU | 4 | 2 | Aumentar a 4 antes de tráfico pesado |
