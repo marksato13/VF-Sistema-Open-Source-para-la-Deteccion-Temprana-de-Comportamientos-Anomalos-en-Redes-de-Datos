@@ -1,0 +1,9 @@
+.venv/
+.ansible/
+.collections/
+*.retry
+*.log
+*.vault-password
+*.pem
+*.key
+artifacts/

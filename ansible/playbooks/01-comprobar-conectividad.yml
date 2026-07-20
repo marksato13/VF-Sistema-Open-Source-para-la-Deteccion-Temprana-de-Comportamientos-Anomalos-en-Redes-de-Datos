@@ -1,0 +1,24 @@
+---
+- name: Comprobar acceso a los nodos sin realizar cambios
+  hosts: ppi_lab
+  gather_facts: false
+  any_errors_fatal: false
+  tasks:
+    - name: Esperar que SSH esté disponible
+      ansible.builtin.wait_for_connection:
+        timeout: 10
+        connect_timeout: 3
+        sleep: 1
+
+    - name: Ejecutar ping de Ansible
+      ansible.builtin.ping:
+
+    - name: Consultar identidad remota sin elevar privilegios
+      ansible.builtin.command: id
+      changed_when: false
+      register: ppi_remote_identity
+
+    - name: Mostrar identidad remota
+      ansible.builtin.debug:
+        var: ppi_remote_identity.stdout
+
