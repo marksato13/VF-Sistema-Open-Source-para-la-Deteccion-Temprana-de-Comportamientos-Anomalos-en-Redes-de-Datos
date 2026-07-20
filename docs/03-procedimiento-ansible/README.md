@@ -1086,3 +1086,74 @@ Estos valores corresponden a tráfico liviano de validación. Todavía deben rep
 Durante la validación se observaron realmente eventos `alert`, `http`, `fileinfo`, `flow` y `stats`. DNS, TLS, SSH y anomalías están configurados, pero aún requieren pruebas específicas antes de declararlos validados.
 
 Estado: **baseline de Suricata instalado, activo y validado con ICMP y HTTP; reinicio controlado, ataques reales, protocolos restantes y pruebas de carga pendientes**.
+
+## 25. Validación de persistencia mediante reinicio controlado
+
+### 25.1 Reinicio de VM02 Sensor
+
+El Sensor se reinició antes que el Servidor para mantener una secuencia recuperable. Ansible confirmó el regreso de SSH y se verificó:
+
+| Elemento | Resultado posterior al reinicio |
+|---|---|
+| Kernel | `7.0.0-27-generic` cargado |
+| Zona horaria | `America/Lima` |
+| NTP | Sincronizado |
+| DNS en `ens34` | `8.8.8.8` y `1.1.1.1` |
+| Interfaces | Las cuatro IP esperadas activas |
+| IP forwarding | `net.ipv4.ip_forward=1` |
+| nftables | Activo, habilitado y política LAN→DMZ cargada |
+| Offloading | TSO, GSO, GRO y LRO en `off` para `ens35` y `ens38` |
+| Suricata | Activo y habilitado |
+| HOME_NET | `[10.30.0.0/24,10.20.0.20/32]` |
+| Captura | AF_PACKET sobre `ens35` |
+| Reglas | 52,044 cargadas |
+
+Después del arranque, tres paquetes ICMP del Cliente al Servidor tuvieron 0 % de pérdida y produjeron tres alertas SID `1000001`. Los contadores de nftables también aumentaron, demostrando que el reenvío se encontraba operativo.
+
+### 25.2 Reinicio de VM03 Servidor
+
+Una vez validado el Sensor, se reinició el Servidor. Se confirmó:
+
+```text
+kernel: 7.0.0-28-generic
+zona horaria: America/Lima
+NTP: sincronizado
+raíz: 115 GiB, 103 GiB disponibles
+```
+
+La ruta configurada en Netplan reapareció después del arranque:
+
+```text
+10.20.0.0/24 via 10.30.0.1 dev ens38 proto static
+```
+
+`ip route get 10.20.0.20` devolvió:
+
+```text
+10.20.0.20 via 10.30.0.1 dev ens38 src 10.30.0.10
+```
+
+Esto confirma que la corrección de asimetría es persistente.
+
+### 25.3 Prueba conjunta posterior a ambos reinicios
+
+Desde VM05 Cliente:
+
+| Prueba | Resultado |
+|---|---|
+| Ruta a `10.30.0.10` | Mediante `10.20.0.1` |
+| ICMP, 5 paquetes | 5 recibidos, 0 % de pérdida |
+| Latencia media | 0.407 ms |
+| TCP/22 | PASS |
+| Alertas Suricata SID `1000001` | 5 de 5 observadas |
+
+Salud de Suricata después de la prueba:
+
+```text
+capture.kernel_drops: 0
+decoder.invalid: 0
+detect.alert_queue_overflow: 0
+rules_loaded: 52044
+```
+
+Estado: **persistencia de Sensor, Suricata, firewall, offloading y ruta de retorno del Servidor validada después de reinicios reales; Cliente y Kali aún no fueron reiniciados**.
