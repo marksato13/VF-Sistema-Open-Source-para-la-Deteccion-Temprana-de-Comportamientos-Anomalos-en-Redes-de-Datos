@@ -79,6 +79,23 @@ El 19 de julio de 2026 se validó esta base en VM01:
 
 La conectividad remota queda pendiente hasta que las cuatro VMs administradas hayan sido creadas y conectadas a `PPI-MGMT`.
 
+### Validación de red de sensor y servidor
+
+El 19 de julio de 2026 se comprobó desde VM01:
+
+| Componente | Interfaz/IP de gestión | ICMP | SSH | Huella ED25519 observada |
+|---|---|---|---|---|
+| VM01 Admin | `ens37` — 10.10.10.10/24 | Local | Local | — |
+| VM02 Sensor | 10.10.10.20/24 | 0 % de pérdida | Puerto 22 abierto | `SHA256:s1CuoCRHEeT82iJqoZ2pupT4A5u6tH58TDXevghZG68` |
+| VM03 Servidor | 10.10.10.30/24 | 0 % de pérdida | Puerto 22 abierto | `SHA256:vCo7DpwfQbD7KczXGskpmPzpqwDgfPtO1Pdj133Uh2o` |
+
+Latencia ICMP observada:
+
+- Sensor: promedio 0.319 ms.
+- Servidor: promedio 0.333 ms.
+
+Las huellas deberán confirmarse desde la consola de cada VM antes de agregarlas al archivo `known_hosts`. La autenticación de Ansible queda pendiente de crear la clave exclusiva del controlador y el usuario remoto.
+
 ## Seguridad
 
 - No desactivar `host_key_checking`.
