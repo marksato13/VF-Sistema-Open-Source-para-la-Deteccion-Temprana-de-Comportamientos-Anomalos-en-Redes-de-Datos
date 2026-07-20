@@ -672,7 +672,7 @@ Hallazgos principales:
 
 La tabla completa de recursos, interfaces y diferencias se mantiene en `docs/01-infraestructura-virtual/README.md`.
 
-Estado: **auditoría validada; quedan pendientes los ajustes de CPU, RAM y disco del Cliente antes de las pruebas de carga**.
+Estado: **auditoría validada; los ajustes posteriores de CPU, RAM y disco del Cliente se registran en la sección 21**.
 
 ## 19. Ampliación de LVM en Sensor y Servidor
 
@@ -915,3 +915,174 @@ espacio disponible: aproximadamente 51 GiB
 La partición y ext4 fueron ampliados en línea sin reiniciar la VM.
 
 Estado: **CPU, RAM y disco actualizados y aprovechados por VM01**.
+
+## 24. Instalación y primera validación de Suricata
+
+### 24.1 Auditoría previa
+
+Se confirmó que Suricata no estaba instalado y que `ens35`, interfaz de entrada desde `PPI-LAN`, se encontraba activa con MTU 1500, sin errores ni descartes registrados por Linux.
+
+La primera ejecución de `apt-get update` falló porque el Sensor tenía `8.8.8.8` configurado como dominio de búsqueda, no como servidor DNS. Se creó una configuración Netplan persistente para `ens34` en `/etc/netplan/99-ppi-dns.yaml`:
+
+```yaml
+network:
+  version: 2
+  ethernets:
+    ens34:
+      nameservers:
+        addresses: [8.8.8.8, 1.1.1.1]
+        search: []
+```
+
+Se verificó con `netplan generate`, `netplan apply`, `resolvectl dns ens34` y resolución de `archive.ubuntu.com`.
+
+### 24.2 Paquetes instalados
+
+Desde los repositorios de Ubuntu 26.04 se instalaron:
+
+| Paquete | Versión |
+|---|---|
+| Suricata | 8.0.3 |
+| suricata-update | 1.3.7 |
+| jq | 1.8.1, ya presente |
+
+Suricata incluye AF_PACKET, Hyperscan, NFQueue, TLS, JA3, JA4 y soporte de systemd. Esta fase utiliza solamente AF_PACKET en modo IDS.
+
+### 24.3 Configuración inicial
+
+Se conservó una copia de fábrica:
+
+```text
+/etc/suricata/suricata.yaml.factory-8.0.3
+```
+
+Cambios aplicados en `/etc/suricata/suricata.yaml`:
+
+```yaml
+HOME_NET: "[10.30.0.0/24,10.20.0.20/32]"
+EXTERNAL_NET: "!$HOME_NET"
+community-id: true
+
+af-packet:
+  - interface: ens35
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+```
+
+Se mantuvieron activos `fast.log`, `eve.json`, `stats.log` y los eventos EVE necesarios para alertas, anomalías, HTTP, DNS, TLS, SSH, flujos y estadísticas.
+
+Kali (`10.20.0.100`) queda fuera de `HOME_NET`. Así, las reglas ET con dirección `$EXTERNAL_NET -> $HOME_NET` pueden evaluar sus pruebas contra la DMZ. El Cliente legítimo se incluye explícitamente como `10.20.0.20/32`.
+
+Se comprobó que `ens38` mantenía TSO, GSO y GRO activos. Se creó y habilitó `/etc/systemd/system/ppi-disable-offload.service` para deshabilitar TSO, GSO, GRO y LRO tanto en `ens35` como en `ens38`, antes de iniciar Suricata. `ethtool -k` confirmó los cuatro valores en `off` para ambas interfaces. Esto reduce el riesgo de que agregaciones del sistema invitado distorsionen tamaños y conteos de paquetes usados después por el pipeline de features.
+
+### 24.4 Reglas
+
+`suricata-update` descargó Emerging Threats Open para Suricata 8.0.3:
+
+```text
+67,977 reglas totales procesadas
+52,043 reglas habilitadas
+15 reglas deshabilitadas
+136 reglas habilitadas por dependencias flowbit
+```
+
+Se añadió `local.rules` con SID `1000001` para una prueba controlada de ICMP. Esta regla identifica tráfico de validación y no debe interpretarse como ataque.
+
+Los archivos reproducibles se guardan en `configs/suricata/`.
+
+### 24.5 Prueba de configuración y servicio
+
+Se ejecutó:
+
+```bash
+suricata -T -c /etc/suricata/suricata.yaml
+systemctl enable --now suricata
+```
+
+Resultados:
+
+```text
+52,044 reglas cargadas correctamente, incluyendo la regla local
+0 reglas fallidas
+servicio active y enabled
+6 hilos de captura AF_PACKET sobre ens35
+aproximadamente 428 MiB de RAM al inicio
+```
+
+El Sensor tiene una actualización de kernel pendiente, desde `7.0.0-14` hacia `7.0.0-27`. No se reinició durante esta fase para no mezclar la validación de Suricata con un cambio de kernel.
+
+### 24.6 Prueba positiva de alerta
+
+Desde el Cliente se enviaron tres solicitudes ICMP hacia `10.30.0.10`. `eve.json` registró tres alertas:
+
+```text
+signature_id: 1000001
+signature: PPI LAB ICMP TEST
+action: allowed
+src_ip: 10.20.0.20
+dest_ip: 10.30.0.10
+```
+
+La acción `allowed` confirma que Suricata funciona como IDS pasivo y no como IPS.
+
+### 24.7 Hallazgo de enrutamiento y corrección
+
+La primera solicitud HTTP llegó al Servidor, pero su respuesta tomó la ruta externa debido a la presencia de dos gateways predeterminados. `ip route get 10.20.0.20` seleccionaba `172.17.25.121` por `ens34`, creando tráfico asimétrico.
+
+Se creó `/etc/netplan/99-ppi-return-route.yaml` con una ruta de retorno:
+
+```yaml
+network:
+  version: 2
+  ethernets:
+    ens38:
+      routes:
+        - to: 10.20.0.0/24
+          via: 10.30.0.1
+```
+
+La ruta aplicada es:
+
+```text
+10.20.0.0/24 via 10.30.0.1 dev ens38
+```
+
+Después de aplicarla, `ip route get 10.20.0.20` confirmó origen `10.30.0.10` y siguiente salto `10.30.0.1`. Esta ruta explícita reemplaza la suposición anterior de que el gateway DMZ sería seleccionado siempre. Su presencia en Netplan demuestra configuración persistente, pero la validación posterior a reinicio sigue pendiente.
+
+Cliente y Kali conservan un gateway externo, pero `ip route get 10.30.0.10` selecciona sus rutas más específicas mediante `10.20.0.1`. El Sensor tiene ambas redes conectadas directamente. Esto asegura el camino para destinos experimentales; no elimina la posibilidad de usar deliberadamente las direcciones `172.17.25.x`, por lo que las NIC externas deberán desconectarse antes del dataset final.
+
+### 24.8 Prueba de capa 7
+
+Se levantó temporalmente `python3 -m http.server` en `10.30.0.10:8080` y se realizó desde el Cliente:
+
+```text
+GET /?ppi=suricata-validation-2 HTTP/1.1
+```
+
+El servidor respondió `200` con 510 bytes. Suricata registró:
+
+- `event_type=http`;
+- origen `10.20.0.20` y destino `10.30.0.10:8080`;
+- método, URL, agente de usuario, tipo de contenido, estado y longitud;
+- `flow_id` y `community_id` para correlación.
+
+Emerging Threats generó `ET INFO Python SimpleHTTP ServerBanner`, severidad 3. Es una alerta informativa coherente con el servidor temporal y no evidencia un ataque. La regla ICMP SID `1000001` no coincidió con el flujo HTTP.
+
+Esta última comprobación funciona como prueba negativa específica de la regla local: un flujo TCP/HTTP legítimo no produjo el SID ICMP `1000001`. Todavía no constituye una prueba integral de falsos positivos del ruleset ET.
+
+### 24.9 Salud inicial
+
+La estadística posterior registró:
+
+```text
+capture.kernel_drops: 0
+decoder.invalid: 0
+detect.alert_queue_overflow: 0
+```
+
+Estos valores corresponden a tráfico liviano de validación. Todavía deben repetirse bajo tráfico legítimo pesado y concurrencia antes de afirmar que el Sensor no pierde paquetes.
+
+Durante la validación se observaron realmente eventos `alert`, `http`, `fileinfo`, `flow` y `stats`. DNS, TLS, SSH y anomalías están configurados, pero aún requieren pruebas específicas antes de declararlos validados.
+
+Estado: **baseline de Suricata instalado, activo y validado con ICMP y HTTP; reinicio controlado, ataques reales, protocolos restantes y pruebas de carga pendientes**.

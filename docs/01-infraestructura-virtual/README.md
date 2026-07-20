@@ -380,7 +380,7 @@ Kali 10.20.0.100 ───┘
 |---|---|---|---|
 | Cliente | `10.30.0.0/24` | `10.20.0.1` | `ens38` |
 | Kali | `10.30.0.0/24` | `10.20.0.1` | `eth1` |
-| Servidor | Ruta predeterminada experimental | `10.30.0.1` | `ens38` |
+| Servidor | `10.20.0.0/24` | `10.30.0.1` | `ens38` |
 
 El Sensor mantiene `net.ipv4.ip_forward=1`. Su tabla `inet ppi_filter` aplica política `drop` al tráfico reenviado y permite únicamente:
 

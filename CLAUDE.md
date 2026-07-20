@@ -46,7 +46,7 @@ Cliente 10.20.0.20 ─┐
 Kali 10.20.0.100 ───┘
 ```
 
-El Sensor tiene `ip_forward=1` y una política de reenvío con nftables. Cliente y Kali poseen una ruta persistente a `10.30.0.0/24` mediante `10.20.0.1`. Servidor utiliza `10.30.0.1` como gateway experimental.
+El Sensor tiene `ip_forward=1` y una política de reenvío con nftables. Cliente y Kali poseen una ruta persistente a `10.30.0.0/24` mediante `10.20.0.1`. El Servidor posee una ruta explícita de retorno a `10.20.0.0/24` mediante `10.30.0.1`.
 
 Las NIC externas de `172.17.25.0/24` todavía existen temporalmente para instalación y recuperación. Son una posible ruta de evasión; deberán desconectarse o bloquearse antes de obtener evidencia experimental definitiva.
 
@@ -61,7 +61,8 @@ Las NIC externas de `172.17.25.0/24` todavía existen temporalmente para instala
 - Todas las VMs usan `America/Lima` y NTP sincronizado.
 - El Sensor `10.10.10.20` sirve como referencia NTP interna.
 - Enrutamiento Cliente/Kali hacia Servidor probado mediante ICMP, TCP/22, traza y contadores de nftables.
-- Siguiente fase: auditar, instalar y configurar Suricata como IDS sobre el flujo LAN–DMZ.
+- Suricata 8.0.3 está instalado como IDS AF_PACKET sobre `ens35`, con `HOME_NET=[10.30.0.0/24,10.20.0.20/32]`, Emerging Threats Open, EVE JSON y una regla local de validación.
+- La captura se validó con alertas ICMP y un evento HTTP completo; todavía faltan revisión adversarial, reinicio controlado y pruebas de carga.
 
 ## Observaciones obligatorias del jurado
 
