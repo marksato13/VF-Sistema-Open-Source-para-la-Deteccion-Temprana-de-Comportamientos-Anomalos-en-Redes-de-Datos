@@ -553,3 +553,32 @@ Clave pública: ppi-ansible-controller
 ```
 
 Mientras no se cumpla, pueden prepararse roles y playbooks localmente, pero no se declarará ninguna configuración remota como aplicada o validada.
+
+### 17.1 Bootstrap automatizado preparado
+
+Se agregó el script:
+
+```text
+ansible/scripts/bootstrap-useransible.sh
+```
+
+El script utiliza temporalmente una cuenta administrativa existente, por defecto `m4rk`, y solicita sus credenciales directamente en una terminal interactiva. En cada VM realiza de forma idempotente:
+
+1. Crear `useransible` si no existe.
+2. Crear `/home/useransible/.ssh` con modo 700.
+3. Instalar la clave pública del controlador.
+4. Aplicar propietario `useransible:useransible`.
+5. Aplicar modo 600 a `authorized_keys`.
+6. Probar inmediatamente autenticación por clave.
+
+No almacena la contraseña administrativa y no agrega `useransible` a `sudo`.
+
+### 17.2 Resultado del primer bootstrap
+
+El primer intento interactivo no consiguió completar la autorización remota. Una comprobación posterior volvió a obtener en las cuatro VMs:
+
+```text
+Permission denied (publickey,password)
+```
+
+Estado: **script preparado y validado sintácticamente; ejecución remota pendiente de credenciales introducidas por el propietario**.
