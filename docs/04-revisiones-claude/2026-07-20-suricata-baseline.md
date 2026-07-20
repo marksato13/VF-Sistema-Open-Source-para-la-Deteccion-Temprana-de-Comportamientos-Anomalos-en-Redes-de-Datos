@@ -62,3 +62,13 @@ La prueba conjunta posterior obtuvo 5 de 5 respuestas ICMP, TCP/22 correcto y 5 
 - Las NIC externas todavía deben aislarse antes del dataset definitivo.
 
 Estado: **revisión inicial atendida; no se declara cerrada la fase experimental de Suricata**.
+
+## Revisión conjunta Codex + Claude (20-07-2026)
+
+Claude confirmó que el baseline de Suricata, el enrutamiento y la persistencia de rutas ya están validados. Indicó estas condiciones previas para pruebas defendibles:
+
+1. Desconectar o bloquear las NIC externas `172.17.25.0/24` antes del dataset final.
+2. Resolver la sincronización NTP de Kali (`Packet count: 0`) y registrar una verificación positiva.
+3. Ejecutar primero tráfico legítimo pesado y medir `kernel_drops`, antes de los escenarios de ataque.
+
+La implementación de variables multicapa L3/L4/L7 y el reentrenamiento de Isolation Forest v2 siguen pendientes; no se presentan como resultados obtenidos.
