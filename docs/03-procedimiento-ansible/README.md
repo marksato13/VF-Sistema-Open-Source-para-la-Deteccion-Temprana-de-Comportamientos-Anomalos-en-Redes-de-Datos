@@ -25,6 +25,9 @@ Estados utilizados:
 | Crear clave del controlador | COMPLETADO | Clave Ed25519 exclusiva disponible |
 | Crear `useransible` en sensor | PENDIENTE DE VALIDACIÓN | Comandos entregados para consola ESXi |
 | Crear `useransible` en servidor | PENDIENTE DE VALIDACIÓN | Comandos entregados para consola ESXi |
+| Conectividad IP con Kali | VALIDADO | 10.10.10.40 responde, 0 % de pérdida |
+| Habilitar SSH en Kali | PENDIENTE | Puerto 22 rechazó la conexión |
+| Crear `useransible` en Kali | PENDIENTE | Requiere instalar y activar OpenSSH |
 | Ejecutar ping de Ansible remoto | PENDIENTE | Requiere cuenta y clave instaladas |
 | Configurar privilegios limitados | PENDIENTE | Se hará después del acceso sin privilegios |
 
@@ -329,3 +332,76 @@ failed=0
 
 Después se diseñará un rol de privilegios mínimos y se automatizará la configuración de interfaces, enrutamiento y Suricata.
 
+## 15. Incorporación de Kali Linux
+
+### 15.1 Comprobación inicial
+
+El 19 de julio de 2026 se comprobó la IP de gestión prevista:
+
+```text
+IP: 10.10.10.40
+Interfaz de salida del controlador: ens37
+ICMP: 2/2 respuestas
+Pérdida: 0 %
+Latencia promedio: 0.283 ms
+MAC observada: 00:0c:29:52:db:74
+SSH: puerto 22 cerrado/rechazado
+```
+
+El resultado confirma que Kali está conectada a `PPI-MGMT`, pero OpenSSH Server todavía no está disponible. No fue posible obtener ni registrar una huella ED25519.
+
+### 15.2 Instalar SSH y la cuenta técnica
+
+Desde la consola de Kali en ESXi se ejecutará:
+
+```bash
+sudo apt update
+sudo apt install -y openssh-server python3
+sudo systemctl enable --now ssh
+
+sudo adduser --disabled-password --gecos "" useransible
+
+sudo install -d \
+  -m 700 \
+  -o useransible \
+  -g useransible \
+  /home/useransible/.ssh
+
+echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB4FMAbIxw5Ddov41uYfLo3vYayyXhrTV/uHhCx8RM76 ppi-ansible-controller' \
+  | sudo tee /home/useransible/.ssh/authorized_keys
+
+sudo chown useransible:useransible \
+  /home/useransible/.ssh/authorized_keys
+
+sudo chmod 600 \
+  /home/useransible/.ssh/authorized_keys
+```
+
+### 15.3 Comprobaciones requeridas en Kali
+
+```bash
+systemctl is-enabled ssh
+systemctl is-active ssh
+ss -lntp | grep ':22'
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+Resultados esperados:
+
+```text
+enabled
+active
+```
+
+La huella ED25519 mostrada por Kali se comparará con `ssh-keyscan` desde VM01 antes de agregarla a `known_hosts`.
+
+### 15.4 Seguridad prevista
+
+- `useransible` usará solamente autenticación por clave.
+- La clave privada permanecerá en VM01.
+- No se habilitará acceso SSH de `root`.
+- No se agregará todavía `useransible` a `sudo`.
+- Posteriormente el firewall de Kali permitirá SSH administrativo desde `10.10.10.10` y bloqueará conexiones iniciadas desde Kali hacia otros nodos de `PPI-MGMT`.
+- Las herramientas de ataque utilizarán la NIC de `PPI-LAN`, no la de gestión.
+
+Estado actual de Kali: **conectividad IP validada; SSH y cuenta técnica pendientes**.

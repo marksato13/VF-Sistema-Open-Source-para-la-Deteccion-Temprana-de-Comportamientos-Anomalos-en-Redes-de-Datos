@@ -110,11 +110,13 @@ El 19 de julio de 2026 se comprobó desde VM01:
 | VM01 Admin | `ens37` — 10.10.10.10/24 | Local | Local | — |
 | VM02 Sensor | 10.10.10.20/24 | 0 % de pérdida | Puerto 22 abierto | `SHA256:s1CuoCRHEeT82iJqoZ2pupT4A5u6tH58TDXevghZG68` |
 | VM03 Servidor | 10.10.10.30/24 | 0 % de pérdida | Puerto 22 abierto | `SHA256:vCo7DpwfQbD7KczXGskpmPzpqwDgfPtO1Pdj133Uh2o` |
+| VM04 Kali | 10.10.10.40/24 | 0 % de pérdida | Puerto 22 cerrado | Pendiente de instalar OpenSSH |
 
 Latencia ICMP observada:
 
 - Sensor: promedio 0.319 ms.
 - Servidor: promedio 0.333 ms.
+- Kali: promedio 0.283 ms.
 
 Las huellas deberán confirmarse desde la consola de cada VM antes de agregarlas al archivo `known_hosts`. La autenticación de Ansible queda pendiente de crear la clave exclusiva del controlador y el usuario remoto.
 
