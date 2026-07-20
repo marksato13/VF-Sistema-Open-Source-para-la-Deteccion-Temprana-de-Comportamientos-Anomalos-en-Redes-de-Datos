@@ -781,3 +781,107 @@ espacio libre   83 GiB
 No se creó un segundo disco y no fue necesario reiniciar durante la ampliación de ext4.
 
 Estado: **recursos finales de VM05 Cliente configurados y validados**.
+
+## 22. Configuración del Sensor como router LAN–DMZ
+
+### 22.1 Auditoría previa
+
+Antes de modificar la red se consultaron interfaces, rutas, reenvío IPv4 y firewall. Se confirmó:
+
+- Sensor: `ens35=10.20.0.1`, `ens38=10.30.0.1` y `net.ipv4.ip_forward=0`.
+- Cliente: `ens38=10.20.0.20`, sin ruta a `10.30.0.0/24`.
+- Kali: `eth1=10.20.0.100`, sin ruta a `10.30.0.0/24`.
+- Servidor: `ens38=10.30.0.10`, con gateway `10.30.0.1`.
+- `nftables` estaba instalado en el Sensor, sin reglas activas y deshabilitado al arranque.
+
+La red `PPI-MGMT` se mantuvo sin cambios para conservar el acceso SSH de recuperación.
+
+### 22.2 Activación persistente de IP forwarding
+
+En el Sensor se creó `/etc/sysctl.d/99-ppi-router.conf`:
+
+```text
+net.ipv4.ip_forward = 1
+```
+
+Se aplicó y verificó con:
+
+```bash
+sysctl --system
+sysctl net.ipv4.ip_forward
+```
+
+Resultado: `net.ipv4.ip_forward = 1`.
+
+### 22.3 Política de reenvío con nftables
+
+Se configuró `/etc/nftables.conf` con una política cerrada para el tráfico reenviado:
+
+```nft
+#!/usr/sbin/nft -f
+flush ruleset
+
+table inet ppi_filter {
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+    ct state invalid drop
+    ct state established,related accept
+    iifname "ens35" oifname "ens38" ip saddr 10.20.0.0/24 ip daddr 10.30.0.0/24 counter accept
+  }
+}
+```
+
+Antes de cargarla se comprobó la sintaxis y después se habilitó su persistencia:
+
+```bash
+nft -c -f /etc/nftables.conf
+nft -f /etc/nftables.conf
+systemctl enable nftables
+```
+
+La cadena `forward` no controla conexiones dirigidas al propio Sensor, por lo que el acceso SSH mediante `PPI-MGMT` se conservó.
+
+### 22.4 Ruta persistente del Cliente
+
+El Cliente utiliza NetworkManager. Se añadió a la conexión asociada con `ens38`:
+
+```bash
+nmcli connection modify 'Conexión cableada 2' \
+  +ipv4.routes '10.30.0.0/24 10.20.0.1'
+nmcli connection up 'Conexión cableada 2'
+```
+
+### 22.5 Ruta persistente de Kali
+
+La conexión de `eth1` se denomina `eth1`:
+
+```bash
+nmcli connection modify eth1 \
+  +ipv4.routes '10.30.0.0/24 10.20.0.1'
+nmcli connection up eth1
+```
+
+### 22.6 Validación funcional
+
+En Cliente y Kali, `ip route get 10.30.0.10` confirmó el siguiente salto `10.20.0.1`. La traza desde el Cliente mostró:
+
+```text
+1  10.20.0.1
+2  10.30.0.10
+```
+
+Resultados:
+
+| Prueba | Cliente | Kali |
+|---|---|---|
+| Ruta por `10.20.0.1` | PASS | PASS |
+| ICMP a `10.30.0.10` | PASS | PASS, 0 % de pérdida |
+| TCP/22 a `10.30.0.10` | PASS | PASS |
+
+El contador de la regla LAN→DMZ del Sensor aumentó a 7 paquetes y 1,932 bytes durante la validación, demostrando que el tráfico fue reenviado por el Sensor.
+
+### 22.7 Condición para las pruebas finales
+
+Las NIC de `172.17.25.0/24` siguen conectadas temporalmente para instalación y recuperación. Aunque las pruebas dirigidas a `10.30.0.10` ya atraviesan obligatoriamente el Sensor, antes de recolectar el dataset final se deberán desconectar en ESXi las NIC externas de Servidor, Kali y Cliente, o bloquear su uso experimental. La interfaz externa del Sensor puede mantenerse mientras sea necesaria para paquetes y NTP.
+
+Estado: **enrutamiento LAN–DMZ, firewall y rutas persistentes configurados y validados**.

@@ -366,6 +366,30 @@ Antes de la validación experimental final se deberá:
 
 No se retirarán las NIC externas mediante automatización remota hasta disponer de acceso confirmado por `PPI-MGMT` y un procedimiento de recuperación por consola ESXi.
 
+### 9.5 Enrutamiento LAN–DMZ implementado
+
+El Sensor quedó configurado como router entre `PPI-LAN` y `PPI-DMZ`:
+
+```text
+Cliente 10.20.0.20 ─┐
+                     ├──► 10.20.0.1 [Sensor] 10.30.0.1 ──► 10.30.0.10 Servidor
+Kali 10.20.0.100 ───┘
+```
+
+| Equipo | Destino | Siguiente salto | Interfaz |
+|---|---|---|---|
+| Cliente | `10.30.0.0/24` | `10.20.0.1` | `ens38` |
+| Kali | `10.30.0.0/24` | `10.20.0.1` | `eth1` |
+| Servidor | Ruta predeterminada experimental | `10.30.0.1` | `ens38` |
+
+El Sensor mantiene `net.ipv4.ip_forward=1`. Su tabla `inet ppi_filter` aplica política `drop` al tráfico reenviado y permite únicamente:
+
+- conexiones iniciadas desde `10.20.0.0/24` hacia `10.30.0.0/24`, entrando por `ens35` y saliendo por `ens38`;
+- paquetes de retorno pertenecientes a conexiones `established,related`;
+- descarta estados inválidos y cualquier otro reenvío.
+
+La configuración se guarda en `/etc/sysctl.d/99-ppi-router.conf` y `/etc/nftables.conf`; el servicio `nftables` está habilitado para el arranque.
+
 ### 9.4 Sincronización horaria del laboratorio
 
 Todas las VMs utilizan la zona horaria `America/Lima`. El Sensor funciona como referencia NTP interna en `10.10.10.20`: sincroniza su reloj mediante Chrony con fuentes externas y permite consultas desde `10.10.10.0/24`. Servidor, Kali y Cliente consultan al Sensor, evitando diferencias de tiempo entre capturas, alertas, registros de aplicación y resultados del modelo.
