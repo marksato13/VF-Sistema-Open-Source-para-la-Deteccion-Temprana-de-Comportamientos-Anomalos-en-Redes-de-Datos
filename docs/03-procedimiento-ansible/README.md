@@ -28,6 +28,9 @@ Estados utilizados:
 | Conectividad IP con Kali | VALIDADO | 10.10.10.40 responde, 0 % de pérdida |
 | Habilitar SSH en Kali | PENDIENTE | Puerto 22 rechazó la conexión |
 | Crear `useransible` en Kali | PENDIENTE | Requiere instalar y activar OpenSSH |
+| Conectividad IP con VM05 Cliente | VALIDADO | 10.10.10.50 responde, 0 % de pérdida |
+| Habilitar SSH en VM05 Cliente | PENDIENTE | Puerto 22 rechazó la conexión |
+| Crear `useransible` en VM05 Cliente | PENDIENTE | Requiere instalar y activar OpenSSH |
 | Ejecutar ping de Ansible remoto | PENDIENTE | Requiere cuenta y clave instaladas |
 | Configurar privilegios limitados | PENDIENTE | Se hará después del acceso sin privilegios |
 
@@ -405,3 +408,76 @@ La huella ED25519 mostrada por Kali se comparará con `ssh-keyscan` desde VM01 a
 - Las herramientas de ataque utilizarán la NIC de `PPI-LAN`, no la de gestión.
 
 Estado actual de Kali: **conectividad IP validada; SSH y cuenta técnica pendientes**.
+
+## 16. Incorporación de VM05 Cliente Desktop
+
+### 16.1 Comprobación inicial
+
+El 19 de julio de 2026 se comprobó la IP de gestión del cliente:
+
+```text
+IP: 10.10.10.50
+Interfaz de salida del controlador: ens37
+ICMP: 2/2 respuestas
+Pérdida: 0 %
+Latencia promedio: 0.309 ms
+MAC observada: 00:0c:29:c5:ed:70
+TTL observado: 64
+SSH: puerto 22 cerrado/rechazado
+```
+
+El TTL es compatible con un sistema Linux, pero la distribución y versión se confirmarán mediante facts de Ansible después de habilitar SSH. El inventario mantiene este host en `clientes_linux`.
+
+### 16.2 Instalar SSH y la cuenta técnica
+
+Desde la consola de VM05 Cliente Desktop en ESXi se ejecutará:
+
+```bash
+sudo apt update
+sudo apt install -y openssh-server python3
+sudo systemctl enable --now ssh
+
+sudo adduser --disabled-password --gecos "" useransible
+
+sudo install -d \
+  -m 700 \
+  -o useransible \
+  -g useransible \
+  /home/useransible/.ssh
+
+echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB4FMAbIxw5Ddov41uYfLo3vYayyXhrTV/uHhCx8RM76 ppi-ansible-controller' \
+  | sudo tee /home/useransible/.ssh/authorized_keys
+
+sudo chown useransible:useransible \
+  /home/useransible/.ssh/authorized_keys
+
+sudo chmod 600 \
+  /home/useransible/.ssh/authorized_keys
+```
+
+### 16.3 Comprobaciones requeridas
+
+```bash
+systemctl is-enabled ssh
+systemctl is-active ssh
+ss -lntp | grep ':22'
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+La huella ED25519 se comparará desde VM01 antes de incorporarla a `known_hosts`.
+
+### 16.4 Función posterior del cliente
+
+Una vez administrable, VM05 producirá tráfico legítimo reproducible:
+
+- Navegación HTTP/HTTPS.
+- Descargas y cargas de archivos grandes.
+- SCP/SFTP.
+- Streaming o tráfico sostenido.
+- `iperf3` TCP y UDP controlado.
+- Paquetes legítimos entre 500 y 1500 bytes.
+- Tráfico concurrente mientras Kali ejecuta ataques autorizados.
+
+La NIC de `PPI-MGMT` se utilizará para Ansible. La NIC de `PPI-LAN`, con IP planificada `10.20.0.20/24`, generará exclusivamente el tráfico experimental.
+
+Estado actual de VM05: **conectividad IP validada; SSH, sistema exacto y cuenta técnica pendientes**.
