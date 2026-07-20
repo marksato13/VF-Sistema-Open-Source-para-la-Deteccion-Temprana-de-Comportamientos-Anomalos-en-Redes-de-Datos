@@ -235,3 +235,9 @@ Una fase solo se considera terminada cuando existen:
 7. commit identificable sin secretos.
 
 El objetivo final no es demostrar que el sistema siempre tiene razón, sino delimitar con evidencia qué detecta, bajo qué condiciones funciona, cuáles son sus falsos positivos y falsos negativos, y qué limitaciones conserva.
+
+## Rediseño experimental vigente
+
+Antes de ejecutar escenarios, Claude debe leer `docs/05-plan-pruebas/01-diseno-defendible.md` y `docs/05-plan-pruebas/README.md`. La campaña vigente se organiza como F0 (calibración), F1 (normalidad para entrenamiento), F2 (estrés legítimo), F3 (anomalías L3/L4/L7) y F4 (mixto). No se deben ejecutar ataques ni capturar el dataset final mientras Kali no tenga NTP sincronizado y las NIC externas estén aisladas.
+
+El propósito es producir ventanas etiquetadas y reproducibles para Isolation Forest y modelos futuros. Las features nuevas deben demostrar código, diccionario, prueba y ablación; nunca deben marcarse como implementadas solo por estar planificadas. Claude debe revisar cada campaña contra MITRE ATT&CK, NIST y la documentación oficial de Suricata, y cuestionar tamaño de muestra, contaminación entre particiones, falsos positivos y pérdida de paquetes.
