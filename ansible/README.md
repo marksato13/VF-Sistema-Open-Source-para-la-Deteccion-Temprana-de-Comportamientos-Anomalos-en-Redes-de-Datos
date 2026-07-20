@@ -10,7 +10,7 @@ Primera base del controlador Ansible. En esta etapa se incluyen configuración, 
 - Python 3.12–3.14.
 - Acceso directo a `PPI-MGMT` desde `10.10.10.10`.
 - Llave SSH por host o una llave de automatización protegida.
-- Usuario remoto `ansible`, inicialmente sin contraseñas almacenadas en Git.
+- Usuario remoto `useransible`, sin contraseñas almacenadas en Git.
 
 Se utiliza `ansible-core` 2.21 porque soporta Python 3.14 en el controlador. Las dependencias se instalan dentro de `.venv`; no se modifica el Python global.
 
@@ -78,6 +78,28 @@ El 19 de julio de 2026 se validó esta base en VM01:
 - Preflight local: 5 tareas `ok`, 0 cambios, 0 fallos.
 
 La conectividad remota queda pendiente hasta que las cuatro VMs administradas hayan sido creadas y conectadas a `PPI-MGMT`.
+
+## Cuenta técnica del laboratorio
+
+El inventario utiliza la cuenta `useransible` y la clave privada local:
+
+```text
+~/.ssh/id_ed25519_ppi_ansible
+```
+
+La clave privada existe solamente en VM01 y está excluida de Git. Su huella es:
+
+```text
+SHA256:pFBXQ3XD4yfZvhDvuh9CTP4+qPCEPr2Q+F0V7TOnAN4
+```
+
+La clave pública que se instala en las VMs administradas es:
+
+```text
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB4FMAbIxw5Ddov41uYfLo3vYayyXhrTV/uHhCx8RM76 ppi-ansible-controller
+```
+
+Desde la consola de cada VM Linux se creará inicialmente la cuenta y se instalará esa clave pública. No se copiará la clave privada y no se registrará una contraseña en el repositorio.
 
 ### Validación de red de sensor y servidor
 
