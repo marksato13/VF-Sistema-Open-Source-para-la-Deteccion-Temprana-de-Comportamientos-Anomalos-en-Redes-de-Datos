@@ -365,3 +365,16 @@ Antes de la validación experimental final se deberá:
 5. Confirmar que el servidor responde exclusivamente mediante `10.30.0.1`.
 
 No se retirarán las NIC externas mediante automatización remota hasta disponer de acceso confirmado por `PPI-MGMT` y un procedimiento de recuperación por consola ESXi.
+
+### 9.4 Sincronización horaria del laboratorio
+
+Todas las VMs utilizan la zona horaria `America/Lima`. El Sensor funciona como referencia NTP interna en `10.10.10.20`: sincroniza su reloj mediante Chrony con fuentes externas y permite consultas desde `10.10.10.0/24`. Servidor, Kali y Cliente consultan al Sensor, evitando diferencias de tiempo entre capturas, alertas, registros de aplicación y resultados del modelo.
+
+| VM | Zona horaria | Fuente NTP | Estado validado |
+|---|---|---|---|
+| Sensor | `America/Lima` | Fuentes de Ubuntu/Canonical | Sincronizado, estrato 3 |
+| Servidor | `America/Lima` | `10.10.10.20` | Sincronizado, estrato 4 |
+| Kali | `America/Lima` | `10.10.10.20` | Sincronizado |
+| Cliente | `America/Lima` | `10.10.10.20` | Sincronizado, estrato 4 |
+
+Esta jerarquía permite conservar una referencia común durante las pruebas. Antes de desconectar las interfaces externas se debe confirmar que el Sensor mantiene una fuente válida o definir la VM administrativa como segunda fuente NTP interna.

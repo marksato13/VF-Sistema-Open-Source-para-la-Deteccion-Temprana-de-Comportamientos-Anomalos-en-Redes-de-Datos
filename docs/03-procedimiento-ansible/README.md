@@ -701,3 +701,52 @@ La opción `-r` amplió también el sistema de archivos ext4 mientras estaba mon
 Para ejecutar la operación se concedió temporalmente `sudo` sin contraseña a `useransible`. El archivo temporal `/etc/sudoers.d/useransible-ansible` fue eliminado de ambas VMs inmediatamente después de validar la ampliación.
 
 Estado: **ampliación de LVM completada y validada en Sensor y Servidor**.
+
+## 20. Zona horaria y sincronización NTP
+
+La auditoría inicial encontró tres configuraciones horarias diferentes:
+
+- Sensor y Servidor: `Etc/UTC`.
+- Kali: `Europe/Madrid`.
+- Cliente y VM administrativa: `America/Lima`.
+- El Sensor no estaba sincronizado y tenía un atraso aproximado de tres horas.
+
+Se estableció `America/Lima` en las cuatro VMs administradas:
+
+```bash
+timedatectl set-timezone America/Lima
+timedatectl set-ntp true
+```
+
+El Sensor utiliza Chrony. No tenía fuentes NTP configuradas y la dirección `8.8.8.8` figuraba incorrectamente como dominio de búsqueda. Se corrigió la resolución DNS de su interfaz externa, se añadió una fuente de Ubuntu/Canonical y se realizó el ajuste inicial con `chronyc makestep`.
+
+Para crear una referencia horaria común dentro de la topología, el Sensor quedó autorizado para atender solicitudes NTP de `10.10.10.0/24`:
+
+```text
+allow 10.10.10.0/24
+```
+
+Servidor y Cliente usan Chrony con esta fuente:
+
+```text
+server 10.10.10.20 iburst prefer trust
+```
+
+Kali usa `systemd-timesyncd` con la siguiente configuración:
+
+```ini
+[Time]
+NTP=10.10.10.20
+FallbackNTP=ntp.ubuntu.com
+```
+
+La validación conjunta del 19 de julio de 2026 confirmó:
+
+| VM | Zona horaria | NTP sincronizado | Referencia |
+|---|---|---|---|
+| Sensor | `America/Lima` | Sí | Ubuntu/Canonical, estrato 3 |
+| Servidor | `America/Lima` | Sí | Sensor `10.10.10.20`, estrato 4 |
+| Kali | `America/Lima` | Sí | Sensor `10.10.10.20` |
+| Cliente | `America/Lima` | Sí | Sensor `10.10.10.20`, estrato 4 |
+
+Estado: **zona horaria unificada y sincronización NTP validada en todas las VMs**.
