@@ -320,14 +320,16 @@ Si estos criterios no se cumplen, los recursos se ajustarán usando mediciones r
 
 ## 9. Inventario real detectado con Ansible
 
-El 19 de julio de 2026 se ejecutó una auditoría sin privilegios sobre las cuatro VMs administradas. Los valores de RAM y disco corresponden a lo visible dentro del sistema invitado; pueden ser ligeramente inferiores a la asignación mostrada por ESXi debido a memoria reservada, particiones y formato del sistema de archivos.
+El 19 de julio de 2026 se ejecutó una auditoría sin privilegios sobre las cuatro VMs administradas. Posteriormente se verificó el almacenamiento con `lsblk`, `findmnt` y `df`. Es importante diferenciar el tamaño del disco virtual presentado por ESXi del tamaño del volumen lógico y del sistema de archivos montado en `/`.
 
-| VM | Sistema | vCPU detectadas | RAM visible | Disco raíz visible | Espacio libre |
-|---|---|---:|---:|---:|---:|
-| VM02 Sensor | Ubuntu 26.04 | 6 | 15,474 MB | 76.7 GB | 65.9 GB |
-| VM03 Servidor | Ubuntu 26.04 | 2 | 3,398 MB | 57.3 GB | 47.3 GB |
-| VM04 Kali | Kali 2026.2 | 4 | 5,927 MB | 55.7 GB | 38.3 GB |
-| VM05 Cliente | Ubuntu 26.04 | 2 | 3,398 MB | 57.7 GB | 44.8 GB |
+| VM | Sistema | vCPU | RAM visible | Disco virtual real | Raíz visible | Libre en raíz |
+|---|---|---:|---:|---:|---:|---:|
+| VM02 Sensor | Ubuntu 26.04 | 6 | 15,474 MB | 160 GiB | 76.7 GiB | 65.9 GiB |
+| VM03 Servidor | Ubuntu 26.04 | 2 | 3,398 MB | 120 GiB | 57.3 GiB | 47.3 GiB |
+| VM04 Kali | Kali 2026.2 | 4 | 5,927 MB | 60 GiB | 55.7 GiB | 38.3 GiB |
+| VM05 Cliente | Ubuntu 26.04 | 2 | 3,398 MB | 60 GiB | 57.7 GiB | 44.8 GiB |
+
+En Sensor y Servidor, ESXi ya presenta el disco planificado completo. La raíz ocupa solo una parte porque el volumen lógico `ubuntu-vg/ubuntu-lv` no fue extendido al llenar el grupo LVM. Por tanto, no se debe volver a aumentar esos dos discos virtuales: se debe ampliar el volumen lógico y el sistema de archivos usando el espacio libre que ya existe dentro de LVM.
 
 ### 9.1 Interfaces reales
 
@@ -342,13 +344,13 @@ El 19 de julio de 2026 se ejecutó una auditoría sin privilegios sobre las cuat
 
 | VM | Recurso | Planificado | Detectado | Acción |
 |---|---|---:|---:|---|
-| Sensor | Disco | 160 GB | 76.7 GB raíz | Ampliar disco virtual y sistema de archivos |
-| Servidor | Disco | 120 GB | 57.3 GB raíz | Ampliar disco virtual y sistema de archivos |
+| Sensor | Disco | 160 GiB | 160 GiB virtual / 76.7 GiB raíz | Conservar disco ESXi; extender LVM y sistema de archivos |
+| Servidor | Disco | 120 GiB | 120 GiB virtual / 57.3 GiB raíz | Conservar disco ESXi; extender LVM y sistema de archivos |
 | Kali | vCPU | 2 | 4 | Aceptar 4 o reducir después de medir contención |
-| Kali | Disco | 60 GB | 55.7 GB raíz | Sin cambio urgente; verificar tamaño virtual |
+| Kali | Disco | 60 GiB | 60 GiB virtual / 55.7 GiB raíz | Sin cambio; asignación correcta |
 | Cliente | vCPU | 4 | 2 | Aumentar a 4 antes de tráfico pesado |
 | Cliente | RAM | 8 GB | 3,398 MB visibles | Aumentar asignación antes de tráfico pesado |
-| Cliente | Disco | 100 GB | 57.7 GB raíz | Ampliar disco virtual y sistema de archivos |
+| Cliente | Disco | 100 GiB | 60 GiB virtual / 57.7 GiB raíz | Aumentar disco ESXi a 100 GiB y después extender partición/sistema de archivos |
 
 ### 9.3 Interfaces externas temporales
 

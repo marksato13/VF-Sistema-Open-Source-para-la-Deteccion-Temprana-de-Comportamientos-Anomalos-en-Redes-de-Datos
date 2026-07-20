@@ -664,9 +664,12 @@ Hallazgos principales:
 - Las cuatro IP de `PPI-MGMT` coinciden con el inventario.
 - Sensor ya dispone de 6 vCPU y aproximadamente 16 GB de RAM.
 - Cliente todavía tiene 2 vCPU y aproximadamente 3.4 GB visibles.
-- Los discos raíz de sensor, servidor y cliente son menores que el diseño final.
+- El disco virtual del Sensor ya es de 160 GiB y el del Servidor de 120 GiB, exactamente como establece el diseño.
+- En Sensor y Servidor, la raíz es menor porque el volumen lógico LVM todavía no consume todo el espacio disponible; no hace falta aumentar nuevamente el disco en ESXi.
+- Kali dispone de un disco virtual de 60 GiB y lo utiliza correctamente.
+- El Cliente sí conserva un disco virtual de 60 GiB frente a los 100 GiB previstos.
 - VM02–VM05 conservan una interfaz externa temporal en `172.17.25.0/24`.
 
 La tabla completa de recursos, interfaces y diferencias se mantiene en `docs/01-infraestructura-virtual/README.md`.
 
-Estado: **auditoría validada; ajustes de hardware en ESXi pendientes antes de las pruebas de carga**.
+Estado: **auditoría validada; quedan pendientes la ampliación de LVM en Sensor y Servidor, y los ajustes de CPU, RAM y disco del Cliente antes de las pruebas de carga**.
