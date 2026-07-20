@@ -327,7 +327,7 @@ El 19 de julio de 2026 se ejecutó una auditoría sin privilegios sobre las cuat
 | VM02 Sensor | Ubuntu 26.04 | 6 | 15,474 MB | 160 GiB | 153.9 GiB | 140 GiB |
 | VM03 Servidor | Ubuntu 26.04 | 2 | 3,398 MB | 120 GiB | 114.8 GiB | 102.5 GiB |
 | VM04 Kali | Kali 2026.2 | 4 | 5,927 MB | 60 GiB | 55.7 GiB | 38.3 GiB |
-| VM05 Cliente | Ubuntu 26.04 | 2 | 3,398 MB | 60 GiB | 57.7 GiB | 44.8 GiB |
+| VM05 Cliente | Ubuntu 26.04 | 4 | 7.2 GiB | 100 GiB | 98 GiB | 83 GiB |
 
 En Sensor y Servidor, ESXi ya presentaba el disco planificado completo. El 19 de julio de 2026 se extendió en línea el volumen `ubuntu-vg/ubuntu-lv` y su sistema de archivos ext4 para utilizar el 100 % del espacio libre del grupo LVM. No fue necesario aumentar los discos virtuales ni reiniciar las VMs.
 
@@ -348,9 +348,9 @@ En Sensor y Servidor, ESXi ya presentaba el disco planificado completo. El 19 de
 | Servidor | Disco | 120 GiB | 120 GiB virtual / 114.8 GiB raíz | Cumplido; LVM y ext4 ampliados |
 | Kali | vCPU | 2 | 4 | Aceptar 4 o reducir después de medir contención |
 | Kali | Disco | 60 GiB | 60 GiB virtual / 55.7 GiB raíz | Sin cambio; asignación correcta |
-| Cliente | vCPU | 4 | 2 | Aumentar a 4 antes de tráfico pesado |
-| Cliente | RAM | 8 GB | 3,398 MB visibles | Aumentar asignación antes de tráfico pesado |
-| Cliente | Disco | 100 GiB | 60 GiB virtual / 57.7 GiB raíz | Aumentar disco ESXi a 100 GiB y después extender partición/sistema de archivos |
+| Cliente | vCPU | 4 | 4 | Cumplido |
+| Cliente | RAM | 8 GiB | 7.2 GiB utilizables | Cumplido; diferencia reservada por el sistema |
+| Cliente | Disco | 100 GiB | 100 GiB virtual / 98 GiB raíz | Cumplido; partición y ext4 ampliados |
 
 ### 9.3 Interfaces externas temporales
 

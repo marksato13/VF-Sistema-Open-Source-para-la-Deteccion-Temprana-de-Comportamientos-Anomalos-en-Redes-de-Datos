@@ -750,3 +750,34 @@ La validación conjunta del 19 de julio de 2026 confirmó:
 | Cliente | `America/Lima` | Sí | Sensor `10.10.10.20`, estrato 4 |
 
 Estado: **zona horaria unificada y sincronización NTP validada en todas las VMs**.
+
+## 21. Ajuste final de recursos de VM05 Cliente
+
+Se apagó VM05 para modificar su hardware en ESXi y se aumentaron los recursos planificados. Después del encendido, Ansible confirmó:
+
+| Recurso | Antes | Después detectado | Estado |
+|---|---:|---:|---|
+| vCPU | 2 | 4 | Cumplido |
+| RAM | Aproximadamente 4 GiB | 7.2 GiB utilizables de 8 GiB asignados | Cumplido |
+| Disco virtual | 60 GiB | 100 GiB | Cumplido |
+
+El disco ya aparecía como `/dev/sda` de 100 GiB, pero la partición raíz `/dev/sda2` conservaba aproximadamente 59 GiB. Se amplió la partición existente y el sistema de archivos ext4 en línea:
+
+```bash
+growpart /dev/sda 2
+resize2fs /dev/sda2
+```
+
+Validación posterior:
+
+```text
+/dev/sda       100 GiB
+/dev/sda1        1 GiB  vfat  /boot/efi
+/dev/sda2     98.9 GiB  ext4  /
+raíz visible    98 GiB
+espacio libre   83 GiB
+```
+
+No se creó un segundo disco y no fue necesario reiniciar durante la ampliación de ext4.
+
+Estado: **recursos finales de VM05 Cliente configurados y validados**.
