@@ -1158,4 +1158,4 @@ detect.alert_queue_overflow: 0
 rules_loaded: 52044
 ```
 
-Estado: **persistencia de Sensor, Suricata, firewall, offloading y rutas de Servidor, Cliente y Kali validada después de reinicios reales. Kali aún requiere recuperar sincronización NTP (`Packet count: 0`) antes de la captura final.**
+Estado: **persistencia de Sensor, Suricata, firewall, offloading y rutas de Servidor, Cliente y Kali validada después de reinicios reales. Kali recuperó sincronización NTP y fue verificada con `NTPSynchronized=yes` el 20 de julio de 2026.**

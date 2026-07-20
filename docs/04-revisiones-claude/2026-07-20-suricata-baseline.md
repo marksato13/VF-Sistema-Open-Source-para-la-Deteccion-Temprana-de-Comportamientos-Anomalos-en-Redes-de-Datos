@@ -57,7 +57,7 @@ La prueba conjunta posterior obtuvo 5 de 5 respuestas ICMP, TCP/22 correcto y 5 
 
 - Falta ejecutar escenarios controlados de ataque desde Kali y comprobar cobertura ET.
 - Falta una campaña de tráfico legítimo pesado para medir falsos positivos y pérdida de paquetes.
-- Kali conserva la ruta tras reinicio, pero al cierre de esta sesión `systemd-timesyncd` aún reporta `Packet count: 0`; debe corregirse antes de capturar el dataset final.
+- Kali recuperó posteriormente la sincronización y fue verificada con `NTPSynchronized=yes` el 20 de julio de 2026 a las 17:46 (`America/Lima`).
 - Falta validar eventos DNS, TLS, SSH y anomalías con pruebas dedicadas.
 - Las NIC externas todavía deben aislarse antes del dataset definitivo.
 
@@ -68,7 +68,7 @@ Estado: **revisión inicial atendida; no se declara cerrada la fase experimental
 Claude confirmó que el baseline de Suricata, el enrutamiento y la persistencia de rutas ya están validados. Indicó estas condiciones previas para pruebas defendibles:
 
 1. Desconectar o bloquear las NIC externas `172.17.25.0/24` antes del dataset final.
-2. Resolver la sincronización NTP de Kali (`Packet count: 0`) y registrar una verificación positiva.
+2. Resolver la sincronización NTP de Kali (`Packet count: 0`) y registrar una verificación positiva. Condición cerrada el 20 de julio de 2026 a las 17:46.
 3. Ejecutar primero tráfico legítimo pesado y medir `kernel_drops`, antes de los escenarios de ataque.
 
 La implementación de variables multicapa L3/L4/L7 y el reentrenamiento de Isolation Forest v2 siguen pendientes; no se presentan como resultados obtenidos.
