@@ -40,8 +40,9 @@ escenario desde VM05
 stop.sh
   ├─ espera 9 s para checkpoint de Suricata
   ├─ SIGINT y cierre limpio de tcpdump
+  ├─ SHA-256 remoto de cada PCAP
   ├─ copia por SSH/TAR a artifacts/campaigns/<ID>/pcap/
-  ├─ lectura completa de cada archivo con tcpdump
+  ├─ verificación del SHA-256 remoto y lectura completa con tcpdump
   ├─ comparación de cantidad/tamaño remoto y local
   ├─ contadores finales y segmento EVE
   └─ SHA256SUMS de toda la campaña
@@ -87,4 +88,4 @@ El snaplen completo puede conservar payload, nombres, URIs o credenciales transm
 
 ## Criterios G4
 
-G4 pasa únicamente si una campaña DNS de calibración produce PCAP legible de extremo a extremo, tamaños remoto/local iguales, cero drops de tcpdump y Suricata, segmento EVE exacto, serie de recursos válida, hashes correctos y ningún proceso/bloqueo residual. Después se repetirá con HTTP de 10 MB para confirmar paquetes cercanos a MTU y calcular la proporción de longitudes de 500–1500 bytes.
+G4 pasa únicamente si una campaña DNS de calibración produce PCAP legible de extremo a extremo, tamaños y SHA-256 remoto/local iguales, cero drops de tcpdump y Suricata, segmento EVE exacto, serie de recursos válida, hashes correctos y ningún proceso/bloqueo residual. Después se repetirá con HTTP de 10 MB para confirmar paquetes cercanos a MTU y calcular la proporción de longitudes de 500–1500 bytes.

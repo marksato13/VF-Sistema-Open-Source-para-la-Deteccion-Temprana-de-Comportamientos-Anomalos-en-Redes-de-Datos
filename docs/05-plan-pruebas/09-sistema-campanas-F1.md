@@ -52,6 +52,7 @@ Cada directorio contiene como mínimo:
 | `pcap-start.json` / `pcap-stop.json` | parámetros fijos y estadísticas de la captura independiente |
 | `pcap/capture.pcap*` | paquetes completos LAN↔DMZ, hasta el límite configurado |
 | `pcap-validation.stderr` | salida de la lectura completa de validación de cada PCAP |
+| `pcap-remote-SHA256SUMS` / `pcap-transfer-verification.txt` | hash calculado antes de copiar y comprobación en VM01 |
 | `eve-slice.jsonl` | registros EVE añadidos mientras la campaña estuvo activa |
 | `deltas.json` | paquetes, drops, errores, overflow y número de registros EVE de la ventana |
 | `SHA256SUMS` | integridad de todos los archivos anteriores |
@@ -96,7 +97,7 @@ Una campaña candidata debe cumplir todos estos puntos:
 2. El commit del manifiesto corresponde a la versión revisada de scripts y configuraciones.
 3. `counter_reset_detected` es `false`; `kernel_drops`, `decoder_invalid` y `alert_queue_overflow` son cero.
 4. `eve_slice_status` es `complete_same_inode`.
-5. Existe al menos un PCAP, su lectura completa no falla, el tamaño copiado coincide con el remoto, no alcanzó el límite del anillo y `tcpdump` reporta cero drops.
+5. Existe al menos un PCAP, su lectura completa no falla, tamaño y SHA-256 coinciden con el original remoto, no alcanzó el límite del anillo y `tcpdump` reporta cero drops.
 6. Las cuatro VMs tienen hora, NTP, interfaces y rutas coherentes.
 7. La salida confirma bytes, solicitudes, bitrate o resultado esperado del escenario.
 8. No hubo otra fuente de tráfico no planificada durante la ventana.

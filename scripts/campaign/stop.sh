@@ -28,9 +28,19 @@ sleep "$settle_seconds"
 
 ppi_ssh "$PPI_SENSOR_IP" "sudo -n /usr/local/sbin/ppi-pcap-control stop '$id'" \
   > "$campaign_dir/pcap-stop.json"
+ppi_ssh "$PPI_SENSOR_IP" "cd '/var/lib/ppi-captures/$id' && sha256sum ./capture.pcap*" \
+  > "$campaign_dir/pcap-remote-SHA256SUMS"
 mkdir -m 0700 "$campaign_dir/pcap"
 ppi_ssh "$PPI_SENSOR_IP" "tar -C '/var/lib/ppi-captures/$id' -cf - ." |
   tar -C "$campaign_dir/pcap" -xf -
+
+pcap_transfer_verified=false
+if (
+  cd "$campaign_dir/pcap"
+  sha256sum -c ../pcap-remote-SHA256SUMS
+) > "$campaign_dir/pcap-transfer-verification.txt" 2>&1; then
+  pcap_transfer_verified=true
+fi
 
 pcap_validation_failures=0
 pcap_file_count=0
@@ -98,6 +108,7 @@ evidence_complete=true
 (( pcap_validation_failures == 0 )) || evidence_complete=false
 (( pcap_file_count == pcap_remote_file_count )) || evidence_complete=false
 (( pcap_total_bytes == pcap_remote_total_bytes )) || evidence_complete=false
+[[ "$pcap_transfer_verified" == true ]] || evidence_complete=false
 [[ "$pcap_limit_reached" == false ]] || evidence_complete=false
 pcap_kernel_drops="$(jq -r '.tcpdump.packets_dropped_by_kernel' "$campaign_dir/pcap-stop.json")"
 (( pcap_kernel_drops == 0 )) || evidence_complete=false
@@ -159,6 +170,7 @@ jq \
   --argjson pcap_kernel_drops "$pcap_kernel_drops" \
   --argjson pcap_remote_file_count "$pcap_remote_file_count" \
   --argjson pcap_remote_total_bytes "$pcap_remote_total_bytes" \
+  --argjson pcap_transfer_verified "$pcap_transfer_verified" \
   --argjson pcap_limit_reached "$pcap_limit_reached" \
   --argjson eve_slice_records "$eve_slice_records" \
   --argjson expected_eve_records "$expected_eve_records" \
@@ -180,6 +192,7 @@ jq \
       pcap_kernel_drops: $pcap_kernel_drops,
       pcap_remote_file_count: $pcap_remote_file_count,
       pcap_remote_total_bytes: $pcap_remote_total_bytes,
+      pcap_transfer_verified: $pcap_transfer_verified,
       pcap_limit_reached: $pcap_limit_reached,
       eve_slice_records: $eve_slice_records,
       expected_eve_records: $expected_eve_records
