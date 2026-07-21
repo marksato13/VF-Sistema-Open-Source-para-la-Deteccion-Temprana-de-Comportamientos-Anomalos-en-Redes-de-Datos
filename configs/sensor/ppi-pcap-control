@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly PATH=/usr/sbin:/usr/bin:/sbin:/bin
+readonly CAPTURE_ROOT=/var/lib/ppi-captures
+readonly STATE_DIR=/run/ppi-pcap
+readonly CAPTURE_INTERFACE=ens35
+readonly ROTATE_MEGABYTES=512
+readonly ROTATE_FILES=4
+readonly CAPTURE_FILTER='(src net 10.20.0.0/24 and dst net 10.30.0.0/24) or (src net 10.30.0.0/24 and dst net 10.20.0.0/24)'
+
+die() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+validate_id() {
+  [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$ ]] || die "ID de campaña inválido"
+}
+
+[[ $# == 2 ]] || die "uso: ppi-pcap-control {start|stop|status} ID"
+action="$1"
+id="$2"
+validate_id "$id"
+
+/usr/bin/install -d -o root -g useransible -m 0750 "$CAPTURE_ROOT"
+/usr/bin/install -d -o root -g root -m 0755 "$STATE_DIR"
+pid_file="$STATE_DIR/pid"
+id_file="$STATE_DIR/id"
+capture_dir="$CAPTURE_ROOT/$id"
+
+active_pid="$(/usr/bin/cat "$pid_file" 2>/dev/null || true)"
+active_id="$(/usr/bin/cat "$id_file" 2>/dev/null || true)"
+
+case "$action" in
+  start)
+    if [[ "$active_pid" =~ ^[0-9]+$ ]] && /usr/bin/kill -0 "$active_pid" 2>/dev/null; then
+      die "ya existe una captura activa para $active_id"
+    fi
+    [[ ! -e "$capture_dir" ]] || die "ya existe evidencia remota para $id"
+    available_kib="$(/usr/bin/df -Pk "$CAPTURE_ROOT" | /usr/bin/awk 'NR == 2 {print $4}')"
+    (( available_kib >= 3145728 )) || die "se requieren al menos 3 GiB libres en el Sensor"
+    /usr/bin/install -d -o tcpdump -g tcpdump -m 0750 "$capture_dir"
+
+    /usr/bin/nohup /usr/bin/tcpdump \
+      -i "$CAPTURE_INTERFACE" -n -s 0 -U -B 4096 \
+      -C "$ROTATE_MEGABYTES" -W "$ROTATE_FILES" \
+      -Z tcpdump -w "$capture_dir/capture.pcap" \
+      "$CAPTURE_FILTER" \
+      > "$capture_dir/tcpdump.stdout" \
+      2> "$capture_dir/tcpdump.stderr" &
+    capture_pid=$!
+    printf '%s\n' "$capture_pid" > "$pid_file"
+    printf '%s\n' "$id" > "$id_file"
+    /usr/bin/sleep 1
+    /usr/bin/kill -0 "$capture_pid" 2>/dev/null || {
+      /usr/bin/cat "$capture_dir/tcpdump.stderr" >&2 || true
+      die "tcpdump no permaneció activo"
+    }
+    /usr/bin/jq -n \
+      --arg id "$id" \
+      --arg interface "$CAPTURE_INTERFACE" \
+      --arg filter "$CAPTURE_FILTER" \
+      --argjson pid "$capture_pid" \
+      --argjson rotate_megabytes "$ROTATE_MEGABYTES" \
+      --argjson rotate_files "$ROTATE_FILES" '
+      {
+        status: "capturing",
+        campaign_id: $id,
+        pid: $pid,
+        interface: $interface,
+        filter: $filter,
+        snaplen: 0,
+        buffer_kib: 4096,
+        rotation: {
+          file_megabytes_decimal: $rotate_megabytes,
+          maximum_files: $rotate_files
+        }
+      }'
+    ;;
+  stop)
+    [[ "$active_id" == "$id" ]] || die "la captura activa es ${active_id:-desconocida}, no $id"
+    [[ "$active_pid" =~ ^[0-9]+$ ]] || die "PID de captura inválido"
+    /usr/bin/kill -0 "$active_pid" 2>/dev/null || die "el proceso de captura no está activo"
+    command_line="$(/usr/bin/tr '\0' ' ' < "/proc/$active_pid/cmdline")"
+    [[ "$command_line" == *"/usr/bin/tcpdump"* && "$command_line" == *"$capture_dir/capture.pcap"* ]] ||
+      die "el PID no corresponde a la captura esperada"
+
+    /usr/bin/kill -INT "$active_pid"
+    for _ in $(/usr/bin/seq 1 15); do
+      /usr/bin/kill -0 "$active_pid" 2>/dev/null || break
+      /usr/bin/sleep 1
+    done
+    /usr/bin/kill -0 "$active_pid" 2>/dev/null && die "tcpdump no cerró limpiamente"
+    /usr/bin/sync "$capture_dir"
+
+    /usr/bin/chgrp -R useransible "$capture_dir"
+    /usr/bin/find "$capture_dir" -type d -exec /usr/bin/chmod 0750 {} +
+    /usr/bin/find "$capture_dir" -type f -exec /usr/bin/chmod 0640 {} +
+    /usr/bin/rm -f -- "$pid_file" "$id_file"
+
+    captured="$(/usr/bin/awk '/packets captured$/ {value=$1} END {print value+0}' "$capture_dir/tcpdump.stderr")"
+    received="$(/usr/bin/awk '/packets received by filter$/ {value=$1} END {print value+0}' "$capture_dir/tcpdump.stderr")"
+    dropped="$(/usr/bin/awk '/packets dropped by kernel$/ {value=$1} END {print value+0}' "$capture_dir/tcpdump.stderr")"
+    file_count="$(/usr/bin/find "$capture_dir" -maxdepth 1 -type f -name 'capture.pcap*' | /usr/bin/wc -l)"
+    total_bytes="$(/usr/bin/find "$capture_dir" -maxdepth 1 -type f -name 'capture.pcap*' -printf '%s\n' | /usr/bin/awk '{sum += $1} END {print sum+0}')"
+    /usr/bin/jq -n \
+      --arg id "$id" \
+      --arg directory "$capture_dir" \
+      --argjson captured "$captured" \
+      --argjson received "$received" \
+      --argjson dropped "$dropped" \
+      --argjson file_count "$file_count" \
+      --argjson total_bytes "$total_bytes" '
+      {
+        status: "stopped",
+        campaign_id: $id,
+        remote_directory: $directory,
+        tcpdump: {
+          packets_captured: $captured,
+          packets_received_by_filter: $received,
+          packets_dropped_by_kernel: $dropped
+        },
+        files: {count: $file_count, total_bytes: $total_bytes}
+      }'
+    ;;
+  status)
+    if [[ "$active_id" == "$id" && "$active_pid" =~ ^[0-9]+$ ]] &&
+       /usr/bin/kill -0 "$active_pid" 2>/dev/null; then
+      state=capturing
+    else
+      state=inactive
+    fi
+    /usr/bin/jq -n --arg id "$id" --arg state "$state" --arg pid "${active_pid:-}" \
+      '{campaign_id: $id, status: $state, pid: $pid}'
+    ;;
+  *) die "acción no permitida" ;;
+esac

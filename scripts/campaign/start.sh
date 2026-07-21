@@ -22,6 +22,8 @@ ppi_validate_id "$id"
 [[ -r "$PPI_SSH_KEY" ]] || ppi_die "no se puede leer la clave SSH $PPI_SSH_KEY"
 
 mkdir -p -m 0700 "$PPI_CAMPAIGNS_DIR"
+local_available_kib="$(df -Pk "$PPI_CAMPAIGNS_DIR" | awk 'NR == 2 {print $4}')"
+(( local_available_kib >= 3145728 )) || ppi_die "se requieren al menos 3 GiB libres en VM01"
 campaign_dir="$(ppi_campaign_dir "$id")"
 [[ ! -e "$campaign_dir" ]] || ppi_die "ya existe el directorio de campaña $campaign_dir"
 if ! mkdir -m 0700 "$PPI_ACTIVE_LOCK" 2>/dev/null; then
@@ -30,9 +32,17 @@ if ! mkdir -m 0700 "$PPI_ACTIVE_LOCK" 2>/dev/null; then
 fi
 
 sampler_pid=""
+pcap_attempted=false
 cleanup_failed_start() {
   if [[ -n "$sampler_pid" ]] && kill -0 "$sampler_pid" 2>/dev/null; then
     kill "$sampler_pid" 2>/dev/null || true
+  fi
+  if [[ "$pcap_attempted" == true ]]; then
+    pcap_state="$(ppi_ssh "$PPI_SENSOR_IP" "sudo -n /usr/local/sbin/ppi-pcap-control status '$id'" 2>/dev/null |
+      jq -r '.status' 2>/dev/null || true)"
+    if [[ "$pcap_state" == capturing ]]; then
+      ppi_ssh "$PPI_SENSOR_IP" "sudo -n /usr/local/sbin/ppi-pcap-control stop '$id'" >/dev/null 2>&1 || true
+    fi
   fi
   rm -rf -- "$PPI_ACTIVE_LOCK"
   echo "ERROR: no se pudo iniciar la campaña $id; se conservó la evidencia parcial en $campaign_dir" >&2
@@ -104,6 +114,10 @@ done
 ppi_ssh "$PPI_SENSOR_IP" 'sudo -n /usr/local/sbin/ppi-suricata-metrics' \
   > "$campaign_dir/sensor-before.json"
 jq -e '.suricata.service_state == "active"' "$campaign_dir/sensor-before.json" >/dev/null
+
+pcap_attempted=true
+ppi_ssh "$PPI_SENSOR_IP" "sudo -n /usr/local/sbin/ppi-pcap-control start '$id'" \
+  > "$campaign_dir/pcap-start.json"
 
 "$SCRIPT_DIR/sample-sensor.sh" "$PPI_SENSOR_IP" 1 \
   > "$campaign_dir/sensor-timeseries.tsv" \

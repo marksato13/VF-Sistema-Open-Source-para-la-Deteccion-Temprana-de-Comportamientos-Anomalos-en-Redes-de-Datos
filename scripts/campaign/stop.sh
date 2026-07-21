@@ -26,6 +26,29 @@ settle_seconds="${PPI_CAMPAIGN_SETTLE_SECONDS:-9}"
   ppi_die "PPI_CAMPAIGN_SETTLE_SECONDS debe estar entre 0 y 15"
 sleep "$settle_seconds"
 
+ppi_ssh "$PPI_SENSOR_IP" "sudo -n /usr/local/sbin/ppi-pcap-control stop '$id'" \
+  > "$campaign_dir/pcap-stop.json"
+mkdir -m 0700 "$campaign_dir/pcap"
+ppi_ssh "$PPI_SENSOR_IP" "tar -C '/var/lib/ppi-captures/$id' -cf - ." |
+  tar -C "$campaign_dir/pcap" -xf -
+
+pcap_validation_failures=0
+pcap_file_count=0
+pcap_total_bytes=0
+: > "$campaign_dir/pcap-validation.stderr"
+while IFS= read -r -d '' pcap_file; do
+  pcap_file_count=$((pcap_file_count + 1))
+  pcap_size="$(stat -c '%s' "$pcap_file")"
+  pcap_total_bytes=$((pcap_total_bytes + pcap_size))
+  if ! tcpdump -n -r "$pcap_file" -w /dev/null 2>> "$campaign_dir/pcap-validation.stderr"; then
+    pcap_validation_failures=$((pcap_validation_failures + 1))
+  fi
+done < <(find "$campaign_dir/pcap" -maxdepth 1 -type f -name 'capture.pcap*' -print0 | sort -z)
+pcap_remote_file_count="$(jq -r '.files.count' "$campaign_dir/pcap-stop.json")"
+pcap_remote_total_bytes="$(jq -r '.files.total_bytes' "$campaign_dir/pcap-stop.json")"
+pcap_limit_reached=false
+(( pcap_total_bytes < 1945600000 )) || pcap_limit_reached=true
+
 sampler_pid="$(cat "$PPI_ACTIVE_LOCK/sampler_pid" 2>/dev/null || true)"
 if [[ "$sampler_pid" =~ ^[0-9]+$ ]] && kill -0 "$sampler_pid" 2>/dev/null; then
   sampler_command="$(ps -p "$sampler_pid" -o args= || true)"
@@ -71,6 +94,13 @@ fi
 evidence_complete=true
 (( sensor_sample_rows >= 1 )) || evidence_complete=false
 (( sensor_sampler_stderr_bytes == 0 )) || evidence_complete=false
+(( pcap_file_count >= 1 )) || evidence_complete=false
+(( pcap_validation_failures == 0 )) || evidence_complete=false
+(( pcap_file_count == pcap_remote_file_count )) || evidence_complete=false
+(( pcap_total_bytes == pcap_remote_total_bytes )) || evidence_complete=false
+[[ "$pcap_limit_reached" == false ]] || evidence_complete=false
+pcap_kernel_drops="$(jq -r '.tcpdump.packets_dropped_by_kernel' "$campaign_dir/pcap-stop.json")"
+(( pcap_kernel_drops == 0 )) || evidence_complete=false
 [[ "$eve_slice_status" == "complete_same_inode" ]] || evidence_complete=false
 (( eve_slice_records == expected_eve_records )) || evidence_complete=false
 
@@ -123,6 +153,13 @@ jq \
   --argjson settle_seconds "$settle_seconds" \
   --argjson sensor_sample_rows "$sensor_sample_rows" \
   --argjson sensor_sampler_stderr_bytes "$sensor_sampler_stderr_bytes" \
+  --argjson pcap_file_count "$pcap_file_count" \
+  --argjson pcap_total_bytes "$pcap_total_bytes" \
+  --argjson pcap_validation_failures "$pcap_validation_failures" \
+  --argjson pcap_kernel_drops "$pcap_kernel_drops" \
+  --argjson pcap_remote_file_count "$pcap_remote_file_count" \
+  --argjson pcap_remote_total_bytes "$pcap_remote_total_bytes" \
+  --argjson pcap_limit_reached "$pcap_limit_reached" \
   --argjson eve_slice_records "$eve_slice_records" \
   --argjson expected_eve_records "$expected_eve_records" \
   --argjson evidence_complete "$evidence_complete" '
@@ -137,6 +174,13 @@ jq \
       complete: $evidence_complete,
       sensor_sample_rows: $sensor_sample_rows,
       sensor_sampler_stderr_bytes: $sensor_sampler_stderr_bytes,
+      pcap_file_count: $pcap_file_count,
+      pcap_total_bytes: $pcap_total_bytes,
+      pcap_validation_failures: $pcap_validation_failures,
+      pcap_kernel_drops: $pcap_kernel_drops,
+      pcap_remote_file_count: $pcap_remote_file_count,
+      pcap_remote_total_bytes: $pcap_remote_total_bytes,
+      pcap_limit_reached: $pcap_limit_reached,
       eve_slice_records: $eve_slice_records,
       expected_eve_records: $expected_eve_records
     }

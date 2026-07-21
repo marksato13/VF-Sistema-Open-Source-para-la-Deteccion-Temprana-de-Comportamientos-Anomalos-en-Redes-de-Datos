@@ -13,7 +13,15 @@
         group: root
         mode: "0755"
 
-    - name: Autorizar solamente el recolector de métricas
+    - name: Instalar controlador de PCAP con interfaz y filtro fijos
+      ansible.builtin.copy:
+        src: ../../configs/sensor/ppi-pcap-control
+        dest: /usr/local/sbin/ppi-pcap-control
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Autorizar solamente los controladores del orquestador
       ansible.builtin.copy:
         src: ../../configs/sensor/useransible-ppi-metrics.sudoers
         dest: /etc/sudoers.d/useransible-ppi-metrics

@@ -146,8 +146,8 @@ Las huellas deberán confirmarse desde la consola de cada VM antes de agregarlas
 - `03-configurar-servicios-servidor.yml`: instala NGINX, HTTPS, dnsmasq e iperf3 y crea archivos controlados.
 - `04-configurar-cliente-f1.yml`: instala las herramientas benignas de generación y medición.
 - `05-ajustar-captura-suricata.yml`: configura AF_PACKET, ring RX y reinicia Suricata solo después de `suricata -T`.
-- `06-desplegar-orquestacion-campanas.yml`: instala el recolector restringido de métricas de Suricata y el generador benigno calibrado del Cliente.
+- `06-desplegar-orquestacion-campanas.yml`: instala los controladores restringidos de métricas/PCAP en Sensor y el generador benigno calibrado del Cliente.
 
 Estos playbooks requieren privilegios. `useransible` no pertenece a sudoers de forma permanente: durante la ejecución se autorizó mediante un archivo temporal validado con `visudo`, que fue eliminado inmediatamente en Servidor, Cliente y Sensor. Las NIC externas de Servidor y Cliente se habilitaron solo para descargar paquetes y volvieron a estado `DOWN` al finalizar.
 
-La única excepción permanente es el comando exacto `/usr/local/sbin/ppi-suricata-metrics` en el Sensor. Es propiedad de `root`, no acepta argumentos y expone únicamente contadores y estado operativo en JSON. La prueba negativa confirmó que `useransible` no puede usar `sudo` para ejecutar `/usr/bin/id`. El razonamiento y procedimiento están en `docs/05-plan-pruebas/09-sistema-campanas-F1.md`.
+Las únicas excepciones permanentes son `/usr/local/sbin/ppi-suricata-metrics` y `/usr/local/sbin/ppi-pcap-control` en el Sensor. Ambos son propiedad de `root`; el primero no acepta argumentos y el segundo valida acción e ID, manteniendo interfaz, filtro, destino y rotación fijos. Las pruebas negativas confirmaron que `useransible` no puede ejecutar directamente `/usr/bin/id` ni `/usr/bin/tcpdump`. El razonamiento está en `docs/05-plan-pruebas/09-sistema-campanas-F1.md` y `11-diseno-captura-PCAP-G4.md`.

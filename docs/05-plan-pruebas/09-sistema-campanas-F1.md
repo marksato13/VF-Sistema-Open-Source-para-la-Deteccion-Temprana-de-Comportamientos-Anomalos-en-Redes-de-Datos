@@ -12,11 +12,12 @@ Los resultados de ejecución se guardan en `artifacts/campaigns/<ID>/`, excluido
 
 | Componente | Función |
 |---|---|
-| `scripts/campaign/start.sh` | crea el manifiesto, bloquea ejecuciones simultáneas, audita las cuatro VMs, toma contadores iniciales e inicia el muestreo del Sensor |
-| `scripts/campaign/stop.sh` | espera nueve segundos para estabilización, detiene el muestreo, toma contadores finales, extrae el segmento EVE acotado, calcula deltas y genera `SHA256SUMS` |
+| `scripts/campaign/start.sh` | crea el manifiesto, bloquea ejecuciones simultáneas, audita las cuatro VMs, toma contadores iniciales e inicia PCAP y muestreo del Sensor |
+| `scripts/campaign/stop.sh` | espera nueve segundos, cierra y copia PCAP, detiene el muestreo, toma contadores finales, extrae EVE, calcula deltas y genera `SHA256SUMS` |
 | `scripts/campaign/run-f1.sh` | ejecuta un escenario benigno limitado desde VM05 y garantiza el cierre de la campaña aunque falle el escenario |
 | `scripts/campaign/sample-sensor.sh` | consulta por SSH cada segundo los ticks de CPU, RSS, memoria disponible y carga del Sensor, y escribe la serie localmente |
 | `ppi-suricata-metrics` | consulta el socket de Suricata y devuelve únicamente métricas JSON sin aceptar argumentos |
+| `ppi-pcap-control` | inicia/detiene `tcpdump` con interfaz, filtro, snaplen, búfer y rotación fijos |
 | `06-desplegar-orquestacion-campanas.yml` | instala el recolector restringido en Sensor y el generador F1 en Cliente |
 
 Solo puede existir una campaña activa. El bloqueo evita mezclar dos escenarios y se mantiene hasta que `stop.sh` cierre la ejecución.
@@ -48,6 +49,9 @@ Cada directorio contiene como mínimo:
 | `sensor-before.json` / `sensor-after.json` | instantáneas acumuladas del Sensor |
 | `sensor-timeseries.tsv` | serie temporal de recursos durante el escenario |
 | `scenario-output.txt` / `scenario-stderr.txt` | salida y error del generador remoto |
+| `pcap-start.json` / `pcap-stop.json` | parámetros fijos y estadísticas de la captura independiente |
+| `pcap/capture.pcap*` | paquetes completos LAN↔DMZ, hasta el límite configurado |
+| `pcap-validation.stderr` | salida de la lectura completa de validación de cada PCAP |
 | `eve-slice.jsonl` | registros EVE añadidos mientras la campaña estuvo activa |
 | `deltas.json` | paquetes, drops, errores, overflow y número de registros EVE de la ventana |
 | `SHA256SUMS` | integridad de todos los archivos anteriores |
@@ -92,10 +96,11 @@ Una campaña candidata debe cumplir todos estos puntos:
 2. El commit del manifiesto corresponde a la versión revisada de scripts y configuraciones.
 3. `counter_reset_detected` es `false`; `kernel_drops`, `decoder_invalid` y `alert_queue_overflow` son cero.
 4. `eve_slice_status` es `complete_same_inode`.
-5. Las cuatro VMs tienen hora, NTP, interfaces y rutas coherentes.
-6. La salida confirma bytes, solicitudes, bitrate o resultado esperado del escenario.
-7. No hubo otra fuente de tráfico no planificada durante la ventana.
-8. Los hashes se verifican con `sha256sum -c SHA256SUMS`.
+5. Existe al menos un PCAP, su lectura completa no falla, el tamaño copiado coincide con el remoto, no alcanzó el límite del anillo y `tcpdump` reporta cero drops.
+6. Las cuatro VMs tienen hora, NTP, interfaces y rutas coherentes.
+7. La salida confirma bytes, solicitudes, bitrate o resultado esperado del escenario.
+8. No hubo otra fuente de tráfico no planificada durante la ventana.
+9. Los hashes se verifican con `sha256sum -c SHA256SUMS`.
 
 La aceptación exige revisión humana. Cero drops demuestra únicamente que Suricata no reportó pérdida bajo las condiciones observadas; no demuestra ausencia absoluta de paquetes perdidos en toda la ruta.
 
@@ -107,4 +112,4 @@ La aceptación exige revisión humana. Cero drops demuestra únicamente que Suri
 4. Validar distribución de tamaños de paquetes y falsos positivos por campaña.
 5. Solo después cerrar F1 y pasar a ataques F2 desde Kali, con un ejecutor y límites separados.
 
-Todavía no se capturan PCAP desde el orquestador. EVE permite validar funcionamiento, pero las futuras 14 features de capa 3 y 4 requerirán PCAP o telemetría de flujo reproducible. La captura limitada, la rotación, el espacio en disco y la anonimización deben resolverse antes de producir el dataset definitivo.
+La captura PCAP está incorporada desde G4. Antes del dataset definitivo todavía se deben validar su funcionamiento extremo a extremo, la retención, la anonimización y la extracción reproducible de features.
