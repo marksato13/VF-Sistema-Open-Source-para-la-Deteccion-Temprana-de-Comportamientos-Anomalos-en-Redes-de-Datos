@@ -2,7 +2,7 @@
 
 ## Estado
 
-Primera base del controlador Ansible. En esta etapa se incluyen configuración, inventario y verificaciones que no modifican las máquinas remotas. Los roles de red, Suricata, servidor, cliente y generador de tráfico se incorporarán después de crear las VMs y confirmar sus interfaces.
+Controlador Ansible operativo para inventario, auditoría y configuración reproducible de los servicios del laboratorio. Los playbooks que modifican el sistema requieren privilegio explícito; las credenciales no se almacenan en Git.
 
 ## Requisitos del controlador
 
@@ -146,5 +146,8 @@ Las huellas deberán confirmarse desde la consola de cada VM antes de agregarlas
 - `03-configurar-servicios-servidor.yml`: instala NGINX, HTTPS, dnsmasq e iperf3 y crea archivos controlados.
 - `04-configurar-cliente-f1.yml`: instala las herramientas benignas de generación y medición.
 - `05-ajustar-captura-suricata.yml`: configura AF_PACKET, ring RX y reinicia Suricata solo después de `suricata -T`.
+- `06-desplegar-orquestacion-campanas.yml`: instala el recolector restringido de métricas de Suricata y el generador benigno calibrado del Cliente.
 
 Estos playbooks requieren privilegios. `useransible` no pertenece a sudoers de forma permanente: durante la ejecución se autorizó mediante un archivo temporal validado con `visudo`, que fue eliminado inmediatamente en Servidor, Cliente y Sensor. Las NIC externas de Servidor y Cliente se habilitaron solo para descargar paquetes y volvieron a estado `DOWN` al finalizar.
+
+La única excepción permanente es el comando exacto `/usr/local/sbin/ppi-suricata-metrics` en el Sensor. Es propiedad de `root`, no acepta argumentos y expone únicamente contadores y estado operativo en JSON. La prueba negativa confirmó que `useransible` no puede usar `sudo` para ejecutar `/usr/bin/id`. El razonamiento y procedimiento están en `docs/05-plan-pruebas/09-sistema-campanas-F1.md`.

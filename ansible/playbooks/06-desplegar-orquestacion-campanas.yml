@@ -1,0 +1,45 @@
+---
+- name: Desplegar lectura restringida de métricas en VM02 Sensor
+  hosts: ppi-sensor
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Instalar recolector inmutable para useransible
+      ansible.builtin.copy:
+        src: ../../configs/sensor/ppi-suricata-metrics
+        dest: /usr/local/sbin/ppi-suricata-metrics
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Autorizar solamente el recolector de métricas
+      ansible.builtin.copy:
+        src: ../../configs/sensor/useransible-ppi-metrics.sudoers
+        dest: /etc/sudoers.d/useransible-ppi-metrics
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+
+- name: Desplegar generador benigno limitado en VM05 Cliente
+  hosts: ppi-client
+  become: false
+  gather_facts: false
+
+  tasks:
+    - name: Crear directorio de herramientas de campaña
+      ansible.builtin.file:
+        path: /home/useransible/bin
+        state: directory
+        owner: useransible
+        group: useransible
+        mode: "0750"
+
+    - name: Instalar generador F1 con límites calibrados
+      ansible.builtin.copy:
+        src: ../../scripts/f1/run-benign.sh
+        dest: /home/useransible/bin/ppi-run-benign
+        owner: useransible
+        group: useransible
+        mode: "0750"

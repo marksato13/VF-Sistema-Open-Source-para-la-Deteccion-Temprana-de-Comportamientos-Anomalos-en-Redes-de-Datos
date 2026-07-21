@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "$SCRIPT_DIR/common.sh"
+
+if (( $# < 1 || $# > 2 )); then
+  echo "Uso: $0 ID [CODIGO_SALIDA]" >&2
+  exit 2
+fi
+
+id="$1"
+scenario_exit_code="${2:-0}"
+ppi_validate_id "$id"
+[[ "$scenario_exit_code" =~ ^[0-9]+$ ]] || ppi_die "código de salida inválido"
+[[ -d "$PPI_ACTIVE_LOCK" ]] || ppi_die "no existe una campaña activa"
+active_id="$(cat "$PPI_ACTIVE_LOCK/id")"
+[[ "$active_id" == "$id" ]] || ppi_die "la campaña activa es $active_id, no $id"
+
+campaign_dir="$(ppi_campaign_dir "$id")"
+[[ -d "$campaign_dir" ]] || ppi_die "no existe $campaign_dir"
+
+sampler_pid="$(cat "$PPI_ACTIVE_LOCK/sampler_pid" 2>/dev/null || true)"
+if [[ "$sampler_pid" =~ ^[0-9]+$ ]] && kill -0 "$sampler_pid" 2>/dev/null; then
+  sampler_command="$(ps -p "$sampler_pid" -o args= || true)"
+  [[ "$sampler_command" == *"$PPI_SENSOR_IP"* ]] || ppi_die "el PID $sampler_pid no corresponde al sampler esperado"
+  kill "$sampler_pid"
+  for _ in 1 2 3 4 5; do
+    kill -0 "$sampler_pid" 2>/dev/null || break
+    sleep 1
+  done
+  kill -0 "$sampler_pid" 2>/dev/null &&
+    ppi_die "el sampler PID $sampler_pid no se detuvo; la campaña permanece abierta"
+fi
+
+ppi_ssh "$PPI_SENSOR_IP" 'sudo -n /usr/local/sbin/ppi-suricata-metrics' \
+  > "$campaign_dir/sensor-after.json"
+
+before_inode="$(jq -r '.eve.inode' "$campaign_dir/sensor-before.json")"
+after_inode="$(jq -r '.eve.inode' "$campaign_dir/sensor-after.json")"
+before_lines="$(jq -r '.eve.lines' "$campaign_dir/sensor-before.json")"
+if [[ "$before_inode" == "$after_inode" ]]; then
+  first_line=$((before_lines + 1))
+  ppi_ssh "$PPI_SENSOR_IP" "tail -n +$first_line /var/log/suricata/eve.json" \
+    > "$campaign_dir/eve-slice.jsonl"
+  eve_slice_status="complete_same_inode"
+else
+  : > "$campaign_dir/eve-slice.jsonl"
+  eve_slice_status="unavailable_log_rotated"
+fi
+
+ended_at="$(date --iso-8601=seconds)"
+ended_at_utc="$(date --utc --iso-8601=seconds)"
+if (( scenario_exit_code == 0 )); then
+  final_status="completed"
+else
+  final_status="scenario_failed"
+fi
+
+jq -n \
+  --slurpfile before "$campaign_dir/sensor-before.json" \
+  --slurpfile after "$campaign_dir/sensor-after.json" \
+  --arg eve_slice_status "$eve_slice_status" '
+  def delta($a; $b):
+    if ($a | type) == "number" and ($b | type) == "number" and $b >= $a then $b - $a else null end;
+  {
+    schema_version: 1,
+    counter_reset_detected: (
+      $after[0].suricata.capture.kernel_packets < $before[0].suricata.capture.kernel_packets
+    ),
+    capture: {
+      kernel_packets: delta($before[0].suricata.capture.kernel_packets; $after[0].suricata.capture.kernel_packets),
+      kernel_drops: delta($before[0].suricata.capture.kernel_drops; $after[0].suricata.capture.kernel_drops),
+      kernel_ifdrops: delta($before[0].suricata.capture.kernel_ifdrops; $after[0].suricata.capture.kernel_ifdrops)
+    },
+    decoder_invalid: delta($before[0].suricata.decoder_invalid; $after[0].suricata.decoder_invalid),
+    alert_queue_overflow: delta($before[0].suricata.alert_queue_overflow; $after[0].suricata.alert_queue_overflow),
+    eve: {
+      records: delta($before[0].eve.lines; $after[0].eve.lines),
+      slice_status: $eve_slice_status
+    }
+  }' > "$campaign_dir/deltas.json"
+
+manifest_tmp="$campaign_dir/manifest.json.tmp"
+jq \
+  --arg ended_at "$ended_at" \
+  --arg ended_at_utc "$ended_at_utc" \
+  --arg status "$final_status" \
+  --argjson scenario_exit_code "$scenario_exit_code" \
+  --arg eve_slice_status "$eve_slice_status" '
+  . + {
+    status: $status,
+    ended_at: $ended_at,
+    ended_at_utc: $ended_at_utc,
+    scenario_exit_code: $scenario_exit_code,
+    eve_slice_status: $eve_slice_status
+  }' "$campaign_dir/manifest.json" > "$manifest_tmp"
+mv "$manifest_tmp" "$campaign_dir/manifest.json"
+
+(
+  cd "$campaign_dir"
+  find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+)
+rm -rf -- "$PPI_ACTIVE_LOCK"
+
+printf 'Campaña cerrada: %s\nEstado: %s\nDirectorio: %s\n' "$id" "$final_status" "$campaign_dir"

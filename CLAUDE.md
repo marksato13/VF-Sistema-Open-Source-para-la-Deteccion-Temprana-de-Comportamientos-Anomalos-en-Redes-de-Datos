@@ -63,6 +63,9 @@ Las NIC externas de `172.17.25.0/24` todavía existen temporalmente para instala
 - Enrutamiento Cliente/Kali hacia Servidor probado mediante ICMP, TCP/22, traza y contadores de nftables.
 - Suricata 8.0.3 está instalado como IDS AF_PACKET sobre `ens35`, con `HOME_NET=[10.30.0.0/24,10.20.0.20/32]`, Emerging Threats Open, EVE JSON y una regla local de validación.
 - La captura se validó con alertas ICMP y un evento HTTP completo. Sensor y Servidor superaron reinicios controlados con configuración persistente; todavía faltan ataques reales, protocolos restantes y pruebas de carga.
+- La calibración segura fijó techos de F1 en 200 Mbit/s TCP, 50 Mbit/s UDP y 20 MB/s por transferencia HTTP/HTTPS; todas las pruebas acotadas posteriores registraron cero drops de Suricata.
+- Existe un orquestador reproducible en `scripts/campaign/`: manifiesto, inventario, contadores, serie temporal del Sensor, segmento EVE y hashes por campaña. Los artefactos runtime permanecen fuera de Git.
+- `useransible` solo puede elevar privilegios para `/usr/local/sbin/ppi-suricata-metrics`; el comando no acepta argumentos y no concede sudo general.
 
 ## Observaciones obligatorias del jurado
 

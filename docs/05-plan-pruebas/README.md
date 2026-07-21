@@ -9,6 +9,8 @@ Este plan separa las campañas para que el entrenamiento y la evaluación sean d
 3. Verificar `ip route get 10.30.0.10` desde Cliente y Kali: siguiente salto `10.20.0.1`.
 4. Registrar antes y después de cada campaña: `capture.kernel_drops`, `decoder.invalid`, `alert_queue_overflow`, CPU, RAM, espacio de disco y número de eventos EVE.
 
+El procedimiento automatizado, la estructura de evidencia y los criterios de aceptación se describen en `09-sistema-campanas-F1.md`.
+
 ## Grupo A: tráfico legítimo pesado
 
 Ejecutar desde Cliente hacia Servidor, con una sesión nueva por escenario:
