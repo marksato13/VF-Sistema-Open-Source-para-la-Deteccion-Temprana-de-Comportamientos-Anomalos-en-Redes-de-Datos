@@ -1,0 +1,154 @@
+---
+- name: Configurar servicios experimentales de VM03 Servidor
+  hosts: ppi-server
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Crear directorio de configuración de dnsmasq antes de instalar
+      ansible.builtin.file:
+        path: /etc/dnsmasq.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Instalar configuración DNS limitada a la DMZ
+      ansible.builtin.copy:
+        src: ../../configs/server/dnsmasq-ppi.conf
+        dest: /etc/dnsmasq.d/ppi-lab.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Instalar servicios mínimos
+      ansible.builtin.apt:
+        name:
+          - nginx
+          - iperf3
+          - dnsmasq
+          - curl
+          - openssl
+        state: present
+        update_cache: "{{ ppi_update_cache | default(false) | bool }}"
+
+    - name: Crear directorios del contenido de prueba
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0755"
+      loop:
+        - /srv/ppi
+        - /srv/ppi/files
+
+    - name: Crear página de identificación del laboratorio
+      ansible.builtin.copy:
+        dest: /srv/ppi/index.html
+        owner: www-data
+        group: www-data
+        mode: "0644"
+        content: |
+          <!doctype html>
+          <html lang="es"><head><meta charset="utf-8"><title>PPI Lab</title></head>
+          <body><h1>Servidor de pruebas PPI</h1><p>Tráfico legítimo controlado.</p></body></html>
+
+    - name: Crear archivos binarios de tamaños controlados
+      ansible.builtin.command:
+        cmd: "fallocate -l {{ item.size }} /srv/ppi/files/{{ item.name }}"
+        creates: "/srv/ppi/files/{{ item.name }}"
+      loop:
+        - { name: "10MB.bin", size: "10M" }
+        - { name: "100MB.bin", size: "100M" }
+        - { name: "500MB.bin", size: "500M" }
+        - { name: "1GB.bin", size: "1G" }
+
+    - name: Ajustar propiedad de archivos de prueba
+      ansible.builtin.file:
+        path: /srv/ppi/files
+        state: directory
+        recurse: true
+        owner: www-data
+        group: www-data
+
+    - name: Crear certificado TLS exclusivo del laboratorio
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:3072 -nodes -days 365
+          -subj /CN=server.ppi.lab
+          -addext subjectAltName=DNS:server.ppi.lab,DNS:web.ppi.lab,IP:10.30.0.10
+          -keyout /etc/ssl/private/ppi-lab.key
+          -out /etc/ssl/certs/ppi-lab.crt
+        creates: /etc/ssl/certs/ppi-lab.crt
+
+    - name: Proteger clave TLS
+      ansible.builtin.file:
+        path: /etc/ssl/private/ppi-lab.key
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Instalar sitio NGINX del laboratorio
+      ansible.builtin.copy:
+        src: ../../configs/server/nginx-ppi.conf
+        dest: /etc/nginx/conf.d/ppi-lab.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Deshabilitar sitio NGINX predeterminado
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Instalar servicio iperf3 controlado
+      ansible.builtin.copy:
+        src: ../../configs/server/ppi-iperf3.service
+        dest: /etc/systemd/system/ppi-iperf3.service
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Instalar política nftables de la fase F1
+      ansible.builtin.copy:
+        src: ../../configs/server/ppi-server.nft
+        dest: /etc/ppi-server.nft
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Instalar servicio de firewall del Servidor
+      ansible.builtin.copy:
+        src: ../../configs/server/ppi-server-firewall.service
+        dest: /etc/systemd/system/ppi-server-firewall.service
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Validar configuración NGINX
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Validar configuración dnsmasq
+      ansible.builtin.command: dnsmasq --test
+      changed_when: false
+
+    - name: Validar política nftables del Servidor
+      ansible.builtin.command: nft -c -f /etc/ppi-server.nft
+      changed_when: false
+
+    - name: Recargar systemd
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+    - name: Habilitar y arrancar servicios
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        enabled: true
+        state: restarted
+      loop:
+        - nginx
+        - dnsmasq
+        - ppi-server-firewall
+        - ppi-iperf3

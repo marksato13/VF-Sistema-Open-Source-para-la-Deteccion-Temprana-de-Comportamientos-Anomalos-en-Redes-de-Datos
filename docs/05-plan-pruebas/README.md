@@ -26,7 +26,7 @@ Los escenarios A deben incluir tráfico legítimo con paquetes de 500–1500 byt
 
 ## Grupo B: ataques controlados desde Kali
 
-Solo después de cerrar Grupo A: escaneo TCP/UDP limitado, ráfaga de SYN, intentos de autenticación fallidos contra un servicio de laboratorio y solicitudes HTTP anómalas. Cada escenario tendrá timestamp, origen, destino, comando, duración y evidencia EVE asociada.
+Solo después de cerrar Grupo A: escaneo TCP/UDP limitado, ráfaga de SYN, autenticación HTTP fallida visible en red, consultas DNS anómalas y solicitudes HTTP anómalas. Los intentos SSH fallidos solo se usarán si se integran logs del host, porque su resultado está cifrado. Cada escenario tendrá timestamp, origen, destino, comando, duración y evidencia asociada.
 
 ## Grupo C: mixto
 

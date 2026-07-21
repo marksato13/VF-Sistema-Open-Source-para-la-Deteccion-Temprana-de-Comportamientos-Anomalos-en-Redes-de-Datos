@@ -25,6 +25,11 @@ outputs:
 
 af-packet:
   - interface: ens35
+    threads: 4
+    tpacket-v3: yes
+    ring-size: 32768
+    block-size: 1048576
+    buffer-size: 1048576
     cluster-id: 99
     cluster-type: cluster_flow
     defrag: yes
@@ -40,7 +45,7 @@ Kali (`10.20.0.100`) queda fuera de `HOME_NET` para que las reglas direccionales
 
 ## Offloading
 
-El servicio reproducible `configs/suricata/ppi-disable-offload.service` deshabilita TSO, GSO, GRO y LRO en `ens35` y `ens38` antes de iniciar Suricata. Debe copiarse a `/etc/systemd/system/`, habilitarse y verificarse con `ethtool -k`.
+El servicio reproducible `configs/suricata/ppi-disable-offload.service` amplía el ring RX de `ens35` a 4096 y deshabilita TSO, GSO, GRO y LRO en `ens35` y `ens38` antes de iniciar Suricata. Debe copiarse a `/etc/systemd/system/`, habilitarse y verificarse con `ethtool -g` y `ethtool -k`.
 
 ## Reglas
 

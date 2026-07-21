@@ -26,7 +26,7 @@ Repite F1 con picos legítimos: 2, 4 y 8 descargas concurrentes; `iperf3` al 25 
 |---|---|---|
 | L3 | barrido de hosts/puertos desde Kali y variación de origen | IPs únicas, ratio de destinos, entropía de destinos, TTL |
 | L4 | SYN burst limitado, UDP burst y puertos no usados | frecuencia SYN, SYN/ACK, RST, ratio de flags, puertos únicos |
-| L7 | intentos SSH fallidos en servicio de laboratorio, HTTP paths inexistentes y consultas DNS anómalas | fallos de login, códigos HTTP, frecuencia DNS, longitud/entropía de URI |
+| L7 | autenticación HTTP fallida, paths inexistentes y consultas DNS anómalas; SSH fallido solo con logs del host | ratio 401/403/404, frecuencia DNS/NXDOMAIN, longitud/entropía de URI |
 
 Cada escenario tendrá intensidad baja/media/alta y duración fija; se detendrá si afecta la disponibilidad del servidor.
 

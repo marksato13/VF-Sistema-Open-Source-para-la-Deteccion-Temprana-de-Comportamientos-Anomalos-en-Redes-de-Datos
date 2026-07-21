@@ -5,6 +5,7 @@ Before=suricata.service
 
 [Service]
 Type=oneshot
+ExecStart=/usr/sbin/ethtool -G ens35 rx 4096
 ExecStart=/usr/sbin/ethtool -K ens35 gro off lro off tso off gso off
 ExecStart=/usr/sbin/ethtool -K ens38 gro off lro off tso off gso off
 RemainAfterExit=yes

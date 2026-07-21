@@ -1,0 +1,13 @@
+[Unit]
+Description=PPI Lab phase-specific server firewall
+After=network-online.target
+Before=ppi-iperf3.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nft -f /etc/ppi-server.nft
+ExecStop=/usr/sbin/nft delete table inet ppi_server
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

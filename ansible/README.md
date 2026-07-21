@@ -140,3 +140,11 @@ Las huellas deberán confirmarse desde la consola de cada VM antes de agregarlas
 - No guardar contraseñas, claves privadas ni archivos de Vault en Git.
 - Utilizar Ansible Vault cuando se incorporen secretos cifrados.
 - La VM Kali aceptará administración desde `10.10.10.10`, pero no iniciará conexiones hacia otros nodos de gestión.
+
+## Playbooks de servicios y calibración
+
+- `03-configurar-servicios-servidor.yml`: instala NGINX, HTTPS, dnsmasq e iperf3 y crea archivos controlados.
+- `04-configurar-cliente-f1.yml`: instala las herramientas benignas de generación y medición.
+- `05-ajustar-captura-suricata.yml`: configura AF_PACKET, ring RX y reinicia Suricata solo después de `suricata -T`.
+
+Estos playbooks requieren privilegios. `useransible` no pertenece a sudoers de forma permanente: durante la ejecución se autorizó mediante un archivo temporal validado con `visudo`, que fue eliminado inmediatamente en Servidor, Cliente y Sensor. Las NIC externas de Servidor y Cliente se habilitaron solo para descargar paquetes y volvieron a estado `DOWN` al finalizar.
