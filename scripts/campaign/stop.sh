@@ -46,14 +46,21 @@ pcap_validation_failures=0
 pcap_file_count=0
 pcap_total_bytes=0
 : > "$campaign_dir/pcap-validation.stderr"
-while IFS= read -r -d '' pcap_file; do
+mapfile -d '' pcap_files < <(
+  find "$campaign_dir/pcap" -maxdepth 1 -type f -name 'capture.pcap*' -print0 | sort -z
+)
+for pcap_file in "${pcap_files[@]}"; do
   pcap_file_count=$((pcap_file_count + 1))
   pcap_size="$(stat -c '%s' "$pcap_file")"
   pcap_total_bytes=$((pcap_total_bytes + pcap_size))
   if ! tcpdump -n -r "$pcap_file" -w /dev/null 2>> "$campaign_dir/pcap-validation.stderr"; then
     pcap_validation_failures=$((pcap_validation_failures + 1))
   fi
-done < <(find "$campaign_dir/pcap" -maxdepth 1 -type f -name 'capture.pcap*' -print0 | sort -z)
+done
+"$SCRIPT_DIR/../analysis/pcap-ip-length-summary.sh" "${pcap_files[@]}" \
+  > "$campaign_dir/pcap-ip-length-summary.json"
+pcap_parsed_packets="$(jq -r '.total_ipv4_packets' "$campaign_dir/pcap-ip-length-summary.json")"
+pcap_captured_packets="$(jq -r '.tcpdump.packets_captured' "$campaign_dir/pcap-stop.json")"
 pcap_remote_file_count="$(jq -r '.files.count' "$campaign_dir/pcap-stop.json")"
 pcap_remote_total_bytes="$(jq -r '.files.total_bytes' "$campaign_dir/pcap-stop.json")"
 pcap_limit_reached=false
@@ -106,6 +113,7 @@ evidence_complete=true
 (( sensor_sampler_stderr_bytes == 0 )) || evidence_complete=false
 (( pcap_file_count >= 1 )) || evidence_complete=false
 (( pcap_validation_failures == 0 )) || evidence_complete=false
+(( pcap_parsed_packets == pcap_captured_packets )) || evidence_complete=false
 (( pcap_file_count == pcap_remote_file_count )) || evidence_complete=false
 (( pcap_total_bytes == pcap_remote_total_bytes )) || evidence_complete=false
 [[ "$pcap_transfer_verified" == true ]] || evidence_complete=false
@@ -167,6 +175,8 @@ jq \
   --argjson pcap_file_count "$pcap_file_count" \
   --argjson pcap_total_bytes "$pcap_total_bytes" \
   --argjson pcap_validation_failures "$pcap_validation_failures" \
+  --argjson pcap_parsed_packets "$pcap_parsed_packets" \
+  --argjson pcap_captured_packets "$pcap_captured_packets" \
   --argjson pcap_kernel_drops "$pcap_kernel_drops" \
   --argjson pcap_remote_file_count "$pcap_remote_file_count" \
   --argjson pcap_remote_total_bytes "$pcap_remote_total_bytes" \
@@ -189,6 +199,8 @@ jq \
       pcap_file_count: $pcap_file_count,
       pcap_total_bytes: $pcap_total_bytes,
       pcap_validation_failures: $pcap_validation_failures,
+      pcap_parsed_packets: $pcap_parsed_packets,
+      pcap_captured_packets: $pcap_captured_packets,
       pcap_kernel_drops: $pcap_kernel_drops,
       pcap_remote_file_count: $pcap_remote_file_count,
       pcap_remote_total_bytes: $pcap_remote_total_bytes,

@@ -43,6 +43,7 @@ stop.sh
   ├─ SHA-256 remoto de cada PCAP
   ├─ copia por SSH/TAR a artifacts/campaigns/<ID>/pcap/
   ├─ verificación del SHA-256 remoto y lectura completa con tcpdump
+  ├─ resumen de longitud IPv4 y comparación con paquetes capturados
   ├─ comparación de cantidad/tamaño remoto y local
   ├─ contadores finales y segmento EVE
   └─ SHA256SUMS de toda la campaña

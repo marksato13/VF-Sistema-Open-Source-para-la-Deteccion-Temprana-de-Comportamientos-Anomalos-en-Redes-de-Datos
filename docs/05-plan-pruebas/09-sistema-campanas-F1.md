@@ -53,6 +53,7 @@ Cada directorio contiene como mínimo:
 | `pcap/capture.pcap*` | paquetes completos LAN↔DMZ, hasta el límite configurado |
 | `pcap-validation.stderr` | salida de la lectura completa de validación de cada PCAP |
 | `pcap-remote-SHA256SUMS` / `pcap-transfer-verification.txt` | hash calculado antes de copiar y comprobación en VM01 |
+| `pcap-ip-length-summary.json` | distribución reproducible de longitud IPv4 y rango objetivo de 500–1500 bytes |
 | `eve-slice.jsonl` | registros EVE añadidos mientras la campaña estuvo activa |
 | `deltas.json` | paquetes, drops, errores, overflow y número de registros EVE de la ventana |
 | `SHA256SUMS` | integridad de todos los archivos anteriores |
