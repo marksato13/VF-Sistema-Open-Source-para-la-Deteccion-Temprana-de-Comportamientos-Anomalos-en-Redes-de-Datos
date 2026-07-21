@@ -13,7 +13,7 @@ Los resultados de ejecución se guardan en `artifacts/campaigns/<ID>/`, excluido
 | Componente | Función |
 |---|---|
 | `scripts/campaign/start.sh` | crea el manifiesto, bloquea ejecuciones simultáneas, audita las cuatro VMs, toma contadores iniciales e inicia el muestreo del Sensor |
-| `scripts/campaign/stop.sh` | detiene el muestreo, toma contadores finales, extrae el segmento EVE, calcula deltas y genera `SHA256SUMS` |
+| `scripts/campaign/stop.sh` | espera tres segundos para estabilización, detiene el muestreo, toma contadores finales, extrae el segmento EVE acotado, calcula deltas y genera `SHA256SUMS` |
 | `scripts/campaign/run-f1.sh` | ejecuta un escenario benigno limitado desde VM05 y garantiza el cierre de la campaña aunque falle el escenario |
 | `scripts/campaign/sample-sensor.sh` | registra por segundo CPU de Suricata, RSS, memoria disponible y carga del Sensor |
 | `ppi-suricata-metrics` | consulta el socket de Suricata y devuelve únicamente métricas JSON sin aceptar argumentos |
@@ -52,7 +52,9 @@ Cada directorio contiene como mínimo:
 | `deltas.json` | paquetes, drops, errores, overflow y número de registros EVE de la ventana |
 | `SHA256SUMS` | integridad de todos los archivos anteriores |
 
-La extracción EVE por número de línea solo se declara completa si el inode es igual antes y después. Si ocurre una rotación, se crea un segmento vacío y `eve_slice_status` queda como `unavailable_log_rotated`; esa campaña no debe aceptarse sin recuperar ambos archivos rotados.
+La extracción EVE usa el intervalo cerrado entre el número de línea inicial y el checkpoint final; no usa `tail` hasta el final porque podrían incorporarse eventos posteriores al conteo. Solo se declara completa si el inode es igual antes y después. Si ocurre una rotación, se crea un segmento vacío y `eve_slice_status` queda como `unavailable_log_rotated`; esa campaña no debe aceptarse sin recuperar ambos archivos rotados.
+
+El ejecutor espera un segundo antes del escenario para obtener una muestra basal. Al cerrar, la espera predeterminada de tres segundos permite que Suricata actualice EVE y sus contadores antes del checkpoint final. Puede ajustarse entre 0 y 10 segundos con `PPI_CAMPAIGN_SETTLE_SECONDS`; el valor efectivo queda registrado como `settle_seconds`. Para las campañas oficiales se conservará el valor predeterminado.
 
 `cpu_percent_lifetime` de las instantáneas es el promedio desde el inicio del proceso. Para analizar carga durante el escenario debe usarse `cpu_percent` de `sensor-timeseries.tsv`, calculado con la diferencia de ticks de CPU cada segundo. Ese valor puede superar 100 % porque Suricata usa varios núcleos.
 
@@ -86,7 +88,7 @@ Si el escenario falla, `run-f1.sh` cierra igualmente la campaña y registra `sta
 
 Una campaña candidata debe cumplir todos estos puntos:
 
-1. `manifest.status` es `completed`, `scenario_exit_code` es 0 y `git.dirty` es `false`.
+1. `manifest.status` es `completed`, `evidence.complete` es `true`, `scenario_exit_code` es 0 y `git.dirty` es `false`.
 2. El commit del manifiesto corresponde a la versión revisada de scripts y configuraciones.
 3. `counter_reset_detected` es `false`; `kernel_drops`, `decoder_invalid` y `alert_queue_overflow` son cero.
 4. `eve_slice_status` es `complete_same_inode`.

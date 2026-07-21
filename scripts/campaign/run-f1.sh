@@ -35,6 +35,8 @@ close_on_signal() {
 }
 trap close_on_signal HUP INT TERM
 
+# Garantiza al menos una muestra basal antes de escenarios instantáneos.
+sleep 1
 remote_command="$(printf '%q ' /home/useransible/bin/ppi-run-benign "$scenario" "$@")"
 ppi_ssh "$PPI_CLIENT_IP" "$remote_command" \
   > "$campaign_dir/scenario-output.txt" \

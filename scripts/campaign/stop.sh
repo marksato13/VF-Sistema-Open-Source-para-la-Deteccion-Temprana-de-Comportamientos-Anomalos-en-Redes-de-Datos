@@ -21,6 +21,11 @@ active_id="$(cat "$PPI_ACTIVE_LOCK/id")"
 campaign_dir="$(ppi_campaign_dir "$id")"
 [[ -d "$campaign_dir" ]] || ppi_die "no existe $campaign_dir"
 
+settle_seconds="${PPI_CAMPAIGN_SETTLE_SECONDS:-3}"
+[[ "$settle_seconds" =~ ^[0-9]+$ ]] && (( settle_seconds <= 10 )) ||
+  ppi_die "PPI_CAMPAIGN_SETTLE_SECONDS debe estar entre 0 y 10"
+sleep "$settle_seconds"
+
 sampler_pid="$(cat "$PPI_ACTIVE_LOCK/sampler_pid" 2>/dev/null || true)"
 if [[ "$sampler_pid" =~ ^[0-9]+$ ]] && kill -0 "$sampler_pid" 2>/dev/null; then
   sampler_command="$(ps -p "$sampler_pid" -o args= || true)"
@@ -40,28 +45,50 @@ ppi_ssh "$PPI_SENSOR_IP" 'sudo -n /usr/local/sbin/ppi-suricata-metrics' \
 before_inode="$(jq -r '.eve.inode' "$campaign_dir/sensor-before.json")"
 after_inode="$(jq -r '.eve.inode' "$campaign_dir/sensor-after.json")"
 before_lines="$(jq -r '.eve.lines' "$campaign_dir/sensor-before.json")"
+after_lines="$(jq -r '.eve.lines' "$campaign_dir/sensor-after.json")"
 if [[ "$before_inode" == "$after_inode" ]]; then
-  first_line=$((before_lines + 1))
-  ppi_ssh "$PPI_SENSOR_IP" "tail -n +$first_line /var/log/suricata/eve.json" \
-    > "$campaign_dir/eve-slice.jsonl"
+  if (( after_lines > before_lines )); then
+    first_line=$((before_lines + 1))
+    ppi_ssh "$PPI_SENSOR_IP" "sed -n '${first_line},${after_lines}p' /var/log/suricata/eve.json" \
+      > "$campaign_dir/eve-slice.jsonl"
+  else
+    : > "$campaign_dir/eve-slice.jsonl"
+  fi
   eve_slice_status="complete_same_inode"
 else
   : > "$campaign_dir/eve-slice.jsonl"
   eve_slice_status="unavailable_log_rotated"
 fi
 
+sensor_sample_rows="$(awk 'END {print (NR > 0 ? NR - 1 : 0)}' "$campaign_dir/sensor-timeseries.tsv")"
+sensor_sampler_stderr_bytes="$(stat -c '%s' "$campaign_dir/sensor-timeseries.stderr")"
+eve_slice_records="$(wc -l < "$campaign_dir/eve-slice.jsonl")"
+if [[ "$before_inode" == "$after_inode" ]] && (( after_lines >= before_lines )); then
+  expected_eve_records=$((after_lines - before_lines))
+else
+  expected_eve_records=-1
+fi
+evidence_complete=true
+(( sensor_sample_rows >= 1 )) || evidence_complete=false
+(( sensor_sampler_stderr_bytes == 0 )) || evidence_complete=false
+[[ "$eve_slice_status" == "complete_same_inode" ]] || evidence_complete=false
+(( eve_slice_records == expected_eve_records )) || evidence_complete=false
+
 ended_at="$(date --iso-8601=seconds)"
 ended_at_utc="$(date --utc --iso-8601=seconds)"
-if (( scenario_exit_code == 0 )); then
+if (( scenario_exit_code != 0 )); then
+  final_status="scenario_failed"
+elif [[ "$evidence_complete" == true ]]; then
   final_status="completed"
 else
-  final_status="scenario_failed"
+  final_status="evidence_failed"
 fi
 
 jq -n \
   --slurpfile before "$campaign_dir/sensor-before.json" \
   --slurpfile after "$campaign_dir/sensor-after.json" \
-  --arg eve_slice_status "$eve_slice_status" '
+  --arg eve_slice_status "$eve_slice_status" \
+  --argjson eve_slice_records "$eve_slice_records" '
   def delta($a; $b):
     if ($a | type) == "number" and ($b | type) == "number" and $b >= $a then $b - $a else null end;
   {
@@ -78,6 +105,10 @@ jq -n \
     alert_queue_overflow: delta($before[0].suricata.alert_queue_overflow; $after[0].suricata.alert_queue_overflow),
     eve: {
       records: delta($before[0].eve.lines; $after[0].eve.lines),
+      slice_records: $eve_slice_records,
+      slice_matches_checkpoint: (
+        delta($before[0].eve.lines; $after[0].eve.lines) == $eve_slice_records
+      ),
       slice_status: $eve_slice_status
     }
   }' > "$campaign_dir/deltas.json"
@@ -88,13 +119,27 @@ jq \
   --arg ended_at_utc "$ended_at_utc" \
   --arg status "$final_status" \
   --argjson scenario_exit_code "$scenario_exit_code" \
-  --arg eve_slice_status "$eve_slice_status" '
+  --arg eve_slice_status "$eve_slice_status" \
+  --argjson settle_seconds "$settle_seconds" \
+  --argjson sensor_sample_rows "$sensor_sample_rows" \
+  --argjson sensor_sampler_stderr_bytes "$sensor_sampler_stderr_bytes" \
+  --argjson eve_slice_records "$eve_slice_records" \
+  --argjson expected_eve_records "$expected_eve_records" \
+  --argjson evidence_complete "$evidence_complete" '
   . + {
     status: $status,
     ended_at: $ended_at,
     ended_at_utc: $ended_at_utc,
     scenario_exit_code: $scenario_exit_code,
-    eve_slice_status: $eve_slice_status
+    settle_seconds: $settle_seconds,
+    eve_slice_status: $eve_slice_status,
+    evidence: {
+      complete: $evidence_complete,
+      sensor_sample_rows: $sensor_sample_rows,
+      sensor_sampler_stderr_bytes: $sensor_sampler_stderr_bytes,
+      eve_slice_records: $eve_slice_records,
+      expected_eve_records: $expected_eve_records
+    }
   }' "$campaign_dir/manifest.json" > "$manifest_tmp"
 mv "$manifest_tmp" "$campaign_dir/manifest.json"
 
@@ -105,3 +150,4 @@ mv "$manifest_tmp" "$campaign_dir/manifest.json"
 rm -rf -- "$PPI_ACTIVE_LOCK"
 
 printf 'Campaña cerrada: %s\nEstado: %s\nDirectorio: %s\n' "$id" "$final_status" "$campaign_dir"
+[[ "$final_status" != "evidence_failed" ]] || exit 3
