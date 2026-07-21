@@ -48,11 +48,15 @@ Las fases son una hipótesis de trabajo, no una secuencia inmutable. Cada una ti
 
 | Puerta | Evidencia requerida | Acción si no cumple |
 |---|---|---|
-| G0 | NTP, rutas y aislamiento correctos | detener; corregir infraestructura y repetir F0 |
-| G1 | F0 sin pérdida ni eventos inexplicables | depurar Suricata, firewall o servicio antes de F1 |
-| G2 | F1 cubre protocolos, tamaños 500–1500 bytes y variación legítima | ampliar escenarios normales antes de entrenar |
-| G3 | F2 mantiene disponibilidad y pérdida dentro del umbral definido | reducir bitrate/concurrencia o ampliar recursos; no ejecutar F3 |
-| G4 | F3 produce etiquetas y evidencia EVE correlacionable | ajustar una técnica por vez y repetir; no mezclar ataques |
-| G5 | F4 separa congestión legítima de anomalía | revisar features, ventanas y particiones antes de publicar métricas |
+| G0 | NTP, rutas y aislamiento temporal correctos | detener y corregir infraestructura |
+| G1 | servicios, enrutamiento y captura funcionales | depurar Suricata, firewall o servicio |
+| G2 | límites de throughput/concurrencia sin drops | reducir carga o ajustar recursos |
+| G3 | orquestador conserva manifiesto, contadores, EVE y hashes | corregir trazabilidad antes de nuevas campañas |
+| G4 | PCAP acotado, íntegro y sin drops | corregir captura/retención antes de features |
+| G5 | 14 features causales con esquema, código y pruebas | corregir fórmulas, fuentes o fuga temporal |
+| G6 | F1 representa normalidad diversa y pesada | ampliar escenarios normales; no entrenar |
+| G7 | F2 mantiene disponibilidad bajo estrés legítimo | reducir límites o separar perfiles operativos |
+| G8 | F3 produce anomalías L3/L4/L7 etiquetadas y correlacionables | ajustar una técnica por vez; no mezclar ataques |
+| G9 | F4 y evaluación separan congestión legítima de anomalía | revisar features, particiones, modelo y umbrales |
 
 Se puede dividir una fase, repetirla o introducir una fase intermedia de calibración cuando la evidencia lo exija. El producto final debe reportar tanto los resultados favorables como los límites, repeticiones y escenarios descartados.

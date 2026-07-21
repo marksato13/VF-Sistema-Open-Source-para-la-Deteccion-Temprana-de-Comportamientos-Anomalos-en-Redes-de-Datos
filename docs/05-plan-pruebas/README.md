@@ -13,6 +13,7 @@ El procedimiento automatizado, la estructura de evidencia y los criterios de ace
 La validación extremo a extremo y los dos fallos corregidos se registran en `10-validacion-orquestador-G3.md`.
 El diseño y la validación PCAP están en `11-diseno-captura-PCAP-G4.md` y `12-validacion-captura-PCAP-G4.md`.
 El contrato de las 14 variables causales se define en `../06-features-modelado/01-diccionario-multicapa-G5.md`.
+Su validación sintética y real está en `../06-features-modelado/02-validacion-extractor-G5.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
