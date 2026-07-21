@@ -51,6 +51,8 @@ stop.sh
 
 El archivo ejecutable y sus directorios padre son propiedad de `root`. Sudoers permite invocar el helper, pero el helper exige exactamente una acción (`start`, `stop` o `status`) y un ID de 3–64 caracteres seguros. Internamente usa rutas absolutas y valida que el PID corresponda tanto a `tcpdump` como al directorio de la campaña antes de enviar `SIGINT`.
 
+El directorio padre `/var/lib/ppi-captures` usa modo `0711`: permite atravesar una ruta conocida, pero no listar campañas. Durante la captura, el subdirectorio pertenece a `tcpdump:tcpdump`; al cerrar cambia a `root:useransible` con modo `0750` para permitir únicamente la copia autenticada. Este detalle también permite que el usuario sin privilegios de `tcpdump` atraviese el directorio padre después de la caída de privilegios.
+
 Pruebas ejecutadas:
 
 - `status CHECK-PCAP-001`: permitido, estado `inactive`;

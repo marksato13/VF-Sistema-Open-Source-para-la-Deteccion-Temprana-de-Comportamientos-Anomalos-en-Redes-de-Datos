@@ -23,7 +23,7 @@ action="$1"
 id="$2"
 validate_id "$id"
 
-/usr/bin/install -d -o root -g useransible -m 0750 "$CAPTURE_ROOT"
+/usr/bin/install -d -o root -g root -m 0711 "$CAPTURE_ROOT"
 /usr/bin/install -d -o root -g root -m 0755 "$STATE_DIR"
 pid_file="$STATE_DIR/pid"
 id_file="$STATE_DIR/id"
@@ -37,6 +37,7 @@ case "$action" in
     if [[ "$active_pid" =~ ^[0-9]+$ ]] && /usr/bin/kill -0 "$active_pid" 2>/dev/null; then
       die "ya existe una captura activa para $active_id"
     fi
+    /usr/bin/rm -f -- "$pid_file" "$id_file"
     [[ ! -e "$capture_dir" ]] || die "ya existe evidencia remota para $id"
     available_kib="$(/usr/bin/df -Pk "$CAPTURE_ROOT" | /usr/bin/awk 'NR == 2 {print $4}')"
     (( available_kib >= 3145728 )) || die "se requieren al menos 3 GiB libres en el Sensor"
