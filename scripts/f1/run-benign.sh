@@ -25,8 +25,11 @@ shift || true
 case "$scenario" in
   http|https)
     size="${1:-}"
+    rate="${2:-20M}"
     case "$size" in 10MB|100MB|500MB|1GB) ;; *) echo "ERROR: tamaño permitido: 10MB, 100MB, 500MB o 1GB" >&2; exit 2;; esac
+    case "$rate" in 2M|5M|10M|20M) ;; *) echo "ERROR: límite HTTP permitido: 2M, 5M, 10M o 20M bytes/s" >&2; exit 2;; esac
     curl_args=(--fail --silent --show-error --output /dev/null
+      --limit-rate "$rate"
       --write-out '{"http_code":%{http_code},"bytes":%{size_download},"seconds":%{time_total},"speed_Bps":%{speed_download}}\n')
     [[ "$scenario" == https ]] && curl_args+=(--insecure)
     curl "${curl_args[@]}" "$scenario://$TARGET_IP/files/$size.bin"

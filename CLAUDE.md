@@ -245,3 +245,5 @@ El propósito es producir ventanas etiquetadas y reproducibles para Isolation Fo
 VM03 dispone ahora de NGINX HTTP/HTTPS, DNS local, iperf3 y SSH/SFTP; VM05 tiene las herramientas de cliente. La prueba iperf3 sin pacing de 2.58 Gbit/s produjo 389,932 descartes y está excluida del dataset. AF_PACKET fue ajustado y 100 Mbit/s durante 10 s obtuvo cero drops. Claude debe rechazar cualquier escenario iperf3 sin bitrate explícito y recordar que fallos de login SSH no son visibles en EVE sin integrar logs del host.
 
 La calibración posterior fijó máximos F1 de 200 Mbit/s TCP y 50 Mbit/s UDP. TCP 250 tuvo retransmisiones y solo una ronda, TCP 300 fue abortado por la guardia, y UDP 75/100 presentó pérdida. `scripts/f1/run-benign.sh` rechaza esos valores superiores. La calibración no pertenece al dataset final.
+
+HTTP/HTTPS quedó calibrado con 10 MB, 100 MB, 500 MB y 1 GB, además de 2/4/8 flujos concurrentes. Suricata terminó con cero drops y una muestra tcpdump registró 90.84 % de payloads TCP entre 500 y 1500 bytes. Los detalles están en `08-resultados-http-https-G2.md`; estos datos también son calibración y no entrenamiento.
