@@ -45,14 +45,14 @@ case "$scenario" in
   iperf-tcp)
     rate="${1:-}"
     duration="${2:-}"
-    case "$rate" in 10M|25M|50M|100M|200M|300M) ;; *) echo "ERROR: bitrate TCP permitido: 10M, 25M, 50M, 100M, 200M o 300M" >&2; exit 2;; esac
+    case "$rate" in 10M|25M|50M|100M|200M) ;; *) echo "ERROR: bitrate TCP permitido: 10M, 25M, 50M, 100M o 200M" >&2; exit 2;; esac
     require_duration "$duration"
     iperf3 -c "$TARGET_IP" -b "$rate" -t "$duration" -J
     ;;
   iperf-udp)
     rate="${1:-}"
     duration="${2:-}"
-    case "$rate" in 1M|10M|25M|50M|100M) ;; *) echo "ERROR: bitrate UDP permitido: 1M, 10M, 25M, 50M o 100M" >&2; exit 2;; esac
+    case "$rate" in 1M|10M|25M|50M) ;; *) echo "ERROR: bitrate UDP permitido: 1M, 10M, 25M o 50M" >&2; exit 2;; esac
     require_duration "$duration"
     iperf3 -c "$TARGET_IP" -u -b "$rate" -t "$duration" -J
     ;;

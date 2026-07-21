@@ -59,7 +59,7 @@ Después del reinicio de Suricata, una prueba TCP limitada a 100 Mbit/s durante 
 
 ## Decisión
 
-Estado: **servicios listos; calibración continúa**. El siguiente paso es probar 50, 100, 200 y 300 Mbit/s por separado, con deltas de contadores. No se volverá a usar iperf3 TCP sin `-b`, ni se incorporará la ráfaga de 2.58 Gbit/s al dataset.
+Estado actualizado: **servicios listos y calibración de throughput cerrada**. Los resultados completos están en `07-resultados-calibracion-G2.md`. No se volverá a usar iperf3 TCP sin `-b`, ni se incorporará la ráfaga de 2.58 Gbit/s al dataset.
 
 ## Revisión crítica de Claude y correcciones
 

@@ -14,3 +14,5 @@ Ejemplos:
 ```
 
 No ampliar los valores permitidos hasta medir deltas de `kernel_drops`, `decoder.invalid` y `alert_queue_overflow`. La salida JSON de iperf3 se conserva fuera de Git junto con el manifiesto de campaña.
+
+La calibración G2 fijó máximos de 200 Mbit/s para TCP y 50 Mbit/s para UDP. Valores superiores quedaron excluidos del ejecutor de producción.
