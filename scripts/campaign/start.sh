@@ -15,10 +15,13 @@ phase="$2"
 scenario="$3"
 traffic_class="$4"
 purpose="${5:-experiment}"
+warmup_seconds="${PPI_CAMPAIGN_WARMUP_SECONDS:-1}"
 ppi_validate_id "$id"
 [[ "$phase" =~ ^F[0-9]+$ ]] || ppi_die "la fase debe usar el formato F0, F1, ..."
 [[ "$traffic_class" =~ ^[a-z][a-z0-9_-]*$ ]] || ppi_die "clase de tráfico inválida"
 [[ "$purpose" =~ ^[a-z][a-z0-9_-]*$ ]] || ppi_die "propósito inválido"
+[[ "$warmup_seconds" =~ ^[0-9]+$ ]] && (( warmup_seconds >= 1 && warmup_seconds <= 120 )) ||
+  ppi_die "PPI_CAMPAIGN_WARMUP_SECONDS debe estar entre 1 y 120"
 [[ -r "$PPI_SSH_KEY" ]] || ppi_die "no se puede leer la clave SSH $PPI_SSH_KEY"
 
 mkdir -p -m 0700 "$PPI_CAMPAIGNS_DIR"
@@ -71,7 +74,8 @@ jq -n \
   --arg started_at "$started_at" \
   --arg started_at_utc "$started_at_utc" \
   --arg git_commit "$git_commit" \
-  --argjson git_dirty "$git_dirty" '
+  --argjson git_dirty "$git_dirty" \
+  --argjson warmup_seconds "$warmup_seconds" '
   {
     schema_version: 1,
     campaign_id: $id,
@@ -83,6 +87,7 @@ jq -n \
     started_at: $started_at,
     started_at_utc: $started_at_utc,
     git: {commit: $git_commit, dirty: $git_dirty},
+    warmup_seconds: $warmup_seconds,
     topology: {
       sensor_mgmt: "10.10.10.20",
       server_service: "10.30.0.10",

@@ -23,6 +23,9 @@ for argument in "$@"; do
 done
 
 purpose="${PPI_CAMPAIGN_PURPOSE:-experiment}"
+warmup_seconds="${PPI_CAMPAIGN_WARMUP_SECONDS:-1}"
+[[ "$warmup_seconds" =~ ^[0-9]+$ ]] && (( warmup_seconds >= 1 && warmup_seconds <= 120 )) ||
+  ppi_die "PPI_CAMPAIGN_WARMUP_SECONDS debe estar entre 1 y 120"
 "$SCRIPT_DIR/start.sh" "$id" F1 "$scenario" benign "$purpose" || exit $?
 campaign_dir="$(ppi_campaign_dir "$id")"
 campaign_closed=false
@@ -35,8 +38,8 @@ close_on_signal() {
 }
 trap close_on_signal HUP INT TERM
 
-# Garantiza al menos una muestra basal antes de escenarios instantáneos.
-sleep 1
+# F1 final usa 60 s para completar las ventanas causales; calibración usa 1 s.
+sleep "$warmup_seconds"
 remote_command="$(printf '%q ' /home/useransible/bin/ppi-run-benign "$scenario" "$@")"
 ppi_ssh "$PPI_CLIENT_IP" "$remote_command" \
   > "$campaign_dir/scenario-output.txt" \

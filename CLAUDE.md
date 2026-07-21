@@ -68,6 +68,7 @@ Las NIC externas de `172.17.25.0/24` todavía existen temporalmente para instala
 - `useransible` solo puede elevar privilegios para los helpers versionados `ppi-suricata-metrics` y `ppi-pcap-control`; no dispone de sudo general ni de permiso directo sobre `tcpdump`.
 - G4 incorpora PCAP por campaña mediante un helper raíz que fija `ens35`, filtro LAN↔DMZ, snaplen completo y rotación máxima aproximada de 2.048 GB. El diseño y riesgos están en `docs/05-plan-pruebas/11-diseno-captura-PCAP-G4.md`.
 - G4 pasó con DNS y HTTP. En `CAL-G4-HTTP-001`, 7,242 de 8,484 paquetes IPv4 (85.36 %) midieron 500–1500 bytes, con cero drops y SHA remoto/local verificado. Resultados: `docs/05-plan-pruebas/12-validacion-captura-PCAP-G4.md`.
+- G5 define `multilayer-v1`: 14 features causales por IP iniciadora, con ventanas de 10/30/60 s y tres señales L7 pasivas. Diccionario: `docs/06-features-modelado/01-diccionario-multicapa-G5.md`; extractor: `scripts/features/`.
 - El gate G3 del orquestador pasó con `CAL-F1-DNS-003`: 6 paquetes, cero drops/errores/overflow, 7 registros EVE exactos y 7 muestras del Sensor. Esta ejecución es calibración y no pertenece al dataset.
 
 ## Observaciones obligatorias del jurado

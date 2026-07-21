@@ -58,8 +58,10 @@ case "$action" in
       /usr/bin/cat "$capture_dir/tcpdump.stderr" >&2 || true
       die "tcpdump no permaneció activo"
     }
+    verified_at="$(/usr/bin/date --iso-8601=microseconds)"
     /usr/bin/jq -n \
       --arg id "$id" \
+      --arg verified_at "$verified_at" \
       --arg interface "$CAPTURE_INTERFACE" \
       --arg filter "$CAPTURE_FILTER" \
       --argjson pid "$capture_pid" \
@@ -68,6 +70,7 @@ case "$action" in
       {
         status: "capturing",
         campaign_id: $id,
+        verified_at: $verified_at,
         pid: $pid,
         interface: $interface,
         filter: $filter,
