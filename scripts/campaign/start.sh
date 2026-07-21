@@ -116,8 +116,12 @@ ppi_ssh "$PPI_SENSOR_IP" 'sudo -n /usr/local/sbin/ppi-suricata-metrics' \
 jq -e '.suricata.service_state == "active"' "$campaign_dir/sensor-before.json" >/dev/null
 
 pcap_attempted=true
-ppi_ssh "$PPI_SENSOR_IP" "sudo -n /usr/local/sbin/ppi-pcap-control start '$id'" \
-  > "$campaign_dir/pcap-start.json"
+if ! ppi_ssh "$PPI_SENSOR_IP" "sudo -n /usr/local/sbin/ppi-pcap-control start '$id'" \
+  > "$campaign_dir/pcap-start.json"; then
+  cleanup_failed_start
+  trap - ERR INT TERM
+  exit 1
+fi
 
 "$SCRIPT_DIR/sample-sensor.sh" "$PPI_SENSOR_IP" 1 \
   > "$campaign_dir/sensor-timeseries.tsv" \
