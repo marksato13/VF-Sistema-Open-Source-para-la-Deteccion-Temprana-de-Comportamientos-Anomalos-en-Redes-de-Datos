@@ -10,6 +10,7 @@ Este plan separa las campañas para que el entrenamiento y la evaluación sean d
 4. Registrar antes y después de cada campaña: `capture.kernel_drops`, `decoder.invalid`, `alert_queue_overflow`, CPU, RAM, espacio de disco y número de eventos EVE.
 
 El procedimiento automatizado, la estructura de evidencia y los criterios de aceptación se describen en `09-sistema-campanas-F1.md`.
+La validación extremo a extremo y los dos fallos corregidos se registran en `10-validacion-orquestador-G3.md`.
 
 ## Grupo A: tráfico legítimo pesado
 

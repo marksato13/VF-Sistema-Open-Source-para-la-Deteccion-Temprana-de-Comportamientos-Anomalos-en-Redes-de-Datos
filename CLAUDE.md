@@ -66,6 +66,7 @@ Las NIC externas de `172.17.25.0/24` todavía existen temporalmente para instala
 - La calibración segura fijó techos de F1 en 200 Mbit/s TCP, 50 Mbit/s UDP y 20 MB/s por transferencia HTTP/HTTPS; todas las pruebas acotadas posteriores registraron cero drops de Suricata.
 - Existe un orquestador reproducible en `scripts/campaign/`: manifiesto, inventario, contadores, serie temporal del Sensor, segmento EVE y hashes por campaña. Los artefactos runtime permanecen fuera de Git.
 - `useransible` solo puede elevar privilegios para `/usr/local/sbin/ppi-suricata-metrics`; el comando no acepta argumentos y no concede sudo general.
+- El gate G3 del orquestador pasó con `CAL-F1-DNS-003`: 6 paquetes, cero drops/errores/overflow, 7 registros EVE exactos y 7 muestras del Sensor. Esta ejecución es calibración y no pertenece al dataset.
 
 ## Observaciones obligatorias del jurado
 
