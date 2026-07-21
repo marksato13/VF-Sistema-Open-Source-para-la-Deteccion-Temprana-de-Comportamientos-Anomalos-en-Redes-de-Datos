@@ -21,9 +21,9 @@ active_id="$(cat "$PPI_ACTIVE_LOCK/id")"
 campaign_dir="$(ppi_campaign_dir "$id")"
 [[ -d "$campaign_dir" ]] || ppi_die "no existe $campaign_dir"
 
-settle_seconds="${PPI_CAMPAIGN_SETTLE_SECONDS:-3}"
-[[ "$settle_seconds" =~ ^[0-9]+$ ]] && (( settle_seconds <= 10 )) ||
-  ppi_die "PPI_CAMPAIGN_SETTLE_SECONDS debe estar entre 0 y 10"
+settle_seconds="${PPI_CAMPAIGN_SETTLE_SECONDS:-9}"
+[[ "$settle_seconds" =~ ^[0-9]+$ ]] && (( settle_seconds <= 15 )) ||
+  ppi_die "PPI_CAMPAIGN_SETTLE_SECONDS debe estar entre 0 y 15"
 sleep "$settle_seconds"
 
 sampler_pid="$(cat "$PPI_ACTIVE_LOCK/sampler_pid" 2>/dev/null || true)"

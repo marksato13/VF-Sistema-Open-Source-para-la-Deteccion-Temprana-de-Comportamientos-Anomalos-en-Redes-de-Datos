@@ -105,7 +105,7 @@ ppi_ssh "$PPI_SENSOR_IP" 'sudo -n /usr/local/sbin/ppi-suricata-metrics' \
   > "$campaign_dir/sensor-before.json"
 jq -e '.suricata.service_state == "active"' "$campaign_dir/sensor-before.json" >/dev/null
 
-ppi_ssh "$PPI_SENSOR_IP" 'bash -s -- 1' < "$SCRIPT_DIR/sample-sensor.sh" \
+"$SCRIPT_DIR/sample-sensor.sh" "$PPI_SENSOR_IP" 1 \
   > "$campaign_dir/sensor-timeseries.tsv" \
   2> "$campaign_dir/sensor-timeseries.stderr" &
 sampler_pid=$!

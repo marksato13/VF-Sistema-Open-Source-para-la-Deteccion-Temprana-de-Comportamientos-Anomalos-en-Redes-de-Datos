@@ -13,9 +13,9 @@ Los resultados de ejecución se guardan en `artifacts/campaigns/<ID>/`, excluido
 | Componente | Función |
 |---|---|
 | `scripts/campaign/start.sh` | crea el manifiesto, bloquea ejecuciones simultáneas, audita las cuatro VMs, toma contadores iniciales e inicia el muestreo del Sensor |
-| `scripts/campaign/stop.sh` | espera tres segundos para estabilización, detiene el muestreo, toma contadores finales, extrae el segmento EVE acotado, calcula deltas y genera `SHA256SUMS` |
+| `scripts/campaign/stop.sh` | espera nueve segundos para estabilización, detiene el muestreo, toma contadores finales, extrae el segmento EVE acotado, calcula deltas y genera `SHA256SUMS` |
 | `scripts/campaign/run-f1.sh` | ejecuta un escenario benigno limitado desde VM05 y garantiza el cierre de la campaña aunque falle el escenario |
-| `scripts/campaign/sample-sensor.sh` | registra por segundo CPU de Suricata, RSS, memoria disponible y carga del Sensor |
+| `scripts/campaign/sample-sensor.sh` | consulta por SSH cada segundo los ticks de CPU, RSS, memoria disponible y carga del Sensor, y escribe la serie localmente |
 | `ppi-suricata-metrics` | consulta el socket de Suricata y devuelve únicamente métricas JSON sin aceptar argumentos |
 | `06-desplegar-orquestacion-campanas.yml` | instala el recolector restringido en Sensor y el generador F1 en Cliente |
 
@@ -54,9 +54,9 @@ Cada directorio contiene como mínimo:
 
 La extracción EVE usa el intervalo cerrado entre el número de línea inicial y el checkpoint final; no usa `tail` hasta el final porque podrían incorporarse eventos posteriores al conteo. Solo se declara completa si el inode es igual antes y después. Si ocurre una rotación, se crea un segmento vacío y `eve_slice_status` queda como `unavailable_log_rotated`; esa campaña no debe aceptarse sin recuperar ambos archivos rotados.
 
-El ejecutor espera un segundo antes del escenario para obtener una muestra basal. Al cerrar, la espera predeterminada de tres segundos permite que Suricata actualice EVE y sus contadores antes del checkpoint final. Puede ajustarse entre 0 y 10 segundos con `PPI_CAMPAIGN_SETTLE_SECONDS`; el valor efectivo queda registrado como `settle_seconds`. Para las campañas oficiales se conservará el valor predeterminado.
+El ejecutor espera un segundo antes del escenario para iniciar la serie. El muestreo se escribe localmente después de cada consulta SSH para que el cierre de la conexión no descarte un búfer remoto. Suricata publica estadísticas EVE cada ocho segundos en la configuración observada; por ello, al cerrar se esperan nueve segundos antes del checkpoint final. El margen puede ajustarse entre 0 y 15 segundos con `PPI_CAMPAIGN_SETTLE_SECONDS`; el valor efectivo queda registrado como `settle_seconds`. Para las campañas oficiales se conservará el valor predeterminado.
 
-`cpu_percent_lifetime` de las instantáneas es el promedio desde el inicio del proceso. Para analizar carga durante el escenario debe usarse `cpu_percent` de `sensor-timeseries.tsv`, calculado con la diferencia de ticks de CPU cada segundo. Ese valor puede superar 100 % porque Suricata usa varios núcleos.
+`cpu_percent_lifetime` de las instantáneas es el promedio desde el inicio del proceso. Para analizar carga durante el escenario debe usarse `cpu_percent` de `sensor-timeseries.tsv`, calculado con la diferencia de ticks y el tiempo real transcurrido entre consultas. El intervalo nominal es un segundo, pero la fórmula incluye la latencia SSH. El valor puede superar 100 % porque Suricata usa varios núcleos.
 
 ## Uso
 
