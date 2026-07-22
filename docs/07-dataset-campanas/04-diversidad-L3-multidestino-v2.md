@@ -1,6 +1,6 @@
 # Diversidad legítima L3 y matriz F1 v2
 
-Fecha de diseño: 21 de julio de 2026. Estado: **implementación versionada, aplicación remota pendiente de privilegio temporal en VM03**.
+Fecha de diseño: 21 de julio de 2026. Estado: **aplicado, persistente y validado mediante piloto**. Evidencia: `05-validacion-diversidad-L3-v2.md`.
 
 ## Problema
 
@@ -65,9 +65,9 @@ La matriz oficial pasa de 27 a 29 perfiles y de 135 a **145 campañas**. Mantien
 - conserva target, número de solicitud y código HTTP en la salida;
 - no utiliza Kali ni Internet.
 
-## Aplicación pendiente
+## Procedimiento de aplicación
 
-La cuenta `useransible` no posee sudo general, de acuerdo con el endurecimiento previo. Por eso Codex no aplicó cambios de red eludiendo controles. Se requiere habilitar privilegio temporal en VM03 y ejecutar:
+La cuenta `useransible` no posee sudo general, de acuerdo con el endurecimiento previo. Se habilitó privilegio temporal en VM03, se ejecutó:
 
 ```bash
 cd ansible
@@ -75,7 +75,7 @@ cd ansible
   --limit ppi-server --ask-become-pass
 ```
 
-La contraseña no debe guardarse en inventario, Git ni línea de comandos. Al terminar se elimina la autorización temporal, siguiendo el procedimiento usado en G1/G2.
+La contraseña no se guardó en inventario, Git ni línea de comandos. Al terminar se eliminó la autorización temporal y `sudo -n id` volvió a fallar para `useransible`, siguiendo el procedimiento usado en G1/G2.
 
 ## Gate para aprobar el cambio
 
@@ -87,4 +87,4 @@ La contraseña no debe guardarse en inventario, Git ni línea de comandos. Al te
 6. El piloto `CAL-G6-HTTP-MULTI-1-R01` registra tres destinos, SHA correcto y cero drops.
 7. El CSV produce un ratio L3 no nulo y la auditoría lo excluye como calibración.
 
-Hasta completar estos siete controles, la diversidad multidestino permanece **PENDIENTE**, no aplicada.
+Los siete controles pasaron. La infraestructura multidestino queda **APROBADA para F1 v2**; la campaña completa sigue condicionada al gate de almacenamiento.

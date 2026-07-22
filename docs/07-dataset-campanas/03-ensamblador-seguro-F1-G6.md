@@ -4,7 +4,7 @@ Fecha: 21 de julio de 2026. Implementación: `scripts/dataset/build_f1_dataset.p
 
 ## Decisión
 
-El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Con `f1-normal-v2`, la auditoría debe encontrar cuatro pilotos `v1` excluidos, cero campañas oficiales aceptadas y 145 celdas faltantes; por tanto no produce dataset.
+El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Con `f1-normal-v2`, la auditoría encuentra cinco pilotos excluidos, cero campañas oficiales aceptadas y 145 celdas faltantes; por tanto no produce dataset.
 
 ## Autoridad de los datos
 

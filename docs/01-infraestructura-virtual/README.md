@@ -98,7 +98,7 @@ Recursos:
 | Interfaces | 2: gestión y `PPI-DMZ` |
 | IP de gestión | 10.10.10.30/24 |
 | IP de servicio principal | 10.30.0.10/24 |
-| VIP web planificadas para F1 v2 | 10.30.0.11/24 y 10.30.0.12/24 en `ens38` |
+| VIP web aplicadas para F1 v2 | 10.30.0.11/24 y 10.30.0.12/24 en `ens38` |
 
 El disco de 120 GB permite mantener el sistema operativo, servicios, archivos de prueba de distintos tamaños, cargas y descargas simultáneas, copias temporales y registros del servidor. Durante cada campaña se controlará el espacio libre y se eliminarán solamente los artefactos temporales que ya hayan sido recolectados por la VM administrativa.
 
@@ -337,7 +337,7 @@ En Sensor y Servidor, ESXi ya presentaba el disco planificado completo. El 19 de
 | VM | Red externa temporal | PPI-MGMT | PPI-LAN | PPI-DMZ |
 |---|---|---|---|---|
 | Sensor | `ens34` — 172.17.25.111 | `ens39` — 10.10.10.20 | `ens35` — 10.20.0.1 | `ens38` — 10.30.0.1 |
-| Servidor | `ens34` — 172.17.25.112 | `ens35` — 10.10.10.30 | — | `ens38` — 10.30.0.10 |
+| Servidor | `ens34` — 172.17.25.112 | `ens35` — 10.10.10.30 | — | `ens38` — 10.30.0.10, 10.30.0.11 y 10.30.0.12 |
 | Kali | `eth0` — 172.17.25.113 | `eth2` — 10.10.10.40 | `eth1` — 10.20.0.100 | — |
 | Cliente | `ens34` — 172.17.25.114 | `ens35` — 10.10.10.50 | `ens38` — 10.20.0.20 | — |
 
