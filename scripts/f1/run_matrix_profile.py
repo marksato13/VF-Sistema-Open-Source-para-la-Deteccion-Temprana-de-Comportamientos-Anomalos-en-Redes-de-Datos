@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -63,6 +64,9 @@ def main() -> int:
         raise SystemExit("ERROR: una campaña oficial solo admite la matriz y esquema versionados por defecto")
 
     profile = profiles[args.profile]
+    scenario_args_sha256 = hashlib.sha256(
+        json.dumps(profile["args"], ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     prefix = "CAL-G6" if args.pilot else "F1N"
     campaign_id = f"{prefix}-{args.profile}-R{args.repetition:02d}"
     purpose = "calibration" if args.pilot else "experiment"
@@ -74,6 +78,7 @@ def main() -> int:
         "profile": profile,
         "repetition": args.repetition,
         "matrix_sha256": matrix_report["matrix_sha256"],
+        "scenario_args_sha256": scenario_args_sha256,
         "matrix_storage_gate_pass": matrix_report["storage_gate_pass"],
         "git_commit": git("rev-parse", "HEAD"),
         "warmup_seconds": matrix["warmup_seconds"],
@@ -115,6 +120,7 @@ def main() -> int:
             "PPI_CAMPAIGN_MATRIX_SHA256": matrix_report["matrix_sha256"],
             "PPI_CAMPAIGN_MATRIX_PROFILE": args.profile,
             "PPI_CAMPAIGN_MATRIX_REPETITION": str(args.repetition),
+            "PPI_CAMPAIGN_ARGS_SHA256": scenario_args_sha256,
             "PPI_CAMPAIGN_PARTITION": partition,
         }
     )

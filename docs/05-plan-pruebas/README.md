@@ -16,6 +16,7 @@ El contrato de las 14 variables causales se define en `../06-features-modelado/0
 Su validación sintética y real está en `../06-features-modelado/02-validacion-extractor-G5.md`.
 La matriz ejecutable F1, su partición y el gate de almacenamiento están en `../07-dataset-campanas/01-matriz-F1-normal-G6.md`.
 Los primeros pilotos DNS/HTTP y el bloqueo negativo de capacidad están en `../07-dataset-campanas/02-validacion-pilotos-G6.md`.
+El ensamblador con gates anti-contaminación y sus pruebas están en `../07-dataset-campanas/03-ensamblador-seguro-F1-G6.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
