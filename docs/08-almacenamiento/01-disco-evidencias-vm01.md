@@ -130,6 +130,26 @@ Estado posterior:
 
 El plan completo estima 33,673,250,000 bytes de PCAP y, después de reservarlos, proyecta 115,651,734,320 bytes libres. El `dry-run` oficial seleccionó `/srv/ppi-evidence/artifacts`, reconoció el marcador y devolvió `official_storage.gate_pass=true` sin generar tráfico.
 
+## Checkpoint previo al reinicio
+
+Checkpoint tomado el `2026-07-22T01:53:12-05:00`, antes del reinicio autorizado por el usuario:
+
+| Control | Resultado previo |
+|---|---|
+| Arranque de VM01 observado | `2026-07-22 01:34:39` |
+| RustDesk | `active` y `enabled` |
+| Campaña/bloqueo local | ausentes |
+| Proceso de campaña o PCAP | ausente |
+| Volumen | `/dev/sdb` → `/srv/ppi-evidence`, ext4 |
+| UUID | `b676aa52-55b2-422d-b77a-4cde1d36d37f` |
+| Opciones activas | `rw,nosuid,nodev,noexec,noatime` |
+| Bytes disponibles | `149324984320` |
+| Gate de capacidad | PASS |
+| Gate de identidad | PASS |
+| Git local/remoto | sincronizados en `51290b75b04951c9fc09ece8a2f4920651f84b84` |
+
+La sesión de RustDesk/Codex se interrumpirá por diseño. Después del arranque se volverán a comprobar hora de boot, UUID, opciones, marcador, permisos, bytes disponibles, ambos gates y sincronización Git. No se ejecutará una campaña durante esta prueba de persistencia.
+
 ## Controles antes de la campaña oficial
 
 Después del montaje aún se debe validar un reinicio de VM01: el volumen debe reaparecer por UUID, el marcador debe seguir legible y el gate debe continuar en PASS. También se registrará el espacio real del datastore ESXi, porque 150 GiB thin representan capacidad lógica y el PCAP hace crecer el VMDK físicamente.
