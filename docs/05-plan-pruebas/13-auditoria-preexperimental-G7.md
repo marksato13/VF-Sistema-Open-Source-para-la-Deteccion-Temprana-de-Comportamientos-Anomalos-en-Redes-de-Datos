@@ -1,5 +1,7 @@
 # Auditoría preexperimental G7 — 22 de julio de 2026
 
+> **Seguimiento:** el bypass fue cerrado operacionalmente después de desconectar las NIC externas. La evidencia y la condición de reinicio pendiente están en `14-cierre-operacional-G7.md`.
+
 Esta auditoría de solo lectura se ejecutó desde VM01 después de reiniciar y validar el nuevo volumen de evidencias. Su objetivo fue decidir si la topología podía comenzar las 145 campañas oficiales `f1-normal-v2`. Sustituye cualquier condición temporal de aptitud registrada en G0: el reinicio demostró que bajar interfaces únicamente dentro del sistema operativo no es un aislamiento persistente.
 
 ## Alcance y trazabilidad

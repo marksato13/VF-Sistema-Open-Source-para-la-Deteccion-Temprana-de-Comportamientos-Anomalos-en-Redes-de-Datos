@@ -20,6 +20,7 @@ El ensamblador con gates anti-contaminación y sus pruebas están en `../07-data
 El rediseño multidestino y la transición conservadora de matriz `v1` a `v2` están en `../07-dataset-campanas/04-diversidad-L3-multidestino-v2.md`.
 La aplicación persistente y el piloto con ratio L3 igual a 1.0 están en `../07-dataset-campanas/05-validacion-diversidad-L3-v2.md`.
 La auditoría posterior al reinicio, el bypass externo confirmado y el gate de aislamiento están en `13-auditoria-preexperimental-G7.md`.
+El cierre operacional, la captura correlacionada y la prueba de persistencia pendiente están en `14-cierre-operacional-G7.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
