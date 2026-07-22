@@ -1,6 +1,8 @@
 table inet ppi_server {
     chain input {
         type filter hook input priority 0; policy accept;
+        ip daddr { 10.30.0.11, 10.30.0.12 } tcp dport != 80 counter drop comment "VIP F1 solo HTTP"
+        ip daddr { 10.30.0.11, 10.30.0.12 } meta l4proto udp counter drop comment "VIP F1 sin servicios UDP"
         ip daddr 10.30.0.10 ip saddr != 10.20.0.20 tcp dport 5201 counter drop comment "F1 iperf TCP solo Cliente"
         ip daddr 10.30.0.10 ip saddr != 10.20.0.20 udp dport 5201 counter drop comment "F1 iperf UDP solo Cliente"
     }

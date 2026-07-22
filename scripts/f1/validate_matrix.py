@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 ALLOWED_SCENARIOS = {
-    "http", "https", "http-concurrent", "http-missing", "https-sessions",
+    "http", "https", "http-concurrent", "http-multi", "http-missing", "https-sessions",
     "dns-valid", "dns-nxdomain", "dns-mixed", "ping", "tcp-refused",
     "iperf-tcp", "iperf-udp", "mixed-light",
 }
@@ -28,13 +28,13 @@ def load_and_validate(matrix_path: Path, feature_schema_path: Path) -> tuple[dic
     feature_schema = json.loads(feature_schema_path.read_text(encoding="utf-8"))
     errors: list[str] = []
 
-    if matrix.get("schema_version") != "f1-normal-v1":
-        errors.append("schema_version de matriz inválido")
+    if matrix.get("schema_version") != matrix_path.stem:
+        errors.append("schema_version de matriz no coincide con el nombre del archivo")
     if matrix.get("feature_schema") != feature_schema.get("schema_version"):
         errors.append("feature_schema no coincide")
     repetitions = matrix.get("default_repetitions")
     if not isinstance(repetitions, int) or isinstance(repetitions, bool) or repetitions != 5:
-        errors.append("f1-normal-v1 requiere exactamente 5 repeticiones por perfil")
+        errors.append(f"{matrix_path.stem} requiere exactamente 5 repeticiones por perfil")
     expected_partitions = {
         "1": "train", "2": "train", "3": "train",
         "4": "validation", "5": "test",
@@ -109,7 +109,7 @@ def load_and_validate(matrix_path: Path, feature_schema_path: Path) -> tuple[dic
 def parse_args() -> argparse.Namespace:
     repo = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser()
-    parser.add_argument("--matrix", type=Path, default=repo / "configs/campaigns/f1-normal-v1.json")
+    parser.add_argument("--matrix", type=Path, default=repo / "configs/campaigns/f1-normal-v2.json")
     parser.add_argument("--feature-schema", type=Path, default=repo / "configs/features/multilayer-v1.json")
     parser.add_argument("--require-storage", action="store_true")
     return parser.parse_args()

@@ -5,6 +5,41 @@
   gather_facts: true
 
   tasks:
+    - name: Instalar IP virtuales persistentes de servicios DMZ
+      ansible.builtin.copy:
+        src: ../../configs/server/99-ppi-service-vips.yaml
+        dest: /etc/netplan/99-ppi-service-vips.yaml
+        owner: root
+        group: root
+        mode: "0600"
+      register: ppi_service_vips
+
+    - name: Validar la configuración Netplan combinada
+      ansible.builtin.command: netplan generate
+      changed_when: false
+
+    - name: Aplicar IP virtuales sin modificar la interfaz de gestión
+      ansible.builtin.command: netplan apply
+      when: ppi_service_vips.changed
+      changed_when: true
+
+    - name: Consultar direcciones efectivas de la DMZ
+      ansible.builtin.command: ip -j address show dev ens38
+      register: ppi_dmz_addresses
+      changed_when: false
+
+    - name: Exigir las tres direcciones de servicio
+      ansible.builtin.assert:
+        that:
+          - >-
+            ['10.30.0.10', '10.30.0.11', '10.30.0.12']
+            | difference(
+                (ppi_dmz_addresses.stdout | from_json | first).addr_info
+                | selectattr('family', 'equalto', 'inet')
+                | map(attribute='local') | list
+              ) | length == 0
+        fail_msg: La interfaz ens38 no posee las tres direcciones DMZ requeridas
+
     - name: Crear directorio de configuración de dnsmasq antes de instalar
       ansible.builtin.file:
         path: /etc/dnsmasq.d
@@ -152,3 +187,31 @@
         - dnsmasq
         - ppi-server-firewall
         - ppi-iperf3
+
+    - name: Verificar HTTP en cada dirección de servicio
+      ansible.builtin.uri:
+        url: "http://{{ item }}/health"
+        status_code: 200
+        return_content: true
+      loop:
+        - 10.30.0.10
+        - 10.30.0.11
+        - 10.30.0.12
+
+    - name: Verificar la ruta de retorno desde cada dirección de servicio
+      ansible.builtin.command: "ip -j route get 10.20.0.20 from {{ item }}"
+      loop:
+        - 10.30.0.10
+        - 10.30.0.11
+        - 10.30.0.12
+      register: ppi_return_routes
+      changed_when: false
+
+    - name: Exigir siguiente salto y salida DMZ correctos para cada origen
+      ansible.builtin.assert:
+        that:
+          - (item.stdout | from_json | first).gateway == '10.30.0.1'
+          - (item.stdout | from_json | first).dev == 'ens38'
+      loop: "{{ ppi_return_routes.results }}"
+      loop_control:
+        label: "{{ item.item }}"

@@ -1,6 +1,6 @@
 # Matriz F1 de normalidad representativa — G6
 
-Fecha de congelación del diseño: 21 de julio de 2026. Contrato ejecutable: `configs/campaigns/f1-normal-v1.json`.
+Fecha de congelación del diseño inicial: 21 de julio de 2026. Contrato oficial vigente: `configs/campaigns/f1-normal-v2.json`. La versión `v1` permanece inmutable para reproducir los cuatro pilotos anteriores, pero fue sustituida antes de iniciar campañas oficiales para incorporar diversidad legítima de destinos.
 
 ## Decisión actual
 
@@ -27,13 +27,14 @@ Cada campaña usa:
 | HTTP | 10 MB, 100 MB, 500 MB y 1 GB | cubrir tamaños pequeños y paquetes grandes legítimos |
 | HTTPS | 10 MB, 100 MB, 500 MB y 1 GB | repetir carga pesada con cifrado y sesiones TLS |
 | Error HTTP/TLS | `HTTP-404-5`, `TLS-SESSIONS-20` | impedir que todo 404 o recambio TLS sea anomalía por sí solo |
+| HTTP multidestino | 1 y 5 solicitudes por cada IP `.10`, `.11` y `.12` | variar de forma legítima el ratio de IP destino |
 | Concurrencia HTTP | 2, 4 y 8 flujos; agregado máximo 20 MiB/s | modelar usuarios concurrentes sin sobrepasar G2 |
 | TCP rechazado | cinco conexiones a puerto cerrado | producir SYN/RST benignos y controlados |
 | Throughput TCP | 50, 100 y 200 Mbit/s durante 20 s | rango normal pesado hasta el máximo seguro |
 | Throughput UDP | 10, 25 y 50 Mbit/s durante 20 s | rango normal UDP hasta el máximo seguro |
 | Mezcla legítima | HTTP + TCP + DNS | interacción entre servicios sin Kali |
 
-Son 27 perfiles con cinco repeticiones: **135 campañas**. El JSON contiene los argumentos exactos y una estimación conservadora por PCAP; no se aceptan parámetros libres.
+Son 29 perfiles con cinco repeticiones: **145 campañas**. El JSON contiene los argumentos exactos y una estimación conservadora por PCAP; no se aceptan parámetros libres.
 
 ## Partición sin fuga
 
@@ -56,10 +57,10 @@ Medición de VM01 al congelar la matriz:
 | Concepto | Bytes | Aproximado |
 |---|---:|---:|
 | espacio libre local | 53,925,744,640 | 50.22 GiB |
-| PCAP estimado de F1 | 33,670,250,000 | 31.36 GiB |
-| libre estimado al terminar | 20,255,494,640 | 18.86 GiB |
+| PCAP estimado de F1 | 33,673,250,000 | 31.36 GiB |
+| libre estimado al terminar | 20,252,494,640 | 18.86 GiB |
 | reserva mínima exigida | 21,474,836,480 | 20.00 GiB |
-| requerido PCAP + reserva | 55,145,086,480 | 51.36 GiB |
+| requerido PCAP + reserva | 55,148,086,480 | 51.36 GiB |
 
 Resultado: `storage_gate_pass=false`. Además, VM02 conserva temporalmente otra copia de cada PCAP y todavía falta dimensionar features, índices, F2–F4 y respaldo. Las estimaciones no son una autorización para llenar la raíz.
 
@@ -82,7 +83,7 @@ La cobertura pesada incluye 10 MB–1 GB, concurrencia y throughput. G6 solo pas
 
 ## Huecos conocidos y acciones
 
-1. **Diversidad L3 insuficiente.** Solo existe un servidor `10.30.0.10`; por ello `unique_dst_ip_ratio_30s` tendrá poca variación legítima. Se requieren IP virtuales/servicios adicionales en DMZ o una redefinición demostrada mediante ablación. No se inventarán destinos que no existan.
+1. **Diversidad L3 lógica, no física.** `v2` incorpora `10.30.0.10`, `.11` y `.12` como servicios persistentes de VM03. Esto amplía el ratio de destinos, pero no simula tres hosts ni tres fallos independientes; esa limitación debe mantenerse en la defensa.
 2. **SSH/SFTP pendiente.** No se usará una contraseña en scripts. Debe crearse una identidad técnica exclusiva, datos no sensibles y límites de transferencia antes de añadir el perfil.
 3. **Retención pendiente.** Sensor y VM01 guardan copias; no existe todavía eliminación remota automatizada ni backup verificado.
 4. **Duración real pendiente.** El mínimo teórico supera cuatro horas por warm-up/cooldown y carga. Transferencia, validación y extracción de PCAP pueden elevarlo; se medirá en pilotos antes de reservar la ventana oficial.

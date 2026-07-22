@@ -251,7 +251,7 @@ class DatasetBuilderFixture(unittest.TestCase):
             self.contract, self.campaigns, self.features, self.ledgers
         )
         self.assertEqual(report["accepted_campaigns"], 1)
-        self.assertEqual(len(report["missing_cells"]), 134)
+        self.assertEqual(len(report["missing_cells"]), 144)
         self.assertFalse(report["ready_to_build"])
         with self.assertRaises(builder.GateError):
             builder.build_dataset(self.repo / "dataset", report, accepted, self.contract)
@@ -279,8 +279,8 @@ class DatasetBuilderFixture(unittest.TestCase):
             "ready_to_build": True,
             "matrix_sha256": self.contract.matrix_sha256,
             "feature_schema_sha256": self.contract.schema_sha256,
-            "expected_campaigns": 135,
-            "accepted_campaigns": 135,
+            "expected_campaigns": 145,
+            "accepted_campaigns": 145,
             "excluded_campaigns": [],
             "invalid_campaigns": [],
             "accepted_cells": [],
@@ -292,8 +292,8 @@ class DatasetBuilderFixture(unittest.TestCase):
         }
         output = self.repo / "dataset"
         manifest = builder.build_dataset(output, report, candidates, self.contract)
-        self.assertEqual(manifest["split_rows"], {"train": 81, "validation": 27, "test": 27})
-        self.assertEqual(len(manifest["source_campaigns"]), 135)
+        self.assertEqual(manifest["split_rows"], {"train": 87, "validation": 29, "test": 29})
+        self.assertEqual(len(manifest["source_campaigns"]), 145)
         self.assertEqual(
             {path.name for path in output.iterdir()},
             {"train.csv", "validation.csv", "test.csv", "manifest.json", "SHA256SUMS"},

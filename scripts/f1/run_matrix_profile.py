@@ -15,7 +15,7 @@ from validate_matrix import load_and_validate
 
 
 REPO = Path(__file__).resolve().parents[2]
-DEFAULT_MATRIX = REPO / "configs/campaigns/f1-normal-v1.json"
+DEFAULT_MATRIX = REPO / "configs/campaigns/f1-normal-v2.json"
 DEFAULT_FEATURE_SCHEMA = REPO / "configs/features/multilayer-v1.json"
 
 

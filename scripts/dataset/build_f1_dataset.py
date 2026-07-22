@@ -21,7 +21,7 @@ from typing import Any
 
 
 REPO = Path(__file__).resolve().parents[2]
-MATRIX_RELATIVE = Path("configs/campaigns/f1-normal-v1.json")
+MATRIX_RELATIVE = Path("configs/campaigns/f1-normal-v2.json")
 SCHEMA_RELATIVE = Path("configs/features/multilayer-v1.json")
 CHECKSUM_LINE = re.compile(r"^([a-f0-9]{64}) ([ *])(.+)$")
 COMMIT_ID = re.compile(r"^[a-f0-9]{40}$")
@@ -546,7 +546,7 @@ def build_dataset(
     if len(candidate_cells) != len(set(candidate_cells)) or set(candidate_cells) != required_cells:
         raise GateError(
             "GATE-COMPLETITUD",
-            "la construcción revalidó una colección distinta de las 135 celdas exactas",
+            f"la construcción revalidó una colección distinta de las {len(required_cells)} celdas exactas",
         )
     profiles = {profile["id"]: profile for profile in contract.matrix["profiles"]}
     for candidate in accepted:
@@ -567,7 +567,7 @@ def build_dataset(
     if output_dir.exists():
         raise GateError("GATE-SALIDA", f"el destino ya existe: {output_dir}")
     output_dir.parent.mkdir(parents=True, exist_ok=True)
-    temporary = Path(tempfile.mkdtemp(prefix=".f1-normal-v1-", dir=output_dir.parent))
+    temporary = Path(tempfile.mkdtemp(prefix=".f1-normal-v2-", dir=output_dir.parent))
     try:
         fieldnames = ["partition", "profile_id", "repetition", *METADATA_COLUMNS]
         feature_names = list(contract.feature_names)
@@ -639,7 +639,7 @@ def main() -> int:
     campaigns_dir = args.campaigns_dir or artifacts / "campaigns"
     features_dir = args.features_dir or artifacts / "features"
     ledgers_dir = args.ledgers_dir or artifacts / "g6-ledger"
-    output_dir = args.output_dir or artifacts / "datasets/f1-normal-v1"
+    output_dir = args.output_dir or artifacts / "datasets/f1-normal-v2"
     report, accepted = audit_repository(contract, campaigns_dir, features_dir, ledgers_dir)
     if args.audit_only:
         print(json.dumps(report, indent=2, sort_keys=True))

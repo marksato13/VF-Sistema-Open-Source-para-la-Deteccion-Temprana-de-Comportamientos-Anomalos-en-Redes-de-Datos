@@ -4,7 +4,7 @@ Fecha: 21 de julio de 2026. Implementación: `scripts/dataset/build_f1_dataset.p
 
 ## Decisión
 
-El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. En el estado actual la auditoría encuentra cuatro pilotos excluidos, cero campañas oficiales aceptadas y 135 celdas faltantes; por tanto no produce dataset.
+El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Con `f1-normal-v2`, la auditoría debe encontrar cuatro pilotos `v1` excluidos, cero campañas oficiales aceptadas y 145 celdas faltantes; por tanto no produce dataset.
 
 ## Autoridad de los datos
 
@@ -61,7 +61,7 @@ Esto impide validar retroactivamente una campaña antigua contra una matriz nuev
 
 ### 6. Completitud
 
-- exactamente 27 perfiles × 5 repeticiones;
+- exactamente 29 perfiles × 5 repeticiones;
 - una campaña por celda y listado explícito de cada celda faltante;
 - repositorio actual limpio antes de construir;
 - rechazo de destino preexistente para no sobrescribir un dataset anterior.
@@ -70,10 +70,10 @@ Los vectores idénticos entre campañas se reportan como sospechosos, pero no se
 
 ## Salidas
 
-Cuando los 135 gates pasen, se crearán atómicamente:
+Cuando las 145 celdas pasen, se crearán atómicamente:
 
 ```text
-artifacts/datasets/f1-normal-v1/
+artifacts/datasets/f1-normal-v2/
 ├── train.csv
 ├── validation.csv
 ├── test.csv
@@ -102,7 +102,7 @@ Cada fila agrega `partition`, `profile_id` y `repetition` como metadata, conserv
 13. ventana duplicada dentro del CSV;
 14. hash de argumentos distinto al perfil congelado.
 
-La suite completa contiene 21 pruebas, incluyendo una construcción sintética completa de 135 celdas y las pruebas del esquema de features y la matriz F1.
+La suite completa incluye una construcción sintética completa de 145 celdas, la reproducibilidad de la matriz `v1` y las pruebas del esquema de features.
 
 ## Uso reproducible
 
@@ -125,4 +125,4 @@ python3 scripts/dataset/build_f1_dataset.py
 
 ## Estado de G6
 
-El ensamblador elimina una ruta importante de contaminación, pero G6 continúa pendiente por almacenamiento, diversidad L3, SSH/SFTP y recolección oficial. El script no convierte dos pilotos exitosos en un dataset de entrenamiento.
+El ensamblador elimina una ruta importante de contaminación, pero G6 continúa pendiente por almacenamiento, aplicación/validación de las IP virtuales, SSH/SFTP y recolección oficial. El script no convierte pilotos exitosos en un dataset de entrenamiento.

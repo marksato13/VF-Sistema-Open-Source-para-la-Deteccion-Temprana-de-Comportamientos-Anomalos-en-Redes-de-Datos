@@ -8,7 +8,7 @@ TARGET_IP="${PPI_TARGET_IP:-10.30.0.10}"
 }
 
 usage() {
-  echo "Uso: $0 {http|https|http-concurrent|http-missing|https-sessions|dns-valid|dns-nxdomain|dns-mixed|ping|tcp-refused|iperf-tcp|iperf-udp|mixed-light} argumentos" >&2
+  echo "Uso: $0 {http|https|http-concurrent|http-multi|http-missing|https-sessions|dns-valid|dns-nxdomain|dns-mixed|ping|tcp-refused|iperf-tcp|iperf-udp|mixed-light} argumentos" >&2
   exit 2
 }
 
@@ -64,6 +64,25 @@ case "$scenario" in
     jq -s --argjson expected "$concurrency" \
       '{scenario:"http-concurrent",expected:$expected,completed:length,results:.}' \
       "$temp_dir"/result-*.json
+    ;;
+  http-multi)
+    requests_per_target="${1:-}"
+    case "$requests_per_target" in
+      1|5) ;;
+      *) echo "ERROR: solicitudes por destino permitidas: 1 o 5" >&2; exit 2 ;;
+    esac
+    for target in 10.30.0.10 10.30.0.11 10.30.0.12; do
+      for ((i=1; i<=requests_per_target; i++)); do
+        code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+          "http://$target/health")"
+        [[ "$code" == 200 ]] || {
+          echo "ERROR: $target devolvió HTTP $code" >&2
+          exit 1
+        }
+        printf '{"target":"%s","request":%d,"http_code":200}\n' "$target" "$i"
+        sleep 0.1
+      done
+    done
     ;;
   http-missing)
     count="${1:-}"

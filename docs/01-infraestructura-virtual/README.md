@@ -97,7 +97,8 @@ Recursos:
 | Disco | 120 GB thin |
 | Interfaces | 2: gestión y `PPI-DMZ` |
 | IP de gestión | 10.10.10.30/24 |
-| IP de servicio | 10.30.0.10/24 |
+| IP de servicio principal | 10.30.0.10/24 |
+| VIP web planificadas para F1 v2 | 10.30.0.11/24 y 10.30.0.12/24 en `ens38` |
 
 El disco de 120 GB permite mantener el sistema operativo, servicios, archivos de prueba de distintos tamaños, cargas y descargas simultáneas, copias temporales y registros del servidor. Durante cada campaña se controlará el espacio libre y se eliminarán solamente los artefactos temporales que ya hayan sido recolectados por la VM administrativa.
 

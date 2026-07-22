@@ -19,18 +19,24 @@ SPEC.loader.exec_module(validator)
 
 class F1MatrixTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.matrix_path = REPO_ROOT / "configs/campaigns/f1-normal-v1.json"
+        self.matrix_path = REPO_ROOT / "configs/campaigns/f1-normal-v2.json"
+        self.legacy_matrix_path = REPO_ROOT / "configs/campaigns/f1-normal-v1.json"
         self.schema_path = REPO_ROOT / "configs/features/multilayer-v1.json"
 
     def test_official_matrix_contract(self) -> None:
         matrix, report = validator.load_and_validate(self.matrix_path, self.schema_path)
-        self.assertEqual(report["profiles"], 27)
-        self.assertEqual(report["planned_campaigns"], 135)
+        self.assertEqual(report["profiles"], 29)
+        self.assertEqual(report["planned_campaigns"], 145)
         self.assertEqual(report["repetitions_per_profile"], 5)
         self.assertEqual(len(report["feature_coverage"]), 14)
         self.assertEqual(matrix["warmup_seconds"], 60)
         self.assertEqual(matrix["partition_by_repetition"]["5"], "test")
         self.assertGreaterEqual(report["minimum_free_after_plan_bytes"], 20 * 1024**3)
+
+    def test_legacy_matrix_remains_reproducible(self) -> None:
+        matrix, report = validator.load_and_validate(self.legacy_matrix_path, self.schema_path)
+        self.assertEqual(matrix["schema_version"], "f1-normal-v1")
+        self.assertEqual(report["planned_campaigns"], 135)
 
     def test_rejects_unversioned_remote_argument(self) -> None:
         matrix = json.loads(self.matrix_path.read_text(encoding="utf-8"))

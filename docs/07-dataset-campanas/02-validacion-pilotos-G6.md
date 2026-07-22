@@ -151,6 +151,8 @@ ready_to_build = false
 
 Los cuatro `campaign_id` de calibración aparecen explícitamente como `not_experiment`. La historia causal completa de sus CSV no cambió esa exclusión.
 
+Esta auditoría corresponde al contrato `v1` de 135 campañas. Antes de iniciar datos oficiales, el rediseño multidestino creó `f1-normal-v2` con 145 campañas; los cuatro pilotos `v1` continúan excluidos y no se reinterpretan bajo el contrato nuevo.
+
 ## Hallazgo metodológico
 
 `eligible_training_rows=1` significa únicamente que existe historia causal suficiente de 60 s. No significa que la fila esté autorizada para entrenamiento. El futuro ensamblador debe exigir simultáneamente:

@@ -38,11 +38,11 @@ Fecha: 21 de julio de 2026. Claude Code 2.1.217, modelo Sonnet, modo de planific
 ## CLA-G6-04 — `eligible_training` no autoriza inclusión
 
 1. **Severidad:** crítica.
-2. **Hecho:** los dos pilotos tienen `eligible_training_rows=1` porque poseen 60 s de historia, aunque son calibraciones.
+2. **Hecho:** los cuatro pilotos tienen `eligible_training_rows=1` porque poseen 60 s de historia, aunque son calibraciones.
 3. **Inferencia:** una concatenación directa incorporaría calibraciones al entrenamiento.
 4. **Riesgo:** fuga metodológica y métricas no defendibles.
 5. **Prueba:** ledger `purpose=calibration`, partición manipulada a `train` y CSV elegible.
-6. **Corrección:** exigir `purpose=experiment`, recomputar partición y completar las 135 celdas.
+6. **Corrección:** exigir `purpose=experiment`, recomputar partición y completar todas las celdas del contrato vigente (145 en `v2`).
 7. **Efecto secundario:** no puede construirse un dataset provisional con los pilotos actuales.
 8. **Estado:** confirmada y corregida; prueba automatizada `test_rejects_calibration_even_if_partition_train`.
 

@@ -15,7 +15,7 @@ scenario="$2"
 shift 2
 ppi_validate_id "$id"
 case "$scenario" in
-  http|https|http-concurrent|http-missing|https-sessions|dns-valid|dns-nxdomain|dns-mixed|ping|tcp-refused|iperf-tcp|iperf-udp|mixed-light) ;;
+  http|https|http-concurrent|http-multi|http-missing|https-sessions|dns-valid|dns-nxdomain|dns-mixed|ping|tcp-refused|iperf-tcp|iperf-udp|mixed-light) ;;
   *) ppi_die "escenario F1 no permitido: $scenario" ;;
 esac
 for argument in "$@"; do

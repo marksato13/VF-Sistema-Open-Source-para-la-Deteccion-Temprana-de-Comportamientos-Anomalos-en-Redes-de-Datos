@@ -12,6 +12,7 @@ Ejemplos:
 ./run-benign.sh dns-mixed 20 2
 ./run-benign.sh ping 100 0.2
 ./run-benign.sh http-concurrent 4 100MB 5M
+./run-benign.sh http-multi 1
 ./run-benign.sh http-missing 5
 ./run-benign.sh https-sessions 20
 ./run-benign.sh tcp-refused 5
@@ -28,7 +29,7 @@ En HTTP/HTTPS el tercer argumento limita bytes por segundo. Para pruebas individ
 
 ## Ejecución versionada
 
-La fuente oficial de perfiles es `configs/campaigns/f1-normal-v1.json`. El ejecutor acepta exactamente un perfil y una repetición para impedir el lanzamiento accidental de toda la matriz:
+La fuente oficial de perfiles es `configs/campaigns/f1-normal-v2.json`. `v1` se conserva únicamente para reproducir los cuatro pilotos anteriores. El ejecutor acepta exactamente un perfil y una repetición para impedir el lanzamiento accidental de toda la matriz:
 
 ```bash
 python3 scripts/f1/validate_matrix.py
