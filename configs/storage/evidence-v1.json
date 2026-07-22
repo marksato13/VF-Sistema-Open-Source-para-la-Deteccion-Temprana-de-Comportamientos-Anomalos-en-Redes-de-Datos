@@ -1,0 +1,10 @@
+{
+  "schema_version": "evidence-v1",
+  "mountpoint": "/srv/ppi-evidence",
+  "artifacts_root": "/srv/ppi-evidence/artifacts",
+  "filesystem": "ext4",
+  "minimum_new_disk_bytes": 107374182400,
+  "recommended_new_disk_bytes": 161061273600,
+  "mount_options": "defaults,nodev,nosuid,noexec,noatime",
+  "marker": ".ppi-evidence-volume.json"
+}

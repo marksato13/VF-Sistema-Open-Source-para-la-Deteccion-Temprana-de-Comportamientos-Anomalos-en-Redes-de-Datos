@@ -73,7 +73,7 @@ Los vectores idénticos entre campañas se reportan como sospechosos, pero no se
 Cuando las 145 celdas pasen, se crearán atómicamente:
 
 ```text
-artifacts/datasets/f1-normal-v2/
+/srv/ppi-evidence/artifacts/datasets/f1-normal-v2/
 ├── train.csv
 ├── validation.csv
 ├── test.csv
@@ -109,13 +109,15 @@ La suite completa incluye una construcción sintética completa de 145 celdas, l
 Auditar sin escribir:
 
 ```bash
+export PPI_ARTIFACTS_ROOT=/srv/ppi-evidence/artifacts
 python3 scripts/dataset/build_f1_dataset.py --audit-only \
-  > artifacts/f1-dataset-audit.json
+  > /srv/ppi-evidence/artifacts/f1-dataset-audit.json
 ```
 
 Intentar construir —actualmente debe terminar con código 3 por incompletitud—:
 
 ```bash
+export PPI_ARTIFACTS_ROOT=/srv/ppi-evidence/artifacts
 python3 scripts/dataset/build_f1_dataset.py
 ```
 
@@ -125,4 +127,4 @@ python3 scripts/dataset/build_f1_dataset.py
 
 ## Estado de G6
 
-El ensamblador elimina una ruta importante de contaminación, pero G6 continúa pendiente por almacenamiento, aplicación/validación de las IP virtuales, SSH/SFTP y recolección oficial. El script no convierte pilotos exitosos en un dataset de entrenamiento.
+El ensamblador elimina una ruta importante de contaminación, pero G6 continúa pendiente por el disco dedicado de VM01, SSH/SFTP y la recolección oficial. Las IP virtuales `.11/.12` ya fueron aplicadas, persistieron tras reinicio y pasaron su piloto multidestino. El script no convierte pilotos exitosos en un dataset de entrenamiento.

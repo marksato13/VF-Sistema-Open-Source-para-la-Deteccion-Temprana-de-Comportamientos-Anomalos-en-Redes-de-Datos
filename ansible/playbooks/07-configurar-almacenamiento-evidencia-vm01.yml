@@ -1,0 +1,116 @@
+---
+- name: Configurar disco dedicado de evidencias en VM01
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: true
+  vars:
+    ppi_repo_root: "{{ playbook_dir }}/../.."
+    ppi_storage_contract: "{{ lookup('file', ppi_repo_root + '/configs/storage/evidence-v1.json') | from_json }}"
+    ppi_evidence_owner: m4rk
+    ppi_evidence_group: m4rk
+
+  pre_tasks:
+    - name: Exigir dispositivo estable y confirmación exacta
+      ansible.builtin.assert:
+        that:
+          - ppi_evidence_device is defined
+          - (ppi_evidence_device | default('')) is match('^/dev/disk/by-(id|path)/[^/]+$')
+          - "'-part' not in (ppi_evidence_device | default(''))"
+          - ppi_evidence_confirm_format | default('') == 'FORMAT_NEW_EVIDENCE_DISK'
+        fail_msg: >-
+          Operación bloqueada. Indique un disco completo por /dev/disk/by-id/... o
+          /dev/disk/by-path/... y
+          ppi_evidence_confirm_format=FORMAT_NEW_EVIDENCE_DISK después de revisar la auditoría.
+
+    - name: Auditar el disco sin escribir
+      ansible.builtin.command:
+        argv:
+          - "{{ ppi_repo_root }}/scripts/storage/audit_evidence_disk.py"
+          - --device
+          - "{{ ppi_evidence_device }}"
+          - --minimum-gib
+          - "{{ (ppi_storage_contract.minimum_new_disk_bytes / 1073741824) | int | string }}"
+      register: ppi_disk_audit_raw
+      changed_when: false
+
+    - name: Exigir que todos los bloqueos de seguridad pasen
+      ansible.builtin.assert:
+        that:
+          - (ppi_disk_audit_raw.stdout | from_json).eligible_new_disk | bool
+        fail_msg: "El disco no es nuevo o no es seguro: {{ ppi_disk_audit_raw.stdout }}"
+
+  tasks:
+    - name: Crear ext4 únicamente sobre el disco nuevo auditado
+      community.general.filesystem:
+        dev: "{{ ppi_evidence_device }}"
+        fstype: "{{ ppi_storage_contract.filesystem }}"
+        force: false
+
+    - name: Leer UUID del volumen
+      ansible.builtin.command:
+        argv: [blkid, -s, UUID, -o, value, "{{ ppi_evidence_device }}"]
+      register: ppi_evidence_uuid_raw
+      changed_when: false
+
+    - name: Validar UUID no vacío
+      ansible.builtin.assert:
+        that:
+          - ppi_evidence_uuid_raw.stdout is match('^[A-Fa-f0-9-]{16,}$')
+
+    - name: Montar volumen de forma persistente por UUID
+      ansible.posix.mount:
+        path: "{{ ppi_storage_contract.mountpoint }}"
+        src: "UUID={{ ppi_evidence_uuid_raw.stdout }}"
+        fstype: "{{ ppi_storage_contract.filesystem }}"
+        opts: "{{ ppi_storage_contract.mount_options }}"
+        state: mounted
+
+    - name: Crear raíz privada de artefactos
+      ansible.builtin.file:
+        path: "{{ ppi_storage_contract.artifacts_root }}"
+        state: directory
+        owner: "{{ ppi_evidence_owner }}"
+        group: "{{ ppi_evidence_group }}"
+        mode: "0700"
+
+    - name: Crear estructura privada de artefactos
+      ansible.builtin.file:
+        path: "{{ ppi_storage_contract.artifacts_root }}/{{ item }}"
+        state: directory
+        owner: "{{ ppi_evidence_owner }}"
+        group: "{{ ppi_evidence_group }}"
+        mode: "0700"
+      loop:
+        - campaigns
+        - features
+        - g6-ledger
+        - datasets
+
+    - name: Registrar identidad no sensible del volumen
+      ansible.builtin.copy:
+        dest: "{{ ppi_storage_contract.mountpoint }}/{{ ppi_storage_contract.marker }}"
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          {{ {
+            'schema_version': ppi_storage_contract.schema_version,
+            'filesystem': ppi_storage_contract.filesystem,
+            'filesystem_uuid': ppi_evidence_uuid_raw.stdout,
+            'mountpoint': ppi_storage_contract.mountpoint,
+            'artifacts_root': ppi_storage_contract.artifacts_root
+          } | to_nice_json }}
+
+    - name: Verificar el montaje final
+      ansible.builtin.command:
+        argv: [findmnt, --json, --target, "{{ ppi_storage_contract.mountpoint }}"]
+      register: ppi_evidence_findmnt
+      changed_when: false
+
+    - name: Mostrar resultado verificable
+      ansible.builtin.debug:
+        msg:
+          audit: "{{ ppi_disk_audit_raw.stdout | from_json }}"
+          mount: "{{ ppi_evidence_findmnt.stdout | from_json }}"
+          artifacts_root: "{{ ppi_storage_contract.artifacts_root }}"

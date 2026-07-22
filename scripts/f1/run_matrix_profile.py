@@ -17,6 +17,7 @@ from validate_matrix import load_and_validate
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_MATRIX = REPO / "configs/campaigns/f1-normal-v2.json"
 DEFAULT_FEATURE_SCHEMA = REPO / "configs/features/multilayer-v1.json"
+STORAGE_CONTRACT = REPO / "configs/storage/evidence-v1.json"
 
 
 def git(*args: str) -> str:
@@ -29,6 +30,52 @@ def write_json(path: Path, payload: dict) -> None:
     temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     os.chmod(temporary, 0o600)
     temporary.replace(path)
+
+
+def selected_artifacts_root() -> Path:
+    raw = os.environ.get("PPI_ARTIFACTS_ROOT", str(REPO / "artifacts"))
+    if not Path(raw).is_absolute():
+        raise SystemExit("ERROR: PPI_ARTIFACTS_ROOT debe ser una ruta absoluta")
+    return Path(raw).resolve()
+
+
+def inspect_official_storage(artifacts_root: Path) -> dict:
+    contract = json.loads(STORAGE_CONTRACT.read_text(encoding="utf-8"))
+    expected_root = Path(contract["artifacts_root"])
+    mountpoint = Path(contract["mountpoint"])
+    marker_path = mountpoint / contract["marker"]
+    marker_valid = False
+    if marker_path.is_file():
+        try:
+            marker = json.loads(marker_path.read_text(encoding="utf-8"))
+            marker_valid = (
+                marker.get("schema_version") == contract["schema_version"]
+                and marker.get("mountpoint") == str(mountpoint)
+                and marker.get("artifacts_root") == str(expected_root)
+                and marker.get("filesystem") == contract["filesystem"]
+            )
+        except (OSError, json.JSONDecodeError):
+            marker_valid = False
+    report = {
+        "expected_artifacts_root": str(expected_root),
+        "selected_artifacts_root": str(artifacts_root),
+        "artifacts_root_match": artifacts_root == expected_root,
+        "artifacts_root_is_directory": artifacts_root.is_dir(),
+        "mountpoint": str(mountpoint),
+        "mountpoint_is_mount": os.path.ismount(mountpoint),
+        "marker_path": str(marker_path),
+        "marker_valid": marker_valid,
+    }
+    report["gate_pass"] = all(
+        report[field]
+        for field in (
+            "artifacts_root_match",
+            "artifacts_root_is_directory",
+            "mountpoint_is_mount",
+            "marker_valid",
+        )
+    )
+    return report
 
 
 def parse_args() -> argparse.Namespace:
@@ -47,7 +94,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    matrix, matrix_report = load_and_validate(args.matrix, args.feature_schema)
+    artifacts_root = selected_artifacts_root()
+    matrix, matrix_report = load_and_validate(args.matrix, args.feature_schema, artifacts_root)
+    official_storage = inspect_official_storage(artifacts_root)
     profiles = {profile["id"]: profile for profile in matrix["profiles"]}
     if args.profile not in profiles:
         raise SystemExit(f"ERROR: perfil inexistente: {args.profile}")
@@ -80,6 +129,8 @@ def main() -> int:
         "matrix_sha256": matrix_report["matrix_sha256"],
         "scenario_args_sha256": scenario_args_sha256,
         "matrix_storage_gate_pass": matrix_report["storage_gate_pass"],
+        "artifacts_root": str(artifacts_root),
+        "official_storage": official_storage,
         "git_commit": git("rev-parse", "HEAD"),
         "warmup_seconds": matrix["warmup_seconds"],
         "settle_seconds": matrix["settle_seconds"],
@@ -91,15 +142,20 @@ def main() -> int:
 
     if git("status", "--porcelain"):
         raise SystemExit("ERROR: el árbol Git debe estar limpio para generar evidencia")
+    if not args.pilot and not official_storage["gate_pass"]:
+        raise SystemExit(
+            "ERROR: una campaña oficial exige el volumen identificado y montado en "
+            f"{official_storage['expected_artifacts_root']}"
+        )
     if not args.pilot and not matrix_report["storage_gate_pass"]:
         raise SystemExit(
             "ERROR: el almacenamiento no soporta la matriz oficial y su reserva; "
             "amplíe/monte almacenamiento o use --pilot para calibración"
         )
 
-    campaign_dir = REPO / "artifacts/campaigns" / campaign_id
-    feature_dir = REPO / "artifacts/features" / campaign_id
-    ledger_path = REPO / "artifacts/g6-ledger" / f"{campaign_id}.json"
+    campaign_dir = artifacts_root / "campaigns" / campaign_id
+    feature_dir = artifacts_root / "features" / campaign_id
+    ledger_path = artifacts_root / "g6-ledger" / f"{campaign_id}.json"
     if campaign_dir.exists() or feature_dir.exists() or ledger_path.exists():
         raise SystemExit(f"ERROR: el ID ya posee artefactos: {campaign_id}")
 
@@ -122,6 +178,7 @@ def main() -> int:
             "PPI_CAMPAIGN_MATRIX_REPETITION": str(args.repetition),
             "PPI_CAMPAIGN_ARGS_SHA256": scenario_args_sha256,
             "PPI_CAMPAIGN_PARTITION": partition,
+            "PPI_ARTIFACTS_ROOT": str(artifacts_root),
         }
     )
     run_command = [
@@ -135,6 +192,7 @@ def main() -> int:
         subprocess.run(
             [str(REPO / "scripts/features/extract_campaign.sh"), campaign_id],
             cwd=REPO,
+            env=env,
             check=True,
         )
         report_path = feature_dir / "extraction-report.json"

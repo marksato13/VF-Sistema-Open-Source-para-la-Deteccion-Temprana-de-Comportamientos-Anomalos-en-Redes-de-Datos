@@ -2,7 +2,12 @@
 
 readonly CAMPAIGN_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PPI_REPO_ROOT="$(cd "$CAMPAIGN_SCRIPT_DIR/../.." && pwd)"
-readonly PPI_CAMPAIGNS_DIR="$PPI_REPO_ROOT/artifacts/campaigns"
+if [[ -n "${PPI_ARTIFACTS_ROOT:-}" && "${PPI_ARTIFACTS_ROOT}" != /* ]]; then
+  echo "ERROR: PPI_ARTIFACTS_ROOT debe ser una ruta absoluta" >&2
+  exit 1
+fi
+readonly PPI_ARTIFACTS_ROOT="$(realpath -m "${PPI_ARTIFACTS_ROOT:-$PPI_REPO_ROOT/artifacts}")"
+readonly PPI_CAMPAIGNS_DIR="$PPI_ARTIFACTS_ROOT/campaigns"
 readonly PPI_ACTIVE_LOCK="$PPI_CAMPAIGNS_DIR/.active"
 readonly PPI_SSH_KEY="${PPI_SSH_KEY:-/home/m4rk/.ssh/id_ed25519_ppi_ansible}"
 readonly PPI_SSH_USER="${PPI_SSH_USER:-useransible}"

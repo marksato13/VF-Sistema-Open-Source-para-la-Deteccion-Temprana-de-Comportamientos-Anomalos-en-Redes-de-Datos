@@ -635,7 +635,11 @@ def main() -> int:
     args = parse_args()
     repo = args.repo.resolve()
     contract = load_contract(repo)
-    artifacts = repo / "artifacts"
+    raw_artifacts = os.environ.get("PPI_ARTIFACTS_ROOT", str(repo / "artifacts"))
+    artifacts = Path(raw_artifacts)
+    if not artifacts.is_absolute():
+        print("ERROR: PPI_ARTIFACTS_ROOT debe ser una ruta absoluta", file=os.sys.stderr)
+        return 2
     campaigns_dir = args.campaigns_dir or artifacts / "campaigns"
     features_dir = args.features_dir or artifacts / "features"
     ledgers_dir = args.ledgers_dir or artifacts / "g6-ledger"

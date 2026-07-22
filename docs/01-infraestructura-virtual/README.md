@@ -49,7 +49,8 @@ Recursos:
 |---|---:|
 | vCPU | 4 |
 | RAM | 12 GB asignados; aproximadamente 11 GiB visibles |
-| Disco | 70 GiB thin; raíz ext4 ampliada a 67.6 GiB |
+| Disco de sistema actual | 70 GiB thin; raíz ext4 de 68.9 GiB |
+| Disco de evidencias | 150 GiB thin dedicado, pendiente de añadir y montar |
 | Interfaces | 2: red actual y `PPI-MGMT` |
 | IP externa propuesta | 172.17.25.20/24 |
 | IP de gestión del laboratorio | 10.10.10.10/24 |
@@ -152,21 +153,23 @@ Recursos:
 
 | Máquina | vCPU | RAM | Disco thin |
 |---|---:|---:|---:|
-| VM01 Administración/Ansible | 4 | 12 GB | 70 GB |
+| VM01 Administración/Ansible | 4 | 12 GB | 220 GB: 70 GB sistema + 150 GB evidencias |
 | VM02 Sensor Suricata/ML | 6 | 16 GB | 160 GB |
 | VM03 Servidor protegido | 2 | 4 GB | 120 GB |
 | VM04 Kali Linux | 4 | 6 GB | 60 GB |
 | VM05 Cliente legítimo | 4 | 8 GB | 100 GB |
-| **Total** | **20 vCPU** | **46 GB** | **510 GB** |
+| **Total** | **20 vCPU** | **46 GB** | **660 GB** |
 
 ### Margen conservado
 
 | Recurso | Capacidad del host | Asignación planificada | Margen aproximado |
 |---|---:|---:|---:|
 | RAM | 63.63 GB | 46 GB | 17.63 GB |
-| Almacenamiento | 825.75 GB | 520 GB thin | 305.75 GB lógicos |
+| Almacenamiento | 825.75 GB | 660 GB thin | 165.75 GB lógicos |
 
-Los 16 vCPU representan sobreasignación controlada respecto de la capacidad física expresada en GHz. Es aceptable para este laboratorio siempre que no todas las VMs utilicen el 100 % de CPU simultáneamente. Durante ataques de alta tasa se detendrán tareas no esenciales y se registrará `CPU ready` del hipervisor para comprobar que la contención no invalide los resultados. No se aumentará nuevamente el total de vCPU hasta confirmar el número de sockets, núcleos e hilos físicos del host.
+Los 20 vCPU representan sobreasignación controlada respecto de la capacidad física expresada en GHz. Es aceptable para este laboratorio siempre que no todas las VMs utilicen el 100 % de CPU simultáneamente. Durante ataques de alta tasa se detendrán tareas no esenciales y se registrará `CPU ready` del hipervisor para comprobar que la contención no invalide los resultados. No se aumentará nuevamente el total de vCPU hasta confirmar el número de sockets, núcleos e hilos físicos del host.
+
+El total de disco es capacidad virtual thin, no consumo físico inmediato. Antes de cada fase se controlará el espacio real del datastore. El disco separado de VM01 evita llenar la raíz por PCAP y permite desmontar o respaldar las evidencias sin mezclar el sistema operativo. El procedimiento y sus bloqueos están en `docs/08-almacenamiento/01-disco-evidencias-vm01.md`.
 
 ## 6. Segmentos virtuales
 

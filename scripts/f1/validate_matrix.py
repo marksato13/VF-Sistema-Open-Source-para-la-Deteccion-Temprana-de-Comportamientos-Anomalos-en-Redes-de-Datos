@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 from pathlib import Path
@@ -23,7 +24,11 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def load_and_validate(matrix_path: Path, feature_schema_path: Path) -> tuple[dict, dict]:
+def load_and_validate(
+    matrix_path: Path,
+    feature_schema_path: Path,
+    storage_path: Path | None = None,
+) -> tuple[dict, dict]:
     matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
     feature_schema = json.loads(feature_schema_path.read_text(encoding="utf-8"))
     errors: list[str] = []
@@ -82,7 +87,13 @@ def load_and_validate(matrix_path: Path, feature_schema_path: Path) -> tuple[dic
     if errors:
         raise ValueError("\n".join(errors))
 
-    free_bytes = shutil.disk_usage(matrix_path).free
+    selected_storage = (storage_path or matrix_path).resolve()
+    try:
+        free_bytes = shutil.disk_usage(selected_storage).free
+        storage_path_exists = True
+    except FileNotFoundError:
+        free_bytes = 0
+        storage_path_exists = False
     reserve_value = matrix.get("minimum_free_after_plan_bytes")
     if not isinstance(reserve_value, int) or isinstance(reserve_value, bool) or reserve_value < 20 * 1024**3:
         raise ValueError("la reserva de almacenamiento debe ser al menos 20 GiB")
@@ -99,6 +110,8 @@ def load_and_validate(matrix_path: Path, feature_schema_path: Path) -> tuple[dic
         "minimum_free_after_plan_bytes": reserve,
         "estimated_free_after_plan_bytes": free_bytes - total_bytes,
         "local_free_bytes": free_bytes,
+        "storage_path": str(selected_storage),
+        "storage_path_exists": storage_path_exists,
         "storage_gate_pass": free_bytes >= total_bytes + reserve,
         "feature_coverage": sorted(covered),
         "known_gaps": matrix.get("known_gaps", []),
@@ -111,13 +124,18 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--matrix", type=Path, default=repo / "configs/campaigns/f1-normal-v2.json")
     parser.add_argument("--feature-schema", type=Path, default=repo / "configs/features/multilayer-v1.json")
+    parser.add_argument(
+        "--storage-path",
+        type=Path,
+        default=Path(os.environ.get("PPI_ARTIFACTS_ROOT", repo / "artifacts")),
+    )
     parser.add_argument("--require-storage", action="store_true")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    _, report = load_and_validate(args.matrix, args.feature_schema)
+    _, report = load_and_validate(args.matrix, args.feature_schema, args.storage_path)
     print(json.dumps(report, indent=2, sort_keys=True))
     if args.require_storage and not report["storage_gate_pass"]:
         return 3

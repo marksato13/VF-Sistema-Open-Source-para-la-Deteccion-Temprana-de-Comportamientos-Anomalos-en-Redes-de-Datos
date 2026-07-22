@@ -5,10 +5,11 @@ El extractor usa únicamente la biblioteca estándar de Python y `tcpdump` para 
 Para extraer una campaña cerrada bajo el contrato G5:
 
 ```bash
+export PPI_ARTIFACTS_ROOT=/srv/ppi-evidence/artifacts
 scripts/features/extract_campaign.sh ID-DE-CAMPAÑA
 ```
 
-La salida queda en `artifacts/features/<ID>/`:
+La salida queda en `$PPI_ARTIFACTS_ROOT/features/<ID>/`. Sin la variable se usa `artifacts/features/<ID>/` para mantener compatibles los pilotos históricos:
 
 - `multilayer-v1.csv`: metadatos, soportes de auditoría y las 14 features en orden fijo;
 - `extraction-report.json`: hashes de PCAP, EVE, esquema y CSV;

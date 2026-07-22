@@ -95,6 +95,7 @@ jq -n \
   --arg matrix_repetition "$matrix_repetition" \
   --arg campaign_partition "$campaign_partition" \
   --arg scenario_args_sha256 "$scenario_args_sha256" \
+  --arg artifacts_root "$PPI_ARTIFACTS_ROOT" \
   --argjson git_dirty "$git_dirty" \
   --argjson warmup_seconds "$warmup_seconds" '
   {
@@ -108,6 +109,7 @@ jq -n \
     started_at: $started_at,
     started_at_utc: $started_at_utc,
     git: {commit: $git_commit, dirty: $git_dirty},
+    artifacts_root: $artifacts_root,
     partition: $campaign_partition,
     campaign_plan: (
       if $matrix_sha256 == "" then null else {

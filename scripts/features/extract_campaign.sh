@@ -13,7 +13,7 @@ fi
 id="$1"
 ppi_validate_id "$id"
 campaign_dir="$(ppi_campaign_dir "$id")"
-output_dir="${2:-$PPI_REPO_ROOT/artifacts/features/$id}"
+output_dir="${2:-$PPI_ARTIFACTS_ROOT/features/$id}"
 
 [[ -d "$campaign_dir" ]] || ppi_die "campaña inexistente: $id"
 [[ "$(jq -r '.status' "$campaign_dir/manifest.json")" == completed ]] ||

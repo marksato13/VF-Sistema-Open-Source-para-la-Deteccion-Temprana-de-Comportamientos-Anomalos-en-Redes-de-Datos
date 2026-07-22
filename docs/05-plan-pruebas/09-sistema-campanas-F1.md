@@ -6,7 +6,7 @@ Fecha de implementación: 20 de julio de 2026.
 
 Este bloque transforma las ejecuciones manuales de calibración en campañas trazables. Su función es conservar el contexto técnico necesario para decidir si una ejecución puede entrar al dataset. No etiqueta automáticamente una prueba como válida y no sustituye la revisión de calidad.
 
-Los resultados de ejecución se guardan en `artifacts/campaigns/<ID>/`, excluido de Git. El repositorio conserva el código, la configuración y el procedimiento; PCAP, EVE, logs y datasets permanecen fuera de Git por tamaño, privacidad y riesgo de incluir datos sensibles.
+Los pilotos históricos se guardan en `artifacts/campaigns/<ID>/`, excluido de Git. Las campañas oficiales usarán `/srv/ppi-evidence/artifacts/campaigns/<ID>/` mediante `PPI_ARTIFACTS_ROOT`. El repositorio conserva el código, la configuración y el procedimiento; PCAP, EVE, logs y datasets permanecen fuera de Git por tamaño, privacidad y riesgo de incluir datos sensibles.
 
 ## Componentes
 

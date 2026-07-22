@@ -147,7 +147,10 @@ Las huellas deberán confirmarse desde la consola de cada VM antes de agregarlas
 - `04-configurar-cliente-f1.yml`: instala las herramientas benignas de generación y medición.
 - `05-ajustar-captura-suricata.yml`: configura AF_PACKET, ring RX y reinicia Suricata solo después de `suricata -T`.
 - `06-desplegar-orquestacion-campanas.yml`: instala los controladores restringidos de métricas/PCAP en Sensor y el generador benigno calibrado del Cliente.
+- `07-configurar-almacenamiento-evidencia-vm01.yml`: formatea y monta un disco nuevo dedicado en VM01, solo después de una auditoría de lectura y una confirmación literal.
 
 Estos playbooks requieren privilegios. `useransible` no pertenece a sudoers de forma permanente: durante la ejecución se autorizó mediante un archivo temporal validado con `visudo`, que fue eliminado inmediatamente en Servidor, Cliente y Sensor. Las NIC externas de Servidor y Cliente se habilitaron solo para descargar paquetes y volvieron a estado `DOWN` al finalizar.
 
 Las únicas excepciones permanentes son `/usr/local/sbin/ppi-suricata-metrics` y `/usr/local/sbin/ppi-pcap-control` en el Sensor. Ambos son propiedad de `root`; el primero no acepta argumentos y el segundo valida acción e ID, manteniendo interfaz, filtro, destino y rotación fijos. Las pruebas negativas confirmaron que `useransible` no puede ejecutar directamente `/usr/bin/id` ni `/usr/bin/tcpdump`. El razonamiento está en `docs/05-plan-pruebas/09-sistema-campanas-F1.md` y `11-diseno-captura-PCAP-G4.md`.
+
+El playbook `07` se ejecuta localmente en VM01 y es deliberadamente destructivo sobre el dispositivo indicado. No selecciona discos automáticamente: exige una ruta estable de disco completo, comprueba que no sea el disco raíz, que mida al menos 100 GiB y que no tenga particiones, montajes, sistema de archivos ni firmas. El procedimiento exacto está en `docs/08-almacenamiento/01-disco-evidencias-vm01.md`.
