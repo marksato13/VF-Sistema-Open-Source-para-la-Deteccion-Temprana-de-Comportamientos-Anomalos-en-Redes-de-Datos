@@ -4,7 +4,7 @@ Fecha: 21 de julio de 2026. Commit ejecutado: `2cd53839ac7deee7b76957f180f4f193f
 
 ## Decisión
 
-**PASS para infraestructura multidestino y piloto L3.** VM03 conserva tres IP de servicio después de reiniciar, las respuestas atraviesan el Sensor, el firewall limita las VIP y el extractor observó tres destinos legítimos con ratio 1.0. El dato sigue siendo calibración y G6 completo continúa bloqueado por almacenamiento y recolección oficial.
+**PASS para infraestructura multidestino y piloto L3.** VM03 conserva tres IP de servicio después de reiniciar, las respuestas atraviesan el Sensor, el firewall limita las VIP y el extractor observó tres destinos legítimos con ratio 1.0. El dato sigue siendo calibración. El bloqueo de almacenamiento se resolvió el 22 de julio de 2026; G6 continúa pendiente por la recolección oficial.
 
 ## Aplicación con Ansible
 
@@ -105,6 +105,6 @@ El quinto piloto no fue reinterpretado como entrenamiento aunque su fila es caus
 - Las tres IP pertenecen a una sola VM y comparten kernel, NIC y NGINX.
 - El ratio 1.0 se validó en una sola calibración; `HTTP-MULTI-5` y las cinco repeticiones oficiales siguen pendientes.
 - No se ha demostrado generalización hacia múltiples hosts físicos.
-- VM01 continúa sin el disco de evidencias requerido.
+- VM01 ya posee el disco de evidencias requerido; queda pendiente comprobar su montaje tras reinicio.
 
 Por tanto, el hueco de variación legítima L3 está corregido a nivel lógico y reproducible, pero no debe describirse como diversidad física de servidores.

@@ -1,14 +1,14 @@
 # Disco dedicado de evidencias en VM01
 
-Fecha de diseño y auditoría: 21 de julio de 2026.
+Fecha de diseño: 21 de julio de 2026. Aplicación: 22 de julio de 2026.
 
 ## Decisión
 
-VM01 conservará su disco de sistema de 70 GiB y recibirá un **segundo VMDK thin de 150 GiB** para PCAP, features, ledgers y datasets. No se ampliará ni formateará `/dev/sda`. El volumen nuevo se montará en `/srv/ppi-evidence` y la raíz de artefactos será `/srv/ppi-evidence/artifacts`.
+VM01 conserva su disco de sistema de 70 GiB y recibió un **segundo VMDK thin de 150 GiB** para PCAP, features, ledgers y datasets. No se amplió ni formateó `/dev/sda`. El volumen nuevo está montado en `/srv/ppi-evidence` y la raíz de artefactos es `/srv/ppi-evidence/artifacts`.
 
 La matriz F1 v2 estima 33,673,250,000 bytes de PCAP y exige conservar 20 GiB libres. El gate requiere en total 55,148,086,480 bytes, aproximadamente 51.36 GiB. Un volumen de 150 GiB deja margen para metadatos, CSV, EVE, repeticiones fallidas conservadas y las fases posteriores. El mínimo automatizado es 100 GiB; 150 GiB es la asignación recomendada para este laboratorio.
 
-## Estado real antes del cambio
+## Estado real antes del cambio — evidencia histórica
 
 La comprobación de solo lectura registró:
 
@@ -23,14 +23,14 @@ La comprobación de solo lectura registró:
 
 VMware no expone actualmente un identificador `by-id` para `/dev/sda`; sí expone la ruta SCSI estable `/dev/disk/by-path/pci-0000:02:00.0-scsi-0:0:0:0`. Por ello el auditor admite `by-id` o `by-path`, pero nunca `/dev/sdb` directamente ni una ruta terminada en `-partN`.
 
-## Paso físico pendiente en ESXi
+## Paso físico en ESXi — completado
 
 1. Confirmar que no hay campaña ni captura activa.
 2. En la configuración de VM01, **añadir un disco duro nuevo** de 150 GiB con aprovisionamiento thin. No aumentar el VMDK existente de 70 GiB.
 3. Si ESXi no permite añadirlo en caliente, apagar VM01 de forma normal, añadirlo y volverla a encender. La sesión remota caerá durante ese apagado y se retomará tras el arranque.
 4. No inicializar, particionar ni formatear el disco desde otra herramienta.
 
-Este paso no fue ejecutado por Codex porque solo puede identificar de forma segura el dispositivo después de que ESXi lo presente al sistema operativo.
+El operador añadió el VMDK desde ESXi. Ubuntu lo detectó como `/dev/sdb`, SCSI `0:1`, con ruta estable `/dev/disk/by-path/pci-0000:02:00.0-scsi-0:0:1:0`. El disco raíz permanece en SCSI `0:0` y resuelve a `/dev/sda`.
 
 ## Identificación y auditoría sin escritura
 
@@ -65,13 +65,16 @@ Este es el primer paso que sí modifica el disco. Solo se ejecuta después de re
 
 ```bash
 cd /home/m4rk/Documentos/pronteacomopepa/vf-sistema-final/ansible
-../.venv/bin/ansible-playbook -K \
+sudo env ANSIBLE_LOG_PATH=/tmp/ppi-storage-apply-3.log \
+  ../.venv/bin/ansible-playbook \
   playbooks/07-configurar-almacenamiento-evidencia-vm01.yml \
   -e "ppi_evidence_device=$DISPOSITIVO_EVIDENCIA" \
   -e "ppi_evidence_confirm_format=FORMAT_NEW_EVIDENCE_DISK"
 ```
 
 El playbook vuelve a ejecutar la auditoría antes de crear ext4. Después monta por UUID con `nodev,nosuid,noexec,noatime`, crea directorios privados con modo `0700` y escribe el marcador no sensible `.ppi-evidence-volume.json`. El dispositivo solo se usa para datos; no aloja ejecutables.
+
+En esta VM, dos intentos previos terminaron antes de escribir porque Ansible no pudo reutilizar correctamente el prompt sudo interactivo: `changed=0` en ambos casos. La ejecución final elevó el proceso completo con un único `sudo`; terminó `ok=12 changed=5 unreachable=0 failed=0`.
 
 ## Validación posterior y uso por las campañas
 
@@ -94,6 +97,36 @@ Una campaña oficial requiere simultáneamente:
 - espacio libre suficiente para toda F1 v2 y la reserva.
 
 Los cinco pilotos históricos permanecen en `artifacts/` dentro del repositorio de trabajo y siguen excluidos del entrenamiento. El ensamblador y el extractor respetan `PPI_ARTIFACTS_ROOT`, por lo que el dataset oficial se construirá en el volumen dedicado sin mover ni reinterpretar las calibraciones.
+
+## Resultado aplicado
+
+La auditoría privilegiada previa al formateo devolvió todos los controles en `true`:
+
+```text
+eligible_new_disk=true
+device_resolved=/dev/sdb
+root_disk_resolved=/dev/sda
+size_bytes=161061273600
+minimum_bytes=107374182400
+partitions=0, filesystem=null, mountpoints=0, signatures=0
+```
+
+Estado posterior:
+
+| Control | Resultado |
+|---|---|
+| Sistema de archivos | ext4 |
+| UUID | `b676aa52-55b2-422d-b77a-4cde1d36d37f` |
+| Montaje | `/srv/ppi-evidence` |
+| Opciones | `rw,nosuid,nodev,noexec,noatime` |
+| Persistencia | entrada por UUID en `/etc/fstab` |
+| Capacidad utilizable | aproximadamente 147 GiB |
+| Disponible inicial | aproximadamente 140 GiB = 149,324,984,320 bytes |
+| Directorios runtime | propietario `m4rk:m4rk`, modo `0700` |
+| Gate de capacidad F1 v2 | PASS |
+| Gate de identidad del ejecutor | PASS |
+
+El plan completo estima 33,673,250,000 bytes de PCAP y, después de reservarlos, proyecta 115,651,734,320 bytes libres. El `dry-run` oficial seleccionó `/srv/ppi-evidence/artifacts`, reconoció el marcador y devolvió `official_storage.gate_pass=true` sin generar tráfico.
 
 ## Controles antes de la campaña oficial
 
