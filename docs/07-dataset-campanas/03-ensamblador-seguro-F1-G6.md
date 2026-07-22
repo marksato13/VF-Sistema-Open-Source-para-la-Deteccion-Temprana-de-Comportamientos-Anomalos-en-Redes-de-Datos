@@ -4,7 +4,7 @@ Fecha: 21 de julio de 2026. Implementación: `scripts/dataset/build_f1_dataset.p
 
 ## Decisión
 
-El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Con `f1-normal-v2`, la auditoría encuentra cinco pilotos excluidos, cero campañas oficiales aceptadas y 145 celdas faltantes; por tanto no produce dataset.
+El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Después del primer canario, la raíz oficial contiene una campaña aceptada, cero inválidas y 144 celdas faltantes; por tanto todavía no produce dataset. Los cinco pilotos históricos continúan excluidos en la raíz de artefactos heredada y no se mezclan con el volumen oficial.
 
 ## Autoridad de los datos
 
@@ -127,4 +127,4 @@ python3 scripts/dataset/build_f1_dataset.py
 
 ## Estado de G6
 
-El ensamblador elimina una ruta importante de contaminación, pero G6 continúa pendiente por el disco dedicado de VM01, SSH/SFTP y la recolección oficial. Las IP virtuales `.11/.12` ya fueron aplicadas, persistieron tras reinicio y pasaron su piloto multidestino. El script no convierte pilotos exitosos en un dataset de entrenamiento.
+El disco dedicado y G7 ya pasaron. El ensamblador aceptó `F1N-DNS-MIXED-20-2-R01` como la primera celda oficial y continúa bloqueando la construcción por 144 faltantes. SSH/SFTP permanece fuera de la matriz mientras no exista identidad técnica. Las IP virtuales `.11/.12` persistieron tras reinicio. El script no convierte pilotos exitosos en entrenamiento ni permite construir un dataset parcial.

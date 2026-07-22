@@ -1,5 +1,7 @@
 # Matriz F1 de normalidad representativa — G6
 
+> **Seguimiento:** el volumen dedicado resolvió el gate de capacidad y el primer canario oficial `F1N-DNS-MIXED-20-2-R01` fue aceptado. Quedan 144 celdas; ver `06-primer-canario-oficial-F1.md`.
+
 Fecha de congelación del diseño inicial: 21 de julio de 2026. Contrato oficial vigente: `configs/campaigns/f1-normal-v2.json`. La versión `v1` permanece inmutable para reproducir los cuatro pilotos anteriores, pero fue sustituida antes de iniciar campañas oficiales para incorporar diversidad legítima de destinos.
 
 ## Decisión actual
