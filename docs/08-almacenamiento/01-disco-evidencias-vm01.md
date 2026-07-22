@@ -76,6 +76,8 @@ El playbook vuelve a ejecutar la auditoría antes de crear ext4. Después monta 
 
 En esta VM, dos intentos previos terminaron antes de escribir porque Ansible no pudo reutilizar correctamente el prompt sudo interactivo: `changed=0` en ambos casos. La ejecución final elevó el proceso completo con un único `sudo`; terminó `ok=12 changed=5 unreachable=0 failed=0`.
 
+La verificación posterior de `fstab` encontró cero errores de sintaxis. Mostró que systemd todavía conservaba en memoria la versión anterior; el playbook quedó corregido para ejecutar `daemon-reload` en instalaciones futuras. En esta aplicación, el reinicio de persistencia pendiente cargará directamente la entrada nueva por UUID.
+
 ## Validación posterior y uso por las campañas
 
 ```bash
