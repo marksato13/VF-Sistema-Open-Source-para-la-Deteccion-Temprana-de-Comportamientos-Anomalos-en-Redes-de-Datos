@@ -140,3 +140,5 @@ Se solicitó una revisión adversarial del bundle a Claude Code. El proceso real
 **CANARIO HTTP ACEPTADO.** La campaña demuestra que el pipeline oficial soporta tráfico legítimo pesado con 91.6077 % de paquetes IPv4 entre 500 y 1500 bytes, transferencia completa, una fila elegible y cero pérdidas.
 
 Esto valida la primera celda pesada, no toda la observación del jurado ni el dataset completo. El siguiente paso seguro es una escalada por tamaños: ejecutar `HTTP-100MB/R01` con nuevo preflight, auditar rendimiento y drops, y solo entonces evaluar 500 MB y 1 GB. No se autoriza un lote desatendido.
+
+> **Seguimiento:** `HTTP-100MB/R01` fue ejecutado y aceptado con 91.6172 % de paquetes en el rango objetivo, cero drops y dos ventanas elegibles. Ver `08-canario-HTTP-100MB-F1.md`.

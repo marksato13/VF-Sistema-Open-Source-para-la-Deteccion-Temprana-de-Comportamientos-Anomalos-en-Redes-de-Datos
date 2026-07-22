@@ -24,6 +24,7 @@ El cierre operacional, la captura correlacionada y la prueba de persistencia pen
 El reinicio real, la persistencia del aislamiento y el cierre **APTO PERSISTENTE** están en `15-validacion-persistencia-G7.md`.
 El primer canario oficial aceptado y sus límites están en `../07-dataset-campanas/06-primer-canario-oficial-F1.md`.
 El segundo canario oficial, HTTP 10 MB, su distribución de paquetes grandes y el límite de inspección observado en Suricata están en `../07-dataset-campanas/07-canario-HTTP-10MB-F1.md`.
+El tercer canario oficial, HTTP 100 MB, su escalamiento, recursos y dos ventanas elegibles están en `../07-dataset-campanas/08-canario-HTTP-100MB-F1.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
