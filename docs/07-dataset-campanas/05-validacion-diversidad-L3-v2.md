@@ -105,6 +105,6 @@ El quinto piloto no fue reinterpretado como entrenamiento aunque su fila es caus
 - Las tres IP pertenecen a una sola VM y comparten kernel, NIC y NGINX.
 - El ratio 1.0 se validó en una sola calibración; `HTTP-MULTI-5` y las cinco repeticiones oficiales siguen pendientes.
 - No se ha demostrado generalización hacia múltiples hosts físicos.
-- VM01 ya posee el disco de evidencias requerido; queda pendiente comprobar su montaje tras reinicio.
+- VM01 posee el disco de evidencias requerido y su montaje por UUID pasó la prueba de reinicio.
 
 Por tanto, el hueco de variación legítima L3 está corregido a nivel lógico y reproducible, pero no debe describirse como diversidad física de servidores.

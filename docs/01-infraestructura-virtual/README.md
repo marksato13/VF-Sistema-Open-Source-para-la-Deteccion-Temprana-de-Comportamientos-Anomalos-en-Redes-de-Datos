@@ -50,7 +50,7 @@ Recursos:
 | vCPU | 4 |
 | RAM | 12 GB asignados; aproximadamente 11 GiB visibles |
 | Disco de sistema actual | 70 GiB thin; raíz ext4 de 68.9 GiB |
-| Disco de evidencias | 150 GiB thin dedicado; ext4 aplicado en `/srv/ppi-evidence` |
+| Disco de evidencias | 150 GiB thin dedicado; ext4 persistente y validado en `/srv/ppi-evidence` |
 | Interfaces | 2: red actual y `PPI-MGMT` |
 | IP externa propuesta | 172.17.25.20/24 |
 | IP de gestión del laboratorio | 10.10.10.10/24 |

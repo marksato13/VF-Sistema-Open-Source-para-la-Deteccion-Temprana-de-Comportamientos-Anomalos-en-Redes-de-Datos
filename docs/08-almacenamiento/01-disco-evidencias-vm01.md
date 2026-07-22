@@ -150,6 +150,29 @@ Checkpoint tomado el `2026-07-22T01:53:12-05:00`, antes del reinicio autorizado 
 
 La sesión de RustDesk/Codex se interrumpirá por diseño. Después del arranque se volverán a comprobar hora de boot, UUID, opciones, marcador, permisos, bytes disponibles, ambos gates y sincronización Git. No se ejecutará una campaña durante esta prueba de persistencia.
 
+## Validación posterior al reinicio
+
+**PASS.** VM01 arrancó nuevamente el `2026-07-22 01:56:13 -05:00`. La validación se realizó a las `01:59:09 -05:00` sin ejecutar tráfico ni campañas.
+
+| Control | Resultado posterior |
+|---|---|
+| RustDesk | `active` y `enabled` |
+| Disco raíz | `/dev/sda2`, ext4, `rw` |
+| Volumen de evidencias | `/dev/sdb`, ext4, montado automáticamente |
+| UUID observado | `b676aa52-55b2-422d-b77a-4cde1d36d37f`, idéntico al checkpoint |
+| Montaje | `/srv/ppi-evidence` |
+| Opciones reales fuera del sandbox | `rw,nosuid,nodev,noexec,noatime` |
+| Prueba de escritura del directorio | `ARTIFACTS_WRITABLE=PASS` |
+| Marcador | legible, esquema `evidence-v1` y UUID coherente |
+| Propiedad/permisos | `m4rk:m4rk`, modo `0700` en los cinco directorios |
+| Bytes disponibles | `149324984320`, igual al checkpoint |
+| Verificación de `fstab` | 0 errores de parseo y 0 errores |
+| Gate de capacidad F1 v2 | PASS |
+| Gate de identidad del ejecutor | PASS |
+| Git antes de documentar el resultado | local y remoto sincronizados en `c45d747` |
+
+La primera lectura desde la sesión automatizada mostró `ro` tanto para `/` como para el volumen por las restricciones del sandbox de herramientas. La verificación fuera de ese sandbox confirmó que ambos sistemas de archivos estaban realmente `rw`; no se registró ese artefacto del entorno como fallo del sistema operativo.
+
 ## Controles antes de la campaña oficial
 
-Después del montaje aún se debe validar un reinicio de VM01: el volumen debe reaparecer por UUID, el marcador debe seguir legible y el gate debe continuar en PASS. También se registrará el espacio real del datastore ESXi, porque 150 GiB thin representan capacidad lógica y el PCAP hace crecer el VMDK físicamente.
+El reinicio de persistencia ya pasó. Antes de cada lote oficial todavía se registrará el espacio real del datastore ESXi, porque 150 GiB thin representan capacidad lógica y el PCAP hace crecer el VMDK físicamente. También se conservarán los gates de capacidad e identidad como precondiciones automáticas de cada ejecución.
