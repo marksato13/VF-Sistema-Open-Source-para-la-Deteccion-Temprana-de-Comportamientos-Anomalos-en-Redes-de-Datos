@@ -1,5 +1,7 @@
 # Cierre operacional del aislamiento G7 — 22 de julio de 2026
 
+> **Seguimiento:** la condición de reinicio pasó y G7 quedó **APTO PERSISTENTE**. Ver `15-validacion-persistencia-G7.md`.
+
 Esta verificación se ejecutó después de desconectar en ESXi las NIC externas de VM02–VM05. No se reinició ninguna VM y no se inició una campaña oficial. El resultado permite separar dos afirmaciones:
 
 - **aislamiento operacional actual:** APTO;

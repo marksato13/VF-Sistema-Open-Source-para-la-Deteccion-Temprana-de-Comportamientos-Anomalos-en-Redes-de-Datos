@@ -1159,3 +1159,26 @@ rules_loaded: 52044
 ```
 
 Estado: **persistencia de Sensor, Suricata, firewall, offloading y rutas de Servidor, Cliente y Kali validada después de reinicios reales. Kali recuperó sincronización NTP y fue verificada con `NTPSynchronized=yes` el 20 de julio de 2026.**
+
+## 26. Reinicio restringido mediante Ansible
+
+El 22 de julio de 2026 se autorizó en VM02–VM05 solamente el reinicio exacto requerido para pruebas de persistencia:
+
+```text
+useransible ALL=(root) NOPASSWD: /usr/bin/systemctl reboot --no-wall
+```
+
+El archivo `/etc/sudoers.d/ppi-ansible-reboot` pertenece a `root:root`, usa modo `0440` y fue validado con `visudo -cf` en cada VM. No se configuró `NOPASSWD: ALL` ni se agregó `useransible` al grupo `sudo`.
+
+Ansible puede solicitar el reinicio autorizado con:
+
+```bash
+../.venv/bin/ansible ppi-server \
+  -m ansible.builtin.command \
+  -a "sudo -n /usr/bin/systemctl reboot --no-wall" \
+  -B 1 -P 0
+```
+
+Antes de usarlo se debe registrar `boot_id`, hora e inicio del sistema. Después se exige un `boot_id` diferente y se repiten red, servicios y controles negativos. La prueba `sudo -n /usr/bin/id` debe continuar fallando.
+
+Esta regla no habilita playbooks generales con `become: true`. Para instalar paquetes o modificar archivos raíz se utilizará una ventana de mantenimiento explícita con credenciales protegidas por Ansible Vault; nunca se publicarán ni se pasarán como argumentos de comandos. Las credenciales expuestas previamente en canales de conversación deben rotarse.

@@ -21,6 +21,7 @@ El rediseño multidestino y la transición conservadora de matriz `v1` a `v2` es
 La aplicación persistente y el piloto con ratio L3 igual a 1.0 están en `../07-dataset-campanas/05-validacion-diversidad-L3-v2.md`.
 La auditoría posterior al reinicio, el bypass externo confirmado y el gate de aislamiento están en `13-auditoria-preexperimental-G7.md`.
 El cierre operacional, la captura correlacionada y la prueba de persistencia pendiente están en `14-cierre-operacional-G7.md`.
+El reinicio real, la persistencia del aislamiento y el cierre **APTO PERSISTENTE** están en `15-validacion-persistencia-G7.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
