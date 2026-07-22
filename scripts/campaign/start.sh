@@ -16,12 +16,26 @@ scenario="$3"
 traffic_class="$4"
 purpose="${5:-experiment}"
 warmup_seconds="${PPI_CAMPAIGN_WARMUP_SECONDS:-1}"
+matrix_sha256="${PPI_CAMPAIGN_MATRIX_SHA256:-}"
+matrix_profile="${PPI_CAMPAIGN_MATRIX_PROFILE:-}"
+matrix_repetition="${PPI_CAMPAIGN_MATRIX_REPETITION:-}"
+campaign_partition="${PPI_CAMPAIGN_PARTITION:-unassigned}"
 ppi_validate_id "$id"
 [[ "$phase" =~ ^F[0-9]+$ ]] || ppi_die "la fase debe usar el formato F0, F1, ..."
 [[ "$traffic_class" =~ ^[a-z][a-z0-9_-]*$ ]] || ppi_die "clase de tráfico inválida"
 [[ "$purpose" =~ ^[a-z][a-z0-9_-]*$ ]] || ppi_die "propósito inválido"
+case "$campaign_partition" in
+  train|validation|test|excluded_calibration|unassigned) ;;
+  *) ppi_die "partición de campaña inválida" ;;
+esac
 [[ "$warmup_seconds" =~ ^[0-9]+$ ]] && (( warmup_seconds >= 1 && warmup_seconds <= 120 )) ||
   ppi_die "PPI_CAMPAIGN_WARMUP_SECONDS debe estar entre 1 y 120"
+if [[ -n "$matrix_sha256$matrix_profile$matrix_repetition" ]]; then
+  [[ "$matrix_sha256" =~ ^[a-f0-9]{64}$ ]] || ppi_die "hash SHA-256 de matriz inválido"
+  [[ "$matrix_profile" =~ ^[A-Z0-9][A-Z0-9-]{2,47}$ ]] || ppi_die "perfil de matriz inválido"
+  [[ "$matrix_repetition" =~ ^[0-9]+$ ]] && (( matrix_repetition >= 1 && matrix_repetition <= 99 )) ||
+    ppi_die "repetición de matriz inválida"
+fi
 [[ -r "$PPI_SSH_KEY" ]] || ppi_die "no se puede leer la clave SSH $PPI_SSH_KEY"
 
 mkdir -p -m 0700 "$PPI_CAMPAIGNS_DIR"
@@ -74,6 +88,10 @@ jq -n \
   --arg started_at "$started_at" \
   --arg started_at_utc "$started_at_utc" \
   --arg git_commit "$git_commit" \
+  --arg matrix_sha256 "$matrix_sha256" \
+  --arg matrix_profile "$matrix_profile" \
+  --arg matrix_repetition "$matrix_repetition" \
+  --arg campaign_partition "$campaign_partition" \
   --argjson git_dirty "$git_dirty" \
   --argjson warmup_seconds "$warmup_seconds" '
   {
@@ -87,6 +105,14 @@ jq -n \
     started_at: $started_at,
     started_at_utc: $started_at_utc,
     git: {commit: $git_commit, dirty: $git_dirty},
+    partition: $campaign_partition,
+    campaign_plan: (
+      if $matrix_sha256 == "" then null else {
+        matrix_sha256: $matrix_sha256,
+        profile: $matrix_profile,
+        repetition: ($matrix_repetition | tonumber)
+      } end
+    ),
     warmup_seconds: $warmup_seconds,
     topology: {
       sensor_mgmt: "10.10.10.20",

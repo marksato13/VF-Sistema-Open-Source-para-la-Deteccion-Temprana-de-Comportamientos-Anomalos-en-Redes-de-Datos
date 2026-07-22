@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
 if (( $# < 2 )); then
-  echo "Uso: $0 ID {http|https|dns-valid|dns-nxdomain|iperf-tcp|iperf-udp} [ARGUMENTOS]" >&2
+  echo "Uso: $0 ID ESCENARIO-F1 [ARGUMENTOS]" >&2
   exit 2
 fi
 
@@ -15,7 +15,7 @@ scenario="$2"
 shift 2
 ppi_validate_id "$id"
 case "$scenario" in
-  http|https|dns-valid|dns-nxdomain|iperf-tcp|iperf-udp) ;;
+  http|https|http-concurrent|http-missing|https-sessions|dns-valid|dns-nxdomain|dns-mixed|ping|tcp-refused|iperf-tcp|iperf-udp|mixed-light) ;;
   *) ppi_die "escenario F1 no permitido: $scenario" ;;
 esac
 for argument in "$@"; do
