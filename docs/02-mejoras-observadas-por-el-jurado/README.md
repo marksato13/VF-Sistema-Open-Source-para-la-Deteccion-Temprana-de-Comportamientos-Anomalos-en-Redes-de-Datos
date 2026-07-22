@@ -269,12 +269,11 @@ Cada resultado deberá vincularse con:
 
 | Requisito | Estado | Evidencia esperada |
 |---|---|---|
-| Dataset normal con tráfico pesado | Planificado | Capturas, manifiesto y distribución de tamaños |
-| Paquetes normales entre 500 y 1500 bytes | Planificado | Histograma y estadísticas por escenario |
+| Dataset normal con tráfico pesado | En ejecución: 1 celda oficial aceptada | `../07-dataset-campanas/07-canario-HTTP-10MB-F1.md` |
+| Paquetes normales entre 500 y 1500 bytes | Evidencia inicial PASS: 7,248/7,912 (91.6077 %) | PCAP, hashes y distribución en `../07-dataset-campanas/07-canario-HTTP-10MB-F1.md` |
 | Variable de Capa 3 | Planificado | Código, prueba y diccionario de datos |
 | Variable de Capa 4 | Planificado | Código, prueba y diccionario de datos |
 | Variable de Capa 7 | Planificado | Código, prueba y diccionario de datos |
 | Comparación contra 14 features | Planificado | Tabla de métricas y prueba de ablación |
 | Validación sin mezcla de sesiones | Planificado | Manifiesto de particiones |
 | Automatización reproducible | Planificado | Playbooks y logs de Ansible |
-

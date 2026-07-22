@@ -117,3 +117,5 @@ Se solicitaron revisiones de preflight y del bundle a Claude Code. Ambas ejecuci
 **CANARIO ACEPTADO.** Se valida el pipeline oficial completo para un perfil DNS corto: planificación, captura, EVE, métricas, integridad, extracción, ledger y aceptación del ensamblador.
 
 Esto no autoriza ejecutar las 144 campañas restantes en lote. El siguiente perfil recomendado es `HTTP-10MB/R01`: es acotado, ya fue calibrado y debe demostrar tráfico legítimo pesado de 500–1500 bytes con cero drops. Antes de ejecutarlo se repetirá el preflight y se revisará el bundle de forma independiente.
+
+> **Seguimiento:** `HTTP-10MB/R01` fue ejecutado y aceptado con 91.6077 % de paquetes IPv4 entre 500 y 1500 bytes y cero drops. La evidencia está en `07-canario-HTTP-10MB-F1.md`.

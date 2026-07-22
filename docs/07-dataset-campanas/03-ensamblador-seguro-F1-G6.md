@@ -4,7 +4,7 @@ Fecha: 21 de julio de 2026. Implementación: `scripts/dataset/build_f1_dataset.p
 
 ## Decisión
 
-El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Después del primer canario, la raíz oficial contiene una campaña aceptada, cero inválidas y 144 celdas faltantes; por tanto todavía no produce dataset. Los cinco pilotos históricos continúan excluidos en la raíz de artefactos heredada y no se mezclan con el volumen oficial.
+El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Después de los canarios DNS y HTTP 10 MB, la raíz oficial contiene dos campañas aceptadas, cero inválidas y 143 celdas faltantes; por tanto todavía no produce dataset. Los cinco pilotos históricos continúan excluidos en la raíz de artefactos heredada y no se mezclan con el volumen oficial.
 
 ## Autoridad de los datos
 
@@ -127,4 +127,4 @@ python3 scripts/dataset/build_f1_dataset.py
 
 ## Estado de G6
 
-El disco dedicado y G7 ya pasaron. El ensamblador aceptó `F1N-DNS-MIXED-20-2-R01` como la primera celda oficial y continúa bloqueando la construcción por 144 faltantes. SSH/SFTP permanece fuera de la matriz mientras no exista identidad técnica. Las IP virtuales `.11/.12` persistieron tras reinicio. El script no convierte pilotos exitosos en entrenamiento ni permite construir un dataset parcial.
+El disco dedicado y G7 ya pasaron. El ensamblador aceptó `F1N-DNS-MIXED-20-2-R01` y `F1N-HTTP-10MB-R01` como las dos primeras celdas oficiales y continúa bloqueando la construcción por 143 faltantes. La segunda aporta una fila benigna con `large_ip_ratio_10s=0.91607685` y cero drops. SSH/SFTP permanece fuera de la matriz mientras no exista identidad técnica. Las IP virtuales `.11/.12` persistieron tras reinicio. El script no convierte pilotos exitosos en entrenamiento ni permite construir un dataset parcial.
