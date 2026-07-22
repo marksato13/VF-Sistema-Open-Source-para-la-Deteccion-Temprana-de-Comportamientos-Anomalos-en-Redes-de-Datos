@@ -102,7 +102,7 @@ Cada fila agrega `partition`, `profile_id` y `repetition` como metadata, conserv
 13. ventana duplicada dentro del CSV;
 14. hash de argumentos distinto al perfil congelado.
 
-La suite completa contiene 20 pruebas, incluyendo las del esquema de features y la matriz F1.
+La suite completa contiene 21 pruebas, incluyendo una construcción sintética completa de 135 celdas y las pruebas del esquema de features y la matriz F1.
 
 ## Uso reproducible
 

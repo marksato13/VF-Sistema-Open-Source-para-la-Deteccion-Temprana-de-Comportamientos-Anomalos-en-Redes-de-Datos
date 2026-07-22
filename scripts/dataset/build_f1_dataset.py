@@ -527,6 +527,29 @@ def build_dataset(
 ) -> dict[str, Any]:
     if not report["ready_to_build"]:
         raise GateError("GATE-COMPLETITUD", "la auditoría no autoriza construir el dataset")
+    required_cells = expected_cells(contract)
+    candidate_cells = [tuple(candidate.get("cell", [])) for candidate in accepted]
+    if len(candidate_cells) != len(set(candidate_cells)) or set(candidate_cells) != required_cells:
+        raise GateError(
+            "GATE-COMPLETITUD",
+            "la construcción revalidó una colección distinta de las 135 celdas exactas",
+        )
+    profiles = {profile["id"]: profile for profile in contract.matrix["profiles"]}
+    for candidate in accepted:
+        profile_id = candidate["profile_id"]
+        repetition = candidate["repetition"]
+        expected_partition = contract.matrix["partition_by_repetition"][str(repetition)]
+        require_equal(candidate.get("partition"), expected_partition, "GATE-COMPLETITUD", "split al construir")
+        require_equal(candidate.get("matrix_sha256"), contract.matrix_sha256, "GATE-COMPLETITUD", "matriz al construir")
+        require_equal(tuple(candidate["cell"]), (profile_id, repetition), "GATE-COMPLETITUD", "celda al construir")
+        require_equal(profile_id in profiles, True, "GATE-COMPLETITUD", "perfil al construir")
+        for row in candidate["rows"]:
+            require_equal(
+                row.get("campaign_id"),
+                candidate["campaign_id"],
+                "GATE-COMPLETITUD",
+                "campaign_id de fila al construir",
+            )
     if output_dir.exists():
         raise GateError("GATE-SALIDA", f"el destino ya existe: {output_dir}")
     output_dir.parent.mkdir(parents=True, exist_ok=True)

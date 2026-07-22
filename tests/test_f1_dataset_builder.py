@@ -256,6 +256,50 @@ class DatasetBuilderFixture(unittest.TestCase):
         with self.assertRaises(builder.GateError):
             builder.build_dataset(self.repo / "dataset", report, accepted, self.contract)
 
+    def test_complete_collection_builds_three_atomic_splits(self) -> None:
+        base = builder.validate_candidate(
+            self.ledger_path, self.campaigns, self.features, self.contract
+        )
+        candidates = []
+        for profile in self.matrix["profiles"]:
+            for repetition in range(1, 6):
+                candidate = deepcopy(base)
+                campaign_id = f"F1N-{profile['id']}-R{repetition:02d}"
+                candidate.update(
+                    campaign_id=campaign_id,
+                    cell=[profile["id"], repetition],
+                    profile_id=profile["id"],
+                    repetition=repetition,
+                    partition=self.matrix["partition_by_repetition"][str(repetition)],
+                    csv_sha256=hashlib.sha256(campaign_id.encode()).hexdigest(),
+                )
+                candidate["rows"] = [dict(base["rows"][0], campaign_id=campaign_id)]
+                candidates.append(candidate)
+        report = {
+            "ready_to_build": True,
+            "matrix_sha256": self.contract.matrix_sha256,
+            "feature_schema_sha256": self.contract.schema_sha256,
+            "expected_campaigns": 135,
+            "accepted_campaigns": 135,
+            "excluded_campaigns": [],
+            "invalid_campaigns": [],
+            "accepted_cells": [],
+            "campaign_warnings": [],
+            "missing_cells": [],
+            "duplicate_feature_vectors": [],
+            "current_git_dirty": False,
+            "assembler_git_commit": self.commit,
+        }
+        output = self.repo / "dataset"
+        manifest = builder.build_dataset(output, report, candidates, self.contract)
+        self.assertEqual(manifest["split_rows"], {"train": 81, "validation": 27, "test": 27})
+        self.assertEqual(len(manifest["source_campaigns"]), 135)
+        self.assertEqual(
+            {path.name for path in output.iterdir()},
+            {"train.csv", "validation.csv", "test.csv", "manifest.json", "SHA256SUMS"},
+        )
+        builder.verify_checksum_bundle(output)
+
     def test_rejects_output_hash_disagreement(self) -> None:
         self.mutate_json(self.ledger_path, lambda value: value.update(output_sha256="0" * 64))
         self.assert_gate("GATE-CRUCE")
