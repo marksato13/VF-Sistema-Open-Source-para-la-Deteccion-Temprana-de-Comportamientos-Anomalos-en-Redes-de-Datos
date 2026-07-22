@@ -527,6 +527,20 @@ def build_dataset(
 ) -> dict[str, Any]:
     if not report["ready_to_build"]:
         raise GateError("GATE-COMPLETITUD", "la auditoría no autoriza construir el dataset")
+    current_status = subprocess.check_output(
+        ["git", "-C", str(contract.repo), "status", "--porcelain"], text=True
+    ).strip()
+    if current_status:
+        raise GateError("GATE-GIT", "el repositorio cambió después de la auditoría")
+    current_commit = subprocess.check_output(
+        ["git", "-C", str(contract.repo), "rev-parse", "HEAD"], text=True
+    ).strip()
+    require_equal(
+        report.get("assembler_git_commit"),
+        current_commit,
+        "GATE-GIT",
+        "commit auditor/construcción",
+    )
     required_cells = expected_cells(contract)
     candidate_cells = [tuple(candidate.get("cell", [])) for candidate in accepted]
     if len(candidate_cells) != len(set(candidate_cells)) or set(candidate_cells) != required_cells:
