@@ -4,7 +4,7 @@ Fecha: 21 de julio de 2026. Commit ejecutado: `d9b617861b8937f6ccfa6dff9cfb9dd44
 
 ## Decisión
 
-**El contrato, despliegue y ejecutor G6 pasan el piloto técnico. G6 completo continúa pendiente.** Dos campañas benignas terminaron con evidencia íntegra, cero drops y extracción causal. La campaña oficial fue bloqueada correctamente por capacidad. Estos datos tienen propósito `calibration`, partición `excluded_calibration` y no pertenecen al dataset final.
+**El contrato, despliegue y ejecutor G6 pasan el piloto técnico. G6 completo continúa pendiente.** Cuatro campañas benignas DNS/HTTP/RST/TLS terminaron con evidencia íntegra, cero drops y extracción causal. La campaña oficial fue bloqueada correctamente por capacidad. Estos datos tienen propósito `calibration`, partición `excluded_calibration` y no pertenecen al dataset final.
 
 ## Despliegue y controles negativos
 
@@ -94,6 +94,63 @@ Cada manifiesto incorporó:
 
 El ledger del ejecutor conserva además el hash del CSV, número de filas y estado final. Los artefactos grandes permanecen fuera de Git.
 
+## Piloto 3: conexiones TCP rechazadas legítimas
+
+Identificador: `CAL-G6-TCP-REFUSED-5-R01`. Commit limpio: `54e7501`. Perfil: cinco conexiones del Cliente a un puerto cerrado del Servidor.
+
+| Control | Resultado |
+|---|---:|
+| estado / evidencia | `completed` / `complete=true` |
+| partición | `excluded_calibration` |
+| intentos / rechazos esperados | 5 / 5 |
+| paquetes capturados / parseados | 10 / 10 |
+| bytes PCAP remoto / local | 824 / 824 |
+| drops tcpdump / Suricata | 0 / 0 |
+| `decoder.invalid` / overflow | 0 / 0 |
+| EVE extraído / esperado | 9 / 9 |
+| SYN / intentos de flujo | 5 / 5 |
+| `syn_rate_10s` | 0.5/s |
+| `syn_completion_ratio_10s` | 0.0 |
+| `rst_ratio_10s` | 0.5 |
+
+El resultado confirma que SYN sin handshake y RST no son exclusivos de un ataque: también aparecen cuando una aplicación legítima intenta un puerto cerrado. Este estrato debe estar en la normalidad para que esas señales se interpreten conjuntamente con tasa, diversidad y contexto.
+
+## Piloto 4: recambio de sesiones TLS legítimas
+
+Identificador: `CAL-G6-TLS-SESSIONS-20-R01`. Commit limpio: `54e7501`. Perfil: veinte conexiones HTTPS independientes a `/health`.
+
+| Control | Resultado |
+|---|---:|
+| estado / evidencia | `completed` / `complete=true` |
+| respuestas HTTP 200 | 20 / 20 |
+| paquetes capturados / parseados | 433 / 433 |
+| bytes PCAP remoto / local | 146,149 / 146,149 |
+| drops tcpdump / Suricata | 0 / 0 |
+| `decoder.invalid` / overflow | 0 / 0 |
+| EVE extraído / esperado | 35 / 35 |
+| observaciones TLS | 20 |
+| SYN / completitud | 20 / 1.0 |
+| `flow_attempt_rate_10s` | 2.0/s |
+| `syn_rate_10s` | 2.0/s |
+| `tls_session_rate_60s` | 0.33333333 = 20/60 s |
+
+El extractor deduplicó correctamente veinte sesiones y no convirtió su recambio en error HTTP. Este piloto valida el soporte de la feature L7, no su capacidad discriminativa final.
+
+## Auditoría posterior del ensamblador
+
+Después de los pilotos, `build_f1_dataset.py --audit-only` registró:
+
+```text
+accepted_campaigns = 0
+excluded_campaigns = 4
+invalid_campaigns = 0
+missing_cells = 135
+current_git_dirty = false
+ready_to_build = false
+```
+
+Los cuatro `campaign_id` de calibración aparecen explícitamente como `not_experiment`. La historia causal completa de sus CSV no cambió esa exclusión.
+
 ## Hallazgo metodológico
 
 `eligible_training_rows=1` significa únicamente que existe historia causal suficiente de 60 s. No significa que la fila esté autorizada para entrenamiento. El futuro ensamblador debe exigir simultáneamente:
@@ -116,4 +173,4 @@ y validar hashes antes de copiar filas. Usar solo `eligible_training` contaminar
 5. implementar el ensamblador que aplique partición, exclusiones y hashes;
 6. realizar la recolección oficial completa y un informe de distribución antes de entrenar.
 
-Por estas razones G6 conserva estado **PENDIENTE**, aunque los dos pilotos fueron exitosos.
+Por estas razones G6 conserva estado **PENDIENTE**, aunque los cuatro pilotos fueron exitosos.
