@@ -48,7 +48,7 @@ Kali 10.20.0.100 ───┘
 
 El Sensor tiene `ip_forward=1` y una política de reenvío con nftables. Cliente y Kali poseen una ruta persistente a `10.30.0.0/24` mediante `10.20.0.1`. El Servidor posee una ruta explícita de retorno a `10.20.0.0/24` mediante `10.30.0.1`.
 
-Las NIC externas de `172.17.25.0/24` todavía existen temporalmente para instalación y recuperación. Son una posible ruta de evasión; deberán desconectarse o bloquearse antes de obtener evidencia experimental definitiva.
+Las NIC externas de `172.17.25.0/24` todavía existen para instalación y recuperación. El bypass ya no es hipotético: VM01 alcanzó TCP/22 del Servidor por `172.17.25.112` sin cruzar el Sensor. Todas las NIC externas de VM02–VM05 deben permanecer desconectadas en ESXi durante campañas oficiales; VM01 conserva Internet/RustDesk y administra el laboratorio por PPI-MGMT.
 
 ## Estado validado
 
@@ -74,6 +74,7 @@ Las NIC externas de `172.17.25.0/24` todavía existen temporalmente para instala
 - El ensamblador `scripts/dataset/build_f1_dataset.py` exige las 145 campañas `v2`, verifica bundles, recalcula matriz/esquema desde el commit, rechaza calibraciones y reconstruye el split por repetición. Actualmente reporta 0 aceptadas, 5 pilotos excluidos y 145 faltantes. Revisión adversarial: `docs/04-revisiones-claude/2026-07-21-ensamblador-F1.md`.
 - El gate G3 del orquestador pasó con `CAL-F1-DNS-003`: 6 paquetes, cero drops/errores/overflow, 7 registros EVE exactos y 7 muestras del Sensor. Esta ejecución es calibración y no pertenece al dataset.
 - VM01 conserva su disco raíz de 70 GiB y ya posee un segundo VMDK thin de 150 GiB: ext4 por UUID en `/srv/ppi-evidence`, aproximadamente 140 GiB disponibles. El montaje persistió tras reiniciar VM01 con el mismo UUID y opciones `rw,nosuid,nodev,noexec,noatime`; RustDesk volvió `active/enabled`. Los gates de capacidad e identidad de F1 están en PASS. Diseño y evidencia: `docs/08-almacenamiento/01-disco-evidencias-vm01.md`.
+- G7 está **NO APTO** para campañas oficiales: después del reinicio, VM03 recuperó `ens34=172.17.25.112` y VM01 alcanzó SSH directamente sin cruzar la captura `ens35` del Sensor. Antes del canario se deben desconectar en ESXi las NIC externas de VM02–VM05, verificar persistencia y repetir controles positivos/negativos. Auditoría: `docs/05-plan-pruebas/13-auditoria-preexperimental-G7.md`; revisión cruzada: `docs/04-revisiones-claude/2026-07-22-gate-preexperimental-G7.md`.
 
 ## Observaciones obligatorias del jurado
 

@@ -5,7 +5,7 @@ Este plan separa las campañas para que el entrenamiento y la evaluación sean d
 ## Precondiciones
 
 1. Confirmar zona horaria `America/Lima` y NTP sincronizado en las cinco VMs.
-2. Desconectar en ESXi las NIC externas de Servidor, Kali y Cliente; conservar la del Sensor solo si se necesita para administración/NTP.
+2. Desconectar en ESXi las NIC externas de Sensor, Servidor, Kali y Cliente durante toda campaña oficial. El Sensor puede reconectarse únicamente en una ventana de mantenimiento sin captura activa.
 3. Verificar `ip route get 10.30.0.10` desde Cliente y Kali: siguiente salto `10.20.0.1`.
 4. Registrar antes y después de cada campaña: `capture.kernel_drops`, `decoder.invalid`, `alert_queue_overflow`, CPU, RAM, espacio de disco y número de eventos EVE.
 
@@ -19,6 +19,7 @@ Los primeros pilotos DNS/HTTP y el bloqueo negativo de capacidad están en `../0
 El ensamblador con gates anti-contaminación y sus pruebas están en `../07-dataset-campanas/03-ensamblador-seguro-F1-G6.md`.
 El rediseño multidestino y la transición conservadora de matriz `v1` a `v2` están en `../07-dataset-campanas/04-diversidad-L3-multidestino-v2.md`.
 La aplicación persistente y el piloto con ratio L3 igual a 1.0 están en `../07-dataset-campanas/05-validacion-diversidad-L3-v2.md`.
+La auditoría posterior al reinicio, el bypass externo confirmado y el gate de aislamiento están en `13-auditoria-preexperimental-G7.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
