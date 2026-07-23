@@ -123,3 +123,5 @@ El texto de Claude llamó “calibración” a la ejecución en una frase y pidi
 ## Decisión
 
 **CANARIO HTTP 100 MB ACEPTADO.** Es la tercera celda oficial y la segunda evidencia pesada. El siguiente escalón propuesto es `HTTP-500MB/R01`, pero requiere un nuevo preflight y una ejecución aislada; no se autoriza todavía el lote ni el entrenamiento final.
+
+> **Seguimiento:** `HTTP-500MB/R01` fue ejecutado y aceptado con 98.3499 % de paquetes en el rango objetivo, cuatro ventanas elegibles y cero drops. Ver `09-canario-HTTP-500MB-F1.md`.

@@ -4,7 +4,7 @@ Fecha: 21 de julio de 2026. Implementación: `scripts/dataset/build_f1_dataset.p
 
 ## Decisión
 
-El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Después de los canarios DNS, HTTP 10 MB y HTTP 100 MB, la raíz oficial contiene tres campañas aceptadas, cero inválidas y 142 celdas faltantes; por tanto todavía no produce dataset. Los cinco pilotos históricos continúan excluidos en la raíz de artefactos heredada y no se mezclan con el volumen oficial.
+El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Después de los canarios DNS y HTTP 10/100/500 MB, la raíz oficial contiene cuatro campañas aceptadas, cero inválidas y 141 celdas faltantes; por tanto todavía no produce dataset. Los cinco pilotos históricos continúan excluidos en la raíz de artefactos heredada y no se mezclan con el volumen oficial.
 
 ## Autoridad de los datos
 
@@ -127,4 +127,4 @@ python3 scripts/dataset/build_f1_dataset.py
 
 ## Estado de G6
 
-El disco dedicado y G7 ya pasaron. El ensamblador aceptó `F1N-DNS-MIXED-20-2-R01`, `F1N-HTTP-10MB-R01` y `F1N-HTTP-100MB-R01`, y continúa bloqueando la construcción por 142 faltantes. Las dos campañas HTTP aportan tres ventanas benignas con alta razón de paquetes grandes y cero drops. SSH/SFTP permanece fuera de la matriz mientras no exista identidad técnica. Las IP virtuales `.11/.12` persistieron tras reinicio. El script no convierte pilotos exitosos en entrenamiento ni permite construir un dataset parcial.
+El disco dedicado y G7 ya pasaron. El ensamblador aceptó `F1N-DNS-MIXED-20-2-R01` y las campañas HTTP 10/100/500 MB R01, y continúa bloqueando la construcción por 141 faltantes. Las tres campañas HTTP aportan siete ventanas benignas con alta razón de paquetes grandes y cero drops. SSH/SFTP permanece fuera de la matriz mientras no exista identidad técnica. Las IP virtuales `.11/.12` persistieron tras reinicio. El script no convierte pilotos exitosos en entrenamiento ni permite construir un dataset parcial.

@@ -25,6 +25,7 @@ El reinicio real, la persistencia del aislamiento y el cierre **APTO PERSISTENTE
 El primer canario oficial aceptado y sus límites están en `../07-dataset-campanas/06-primer-canario-oficial-F1.md`.
 El segundo canario oficial, HTTP 10 MB, su distribución de paquetes grandes y el límite de inspección observado en Suricata están en `../07-dataset-campanas/07-canario-HTTP-10MB-F1.md`.
 El tercer canario oficial, HTTP 100 MB, su escalamiento, recursos y dos ventanas elegibles están en `../07-dataset-campanas/08-canario-HTTP-100MB-F1.md`.
+El cuarto canario oficial, HTTP 500 MB, la rotación PCAP y el análisis de paquetes TCP pequeños están en `../07-dataset-campanas/09-canario-HTTP-500MB-F1.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
