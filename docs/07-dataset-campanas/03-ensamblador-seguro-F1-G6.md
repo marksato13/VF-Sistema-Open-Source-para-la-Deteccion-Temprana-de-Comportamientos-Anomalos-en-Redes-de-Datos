@@ -4,7 +4,7 @@ Fecha: 21 de julio de 2026. Implementación: `scripts/dataset/build_f1_dataset.p
 
 ## Decisión
 
-El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Después de los canarios DNS, HTTP 10/100/500 MB/1 GB y HTTPS 10/100/500 MB, la raíz oficial contiene ocho campañas aceptadas, cero inválidas y 137 celdas faltantes; por tanto todavía no produce dataset. Los cinco pilotos históricos continúan excluidos en la raíz de artefactos heredada y no se mezclan con el volumen oficial.
+El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Después del canario DNS y los ocho tamaños HTTP/HTTPS, la raíz oficial contiene nueve campañas aceptadas, cero inválidas y 136 celdas faltantes; por tanto todavía no produce dataset. Los cinco pilotos históricos continúan excluidos en la raíz de artefactos heredada y no se mezclan con el volumen oficial.
 
 ## Autoridad de los datos
 
@@ -127,4 +127,4 @@ python3 scripts/dataset/build_f1_dataset.py
 
 ## Estado de G6
 
-El disco dedicado y G7 ya pasaron. El ensamblador aceptó `F1N-DNS-MIXED-20-2-R01`, HTTP 10/100/500 MB/1 GB R01 y HTTPS 10/100/500 MB R01, y continúa bloqueando la construcción por 137 faltantes. HTTP aporta trece ventanas pesadas y HTTPS siete ventanas con sesión TLS, todas sin drops. La diversidad de sesiones permanece separada en `TLS-SESSIONS-20`. Los flows diferidos fuera de alcance no fueron consumidos por las features. SSH/SFTP permanece fuera de la matriz mientras no exista identidad técnica. El script no convierte pilotos exitosos en entrenamiento ni permite construir un dataset parcial.
+El disco dedicado y G7 ya pasaron. El ensamblador aceptó el canario DNS y los ocho tamaños HTTP/HTTPS R01, y continúa bloqueando la construcción por 136 faltantes. HTTP aporta trece ventanas pesadas y HTTPS catorce ventanas, incluida una cola de cierre legítima; todas sin drops. La diversidad de sesiones permanece separada en `TLS-SESSIONS-20`. Los flows diferidos fuera de alcance no fueron consumidos por las features. SSH/SFTP permanece fuera de la matriz mientras no exista identidad técnica. El script no convierte pilotos exitosos en entrenamiento ni permite construir un dataset parcial.

@@ -93,3 +93,5 @@ La carencia de múltiples certificados/JA3 sigue abierta como limitación y even
 El ensamblador acepta ocho campañas, cero inválidas, cero advertencias y 137 faltantes.
 
 **CANARIO HTTPS 500 MB ACEPTADO CON LIMITACIONES.** Siguiente perfil: `HTTPS-1GB/R01` con el contrato original. Revisión: `../04-revisiones-claude/2026-07-22-canario-HTTPS-500MB-F1.md`.
+
+> **Seguimiento:** `HTTPS-1GB/R01` fue ejecutado y aceptado; completa los tamaños HTTPS individuales. Ver `14-canario-HTTPS-1GB-F1.md`.
