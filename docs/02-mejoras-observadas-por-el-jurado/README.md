@@ -269,8 +269,8 @@ Cada resultado deberá vincularse con:
 
 | Requisito | Estado | Evidencia esperada |
 |---|---|---|
-| Dataset normal con tráfico pesado | En ejecución: 4 celdas HTTP oficiales aceptadas | `../07-dataset-campanas/07-canario-HTTP-10MB-F1.md` a `../07-dataset-campanas/10-canario-HTTP-1GB-F1.md` |
-| Paquetes normales entre 500 y 1500 bytes | HTTP 10 MB: 91.6077 %; 100 MB: 91.6172 %; 500 MB: 98.3499 %; 1 GB: 98.7155 % | PCAP, hashes y distribución en los cuatro canarios HTTP |
+| Dataset normal con tráfico pesado | En ejecución: 4 celdas HTTP y 1 HTTPS oficiales aceptadas | `../07-dataset-campanas/07-canario-HTTP-10MB-F1.md` a `../07-dataset-campanas/11-canario-HTTPS-10MB-F1.md` |
+| Paquetes normales entre 500 y 1500 bytes | HTTP: 91.6077–98.7155 %; HTTPS 10 MB: 95.4127 % | PCAP, hashes y distribución en los cinco canarios pesados |
 | Variable de Capa 3 | Planificado | Código, prueba y diccionario de datos |
 | Variable de Capa 4 | Planificado | Código, prueba y diccionario de datos |
 | Variable de Capa 7 | Planificado | Código, prueba y diccionario de datos |

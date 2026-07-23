@@ -27,6 +27,7 @@ El segundo canario oficial, HTTP 10 MB, su distribución de paquetes grandes y e
 El tercer canario oficial, HTTP 100 MB, su escalamiento, recursos y dos ventanas elegibles están en `../07-dataset-campanas/08-canario-HTTP-100MB-F1.md`.
 El cuarto canario oficial, HTTP 500 MB, la rotación PCAP y el análisis de paquetes TCP pequeños están en `../07-dataset-campanas/09-canario-HTTP-500MB-F1.md`.
 El quinto canario oficial, HTTP 1 GB, la no conformidad EVE cerrada y la quietud preventiva están en `../07-dataset-campanas/10-canario-HTTP-1GB-F1.md`.
+El sexto canario oficial, HTTPS 10 MB, la sesión TLS y sus límites de representatividad están en `../07-dataset-campanas/11-canario-HTTPS-10MB-F1.md`.
 
 ## Grupo A: tráfico legítimo pesado
 

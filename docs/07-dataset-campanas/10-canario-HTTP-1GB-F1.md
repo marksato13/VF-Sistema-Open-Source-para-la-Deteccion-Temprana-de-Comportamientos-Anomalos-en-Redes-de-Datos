@@ -124,3 +124,5 @@ El ensamblador acepta cinco campañas, reporta cero inválidas, cero advertencia
 **CANARIO HTTP 1 GB ACEPTADO CON NO CONFORMIDAD CERRADA.** Se valida el máximo tamaño HTTP individual de la matriz. La revisión Claude y la resolución están en `../04-revisiones-claude/2026-07-22-canario-HTTP-1GB-F1.md`.
 
 El siguiente perfil en orden es `HTTPS-10MB/R01`, ya protegido por la quietud previa automática.
+
+> **Seguimiento:** `HTTPS-10MB/R01` fue ejecutado y aceptado con limitaciones explícitas de certificado y visibilidad L7. Ver `11-canario-HTTPS-10MB-F1.md`.
