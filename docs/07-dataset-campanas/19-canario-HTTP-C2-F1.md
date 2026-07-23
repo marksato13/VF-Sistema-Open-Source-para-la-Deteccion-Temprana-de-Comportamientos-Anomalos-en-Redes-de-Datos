@@ -105,3 +105,5 @@ Se corrigieron errores del dictamen sobre conteo EVE, ratios, puertos origen, es
 El ensamblador acepta catorce campañas, cero inválidas, cero advertencias, cero duplicados y reporta 131 celdas faltantes.
 
 **CANARIO HTTP C2 ACEPTADO CON LIMITACIONES.** El siguiente perfil exacto es `HTTP-C4/R01`: cuatro descargas concurrentes de 100 MB, `5M` por flujo y el mismo nominal agregado. Si aparecen drops o se supera el techo operativo, la campaña se rechazará y no se avanzará a C8. Revisión: `../04-revisiones-claude/2026-07-22-canario-HTTP-C2-F1.md`.
+
+Seguimiento: C4 pasó esos gates y quedó aceptado con limitaciones en `20-canario-HTTP-C4-F1.md`.

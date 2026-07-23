@@ -269,8 +269,8 @@ Cada resultado deberá vincularse con:
 
 | Requisito | Estado | Evidencia esperada |
 |---|---|---|
-| Dataset normal con tráfico pesado | En ejecución: 4 celdas HTTP, 4 HTTPS y HTTP-C2 oficiales aceptadas | Canarios 07–14 y `../07-dataset-campanas/19-canario-HTTP-C2-F1.md` |
-| Paquetes normales entre 500 y 1500 bytes | HTTP: 91.6077–98.7155 %; HTTPS: 95.4127–98.0435 %; C2: 95.7053 % | PCAP, hashes y distribución en los nueve canarios pesados |
+| Dataset normal con tráfico pesado | En ejecución: 4 celdas HTTP, 4 HTTPS y HTTP-C2/C4 oficiales aceptadas | Canarios 07–14 y `../07-dataset-campanas/19-canario-HTTP-C2-F1.md`–`../07-dataset-campanas/20-canario-HTTP-C4-F1.md` |
+| Paquetes normales entre 500 y 1500 bytes | HTTP: 91.6077–98.7155 %; HTTPS: 95.4127–98.0435 %; C2: 95.7053 %; C4: 96.1803 % | PCAP, hashes y distribución en los diez canarios pesados |
 | Variable de Capa 3 | Implementada y observada en campañas oficiales | `unique_dst_ip_ratio_30s=1.0` en `../07-dataset-campanas/17-canario-HTTP-MULTI-1-F1.md` y `0.2` en `../07-dataset-campanas/18-canario-HTTP-MULTI-5-F1.md` |
 | Variable de Capa 4 | Implementada y observada en campaña oficial | SYN, completitud y flujos en `../07-dataset-campanas/15-canario-HTTP-404-5-F1.md` |
 | Variable de Capa 7 | Implementada y observada en campañas oficiales | `http_error_ratio_60s=1` en `../07-dataset-campanas/15-canario-HTTP-404-5-F1.md` y `tls_session_rate_60s=20/60` en `../07-dataset-campanas/16-canario-TLS-SESSIONS-20-F1.md` |
