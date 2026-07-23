@@ -105,3 +105,5 @@ La campaña representa automatización HTTPS autorizada de alta frecuencia, no c
 El ensamblador acepta once campañas, cero inválidas, cero advertencias, cero duplicados y reporta 134 celdas faltantes.
 
 **CANARIO DE RECAMBIO TLS ACEPTADO CON LIMITACIONES.** El siguiente perfil exacto es `HTTP-MULTI-1/R01`: una solicitud HTTP secuencial desde el mismo Cliente a cada VIP `.10`, `.11` y `.12`. La concurrencia se evalúa después, por separado, en `HTTP-C2/C4/C8`. Revisión: `../04-revisiones-claude/2026-07-22-canario-TLS-SESSIONS-20-F1.md`.
+
+> **Seguimiento:** `HTTP-MULTI-1/R01` fue ejecutado y aceptado con tres destinos lógicos y `unique_dst_ip_ratio_30s=1`. Ver `17-canario-HTTP-MULTI-1-F1.md`.

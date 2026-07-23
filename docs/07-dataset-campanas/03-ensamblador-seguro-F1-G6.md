@@ -4,7 +4,7 @@ Fecha: 21 de julio de 2026. Implementación: `scripts/dataset/build_f1_dataset.p
 
 ## Decisión
 
-El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Después del canario DNS, los ocho tamaños HTTP/HTTPS, el HTTP 404 legítimo y el recambio TLS, la raíz oficial contiene once campañas aceptadas, cero inválidas y 134 celdas faltantes; por tanto todavía no produce dataset. Los cinco pilotos históricos continúan excluidos en la raíz de artefactos heredada y no se mezclan con el volumen oficial.
+El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Después del canario DNS, los ocho tamaños HTTP/HTTPS, el HTTP 404 legítimo, el recambio TLS y el primer HTTP multidestino, la raíz oficial contiene doce campañas aceptadas, cero inválidas y 133 celdas faltantes; por tanto todavía no produce dataset. Los cinco pilotos históricos continúan excluidos en la raíz de artefactos heredada y no se mezclan con el volumen oficial.
 
 ## Autoridad de los datos
 
@@ -127,4 +127,4 @@ python3 scripts/dataset/build_f1_dataset.py
 
 ## Estado de G6
 
-El disco dedicado y G7 ya pasaron. El ensamblador aceptó el canario DNS, los ocho tamaños HTTP/HTTPS R01, el HTTP 404 legítimo y el recambio TLS, y continúa bloqueando la construcción por 134 faltantes. HTTP aporta trece ventanas pesadas, HTTPS catorce ventanas —incluida una cola de cierre legítima—, HTTP 404 dos ventanas y recambio TLS otras dos; las ventanas de cada campaña pueden compartir horizonte y todas carecen de drops. `TLS-SESSIONS-20` cubre tasa de sesiones, pero solo con una huella, cliente y destino. Los flows diferidos fuera de alcance no fueron consumidos por las features. SSH/SFTP permanece fuera de la matriz mientras no exista identidad técnica. El script no convierte pilotos exitosos en entrenamiento ni permite construir un dataset parcial.
+El disco dedicado y G7 ya pasaron. El ensamblador aceptó el canario DNS, los ocho tamaños HTTP/HTTPS R01, el HTTP 404 legítimo, el recambio TLS y `HTTP-MULTI-1`, y continúa bloqueando la construcción por 133 faltantes. HTTP aporta trece ventanas pesadas, HTTPS catorce ventanas —incluida una cola de cierre legítima—, HTTP 404 dos ventanas, recambio TLS otras dos y multidestino una; todas carecen de drops. `TLS-SESSIONS-20` cubre tasa con una sola huella; `HTTP-MULTI-1` cubre tres VIP lógicas en una VM. Los flows diferidos fuera de alcance no fueron consumidos por las features. SSH/SFTP permanece fuera de la matriz mientras no exista identidad técnica. El script no convierte pilotos exitosos en entrenamiento ni permite construir un dataset parcial.
