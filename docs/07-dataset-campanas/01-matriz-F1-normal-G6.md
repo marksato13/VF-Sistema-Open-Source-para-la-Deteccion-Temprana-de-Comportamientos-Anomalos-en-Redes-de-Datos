@@ -1,6 +1,6 @@
 # Matriz F1 de normalidad representativa — G6
 
-> **Seguimiento:** el volumen dedicado resolvió el gate de capacidad. Los canarios oficiales DNS mixto R01, los ocho tamaños HTTP/HTTPS R01, HTTP 404 R01, recambio TLS R01 y HTTP multidestino 1 R01 fueron aceptados; quedan 133 celdas. Ver `06-primer-canario-oficial-F1.md` a `17-canario-HTTP-MULTI-1-F1.md`.
+> **Seguimiento:** el volumen dedicado resolvió el gate de capacidad. Los canarios oficiales DNS mixto R01, los ocho tamaños HTTP/HTTPS R01, HTTP 404 R01, recambio TLS R01 y los dos HTTP multidestino R01 fueron aceptados; quedan 132 celdas. Ver `06-primer-canario-oficial-F1.md` a `18-canario-HTTP-MULTI-5-F1.md`.
 
 Fecha de congelación del diseño inicial: 21 de julio de 2026. Contrato oficial vigente: `configs/campaigns/f1-normal-v2.json`. La versión `v1` permanece inmutable para reproducir los cuatro pilotos anteriores, pero fue sustituida antes de iniciar campañas oficiales para incorporar diversidad legítima de destinos.
 

@@ -34,6 +34,7 @@ El noveno canario oficial, HTTPS 1 GB, el cierre de tamaños y la ventana FIN/AC
 El décimo canario oficial, cinco HTTP 404 legítimos, sus dos ventanas autocorrelacionadas y sus límites están en `../07-dataset-campanas/15-canario-HTTP-404-5-F1.md`.
 El undécimo canario oficial, veinte sesiones TLS secuenciales, la tasa L7 y sus límites de homogeneidad están en `../07-dataset-campanas/16-canario-TLS-SESSIONS-20-F1.md`.
 El duodécimo canario oficial, tres VIP lógicas y `unique_dst_ip_ratio_30s=1`, está en `../07-dataset-campanas/17-canario-HTTP-MULTI-1-F1.md`.
+El decimotercer canario oficial, quince health checks multidestino y `unique_dst_ip_ratio_30s=0.2`, está en `../07-dataset-campanas/18-canario-HTTP-MULTI-5-F1.md`.
 
 ## Grupo A: tráfico legítimo pesado
 

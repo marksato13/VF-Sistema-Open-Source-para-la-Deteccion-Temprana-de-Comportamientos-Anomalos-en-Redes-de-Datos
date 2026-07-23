@@ -100,3 +100,5 @@ La condición de no entrenar con esta fila aislada está implementada estructura
 El ensamblador acepta doce campañas, cero inválidas, cero advertencias, cero duplicados y reporta 133 celdas faltantes.
 
 **CANARIO HTTP MULTIDESTINO ACEPTADO CON LIMITACIONES.** El siguiente perfil exacto es `HTTP-MULTI-5/R01`: cinco solicitudes secuenciales por VIP, quince en total, con ratio esperado 3/15 = 0.2. Revisión: `../04-revisiones-claude/2026-07-22-canario-HTTP-MULTI-1-F1.md`.
+
+> **Seguimiento:** `HTTP-MULTI-5/R01` fue ejecutado y aceptado con quince conexiones y `unique_dst_ip_ratio_30s=0.2`. Ver `18-canario-HTTP-MULTI-5-F1.md`.
