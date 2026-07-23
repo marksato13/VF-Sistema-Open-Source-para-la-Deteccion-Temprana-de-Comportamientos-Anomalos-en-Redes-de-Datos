@@ -42,6 +42,7 @@ El decimoquinto canario oficial, cuatro descargas HTTP concurrentes, su cola FIN
 El intento `HTTP-C8/R01` rechazado por 476 drops de `tcpdump` y el diagnóstico de búfer están en `../07-dataset-campanas/21-intento-rechazado-HTTP-C8-F1.md`.
 La calibración C8 con búfer de 64 MiB, cero drops y exclusión anti-calibración está en `../07-dataset-campanas/22-calibracion-buffer-HTTP-C8-G6.md`.
 El reintento oficial C8 aceptado, su separación del intento fallido y la comparación controlada están en `../07-dataset-campanas/23-canario-HTTP-C8-F1.md`.
+El canario de cinco rechazos TCP legítimos y la validación de ratios L4 están en `../07-dataset-campanas/24-canario-TCP-REFUSED-5-F1.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
