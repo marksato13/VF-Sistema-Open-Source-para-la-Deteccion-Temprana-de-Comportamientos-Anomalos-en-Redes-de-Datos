@@ -1,6 +1,6 @@
 # Diseño de captura PCAP por campaña — G4
 
-Fecha: 20 de julio de 2026. Estado: implementado, pendiente de validación extremo a extremo.
+Fecha: 20 de julio de 2026. Última actualización: 23 de julio de 2026. Estado: implementado y validado extremo a extremo.
 
 ## Razón
 
@@ -23,7 +23,8 @@ El helper `/usr/local/sbin/ppi-pcap-control` no acepta interfaz, filtro ni ruta 
 | rotación | 4 archivos de 512 millones de bytes |
 | capacidad nominal máxima | 2.048 GB por campaña |
 | usuario del proceso tras abrir interfaz | `tcpdump` |
-| ruta remota | `/var/lib/ppi-captures/<ID>/` |
+| ruta remota activa | `/var/lib/ppi-captures/<ID>/` |
+| archivo remoto de intentos rechazados | `/var/lib/ppi-captures-failed/<ID>/attempt-NN/` |
 
 Si el total alcanza 1,945,600,000 bytes, equivalente al 95 % de la capacidad nominal, el orquestador marca la evidencia incompleta. Esto evita aceptar silenciosamente un anillo que pudo comenzar a sobrescribir sus primeros paquetes.
 
@@ -57,7 +58,9 @@ stop.sh
 
 ## Privilegios y pruebas negativas
 
-El archivo ejecutable y sus directorios padre son propiedad de `root`. Sudoers permite invocar el helper, pero el helper exige exactamente una acción (`start`, `stop` o `status`) y un ID de 3–64 caracteres seguros. Internamente usa rutas absolutas y valida que el PID corresponda tanto a `tcpdump` como al directorio de la campaña antes de enviar `SIGINT`.
+El archivo ejecutable y sus directorios padre son propiedad de `root`. Sudoers permite invocar el helper, pero el helper limita las acciones a `start`, `stop`, `status` y `archive`. Las tres primeras exigen exactamente un ID de 3–64 caracteres seguros. `archive` exige además una etiqueta estricta `attempt-NN`. Internamente usa rutas absolutas, no acepta rutas del operador y valida que el PID corresponda tanto a `tcpdump` como al directorio de la campaña antes de enviar `SIGINT`.
+
+`archive` no elimina ni modifica los archivos de evidencia: mueve atómicamente el directorio cerrado a la zona de intentos fallidos dentro del mismo sistema de archivos. Rechaza la operación si hay una captura activa, si origen y destino coexisten o si la etiqueta no es válida. El procedimiento completo, incluida la verificación de hashes y el movimiento del bundle y ledger locales, está en `17-archivado-intentos-fallidos.md`.
 
 El directorio padre `/var/lib/ppi-captures` usa modo `0711`: permite atravesar una ruta conocida, pero no listar campañas. Durante la captura, el subdirectorio pertenece a `tcpdump:tcpdump`; al cerrar cambia a `root:useransible` con modo `0750` para permitir únicamente la copia autenticada. Este detalle también permite que el usuario sin privilegios de `tcpdump` atraviese el directorio padre después de la caída de privilegios.
 

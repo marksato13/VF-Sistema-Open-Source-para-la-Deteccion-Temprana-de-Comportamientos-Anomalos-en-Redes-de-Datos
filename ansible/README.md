@@ -151,7 +151,7 @@ Las huellas deberán confirmarse desde la consola de cada VM antes de agregarlas
 
 Estos playbooks requieren privilegios. `useransible` no pertenece a sudoers de forma permanente: durante la ejecución se autorizó mediante un archivo temporal validado con `visudo`, que fue eliminado inmediatamente en Servidor, Cliente y Sensor. Las NIC externas de Servidor y Cliente se habilitaron solo para descargar paquetes y volvieron a estado `DOWN` al finalizar.
 
-Las únicas excepciones permanentes son `/usr/local/sbin/ppi-suricata-metrics` y `/usr/local/sbin/ppi-pcap-control` en el Sensor. Ambos son propiedad de `root`; el primero no acepta argumentos y el segundo valida acción e ID, manteniendo interfaz, filtro, destino y rotación fijos. Las pruebas negativas confirmaron que `useransible` no puede ejecutar directamente `/usr/bin/id` ni `/usr/bin/tcpdump`. El razonamiento está en `docs/05-plan-pruebas/09-sistema-campanas-F1.md` y `11-diseno-captura-PCAP-G4.md`.
+Las únicas excepciones permanentes son `/usr/local/sbin/ppi-suricata-metrics` y `/usr/local/sbin/ppi-pcap-control` en el Sensor. Ambos son propiedad de `root`; el primero no acepta argumentos y el segundo limita las acciones a `start`, `stop`, `status` y `archive`, valida el ID y, para archivar, una etiqueta `attempt-NN`. La interfaz, filtro, destinos y rotación permanecen fijos. Las pruebas negativas confirmaron que `useransible` no puede ejecutar directamente `/usr/bin/id` ni `/usr/bin/tcpdump`. El razonamiento está en `docs/05-plan-pruebas/09-sistema-campanas-F1.md`, `11-diseno-captura-PCAP-G4.md` y `17-archivado-intentos-fallidos.md`.
 
 ## NTP interno con las NIC externas aisladas
 

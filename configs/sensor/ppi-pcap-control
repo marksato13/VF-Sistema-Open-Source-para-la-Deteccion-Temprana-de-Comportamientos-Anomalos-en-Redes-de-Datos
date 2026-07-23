@@ -3,6 +3,7 @@ set -euo pipefail
 
 readonly PATH=/usr/sbin:/usr/bin:/sbin:/bin
 readonly CAPTURE_ROOT=/var/lib/ppi-captures
+readonly ARCHIVE_ROOT=/var/lib/ppi-captures-failed
 readonly STATE_DIR=/run/ppi-pcap
 readonly CAPTURE_INTERFACE=ens35
 readonly CAPTURE_BUFFER_KIB=65536
@@ -19,12 +20,24 @@ validate_id() {
   [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$ ]] || die "ID de campaña inválido"
 }
 
-[[ $# == 2 ]] || die "uso: ppi-pcap-control {start|stop|status} ID"
+validate_attempt_label() {
+  [[ "$1" =~ ^attempt-[0-9]{2}$ ]] || die "etiqueta de intento inválida"
+}
+
+[[ $# -ge 2 ]] || die "uso: ppi-pcap-control {start|stop|status} ID | archive ID attempt-NN"
 action="$1"
 id="$2"
 validate_id "$id"
+if [[ "$action" == archive ]]; then
+  [[ $# == 3 ]] || die "uso: ppi-pcap-control archive ID attempt-NN"
+  attempt_label="$3"
+  validate_attempt_label "$attempt_label"
+else
+  [[ $# == 2 ]] || die "uso: ppi-pcap-control {start|stop|status} ID"
+fi
 
 /usr/bin/install -d -o root -g root -m 0711 "$CAPTURE_ROOT"
+/usr/bin/install -d -o root -g root -m 0711 "$ARCHIVE_ROOT"
 /usr/bin/install -d -o root -g root -m 0755 "$STATE_DIR"
 pid_file="$STATE_DIR/pid"
 id_file="$STATE_DIR/id"
@@ -139,6 +152,44 @@ case "$action" in
     fi
     /usr/bin/jq -n --arg id "$id" --arg state "$state" --arg pid "${active_pid:-}" \
       '{campaign_id: $id, status: $state, pid: $pid}'
+    ;;
+  archive)
+    if [[ "$active_pid" =~ ^[0-9]+$ ]] && /usr/bin/kill -0 "$active_pid" 2>/dev/null; then
+      die "no se puede archivar mientras exista una captura activa para $active_id"
+    fi
+    archive_parent="$ARCHIVE_ROOT/$id"
+    archive_dir="$archive_parent/$attempt_label"
+    [[ ! ( -e "$capture_dir" && -e "$archive_dir" ) ]] ||
+      die "existen simultáneamente el origen y el archivo remoto"
+
+    if [[ -e "$archive_dir" ]]; then
+      archive_status=already_archived
+    else
+      [[ -d "$capture_dir" ]] || die "no existe evidencia remota para $id"
+      /usr/bin/install -d -o root -g useransible -m 0750 "$archive_parent"
+      /usr/bin/mv -- "$capture_dir" "$archive_dir"
+      archive_status=archived
+    fi
+
+    /usr/bin/chgrp -R useransible "$archive_dir"
+    /usr/bin/find "$archive_dir" -type d -exec /usr/bin/chmod 0750 {} +
+    /usr/bin/find "$archive_dir" -type f -exec /usr/bin/chmod 0640 {} +
+    file_count="$(/usr/bin/find "$archive_dir" -maxdepth 1 -type f -name 'capture.pcap*' | /usr/bin/wc -l)"
+    total_bytes="$(/usr/bin/find "$archive_dir" -maxdepth 1 -type f -name 'capture.pcap*' -printf '%s\n' | /usr/bin/awk '{sum += $1} END {print sum+0}')"
+    /usr/bin/jq -n \
+      --arg id "$id" \
+      --arg label "$attempt_label" \
+      --arg status "$archive_status" \
+      --arg directory "$archive_dir" \
+      --argjson file_count "$file_count" \
+      --argjson total_bytes "$total_bytes" '
+      {
+        status: $status,
+        campaign_id: $id,
+        attempt_label: $label,
+        remote_directory: $directory,
+        files: {count: $file_count, total_bytes: $total_bytes}
+      }'
     ;;
   *) die "acción no permitida" ;;
 esac
