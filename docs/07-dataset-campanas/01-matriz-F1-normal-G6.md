@@ -4,6 +4,8 @@
 
 El primer intento `HTTP-C8/R01` fue rechazado por 476 drops de `tcpdump`; no cuenta como campaña aceptada ni produce features. Evidencia y plan diagnóstico: `21-intento-rechazado-HTTP-C8-F1.md`.
 
+La calibración posterior con un búfer de 64 MiB produjo cero drops bajo el mismo perfil y rotación. Permanece excluida y solo autoriza preparar un retry trazable. Ver `22-calibracion-buffer-HTTP-C8-G6.md`.
+
 Fecha de congelación del diseño inicial: 21 de julio de 2026. Contrato oficial vigente: `configs/campaigns/f1-normal-v2.json`. La versión `v1` permanece inmutable para reproducir los cuatro pilotos anteriores, pero fue sustituida antes de iniciar campañas oficiales para incorporar diversidad legítima de destinos.
 
 ## Decisión actual

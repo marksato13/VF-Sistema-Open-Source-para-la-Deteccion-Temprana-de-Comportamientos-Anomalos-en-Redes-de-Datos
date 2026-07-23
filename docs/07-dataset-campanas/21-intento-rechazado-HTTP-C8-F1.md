@@ -104,3 +104,5 @@ Todos los archivos enumerados en `SHA256SUMS` pasan. Integridad de archivos no e
 Se desplegará el aumento de búfer y se ejecutará `HTTP-C8` como calibración `CAL-G6-HTTP-C8-R01`, siempre excluida del dataset. Para diagnosticar, se reportará cualquier drop; para autorizar un reintento oficial se exigirán cero drops.
 
 No se reintentará automáticamente ni se sobrescribirá este bundle. Si la calibración pasa, se definirá y ejecutará un archivado preservando el intento rechazado fuera de las raíces que consume el ensamblador; después el reintento usará nuevamente el único ID canónico `F1N-HTTP-C8-R01`. Un sufijo `RETRY` no es compatible con el contrato actual.
+
+Seguimiento: la calibración de búfer pasó con cero drops y está documentada en `22-calibracion-buffer-HTTP-C8-G6.md`. El intento rechazado permanece todavía en las raíces activas hasta versionar el procedimiento de archivado.

@@ -29,6 +29,8 @@ Si el total alcanza 1,945,600,000 bytes, equivalente al 95 % de la capacidad nom
 
 El búfer aumentó a 64 MiB después de que el intento oficial `F1N-HTTP-C8-R01` registrara 476 drops de `tcpdump` con ocho flujos y el búfer anterior de 4 MiB. `net.core.rmem_max=67108864` se instala mediante `/etc/sysctl.d/99-ppi-pcap-buffer.conf`. La rotación permanece deliberadamente en 512 MB × 4 durante la primera calibración diagnóstica para cambiar una sola variable causal.
 
+`CAL-G6-HTTP-C8-R01` repitió el perfil con 605,266/605,266 paquetes y cero drops. La calibración apoya mantener el nuevo búfer y conservar la rotación actual; no entra al dataset ni garantiza que toda campaña futura esté libre de pérdida.
+
 La opción `-B` está expresada en KiB y `-C` en millones de bytes, según el manual oficial de [tcpdump](https://www.tcpdump.org/manpages/tcpdump.1.html). `-W` puede sobrescribir archivos al alcanzar el límite; por eso continúa vigente el umbral preventivo de 95 %.
 
 ## Flujo
