@@ -18,6 +18,7 @@ REPO = Path(__file__).resolve().parents[2]
 DEFAULT_MATRIX = REPO / "configs/campaigns/f1-normal-v2.json"
 DEFAULT_FEATURE_SCHEMA = REPO / "configs/features/multilayer-v1.json"
 STORAGE_CONTRACT = REPO / "configs/storage/evidence-v1.json"
+OFFICIAL_PRE_CAPTURE_QUIET_SECONDS = 70
 
 
 def git(*args: str) -> str:
@@ -135,6 +136,7 @@ def main() -> int:
         "warmup_seconds": matrix["warmup_seconds"],
         "settle_seconds": matrix["settle_seconds"],
         "cooldown_seconds": 0 if args.no_cooldown else matrix["cooldown_seconds"],
+        "pre_capture_quiet_seconds": 0 if args.pilot else OFFICIAL_PRE_CAPTURE_QUIET_SECONDS,
     }
     print(json.dumps(plan, indent=2, sort_keys=True), flush=True)
     if args.dry_run:
@@ -158,6 +160,16 @@ def main() -> int:
     ledger_path = artifacts_root / "g6-ledger" / f"{campaign_id}.json"
     if campaign_dir.exists() or feature_dir.exists() or ledger_path.exists():
         raise SystemExit(f"ERROR: el ID ya posee artefactos: {campaign_id}")
+
+    quiet_seconds = plan["pre_capture_quiet_seconds"]
+    if quiet_seconds:
+        print(
+            f"Quietud previa a captura: {quiet_seconds} s para drenar eventos EVE diferidos",
+            flush=True,
+        )
+        time.sleep(quiet_seconds)
+        if git("status", "--porcelain"):
+            raise SystemExit("ERROR: el árbol Git cambió durante la quietud previa")
 
     ledger = {
         **plan,

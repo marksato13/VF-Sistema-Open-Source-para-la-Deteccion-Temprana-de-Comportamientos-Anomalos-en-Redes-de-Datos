@@ -60,6 +60,8 @@ Cada directorio contiene como mínimo:
 
 La extracción EVE usa el intervalo cerrado entre el número de línea inicial y el checkpoint final; no usa `tail` hasta el final porque podrían incorporarse eventos posteriores al conteo. Solo se declara completa si el inode es igual antes y después. Si ocurre una rotación, se crea un segmento vacío y `eve_slice_status` queda como `unavailable_log_rotated`; esa campaña no debe aceptarse sin recuperar ambos archivos rotados.
 
+Un evento `flow` puede escribirse por timeout después de que terminó la conexión que lo originó. El canario HTTP 1 GB demostró que una comprobación `/health` realizada 11 segundos antes del inicio apareció luego dentro del segmento EVE, aunque su `flow.start` era anterior. No afectó las features porque el extractor solo consume eventos HTTP, DNS y TLS y todas las ventanas empezaron después de la captura. Desde el commit posterior a ese canario, `run_matrix_profile.py` impone 70 segundos de quietud antes de abrir una campaña oficial y registra `pre_capture_quiet_seconds` en el ledger. El warm-up capturado de 60 segundos permanece separado.
+
 El ejecutor espera un segundo antes del escenario para iniciar la serie. El muestreo se escribe localmente después de cada consulta SSH para que el cierre de la conexión no descarte un búfer remoto. Suricata publica estadísticas EVE cada ocho segundos en la configuración observada; por ello, al cerrar se esperan nueve segundos antes del checkpoint final. El margen puede ajustarse entre 0 y 15 segundos con `PPI_CAMPAIGN_SETTLE_SECONDS`; el valor efectivo queda registrado como `settle_seconds`. Para las campañas oficiales se conservará el valor predeterminado.
 
 `cpu_percent_lifetime` de las instantáneas es el promedio desde el inicio del proceso. Para analizar carga durante el escenario debe usarse `cpu_percent` de `sensor-timeseries.tsv`, calculado con la diferencia de ticks y el tiempo real transcurrido entre consultas. El intervalo nominal es un segundo, pero la fórmula incluye la latencia SSH. El valor puede superar 100 % porque Suricata usa varios núcleos.
@@ -108,10 +110,10 @@ La aceptación exige revisión humana. Cero drops demuestra únicamente que Suri
 
 ## Secuencia siguiente
 
-1. Ejecutar una campaña DNS corta con propósito `calibration` para validar el orquestador extremo a extremo.
-2. Corregir cualquier hallazgo y congelar el commit operativo.
-3. Ejecutar repeticiones independientes de A5, A10, A12 y A13; añadir A14 después de implementar su coordinador.
-4. Validar distribución de tamaños de paquetes y falsos positivos por campaña.
-5. Solo después cerrar F1 y pasar a ataques F2 desde Kali, con un ejecutor y límites separados.
+1. Completar las campañas F1 de normalidad representativa, con cinco repeticiones y particiones por repetición.
+2. Auditar cada bundle, distribución de tamaños y falsos positivos antes de avanzar.
+3. Ejecutar F2 como estrés legítimo separado; no etiquetar congestión como ataque.
+4. Ejecutar anomalías F3 desde Kali con un comportamiento controlado por campaña.
+5. Cerrar con F4 mixto y evaluación temporal separada antes del modelo final.
 
 La captura PCAP está incorporada desde G4. Antes del dataset definitivo todavía se deben validar su funcionamiento extremo a extremo, la retención, la anonimización y la extracción reproducible de features.

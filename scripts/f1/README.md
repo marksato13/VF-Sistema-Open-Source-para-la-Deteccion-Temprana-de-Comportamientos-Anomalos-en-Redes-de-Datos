@@ -40,3 +40,5 @@ python3 scripts/f1/run_matrix_profile.py \
 Una campaña definitiva elimina `--pilot`. Exige árbol Git limpio y que el almacenamiento soporte la matriz completa más la reserva declarada. Cada manifiesto registra el hash SHA-256 de la matriz, el perfil y la repetición.
 
 `--no-cooldown` solo existe para pilotos. No se permite en recolección oficial porque una campaña no debe contaminar temporalmente a la siguiente.
+
+Las campañas oficiales esperan además 70 segundos de quietud **antes** de abrir el checkpoint EVE y comenzar el PCAP. Este margen drena eventos `flow` que Suricata puede emitir por timeout después de una comprobación de preflight ya cerrada. El valor queda en el ledger como `pre_capture_quiet_seconds`; no sustituye los 60 segundos de warm-up capturado ni los 30 segundos de cooldown posterior. Los pilotos conservan quietud cero.

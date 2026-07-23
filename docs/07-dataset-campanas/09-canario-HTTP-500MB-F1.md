@@ -130,3 +130,5 @@ Claude Code/Haiku emitió **ACEPTAR con observaciones críticas** y autorizó el
 ## Decisión
 
 **CANARIO HTTP 500 MB ACEPTADO.** Valida el primer estrato pesado, la rotación íntegra del PCAP y cuatro ventanas benignas con cero pérdidas. El siguiente escalón en orden es `HTTP-1GB/R01`, sujeto a un nuevo preflight.
+
+> **Seguimiento:** `HTTP-1GB/R01` fue ejecutado y aceptado con una no conformidad EVE cerrada. Ver `10-canario-HTTP-1GB-F1.md`.
