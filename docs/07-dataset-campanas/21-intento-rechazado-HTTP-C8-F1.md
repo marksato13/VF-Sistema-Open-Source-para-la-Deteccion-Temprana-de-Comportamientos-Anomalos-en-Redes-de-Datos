@@ -105,4 +105,4 @@ Se desplegará el aumento de búfer y se ejecutará `HTTP-C8` como calibración 
 
 No se reintentará automáticamente ni se sobrescribirá este bundle. Si la calibración pasa, se definirá y ejecutará un archivado preservando el intento rechazado fuera de las raíces que consume el ensamblador; después el reintento usará nuevamente el único ID canónico `F1N-HTTP-C8-R01`. Un sufijo `RETRY` no es compatible con el contrato actual.
 
-Seguimiento: la calibración de búfer pasó con cero drops y está documentada en `22-calibracion-buffer-HTTP-C8-G6.md`. El intento rechazado permanece todavía en las raíces activas hasta versionar el procedimiento de archivado.
+Seguimiento: la calibración de búfer pasó con cero drops y está documentada en `22-calibracion-buffer-HTTP-C8-G6.md`. Posteriormente, este intento se archivó íntegramente como `attempt-01` mediante el procedimiento `../05-plan-pruebas/17-archivado-intentos-fallidos.md`; ya no ocupa las raíces activas. El reintento canónico fue aceptado y se documenta en `23-canario-HTTP-C8-F1.md`.

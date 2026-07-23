@@ -96,3 +96,5 @@ Antes del retry:
 5. repetir preflight completo y ejecutar nuevamente el ID canónico `F1N-HTTP-C8-R01`.
 
 El retry solo será aceptado con cero drops.
+
+Seguimiento: las cinco condiciones se cumplieron. El intento fallido quedó preservado como `attempt-01`, el ensamblador volvió a 15/0/130 antes del retry y el reintento oficial obtuvo cero drops. Resultado final: `23-canario-HTTP-C8-F1.md`.
