@@ -98,3 +98,5 @@ Se corrigieron cuatro imprecisiones de la revisión: existen quince conexiones, 
 El ensamblador acepta trece campañas, cero inválidas, cero advertencias, cero duplicados y reporta 132 celdas faltantes.
 
 **CANARIO HTTP MULTIDESTINO REPETIDO ACEPTADO CON LIMITACIONES.** El siguiente perfil exacto es `HTTP-C2/R01`: dos descargas concurrentes de 100 MB a un solo destino, limitadas a `10M` bytes/s por flujo. Revisión: `../04-revisiones-claude/2026-07-22-canario-HTTP-MULTI-5-F1.md`.
+
+> **Seguimiento:** `HTTP-C2/R01` fue ejecutado y aceptado con dos flujos solapados, 95.7053 % de paquetes pesados y cero drops. Ver `19-canario-HTTP-C2-F1.md`.

@@ -4,7 +4,7 @@ Fecha: 21 de julio de 2026. Implementación: `scripts/dataset/build_f1_dataset.p
 
 ## Decisión
 
-El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Después del canario DNS, los ocho tamaños HTTP/HTTPS, el HTTP 404 legítimo, el recambio TLS y los dos HTTP multidestino, la raíz oficial contiene trece campañas aceptadas, cero inválidas y 132 celdas faltantes; por tanto todavía no produce dataset. Los cinco pilotos históricos continúan excluidos en la raíz de artefactos heredada y no se mezclan con el volumen oficial.
+El dataset final ya no se formará concatenando CSV manualmente. El ensamblador aplica gates de procedencia, integridad, partición y completitud antes de escribir cualquier split. Después del canario DNS, los ocho tamaños HTTP/HTTPS, el HTTP 404 legítimo, el recambio TLS, los dos HTTP multidestino y HTTP-C2, la raíz oficial contiene catorce campañas aceptadas, cero inválidas y 131 celdas faltantes; por tanto todavía no produce dataset. Los cinco pilotos históricos continúan excluidos en la raíz de artefactos heredada y no se mezclan con el volumen oficial.
 
 ## Autoridad de los datos
 
@@ -127,4 +127,4 @@ python3 scripts/dataset/build_f1_dataset.py
 
 ## Estado de G6
 
-El disco dedicado y G7 ya pasaron. El ensamblador aceptó el canario DNS, los ocho tamaños HTTP/HTTPS R01, el HTTP 404 legítimo, el recambio TLS y ambos HTTP multidestino, y continúa bloqueando la construcción por 132 faltantes. HTTP aporta trece ventanas pesadas, HTTPS catorce ventanas —incluida una cola de cierre legítima—, HTTP 404 dos ventanas, recambio TLS otras dos y multidestino dos; todas carecen de drops. `TLS-SESSIONS-20` cubre tasa con una sola huella; `HTTP-MULTI-1/5` cubre tres VIP lógicas en una VM con ratios 1.0 y 0.2. Los flows diferidos fuera de alcance no fueron consumidos por las features. SSH/SFTP permanece fuera de la matriz mientras no exista identidad técnica. El script no convierte pilotos exitosos en entrenamiento ni permite construir un dataset parcial.
+El disco dedicado y G7 ya pasaron. El ensamblador aceptó el canario DNS, los ocho tamaños HTTP/HTTPS R01, el HTTP 404 legítimo, el recambio TLS, ambos HTTP multidestino y HTTP-C2, y continúa bloqueando la construcción por 131 faltantes. HTTP aporta quince ventanas pesadas al incluir las dos concurrentes de C2; HTTPS aporta catorce —incluida una cola de cierre legítima—, HTTP 404 dos, recambio TLS dos y multidestino dos; todas carecen de drops. `TLS-SESSIONS-20` cubre tasa con una huella; `HTTP-MULTI-1/5` cubre tres VIP lógicas; C2 demuestra dos flujos realmente solapados. Los flows diferidos fuera de alcance no fueron consumidos por las features. SSH/SFTP permanece fuera de la matriz mientras no exista identidad técnica. El script no convierte pilotos exitosos en entrenamiento ni permite construir un dataset parcial.
