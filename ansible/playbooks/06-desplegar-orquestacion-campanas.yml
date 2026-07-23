@@ -5,6 +5,31 @@
   gather_facts: false
 
   tasks:
+    - name: Instalar límite persistente del búfer PCAP
+      ansible.builtin.copy:
+        src: ../../configs/sensor/99-ppi-pcap-buffer.conf
+        dest: /etc/sysctl.d/99-ppi-pcap-buffer.conf
+        owner: root
+        group: root
+        mode: "0644"
+      register: ppi_pcap_sysctl
+
+    - name: Aplicar sysctl del búfer PCAP
+      ansible.builtin.command: /usr/sbin/sysctl -p /etc/sysctl.d/99-ppi-pcap-buffer.conf
+      when: ppi_pcap_sysctl.changed
+      changed_when: true
+
+    - name: Leer límite efectivo del búfer PCAP
+      ansible.builtin.command: /usr/sbin/sysctl -n net.core.rmem_max
+      register: ppi_pcap_rmem_max
+      changed_when: false
+
+    - name: Exigir el límite de búfer versionado
+      ansible.builtin.assert:
+        that:
+          - ppi_pcap_rmem_max.stdout == "67108864"
+        fail_msg: net.core.rmem_max no coincide con la configuración de captura
+
     - name: Instalar recolector inmutable para useransible
       ansible.builtin.copy:
         src: ../../configs/sensor/ppi-suricata-metrics

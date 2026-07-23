@@ -5,6 +5,7 @@ readonly PATH=/usr/sbin:/usr/bin:/sbin:/bin
 readonly CAPTURE_ROOT=/var/lib/ppi-captures
 readonly STATE_DIR=/run/ppi-pcap
 readonly CAPTURE_INTERFACE=ens35
+readonly CAPTURE_BUFFER_KIB=65536
 readonly ROTATE_MEGABYTES=512
 readonly ROTATE_FILES=4
 readonly CAPTURE_FILTER='(src net 10.20.0.0/24 and dst net 10.30.0.0/24) or (src net 10.30.0.0/24 and dst net 10.20.0.0/24)'
@@ -44,7 +45,7 @@ case "$action" in
     /usr/bin/install -d -o tcpdump -g tcpdump -m 0750 "$capture_dir"
 
     /usr/bin/nohup /usr/bin/tcpdump \
-      -i "$CAPTURE_INTERFACE" -n -s 0 -U -B 4096 \
+      -i "$CAPTURE_INTERFACE" -n -s 0 -U -B "$CAPTURE_BUFFER_KIB" \
       -C "$ROTATE_MEGABYTES" -W "$ROTATE_FILES" \
       -Z tcpdump -w "$capture_dir/capture.pcap" \
       "$CAPTURE_FILTER" \
@@ -65,6 +66,7 @@ case "$action" in
       --arg interface "$CAPTURE_INTERFACE" \
       --arg filter "$CAPTURE_FILTER" \
       --argjson pid "$capture_pid" \
+      --argjson buffer_kib "$CAPTURE_BUFFER_KIB" \
       --argjson rotate_megabytes "$ROTATE_MEGABYTES" \
       --argjson rotate_files "$ROTATE_FILES" '
       {
@@ -75,7 +77,7 @@ case "$action" in
         interface: $interface,
         filter: $filter,
         snaplen: 0,
-        buffer_kib: 4096,
+        buffer_kib: $buffer_kib,
         rotation: {
           file_megabytes_decimal: $rotate_megabytes,
           maximum_files: $rotate_files

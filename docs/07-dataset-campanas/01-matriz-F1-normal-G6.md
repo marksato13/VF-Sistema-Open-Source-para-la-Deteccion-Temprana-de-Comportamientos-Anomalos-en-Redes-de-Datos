@@ -2,6 +2,8 @@
 
 > **Seguimiento:** el volumen dedicado resolvió el gate de capacidad. Los canarios oficiales DNS mixto R01, los ocho tamaños HTTP/HTTPS R01, HTTP 404 R01, recambio TLS R01, los dos HTTP multidestino R01 y HTTP-C2/C4 R01 fueron aceptados; quedan 130 celdas. Ver `06-primer-canario-oficial-F1.md` a `20-canario-HTTP-C4-F1.md`.
 
+El primer intento `HTTP-C8/R01` fue rechazado por 476 drops de `tcpdump`; no cuenta como campaña aceptada ni produce features. Evidencia y plan diagnóstico: `21-intento-rechazado-HTTP-C8-F1.md`.
+
 Fecha de congelación del diseño inicial: 21 de julio de 2026. Contrato oficial vigente: `configs/campaigns/f1-normal-v2.json`. La versión `v1` permanece inmutable para reproducir los cuatro pilotos anteriores, pero fue sustituida antes de iniciar campañas oficiales para incorporar diversidad legítima de destinos.
 
 ## Decisión actual

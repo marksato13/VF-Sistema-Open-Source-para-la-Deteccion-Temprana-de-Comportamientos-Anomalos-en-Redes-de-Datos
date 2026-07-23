@@ -19,13 +19,17 @@ El helper `/usr/local/sbin/ppi-pcap-control` no acepta interfaz, filtro ni ruta 
 | resolución de nombres | desactivada (`-n`) |
 | snaplen | paquete completo (`-s 0`) |
 | escritura | inmediata (`-U`) |
-| búfer de captura | 4096 KiB |
+| búfer de captura | 65,536 KiB; originalmente 4,096 KiB |
 | rotación | 4 archivos de 512 millones de bytes |
 | capacidad nominal máxima | 2.048 GB por campaña |
 | usuario del proceso tras abrir interfaz | `tcpdump` |
 | ruta remota | `/var/lib/ppi-captures/<ID>/` |
 
 Si el total alcanza 1,945,600,000 bytes, equivalente al 95 % de la capacidad nominal, el orquestador marca la evidencia incompleta. Esto evita aceptar silenciosamente un anillo que pudo comenzar a sobrescribir sus primeros paquetes.
+
+El búfer aumentó a 64 MiB después de que el intento oficial `F1N-HTTP-C8-R01` registrara 476 drops de `tcpdump` con ocho flujos y el búfer anterior de 4 MiB. `net.core.rmem_max=67108864` se instala mediante `/etc/sysctl.d/99-ppi-pcap-buffer.conf`. La rotación permanece deliberadamente en 512 MB × 4 durante la primera calibración diagnóstica para cambiar una sola variable causal.
+
+La opción `-B` está expresada en KiB y `-C` en millones de bytes, según el manual oficial de [tcpdump](https://www.tcpdump.org/manpages/tcpdump.1.html). `-W` puede sobrescribir archivos al alcanzar el límite; por eso continúa vigente el umbral preventivo de 95 %.
 
 ## Flujo
 
