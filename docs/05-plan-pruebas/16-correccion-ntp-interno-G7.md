@@ -24,7 +24,7 @@ Sensor 10.10.10.20
         └────────► Cliente 10.10.10.50
 ```
 
-VM01 no consulta al Sensor, por lo que no existe un bucle. Su Chrony conserva las fuentes externas y solo autoriza clientes de `10.10.10.0/24`. El Sensor añade `server 10.10.10.10 iburst prefer` sin `trust`: VM01 debe superar las comprobaciones normales de selección.
+VM01 no consulta al Sensor, por lo que no existe un bucle. Su Chrony conserva las fuentes externas y solo autoriza clientes de `10.10.10.0/24`. El Sensor añade `server 10.10.10.10 iburst prefer require` sin `trust`: VM01 debe superar las comprobaciones normales de selección y existir como fuente requerida alcanzable.
 
 Las fuentes públicas del Sensor permanecen declaradas como fallback de mantenimiento, pero son inalcanzables mientras `ens34` esté `DOWN/NO-CARRIER` y no exista ruta externa. No se reconecta ninguna NIC para ejecutar C8.
 
@@ -57,5 +57,9 @@ Dos observaciones del dictamen se corrigen:
 
 - Chrony actual sí admite la opción `trust`, pero deliberadamente no se configura.
 - No es necesario borrar las fuentes públicas del Sensor: el aislamiento se demuestra por enlace, ruta y prueba negativa, y esas fuentes pueden servir durante una ventana futura de mantenimiento.
+
+Durante la primera aplicación, VM01 tardó aproximadamente 65 segundos en volver a seleccionar una fuente NTS después de reiniciar Chrony; un `waitsync` de 60 segundos terminó inmediatamente antes de la selección. No fue pérdida persistente de configuración.
+
+La primera fuente interna usó solo `prefer`. VM01 respondió y acumuló muestras, pero permaneció en estado `W`: el modo predeterminado `authselectmode mix` aplica de forma efectiva `require+trust` a las fuentes NTS y esperaba una fuente requerida. La prueba runtime añadió únicamente `require` a VM01; quedó seleccionada `*`, el Sensor pasó a estrato 4, `Leap status: Normal`, `NTPSynchronized=yes` y corrección inicial de 52.88 ms. No se añadió `trust` ni se cambió `authselectmode`.
 
 La evidencia de aplicación y el dictamen final se añadirán a este documento después de ejecutar el playbook. Hasta entonces no se afirma que la corrección esté desplegada.

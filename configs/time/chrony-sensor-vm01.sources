@@ -1,2 +1,2 @@
-# VM01 es la fuente interna preferida mientras la NIC externa del Sensor está aislada.
-server 10.10.10.10 iburst prefer
+# VM01 es la fuente interna preferida y requerida mientras la NIC externa del Sensor está aislada.
+server 10.10.10.10 iburst prefer require
