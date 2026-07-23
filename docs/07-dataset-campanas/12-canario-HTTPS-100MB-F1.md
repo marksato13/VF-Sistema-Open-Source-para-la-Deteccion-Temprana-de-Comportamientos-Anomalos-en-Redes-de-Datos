@@ -94,3 +94,5 @@ El ensamblador acepta siete campañas, cero inválidas, cero advertencias y 138 
 **CANARIO HTTPS 100 MB ACEPTADO CON LIMITACIONES.** Siguiente perfil: `HTTPS-500MB/R01`.
 
 Revisión: `../04-revisiones-claude/2026-07-22-canario-HTTPS-100MB-F1.md`.
+
+> **Seguimiento:** `HTTPS-500MB/R01` fue ejecutado y aceptado con 97.7033 % de paquetes en rango, tres filas elegibles y cero drops. Ver `13-canario-HTTPS-500MB-F1.md`.
