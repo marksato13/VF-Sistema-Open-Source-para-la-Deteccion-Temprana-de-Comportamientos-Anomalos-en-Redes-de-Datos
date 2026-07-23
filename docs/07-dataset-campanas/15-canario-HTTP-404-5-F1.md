@@ -101,3 +101,5 @@ Claude Code 2.1.217/Haiku emitió **ACEPTAR** sin fallos bloqueantes. Identific�
 El ensamblador acepta diez campañas, cero inválidas, cero advertencias, cero duplicados y reporta 135 celdas faltantes.
 
 **CANARIO HTTP 404 LEGÍTIMO ACEPTADO CON LIMITACIONES DECLARADAS.** El siguiente perfil exacto es `TLS-SESSIONS-20/R01`: veinte conexiones HTTPS secuenciales a `/health`, no concurrentes. Revisión: `../04-revisiones-claude/2026-07-22-canario-HTTP-404-5-F1.md`.
+
+> **Seguimiento:** `TLS-SESSIONS-20/R01` fue ejecutado y aceptado con veinte sesiones TLS 1.3 y dos filas elegibles. Ver `16-canario-TLS-SESSIONS-20-F1.md`.
