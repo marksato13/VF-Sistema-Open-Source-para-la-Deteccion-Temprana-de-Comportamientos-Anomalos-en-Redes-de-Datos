@@ -21,7 +21,7 @@
       ansible.builtin.meta: flush_handlers
 
     - name: Esperar sincronización de VM01
-      ansible.builtin.command: chronyc waitsync 60 0.1 10 1
+      ansible.builtin.command: chronyc waitsync 120 0.1 10 1
       changed_when: false
 
     - name: Leer estado NTP de VM01
@@ -62,7 +62,7 @@
       ansible.builtin.meta: flush_handlers
 
     - name: Esperar sincronización del Sensor con corrección menor de 100 ms
-      ansible.builtin.command: chronyc waitsync 60 0.1 10 1
+      ansible.builtin.command: chronyc waitsync 120 0.1 10 1
       changed_when: false
 
     - name: Leer fuentes numéricas del Sensor
