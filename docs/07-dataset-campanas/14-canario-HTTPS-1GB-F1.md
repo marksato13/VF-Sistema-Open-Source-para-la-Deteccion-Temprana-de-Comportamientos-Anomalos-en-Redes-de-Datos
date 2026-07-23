@@ -94,3 +94,5 @@ Claude Code/Haiku emitió **ACEPTAR** y consideró defendible conservar la venta
 El ensamblador acepta nueve campañas, cero inválidas, cero advertencias, cero duplicados y 136 faltantes.
 
 **CANARIO HTTPS 1 GB ACEPTADO.** Se completan los tamaños individuales HTTP y HTTPS de R01. El siguiente perfil exacto de la matriz es `HTTP-404-5/R01`. Revisión: `../04-revisiones-claude/2026-07-22-canario-HTTPS-1GB-F1.md`.
+
+> **Seguimiento:** `HTTP-404-5/R01` fue ejecutado y aceptado con cinco 404 legítimos y dos filas elegibles. Ver `15-canario-HTTP-404-5-F1.md`.

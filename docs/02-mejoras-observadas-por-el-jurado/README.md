@@ -271,9 +271,9 @@ Cada resultado deberá vincularse con:
 |---|---|---|
 | Dataset normal con tráfico pesado | En ejecución: 4 celdas HTTP y 4 HTTPS oficiales aceptadas | `../07-dataset-campanas/07-canario-HTTP-10MB-F1.md` a `../07-dataset-campanas/14-canario-HTTPS-1GB-F1.md` |
 | Paquetes normales entre 500 y 1500 bytes | HTTP: 91.6077–98.7155 %; HTTPS: 95.4127–98.0435 % | PCAP, hashes y distribución en los ocho canarios pesados |
-| Variable de Capa 3 | Planificado | Código, prueba y diccionario de datos |
-| Variable de Capa 4 | Planificado | Código, prueba y diccionario de datos |
-| Variable de Capa 7 | Planificado | Código, prueba y diccionario de datos |
+| Variable de Capa 3 | Implementada y validada en piloto multidestino | `../07-dataset-campanas/05-validacion-diversidad-L3-v2.md` |
+| Variable de Capa 4 | Implementada y observada en campaña oficial | SYN, completitud y flujos en `../07-dataset-campanas/15-canario-HTTP-404-5-F1.md` |
+| Variable de Capa 7 | Implementada y observada en campaña oficial | `http_error_ratio_60s=1` en `../07-dataset-campanas/15-canario-HTTP-404-5-F1.md` |
 | Comparación contra 14 features | Planificado | Tabla de métricas y prueba de ablación |
 | Validación sin mezcla de sesiones | Planificado | Manifiesto de particiones |
 | Automatización reproducible | Planificado | Playbooks y logs de Ansible |
