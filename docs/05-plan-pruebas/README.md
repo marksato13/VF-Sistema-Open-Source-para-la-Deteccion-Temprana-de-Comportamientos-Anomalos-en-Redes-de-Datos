@@ -22,6 +22,7 @@ La aplicación persistente y el piloto con ratio L3 igual a 1.0 están en `../07
 La auditoría posterior al reinicio, el bypass externo confirmado y el gate de aislamiento están en `13-auditoria-preexperimental-G7.md`.
 El cierre operacional, la captura correlacionada y la prueba de persistencia pendiente están en `14-cierre-operacional-G7.md`.
 El reinicio real, la persistencia del aislamiento y el cierre **APTO PERSISTENTE** están en `15-validacion-persistencia-G7.md`.
+El bloqueo preventivo de C8 por NTP y el diseño VM01→Sensor→laboratorio están en `16-correccion-ntp-interno-G7.md`.
 El primer canario oficial aceptado y sus límites están en `../07-dataset-campanas/06-primer-canario-oficial-F1.md`.
 El segundo canario oficial, HTTP 10 MB, su distribución de paquetes grandes y el límite de inspección observado en Suricata están en `../07-dataset-campanas/07-canario-HTTP-10MB-F1.md`.
 El tercer canario oficial, HTTP 100 MB, su escalamiento, recursos y dos ventanas elegibles están en `../07-dataset-campanas/08-canario-HTTP-100MB-F1.md`.

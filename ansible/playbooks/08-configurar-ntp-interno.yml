@@ -1,0 +1,113 @@
+---
+- name: Publicar VM01 como referencia NTP limitada a PPI-MGMT
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: false
+  tags:
+    - controller
+
+  tasks:
+    - name: Instalar ACL NTP de PPI-MGMT en VM01
+      ansible.builtin.copy:
+        src: ../../configs/time/chrony-vm01-server.conf
+        dest: /etc/chrony/conf.d/ppi-mgmt-server.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reiniciar Chrony en VM01
+
+    - name: Aplicar cambios pendientes de VM01
+      ansible.builtin.meta: flush_handlers
+
+    - name: Esperar sincronización de VM01
+      ansible.builtin.command: chronyc waitsync 60 0.1 10 1
+      changed_when: false
+
+    - name: Leer estado NTP de VM01
+      ansible.builtin.command: timedatectl show --value -p NTPSynchronized
+      register: ppi_vm01_ntp_sync
+      changed_when: false
+
+    - name: Exigir que VM01 conserve una fuente válida
+      ansible.builtin.assert:
+        that:
+          - ppi_vm01_ntp_sync.stdout == "yes"
+        fail_msg: VM01 no está sincronizada; no debe publicarse como referencia del laboratorio
+
+  handlers:
+    - name: Reiniciar Chrony en VM01
+      ansible.builtin.systemd_service:
+        name: chrony
+        state: restarted
+
+- name: Sincronizar el Sensor desde VM01 sin habilitar su NIC externa
+  hosts: ppi-sensor
+  become: true
+  gather_facts: false
+  tags:
+    - sensor
+
+  tasks:
+    - name: Instalar fuente NTP interna en el Sensor
+      ansible.builtin.copy:
+        src: ../../configs/time/chrony-sensor-vm01.sources
+        dest: /etc/chrony/sources.d/ppi-vm01.sources
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reiniciar Chrony en el Sensor
+
+    - name: Aplicar cambios pendientes del Sensor
+      ansible.builtin.meta: flush_handlers
+
+    - name: Esperar sincronización del Sensor con corrección menor de 100 ms
+      ansible.builtin.command: chronyc waitsync 60 0.1 10 1
+      changed_when: false
+
+    - name: Leer fuentes numéricas del Sensor
+      ansible.builtin.command: chronyc -n sources
+      register: ppi_sensor_ntp_sources
+      changed_when: false
+
+    - name: Leer estado NTP del Sensor
+      ansible.builtin.command: timedatectl show --value -p NTPSynchronized
+      register: ppi_sensor_ntp_sync
+      changed_when: false
+
+    - name: Exigir VM01 seleccionada y Sensor sincronizado
+      ansible.builtin.assert:
+        that:
+          - ppi_sensor_ntp_sync.stdout == "yes"
+          - ppi_sensor_ntp_sources.stdout is regex('(?m)^\\^\\*\\s+10\\.10\\.10\\.10\\s')
+        fail_msg: El Sensor no seleccionó 10.10.10.10 como fuente NTP
+
+  handlers:
+    - name: Reiniciar Chrony en el Sensor
+      ansible.builtin.systemd_service:
+        name: chrony
+        state: restarted
+
+- name: Verificar la cadena NTP del laboratorio
+  hosts: ppi_lab
+  gather_facts: false
+  tags:
+    - verify
+
+  tasks:
+    - name: Leer zona horaria
+      ansible.builtin.command: timedatectl show --value -p Timezone
+      register: ppi_timezone
+      changed_when: false
+
+    - name: Leer sincronización NTP
+      ansible.builtin.command: timedatectl show --value -p NTPSynchronized
+      register: ppi_ntp_sync
+      changed_when: false
+
+    - name: Exigir tiempo coherente
+      ansible.builtin.assert:
+        that:
+          - ppi_timezone.stdout == "America/Lima"
+          - ppi_ntp_sync.stdout == "yes"
+        fail_msg: "{{ inventory_hostname }} no cumple el gate horario"

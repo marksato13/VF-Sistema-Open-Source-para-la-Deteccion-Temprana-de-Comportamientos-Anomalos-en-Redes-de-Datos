@@ -153,4 +153,16 @@ Estos playbooks requieren privilegios. `useransible` no pertenece a sudoers de f
 
 Las únicas excepciones permanentes son `/usr/local/sbin/ppi-suricata-metrics` y `/usr/local/sbin/ppi-pcap-control` en el Sensor. Ambos son propiedad de `root`; el primero no acepta argumentos y el segundo valida acción e ID, manteniendo interfaz, filtro, destino y rotación fijos. Las pruebas negativas confirmaron que `useransible` no puede ejecutar directamente `/usr/bin/id` ni `/usr/bin/tcpdump`. El razonamiento está en `docs/05-plan-pruebas/09-sistema-campanas-F1.md` y `11-diseno-captura-PCAP-G4.md`.
 
+## NTP interno con las NIC externas aisladas
+
+`playbooks/08-configurar-ntp-interno.yml` publica VM01 `10.10.10.10` como fuente NTP únicamente para PPI-MGMT y la configura como fuente preferida del Sensor. Servidor, Kali y Cliente continúan consultando `10.10.10.20`. Las etiquetas `controller`, `sensor` y `verify` permiten aplicar cada nivel con su credencial sudo correspondiente.
+
+Después de aplicar, el gate de solo lectura se ejecuta desde la raíz:
+
+```bash
+scripts/f1/check_ntp_gate.sh
+```
+
+No se debe reconectar una NIC externa para superar este control. El procedimiento y el bloqueo preventivo de C8 están en `docs/05-plan-pruebas/16-correccion-ntp-interno-G7.md`.
+
 El playbook `07` se ejecuta localmente en VM01 y es deliberadamente destructivo sobre el dispositivo indicado. No selecciona discos automáticamente: exige una ruta estable de disco completo, comprueba que no sea el disco raíz, que mida al menos 100 GiB y que no tenga particiones, montajes, sistema de archivos ni firmas. El procedimiento exacto está en `docs/08-almacenamiento/01-disco-evidencias-vm01.md`.
