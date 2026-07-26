@@ -44,6 +44,7 @@ La calibración C8 con búfer de 64 MiB, cero drops y exclusión anti-calibraci�
 El reintento oficial C8 aceptado, su separación del intento fallido y la comparación controlada están en `../07-dataset-campanas/23-canario-HTTP-C8-F1.md`.
 El canario de cinco rechazos TCP legítimos y la validación de ratios L4 están en `../07-dataset-campanas/24-canario-TCP-REFUSED-5-F1.md`.
 El canario iperf3 TCP 50 Mbit/s, su alerta de clasificación L7 y la línea base pesada están en `../07-dataset-campanas/25-canario-TCP-50M-F1.md`.
+El escalamiento iperf3 TCP a 100 Mbit/s y sus cuatro retransmisiones recuperadas están en `../07-dataset-campanas/26-canario-TCP-100M-F1.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
