@@ -59,6 +59,7 @@ El gate agregado de 77 filas, cobertura de las 14 features, política de duplica
 El inicio de R02, la repetibilidad exacta de `DNS-VALID-10` y la separación entre gate de campaña y gate de repetición están en `../07-dataset-campanas/38-canario-DNS-VALID-10-R02.md`.
 La segunda campaña R02 y el efecto de fase de una ráfaga corta sobre ventanas UTC fijas están en `../07-dataset-campanas/39-canario-DNS-VALID-200-R02.md`.
 La tercera campaña R02, el ratio NXDOMAIN legítimo `2/22` y la segunda coincidencia exacta R01↔R02 están en `../07-dataset-campanas/40-canario-DNS-MIXED-20-2-R02.md`.
+La cuarta campaña R02, el ratio NXDOMAIN legítimo `10/60` y la tercera coincidencia exacta R01↔R02 están en `../07-dataset-campanas/41-canario-DNS-MIXED-50-10-R02.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
