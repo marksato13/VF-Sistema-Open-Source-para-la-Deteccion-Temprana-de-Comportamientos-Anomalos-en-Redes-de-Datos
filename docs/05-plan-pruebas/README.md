@@ -57,6 +57,7 @@ El canario ICMP de diez solicitudes, su intento canónico único y la regla de t
 El canario ICMP de cien solicitudes, sus cuatro ventanas y el cierre 29/29 de R01 están en `../07-dataset-campanas/36-canario-PING-100-cierre-R01-F1.md`.
 El gate agregado de 77 filas, cobertura de las 14 features, política de duplicados y autorización condicionada de R02 están en `../07-dataset-campanas/37-auditoria-agregada-R01-F1.md`.
 El inicio de R02, la repetibilidad exacta de `DNS-VALID-10` y la separación entre gate de campaña y gate de repetición están en `../07-dataset-campanas/38-canario-DNS-VALID-10-R02.md`.
+La segunda campaña R02 y el efecto de fase de una ráfaga corta sobre ventanas UTC fijas están en `../07-dataset-campanas/39-canario-DNS-VALID-200-R02.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
