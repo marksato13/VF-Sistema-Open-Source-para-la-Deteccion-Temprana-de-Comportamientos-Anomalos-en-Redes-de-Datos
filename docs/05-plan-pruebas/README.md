@@ -50,6 +50,7 @@ El primer canario iperf3 UDP a 10 Mbit/s, su pérdida y jitter, la cobertura ben
 El escalamiento iperf3 UDP a 25 Mbit/s, la composición exacta del PCAP y la revisión de sesgos están en `../07-dataset-campanas/29-canario-UDP-25M-F1.md`.
 El techo iperf3 UDP a 50 Mbit/s, la comparación 10/25/50 y el cierre de la progresión R01 están en `../07-dataset-campanas/30-canario-UDP-50M-F1.md`.
 El canario mixto concurrente HTTP+iperf3+DNS, su solapamiento y señales L3/L4/L7 están en `../07-dataset-campanas/31-canario-MIXED-LIGHT-F1.md`.
+El canario DNS válido de diez consultas, su línea base ligera y la separación de alcances PCAP/Suricata están en `../07-dataset-campanas/32-canario-DNS-VALID-10-F1.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
