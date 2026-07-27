@@ -47,6 +47,7 @@ El canario iperf3 TCP 50 Mbit/s, su alerta de clasificación L7 y la línea base
 El escalamiento iperf3 TCP a 100 Mbit/s y sus cuatro retransmisiones recuperadas están en `../07-dataset-campanas/26-canario-TCP-100M-F1.md`.
 El techo iperf3 TCP de 200 Mbit/s, sus cinco retransmisiones y cierre de la progresión TCP están en `../07-dataset-campanas/27-canario-TCP-200M-F1.md`.
 El primer canario iperf3 UDP a 10 Mbit/s, su pérdida y jitter, la cobertura benigna pesada y los límites del futuro modelo están en `../07-dataset-campanas/28-canario-UDP-10M-F1.md`.
+El escalamiento iperf3 UDP a 25 Mbit/s, la composición exacta del PCAP y la revisión de sesgos están en `../07-dataset-campanas/29-canario-UDP-25M-F1.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
