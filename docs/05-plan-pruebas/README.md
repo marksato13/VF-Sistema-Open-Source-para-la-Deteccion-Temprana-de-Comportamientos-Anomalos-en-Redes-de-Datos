@@ -53,6 +53,7 @@ El canario mixto concurrente HTTP+iperf3+DNS, su solapamiento y señales L3/L4/L
 El canario DNS válido de diez consultas, su línea base ligera y la separación de alcances PCAP/Suricata están en `../07-dataset-campanas/32-canario-DNS-VALID-10-F1.md`.
 El canario DNS válido de 200 consultas, la reutilización de puerto y la separación transacción/flujo están en `../07-dataset-campanas/33-canario-DNS-VALID-200-F1.md`.
 El canario DNS mixto 50+10, su segundo nivel legítimo de NXDOMAIN y el sesgo de orden temporal están en `../07-dataset-campanas/34-canario-DNS-MIXED-50-10-F1.md`.
+El canario ICMP de diez solicitudes, su intento canónico único y la regla de telemetría no productiva están en `../07-dataset-campanas/35-canario-PING-10-F1.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
