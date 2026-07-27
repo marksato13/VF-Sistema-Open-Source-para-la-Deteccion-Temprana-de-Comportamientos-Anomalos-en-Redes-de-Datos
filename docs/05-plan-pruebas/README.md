@@ -63,6 +63,7 @@ La cuarta campaña R02, el ratio NXDOMAIN legítimo `10/60` y la tercera coincid
 La quinta campaña R02 y el reparto ICMP 18/2 causado por un borde UTC fijo están en `../07-dataset-campanas/42-canario-PING-10-R02.md`.
 La sexta campaña R02, sus ventanas ICMP 48/96/56 y la coincidencia estable de 96 paquetes están en `../07-dataset-campanas/43-canario-PING-100-R02.md`.
 La séptima campaña R02 y su comparación de tráfico legítimo pesado HTTP están en `../07-dataset-campanas/44-canario-HTTP-10MB-R02.md`.
+La octava campaña R02 y la transferencia HTTP legítima de 100 MiB están en `../07-dataset-campanas/45-canario-HTTP-100MB-R02.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
