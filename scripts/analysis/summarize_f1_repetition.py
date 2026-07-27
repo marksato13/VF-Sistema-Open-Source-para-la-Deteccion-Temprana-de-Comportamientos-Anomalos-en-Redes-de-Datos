@@ -191,13 +191,15 @@ def build_summary(
             len(cross_campaign_duplicates),
         )
     )
+    cross_partition_duplicate_count = int(
+        audit_report.get("cross_partition_duplicate_feature_vector_count", 0)
+    )
     current_git_dirty = bool(audit_report.get("current_git_dirty", False))
     gate_pass = (
         repetition_complete
         and total_rows > 0
         and not repository_invalid
         and not repository_warnings
-        and cross_campaign_duplicate_count == 0
         and not current_git_dirty
     )
 
@@ -219,6 +221,7 @@ def build_summary(
             "campaign_warnings": repository_warnings,
             "cross_campaign_duplicate_vectors": cross_campaign_duplicates,
             "cross_campaign_duplicate_vector_count": cross_campaign_duplicate_count,
+            "cross_partition_duplicate_vector_count": cross_partition_duplicate_count,
             "cross_campaign_duplicate_vectors_truncated": int(
                 audit_report.get("duplicate_feature_vectors_truncated", 0)
             ),

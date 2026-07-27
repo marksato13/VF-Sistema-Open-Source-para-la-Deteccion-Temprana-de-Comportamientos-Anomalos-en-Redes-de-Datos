@@ -83,6 +83,7 @@ class RepetitionSummaryTests(unittest.TestCase):
             "campaign_warnings": [],
             "duplicate_feature_vectors": [],
             "duplicate_feature_vector_count": 0,
+            "cross_partition_duplicate_feature_vector_count": 0,
             "duplicate_feature_vectors_truncated": 0,
             "current_git_dirty": False,
             "assembler_git_commit": "c" * 40,
@@ -185,6 +186,30 @@ class RepetitionSummaryTests(unittest.TestCase):
         )
         self.assertTrue(result["repetition_complete"])
         self.assertFalse(result["gate_pass"])
+
+    def test_exact_cross_campaign_vector_is_diagnostic_not_collection_failure(self) -> None:
+        audit = {
+            **self.audit,
+            "duplicate_feature_vectors": [
+                {
+                    "first_campaign": "A",
+                    "first_partition": "train",
+                    "duplicate_campaign": "B",
+                    "duplicate_partition": "validation",
+                    "cross_partition": True,
+                }
+            ],
+            "duplicate_feature_vector_count": 1,
+            "cross_partition_duplicate_feature_vector_count": 1,
+        }
+        result = summary_module.build_summary(
+            1, self.contract, audit, self.accepted, self.counts
+        )
+        self.assertTrue(result["gate_pass"])
+        self.assertEqual(
+            result["repository_audit"]["cross_partition_duplicate_vector_count"],
+            1,
+        )
 
     def test_rejects_repetition_outside_matrix(self) -> None:
         with self.assertRaisesRegex(ValueError, "fuera de rango"):

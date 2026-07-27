@@ -441,26 +441,35 @@ def find_cross_campaign_duplicate_vectors(
     accepted: list[dict[str, Any]],
     feature_names: tuple[str, ...],
     report_limit: int = 100,
-) -> tuple[list[dict[str, str]], int]:
-    fingerprints: dict[tuple[str, ...], str] = {}
-    reported: list[dict[str, str]] = []
+) -> tuple[list[dict[str, Any]], int, int]:
+    fingerprints: dict[tuple[str, ...], tuple[str, str]] = {}
+    reported: list[dict[str, Any]] = []
     total = 0
+    cross_partition_total = 0
     for candidate in accepted:
         for row in candidate["rows"]:
             fingerprint = tuple(row[name] for name in feature_names)
             previous = fingerprints.get(fingerprint)
             if previous is None:
-                fingerprints[fingerprint] = candidate["campaign_id"]
-            elif previous != candidate["campaign_id"]:
+                fingerprints[fingerprint] = (
+                    candidate["campaign_id"],
+                    candidate["partition"],
+                )
+            elif previous[0] != candidate["campaign_id"]:
                 total += 1
+                cross_partition = previous[1] != candidate["partition"]
+                cross_partition_total += int(cross_partition)
                 if len(reported) < report_limit:
                     reported.append(
                         {
-                            "first_campaign": previous,
+                            "first_campaign": previous[0],
+                            "first_partition": previous[1],
                             "duplicate_campaign": candidate["campaign_id"],
+                            "duplicate_partition": candidate["partition"],
+                            "cross_partition": cross_partition,
                         }
                     )
-    return reported, total
+    return reported, total, cross_partition_total
 
 
 def audit_repository(
@@ -508,10 +517,11 @@ def audit_repository(
     current_commit = subprocess.check_output(
         ["git", "-C", str(contract.repo), "rev-parse", "HEAD"], text=True
     ).strip()
-    duplicate_vectors, duplicate_vector_count = find_cross_campaign_duplicate_vectors(
-        accepted,
-        contract.feature_names,
-    )
+    (
+        duplicate_vectors,
+        duplicate_vector_count,
+        cross_partition_duplicate_vector_count,
+    ) = find_cross_campaign_duplicate_vectors(accepted, contract.feature_names)
     report = {
         "schema_version": "f1-dataset-audit-v1",
         "matrix_sha256": contract.matrix_sha256,
@@ -537,6 +547,7 @@ def audit_repository(
         "missing_cells": [{"profile_id": profile, "repetition": repetition} for profile, repetition in missing],
         "duplicate_feature_vectors": duplicate_vectors,
         "duplicate_feature_vector_count": duplicate_vector_count,
+        "cross_partition_duplicate_feature_vector_count": cross_partition_duplicate_vector_count,
         "duplicate_feature_vectors_truncated": duplicate_vector_count - len(duplicate_vectors),
         "current_git_dirty": bool(current_status),
         "assembler_git_commit": current_commit,

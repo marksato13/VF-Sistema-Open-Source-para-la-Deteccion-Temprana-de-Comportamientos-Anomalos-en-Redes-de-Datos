@@ -86,18 +86,31 @@ class DatasetBuilderFixture(unittest.TestCase):
     def test_duplicate_vector_report_preserves_total_when_truncated(self) -> None:
         row = {name: "0.00000000" for name in self.contract.feature_names}
         accepted = [
-            {"campaign_id": "FIRST", "rows": [row]},
-            {"campaign_id": "SECOND", "rows": [dict(row), dict(row), dict(row)]},
+            {"campaign_id": "FIRST", "partition": "train", "rows": [row]},
+            {
+                "campaign_id": "SECOND",
+                "partition": "validation",
+                "rows": [dict(row), dict(row), dict(row)],
+            },
         ]
-        reported, total = builder.find_cross_campaign_duplicate_vectors(
+        reported, total, cross_partition_total = builder.find_cross_campaign_duplicate_vectors(
             accepted,
             self.contract.feature_names,
             report_limit=1,
         )
         self.assertEqual(total, 3)
+        self.assertEqual(cross_partition_total, 3)
         self.assertEqual(
             reported,
-            [{"first_campaign": "FIRST", "duplicate_campaign": "SECOND"}],
+            [
+                {
+                    "first_campaign": "FIRST",
+                    "first_partition": "train",
+                    "duplicate_campaign": "SECOND",
+                    "duplicate_partition": "validation",
+                    "cross_partition": True,
+                }
+            ],
         )
 
     def _write_json(self, path: Path, value: dict) -> None:
