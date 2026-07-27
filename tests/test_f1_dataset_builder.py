@@ -75,6 +75,31 @@ class DatasetBuilderFixture(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
+    def test_rejects_non_sequential_feature_order(self) -> None:
+        schema_path = self.repo / builder.SCHEMA_RELATIVE
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        schema["features"][0]["order"] = 2
+        schema_path.write_text(json.dumps(schema), encoding="utf-8")
+        with self.assertRaisesRegex(builder.GateError, "exactamente 1..14"):
+            builder.load_contract(self.repo)
+
+    def test_duplicate_vector_report_preserves_total_when_truncated(self) -> None:
+        row = {name: "0.00000000" for name in self.contract.feature_names}
+        accepted = [
+            {"campaign_id": "FIRST", "rows": [row]},
+            {"campaign_id": "SECOND", "rows": [dict(row), dict(row), dict(row)]},
+        ]
+        reported, total = builder.find_cross_campaign_duplicate_vectors(
+            accepted,
+            self.contract.feature_names,
+            report_limit=1,
+        )
+        self.assertEqual(total, 3)
+        self.assertEqual(
+            reported,
+            [{"first_campaign": "FIRST", "duplicate_campaign": "SECOND"}],
+        )
+
     def _write_json(self, path: Path, value: dict) -> None:
         path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
 

@@ -81,9 +81,15 @@ def load_contract(repo: Path) -> Contract:
     schema_path = repo / SCHEMA_RELATIVE
     matrix = load_json(matrix_path, "GATE-CONTRATO")
     schema = load_json(schema_path, "GATE-CONTRATO")
-    feature_names = tuple(item["name"] for item in schema.get("features", []))
+    feature_definitions = schema.get("features", [])
+    feature_names = tuple(item["name"] for item in feature_definitions)
     if len(feature_names) != 14 or len(set(feature_names)) != 14:
         raise GateError("GATE-CONTRATO", "el esquema no contiene 14 features únicas")
+    if [item.get("order") for item in feature_definitions] != list(range(1, 15)):
+        raise GateError(
+            "GATE-CONTRATO",
+            "el orden declarado de las features debe ser exactamente 1..14",
+        )
     if matrix.get("feature_schema") != schema.get("schema_version"):
         raise GateError("GATE-CONTRATO", "la matriz no referencia el esquema activo")
     return Contract(
@@ -431,6 +437,32 @@ def expected_cells(contract: Contract) -> set[tuple[str, int]]:
     return {(profile["id"], repetition) for profile in contract.matrix["profiles"] for repetition in range(1, repetitions + 1)}
 
 
+def find_cross_campaign_duplicate_vectors(
+    accepted: list[dict[str, Any]],
+    feature_names: tuple[str, ...],
+    report_limit: int = 100,
+) -> tuple[list[dict[str, str]], int]:
+    fingerprints: dict[tuple[str, ...], str] = {}
+    reported: list[dict[str, str]] = []
+    total = 0
+    for candidate in accepted:
+        for row in candidate["rows"]:
+            fingerprint = tuple(row[name] for name in feature_names)
+            previous = fingerprints.get(fingerprint)
+            if previous is None:
+                fingerprints[fingerprint] = candidate["campaign_id"]
+            elif previous != candidate["campaign_id"]:
+                total += 1
+                if len(reported) < report_limit:
+                    reported.append(
+                        {
+                            "first_campaign": previous,
+                            "duplicate_campaign": candidate["campaign_id"],
+                        }
+                    )
+    return reported, total
+
+
 def audit_repository(
     contract: Contract,
     campaigns_dir: Path,
@@ -476,18 +508,10 @@ def audit_repository(
     current_commit = subprocess.check_output(
         ["git", "-C", str(contract.repo), "rev-parse", "HEAD"], text=True
     ).strip()
-    fingerprints: dict[tuple[str, ...], str] = {}
-    duplicate_vectors: list[dict[str, str]] = []
-    for candidate in accepted:
-        for row in candidate["rows"]:
-            fingerprint = tuple(row[name] for name in contract.feature_names)
-            previous = fingerprints.get(fingerprint)
-            if previous and previous != candidate["campaign_id"] and len(duplicate_vectors) < 100:
-                duplicate_vectors.append(
-                    {"first_campaign": previous, "duplicate_campaign": candidate["campaign_id"]}
-                )
-            else:
-                fingerprints[fingerprint] = candidate["campaign_id"]
+    duplicate_vectors, duplicate_vector_count = find_cross_campaign_duplicate_vectors(
+        accepted,
+        contract.feature_names,
+    )
     report = {
         "schema_version": "f1-dataset-audit-v1",
         "matrix_sha256": contract.matrix_sha256,
@@ -512,6 +536,8 @@ def audit_repository(
         ],
         "missing_cells": [{"profile_id": profile, "repetition": repetition} for profile, repetition in missing],
         "duplicate_feature_vectors": duplicate_vectors,
+        "duplicate_feature_vector_count": duplicate_vector_count,
+        "duplicate_feature_vectors_truncated": duplicate_vector_count - len(duplicate_vectors),
         "current_git_dirty": bool(current_status),
         "assembler_git_commit": current_commit,
         "ready_to_build": not invalid and not missing and len(accepted) == len(expected) and not current_status,
