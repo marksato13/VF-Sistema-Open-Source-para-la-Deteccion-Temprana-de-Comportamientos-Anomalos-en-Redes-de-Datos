@@ -73,6 +73,7 @@ La decimocuarta campaña R02, la transferencia HTTPS de 1 GiB y el inventario pe
 La decimoquinta campaña R02, cinco errores HTTP legítimos y la proyección de almacenamiento están en `../07-dataset-campanas/52-canario-HTTP-404-5-R02.md`.
 La decimosexta campaña R02 y veinte sesiones TLS secuenciales están en `../07-dataset-campanas/53-canario-TLS-SESSIONS-20-R02.md`.
 La decimoséptima campaña R02 y la repetibilidad multidestino de tres VIP están en `../07-dataset-campanas/54-canario-HTTP-MULTI-1-R02.md`.
+La decimoctava campaña R02, quince health checks multidestino y `unique_dst_ip_ratio_30s=0.2`, está en `../07-dataset-campanas/55-canario-HTTP-MULTI-5-R02.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
