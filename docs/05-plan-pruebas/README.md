@@ -77,6 +77,7 @@ La decimoctava campaña R02, quince health checks multidestino y `unique_dst_ip_
 La decimonovena campaña R02, dos descargas HTTP concurrentes y 93.6718 % de paquetes pesados, está en `../07-dataset-campanas/56-canario-HTTP-C2-R02.md`.
 La vigésima campaña R02, cuatro descargas HTTP concurrentes y 93.6295 % de paquetes pesados, está en `../07-dataset-campanas/57-canario-HTTP-C4-R02.md`.
 La vigesimoprimera campaña R02, ocho descargas HTTP concurrentes, rotación PCAP y cero drops, está en `../07-dataset-campanas/58-canario-HTTP-C8-R02.md`.
+La vigesimosegunda campaña R02 y cinco rechazos TCP legítimos controlados están en `../07-dataset-campanas/59-canario-TCP-REFUSED-5-R02.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
