@@ -70,6 +70,7 @@ La undécima campaña R02, su sesión TLS y el efecto del borde UTC están en `.
 La duodécima campaña R02 y la transferencia HTTPS legítima de 100 MiB están en `../07-dataset-campanas/49-canario-HTTPS-100MB-R02.md`.
 La decimotercera campaña R02 y la transferencia HTTPS sostenida de 500 MiB están en `../07-dataset-campanas/50-canario-HTTPS-500MB-R02.md`.
 La decimocuarta campaña R02, la transferencia HTTPS de 1 GiB y el inventario pendiente están en `../07-dataset-campanas/51-canario-HTTPS-1GB-R02.md`.
+La decimoquinta campaña R02, cinco errores HTTP legítimos y la proyección de almacenamiento están en `../07-dataset-campanas/52-canario-HTTP-404-5-R02.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
