@@ -88,6 +88,7 @@ La vigesimonovena campaña completa R02 con HTTP+iperf3+DNS concurrentes, 29/29 
 El gate agregado R02, la comparación descriptiva R01↔R02, cobertura multicapa, sesgos, duplicados y condiciones para R03 están en `../07-dataset-campanas/67-auditoria-agregada-R02-F1.md`.
 La primera campaña R03 reproduce `DNS-VALID-10` por tercera vez con evidencia independiente y el mismo vector controlado en `../07-dataset-campanas/68-canario-DNS-VALID-10-R03.md`.
 La segunda campaña R03 reproduce 200 respuestas DNS válidas y documenta el efecto de fase en dos ventanas en `../07-dataset-campanas/69-canario-DNS-VALID-200-R03.md`.
+La tercera campaña R03 reproduce el patrón benigno de veinte consultas válidas y dos NXDOMAIN, con evidencia independiente y un tercer vector exacto, en `../07-dataset-campanas/70-canario-DNS-MIXED-20-2-R03.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
