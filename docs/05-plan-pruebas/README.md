@@ -87,6 +87,7 @@ La vigesimoctava campaña R02 cierra UDP a 50 Mbit/s con PCAP íntegro y documen
 La vigesimonovena campaña completa R02 con HTTP+iperf3+DNS concurrentes, 29/29 celdas válidas y señales conjuntas L3/L4/L7 en `../07-dataset-campanas/66-canario-MIXED-LIGHT-R02.md`.
 El gate agregado R02, la comparación descriptiva R01↔R02, cobertura multicapa, sesgos, duplicados y condiciones para R03 están en `../07-dataset-campanas/67-auditoria-agregada-R02-F1.md`.
 La primera campaña R03 reproduce `DNS-VALID-10` por tercera vez con evidencia independiente y el mismo vector controlado en `../07-dataset-campanas/68-canario-DNS-VALID-10-R03.md`.
+La segunda campaña R03 reproduce 200 respuestas DNS válidas y documenta el efecto de fase en dos ventanas en `../07-dataset-campanas/69-canario-DNS-VALID-200-R03.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
