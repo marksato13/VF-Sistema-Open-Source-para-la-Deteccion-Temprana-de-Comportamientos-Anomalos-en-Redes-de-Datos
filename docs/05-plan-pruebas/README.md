@@ -85,6 +85,7 @@ La vigesimosexta campaña R02 abre UDP a 10 Mbit/s con cero pérdida, cero drops
 La vigesimoséptima campaña R02 reproduce UDP a 25 Mbit/s con cero pérdida/drops y totales R01↔R02 idénticos en `../07-dataset-campanas/64-canario-UDP-25M-R02.md`.
 La vigesimoctava campaña R02 cierra UDP a 50 Mbit/s con PCAP íntegro y documenta una discrepancia de un datagrama en el receptor iperf3 3.20 en `../07-dataset-campanas/65-canario-UDP-50M-R02.md`.
 La vigesimonovena campaña completa R02 con HTTP+iperf3+DNS concurrentes, 29/29 celdas válidas y señales conjuntas L3/L4/L7 en `../07-dataset-campanas/66-canario-MIXED-LIGHT-R02.md`.
+El gate agregado R02, la comparación descriptiva R01↔R02, cobertura multicapa, sesgos, duplicados y condiciones para R03 están en `../07-dataset-campanas/67-auditoria-agregada-R02-F1.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
@@ -97,7 +98,7 @@ Ejecutar desde Cliente hacia Servidor, con una sesión nueva por escenario:
 | A10 | descargas HTTP concurrentes | conexiones simultáneas y falsos positivos |
 | A12 | `iperf3` TCP | throughput, tamaño de paquete y drops |
 | A13 | `iperf3` UDP controlado | bitrate, pérdida y drops |
-| A14 | HTTP + SSH + `iperf3` concurrentes | métricas agregadas y disponibilidad |
+| A14 | HTTP + DNS + `iperf3` concurrentes | métricas agregadas, solapamiento y disponibilidad |
 
 Los escenarios A deben incluir tráfico legítimo con paquetes de 500–1500 bytes para ampliar el rango de entrenamiento de Isolation Forest.
 
