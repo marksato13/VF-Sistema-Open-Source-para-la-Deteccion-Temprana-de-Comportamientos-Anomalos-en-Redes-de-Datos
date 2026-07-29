@@ -82,6 +82,7 @@ La vigesimotercera campaña R02, iperf3 TCP a 50 Mbit/s y clasificación L7 fall
 La vigesimocuarta campaña R02, iperf3 TCP a 100 Mbit/s, cero drops y 95.5827 % de paquetes pesados, está en `../07-dataset-campanas/61-canario-TCP-100M-R02.md`.
 La vigesimoquinta campaña R02 cierra la progresión TCP a 200 Mbit/s con dos PCAP, cero drops y 94.1073 % de paquetes pesados en `../07-dataset-campanas/62-canario-TCP-200M-R02.md`.
 La vigesimosexta campaña R02 abre UDP a 10 Mbit/s con cero pérdida, cero drops y 99.8323 % de paquetes pesados en `../07-dataset-campanas/63-canario-UDP-10M-R02.md`.
+La vigesimoséptima campaña R02 reproduce UDP a 25 Mbit/s con cero pérdida/drops y totales R01↔R02 idénticos en `../07-dataset-campanas/64-canario-UDP-25M-R02.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
