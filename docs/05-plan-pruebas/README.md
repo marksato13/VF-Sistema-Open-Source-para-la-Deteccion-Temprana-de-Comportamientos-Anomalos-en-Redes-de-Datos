@@ -84,6 +84,7 @@ La vigesimoquinta campaña R02 cierra la progresión TCP a 200 Mbit/s con dos PC
 La vigesimosexta campaña R02 abre UDP a 10 Mbit/s con cero pérdida, cero drops y 99.8323 % de paquetes pesados en `../07-dataset-campanas/63-canario-UDP-10M-R02.md`.
 La vigesimoséptima campaña R02 reproduce UDP a 25 Mbit/s con cero pérdida/drops y totales R01↔R02 idénticos en `../07-dataset-campanas/64-canario-UDP-25M-R02.md`.
 La vigesimoctava campaña R02 cierra UDP a 50 Mbit/s con PCAP íntegro y documenta una discrepancia de un datagrama en el receptor iperf3 3.20 en `../07-dataset-campanas/65-canario-UDP-50M-R02.md`.
+La vigesimonovena campaña completa R02 con HTTP+iperf3+DNS concurrentes, 29/29 celdas válidas y señales conjuntas L3/L4/L7 en `../07-dataset-campanas/66-canario-MIXED-LIGHT-R02.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
