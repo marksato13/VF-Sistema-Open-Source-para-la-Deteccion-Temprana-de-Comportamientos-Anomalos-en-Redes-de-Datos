@@ -79,6 +79,7 @@ La vigésima campaña R02, cuatro descargas HTTP concurrentes y 93.6295 % de paq
 La vigesimoprimera campaña R02, ocho descargas HTTP concurrentes, rotación PCAP y cero drops, está en `../07-dataset-campanas/58-canario-HTTP-C8-R02.md`.
 La vigesimosegunda campaña R02 y cinco rechazos TCP legítimos controlados están en `../07-dataset-campanas/59-canario-TCP-REFUSED-5-R02.md`.
 La vigesimotercera campaña R02, iperf3 TCP a 50 Mbit/s y clasificación L7 fallida permitida, está en `../07-dataset-campanas/60-canario-TCP-50M-R02.md`.
+La vigesimocuarta campaña R02, iperf3 TCP a 100 Mbit/s, cero drops y 95.5827 % de paquetes pesados, está en `../07-dataset-campanas/61-canario-TCP-100M-R02.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
