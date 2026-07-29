@@ -90,6 +90,7 @@ La primera campaña R03 reproduce `DNS-VALID-10` por tercera vez con evidencia i
 La segunda campaña R03 reproduce 200 respuestas DNS válidas y documenta el efecto de fase en dos ventanas en `../07-dataset-campanas/69-canario-DNS-VALID-200-R03.md`.
 La tercera campaña R03 reproduce el patrón benigno de veinte consultas válidas y dos NXDOMAIN, con evidencia independiente y un tercer vector exacto, en `../07-dataset-campanas/70-canario-DNS-MIXED-20-2-R03.md`.
 La cuarta campaña R03 reproduce cincuenta consultas válidas y diez NXDOMAIN, conserva un vector exacto independiente y delimita el peso repetido, en `../07-dataset-campanas/71-canario-DNS-MIXED-50-10-R03.md`.
+La quinta campaña R03 genera diez pares ICMP en ventanas 6/14 y documenta una equivalencia observacional con el prefijo de `PING-100/R01` en `../07-dataset-campanas/72-canario-PING-10-R03.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
