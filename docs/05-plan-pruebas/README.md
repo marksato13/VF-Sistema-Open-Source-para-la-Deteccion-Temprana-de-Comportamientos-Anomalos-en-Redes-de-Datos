@@ -93,6 +93,7 @@ La cuarta campaña R03 reproduce cincuenta consultas válidas y diez NXDOMAIN, c
 La quinta campaña R03 genera diez pares ICMP en ventanas 6/14 y documenta una equivalencia observacional con el prefijo de `PING-100/R01` en `../07-dataset-campanas/72-canario-PING-10-R03.md`.
 La sexta campaña R03 genera cien pares ICMP en ventanas 62/98/40, sin pérdida ni un nuevo vector exacto, en `../07-dataset-campanas/73-canario-PING-100-R03.md`.
 La séptima campaña R03 transfiere 10 MiB por HTTP y aporta 7,248 paquetes legítimos de 500–1500 bytes en `../07-dataset-campanas/74-canario-HTTP-10MB-R03.md`.
+La octava campaña R03 transfiere 100 MiB por HTTP y aporta 72,464 paquetes legítimos de 500–1500 bytes en `../07-dataset-campanas/75-canario-HTTP-100MB-R03.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
