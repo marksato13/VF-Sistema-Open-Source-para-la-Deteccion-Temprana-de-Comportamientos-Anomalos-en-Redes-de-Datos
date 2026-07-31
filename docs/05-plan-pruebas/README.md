@@ -100,6 +100,7 @@ La undécima campaña R03 transfiere 10 MiB por HTTPS, aporta 7,256 paquetes leg
 La duodécima campaña R03 transfiere 100 MiB por HTTPS, aporta 72,576 paquetes legítimos de 500–1500 bytes y dos ventanas correlacionadas en `../07-dataset-campanas/79-canario-HTTPS-100MB-R03.md`.
 La decimotercera campaña R03 transfiere 500 MiB por HTTPS, rota dos PCAP y aporta 362,957 paquetes legítimos de 500–1500 bytes en `../07-dataset-campanas/80-canario-HTTPS-500MB-R03.md`.
 La decimocuarta campaña R03 cierra los tamaños HTTPS individuales con 1 GiB, tres PCAP y 743,379 paquetes legítimos de 500–1500 bytes en `../07-dataset-campanas/81-canario-HTTPS-1GB-R03.md`.
+La decimoquinta campaña R03 reproduce cinco HTTP 404 legítimos, excluye las rutas de preflight y registra un vector exacto R02↔R03 en `../07-dataset-campanas/82-canario-HTTP-404-5-R03.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
