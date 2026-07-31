@@ -339,3 +339,5 @@ VM03 dispone ahora de NGINX HTTP/HTTPS, DNS local, iperf3 y SSH/SFTP; VM05 tiene
 La calibración posterior fijó máximos F1 de 200 Mbit/s TCP y 50 Mbit/s UDP. TCP 250 tuvo retransmisiones y solo una ronda, TCP 300 fue abortado por la guardia, y UDP 75/100 presentó pérdida. `scripts/f1/run-benign.sh` rechaza esos valores superiores. La calibración no pertenece al dataset final.
 
 HTTP/HTTPS quedó calibrado con 10 MB, 100 MB, 500 MB y 1 GB, además de 2/4/8 flujos concurrentes. Suricata terminó con cero drops y una muestra tcpdump registró 90.84 % de payloads TCP entre 500 y 1500 bytes. Los detalles están en `08-resultados-http-https-G2.md`; estos datos también son calibración y no entrenamiento.
+
+El cierre de `TLS-SESSIONS-20/R03` está en `docs/07-dataset-campanas/83-canario-TLS-SESSIONS-20-R03.md`: veinte sesiones TLS homogéneas, dos filas correlacionadas por borde UTC y ningún duplicado exacto nuevo. Siguiente autorizado: solo preflight independiente de `F1N-HTTP-MULTI-1-R03`.
