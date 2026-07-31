@@ -345,3 +345,5 @@ El cierre de `TLS-SESSIONS-20/R03` está en `docs/07-dataset-campanas/83-canario
 El cierre de `HTTP-MULTI-1/R03` está en `docs/07-dataset-campanas/84-canario-HTTP-MULTI-1-R03.md`: tres VIP lógicas de una VM, una fila exacta a R01/R02 y contador global de duplicados dentro de `train` elevado a trece. Siguiente autorizado: solo preflight independiente de `F1N-HTTP-MULTI-5-R03`.
 
 El cierre de `HTTP-MULTI-5/R03` está en `docs/07-dataset-campanas/85-canario-HTTP-MULTI-5-R03.md`: quince GET a tres VIP lógicas, vector exacto R01/R02 y contador global de duplicados dentro de `train` elevado a catorce. Siguiente autorizado: solo preflight independiente de `F1N-HTTP-C2-R03`.
+
+El cierre de `HTTP-C2/R03` está en `docs/07-dataset-campanas/86-canario-HTTP-C2-R03.md`: dos descargas concurrentes, 144,929 paquetes legítimos de 500–1500 bytes y una fila de cierre exacta a R02. Siguiente autorizado: solo preflight independiente de `F1N-HTTP-C4-R03`.

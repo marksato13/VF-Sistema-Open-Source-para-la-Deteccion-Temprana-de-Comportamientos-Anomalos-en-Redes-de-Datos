@@ -104,6 +104,7 @@ La decimoquinta campaña R03 reproduce cinco HTTP 404 legítimos, excluye las ru
 La decimosexta campaña R03 reproduce veinte sesiones TLS secuenciales, veinte huellas homogéneas y dos ventanas correlacionadas, sin añadir duplicados exactos, en `../07-dataset-campanas/83-canario-TLS-SESSIONS-20-R03.md`.
 La decimoséptima campaña R03 observa tres VIP lógicas en una VM y reproduce exactamente el vector R01/R02, elevando a trece el contador de duplicados dentro de `train`, en `../07-dataset-campanas/84-canario-HTTP-MULTI-1-R03.md`.
 La decimoctava campaña R03 ejecuta quince GET entre tres VIP lógicas y vuelve a reproducir el vector R01/R02, elevando a catorce el contador de duplicados dentro de `train`, en `../07-dataset-campanas/85-canario-HTTP-MULTI-5-R03.md`.
+La decimonovena campaña R03 ejecuta dos descargas HTTP concurrentes, aporta 144,929 paquetes legítimos de 500–1500 bytes y eleva a quince los duplicados dentro de `train` por su fila de cierre, en `../07-dataset-campanas/86-canario-HTTP-C2-R03.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
