@@ -343,3 +343,5 @@ HTTP/HTTPS quedó calibrado con 10 MB, 100 MB, 500 MB y 1 GB, además de 2/4/8 f
 El cierre de `TLS-SESSIONS-20/R03` está en `docs/07-dataset-campanas/83-canario-TLS-SESSIONS-20-R03.md`: veinte sesiones TLS homogéneas, dos filas correlacionadas por borde UTC y ningún duplicado exacto nuevo. Siguiente autorizado: solo preflight independiente de `F1N-HTTP-MULTI-1-R03`.
 
 El cierre de `HTTP-MULTI-1/R03` está en `docs/07-dataset-campanas/84-canario-HTTP-MULTI-1-R03.md`: tres VIP lógicas de una VM, una fila exacta a R01/R02 y contador global de duplicados dentro de `train` elevado a trece. Siguiente autorizado: solo preflight independiente de `F1N-HTTP-MULTI-5-R03`.
+
+El cierre de `HTTP-MULTI-5/R03` está en `docs/07-dataset-campanas/85-canario-HTTP-MULTI-5-R03.md`: quince GET a tres VIP lógicas, vector exacto R01/R02 y contador global de duplicados dentro de `train` elevado a catorce. Siguiente autorizado: solo preflight independiente de `F1N-HTTP-C2-R03`.

@@ -103,6 +103,7 @@ La decimocuarta campaña R03 cierra los tamaños HTTPS individuales con 1 GiB, t
 La decimoquinta campaña R03 reproduce cinco HTTP 404 legítimos, excluye las rutas de preflight y registra un vector exacto R02↔R03 en `../07-dataset-campanas/82-canario-HTTP-404-5-R03.md`.
 La decimosexta campaña R03 reproduce veinte sesiones TLS secuenciales, veinte huellas homogéneas y dos ventanas correlacionadas, sin añadir duplicados exactos, en `../07-dataset-campanas/83-canario-TLS-SESSIONS-20-R03.md`.
 La decimoséptima campaña R03 observa tres VIP lógicas en una VM y reproduce exactamente el vector R01/R02, elevando a trece el contador de duplicados dentro de `train`, en `../07-dataset-campanas/84-canario-HTTP-MULTI-1-R03.md`.
+La decimoctava campaña R03 ejecuta quince GET entre tres VIP lógicas y vuelve a reproducir el vector R01/R02, elevando a catorce el contador de duplicados dentro de `train`, en `../07-dataset-campanas/85-canario-HTTP-MULTI-5-R03.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
