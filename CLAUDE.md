@@ -341,3 +341,5 @@ La calibración posterior fijó máximos F1 de 200 Mbit/s TCP y 50 Mbit/s UDP. T
 HTTP/HTTPS quedó calibrado con 10 MB, 100 MB, 500 MB y 1 GB, además de 2/4/8 flujos concurrentes. Suricata terminó con cero drops y una muestra tcpdump registró 90.84 % de payloads TCP entre 500 y 1500 bytes. Los detalles están en `08-resultados-http-https-G2.md`; estos datos también son calibración y no entrenamiento.
 
 El cierre de `TLS-SESSIONS-20/R03` está en `docs/07-dataset-campanas/83-canario-TLS-SESSIONS-20-R03.md`: veinte sesiones TLS homogéneas, dos filas correlacionadas por borde UTC y ningún duplicado exacto nuevo. Siguiente autorizado: solo preflight independiente de `F1N-HTTP-MULTI-1-R03`.
+
+El cierre de `HTTP-MULTI-1/R03` está en `docs/07-dataset-campanas/84-canario-HTTP-MULTI-1-R03.md`: tres VIP lógicas de una VM, una fila exacta a R01/R02 y contador global de duplicados dentro de `train` elevado a trece. Siguiente autorizado: solo preflight independiente de `F1N-HTTP-MULTI-5-R03`.
