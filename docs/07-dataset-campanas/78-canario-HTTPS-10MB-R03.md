@@ -1,6 +1,6 @@
 # Undécimo canario oficial R03 — HTTPS-10MB
 
-Fecha: 30 de julio de 2026. Campaña: `F1N-HTTPS-10MB-R03`. Estado técnico: **ACEPTADA CON LIMITACIONES**. Revisión externa de Claude: **PENDIENTE POR AUTENTICACIÓN**.
+Fecha: 30 de julio de 2026. Campaña: `F1N-HTTPS-10MB-R03`. Estado: **ACEPTADA CON LIMITACIONES**.
 
 ## Objetivo y preflight
 
@@ -83,6 +83,6 @@ ledger                 13e7255616f60bf2f56453ae85de08d9c58684bb5fcc4b616612d19ec
 
 El ensamblador aceptó 69/145 campañas: R03 11/29, 76 faltantes, cero inválidas/advertencias, once coincidencias exactas dentro de `train` —sin aumento— y cero cruces observados. R04/validation y R05/test todavía no existen, por lo que el cero actual no demuestra ausencia futura de contaminación.
 
-Claude Code 2.1.217 fue invocado con la evidencia, pero devolvió `401 OAuth access token has expired`; `claude auth status` aún mostraba la cuenta como `loggedIn`. No se atribuye a Claude un dictamen inexistente. La revisión técnica de Codex verificó los artefactos, corrigió el cálculo de CPU y mantuvo separados paquetes PCAP, eventos EVE e inferencias.
+Tras renovar la sesión, Claude Code 2.1.217/Sonnet emitió **ACEPTAR CON LIMITACIONES** y autorizó únicamente el preflight independiente de `HTTPS-100MB/R03`. Ratificó integridad, opacidad HTTPS, PKI de laboratorio, `flow` IPv6 fuera de alcance y ausencia todavía de validation/test. Se descartó su inferencia de que diferencias de alcance entre AF_PACKET y tcpdump explican el delta +3: los artefactos no demuestran esa causa. La revisión técnica de Codex también corrigió el cálculo de CPU y mantuvo separados paquetes PCAP, eventos EVE e inferencias.
 
-**F1N-HTTPS-10MB-R03 ACEPTADA TÉCNICAMENTE CON LIMITACIONES; REVISIÓN CLAUDE PENDIENTE.** Siguiente perfil de matriz: preflight independiente de `F1N-HTTPS-100MB-R03`, después de restablecer la autenticación de Claude si se exige su dictamen antes de avanzar.
+**F1N-HTTPS-10MB-R03 ACEPTADA CON LIMITACIONES.** Siguiente autorizado: solo preflight independiente de `F1N-HTTPS-100MB-R03`.

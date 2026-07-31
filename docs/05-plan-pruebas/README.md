@@ -96,7 +96,7 @@ La séptima campaña R03 transfiere 10 MiB por HTTP y aporta 7,248 paquetes leg�
 La octava campaña R03 transfiere 100 MiB por HTTP y aporta 72,464 paquetes legítimos de 500–1500 bytes en `../07-dataset-campanas/75-canario-HTTP-100MB-R03.md`.
 La novena campaña R03 transfiere 500 MiB por HTTP, rota dos PCAP y aporta 362,216 paquetes legítimos de 500–1500 bytes en `../07-dataset-campanas/76-canario-HTTP-500MB-R03.md`.
 La décima campaña R03 transfiere 1 GiB por HTTP, rota tres PCAP y aporta 742,152 paquetes legítimos de 500–1500 bytes en `../07-dataset-campanas/77-canario-HTTP-1GB-R03.md`.
-La undécima campaña R03 transfiere 10 MiB por HTTPS, aporta 7,256 paquetes legítimos de 500–1500 bytes y una sesión TLS 1.3 en `../07-dataset-campanas/78-canario-HTTPS-10MB-R03.md`; su revisión Claude quedó pendiente por OAuth expirado.
+La undécima campaña R03 transfiere 10 MiB por HTTPS, aporta 7,256 paquetes legítimos de 500–1500 bytes y una sesión TLS 1.3 en `../07-dataset-campanas/78-canario-HTTPS-10MB-R03.md`; Claude/Sonnet la aceptó con limitaciones tras renovar su sesión.
 
 ## Grupo A: tráfico legítimo pesado
 
