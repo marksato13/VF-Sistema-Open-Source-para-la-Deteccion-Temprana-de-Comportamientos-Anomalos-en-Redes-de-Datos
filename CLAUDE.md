@@ -349,3 +349,5 @@ El cierre de `HTTP-MULTI-5/R03` está en `docs/07-dataset-campanas/85-canario-HT
 El cierre de `HTTP-C2/R03` está en `docs/07-dataset-campanas/86-canario-HTTP-C2-R03.md`: dos descargas concurrentes, 144,929 paquetes legítimos de 500–1500 bytes y una fila de cierre exacta a R02. Siguiente autorizado: solo preflight independiente de `F1N-HTTP-C4-R03`.
 
 El cierre de `HTTP-C4/R03` está en `docs/07-dataset-campanas/87-canario-HTTP-C4-R03.md`: cuatro descargas concurrentes, 290,000 paquetes legítimos de 500–1500 bytes y ningún duplicado exacto nuevo. Siguiente autorizado: solo preflight independiente de `F1N-HTTP-C8-R03`.
+
+El cierre de `HTTP-C8/R03` está en `docs/07-dataset-campanas/88-canario-HTTP-C8-R03.md`: ocho descargas concurrentes, dos PCAP, 580,019 paquetes legítimos de 500–1500 bytes y cero drops. Siguiente autorizado: solo preflight independiente de `F1N-TCP-REFUSED-5-R03`.
