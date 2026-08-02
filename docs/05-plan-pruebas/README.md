@@ -109,6 +109,7 @@ La vigésima campaña R03 ejecuta cuatro descargas HTTP concurrentes, aporta 290
 La vigesimoprimera campaña R03 ejecuta ocho descargas HTTP concurrentes, rota dos PCAP y aporta 580,019 paquetes legítimos de 500–1500 bytes sin añadir duplicados, en `../07-dataset-campanas/88-canario-HTTP-C8-R03.md`.
 La vigesimosegunda campaña R03 reproduce cinco rechazos TCP legítimos mediante cinco pares SYN–RST/ACK y una fila L4 sin añadir duplicados, en `../07-dataset-campanas/89-canario-TCP-REFUSED-5-R03.md`.
 La vigesimotercera campaña R03 reproduce iperf3 TCP a 50 Mbit/s, aporta 86,818 paquetes legítimos de 500–1500 bytes y conserva cuatro retransmisiones sin causa atribuida, en `../07-dataset-campanas/90-canario-TCP-50M-R03.md`.
+La vigesimocuarta campaña R03 reproduce iperf3 TCP a 100 Mbit/s, aporta 173,634 paquetes legítimos de 500–1500 bytes y conserva siete retransmisiones sin causa atribuida, en `../07-dataset-campanas/91-canario-TCP-100M-R03.md`.
 
 ## Grupo A: tráfico legítimo pesado
 

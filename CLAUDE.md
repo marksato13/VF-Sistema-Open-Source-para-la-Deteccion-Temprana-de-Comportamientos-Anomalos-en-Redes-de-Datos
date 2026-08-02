@@ -355,3 +355,5 @@ El cierre de `HTTP-C8/R03` está en `docs/07-dataset-campanas/88-canario-HTTP-C8
 El cierre de `TCP-REFUSED-5/R03` está en `docs/07-dataset-campanas/89-canario-TCP-REFUSED-5-R03.md`: cinco pares SYN–RST/ACK, una fila L4 y ningún duplicado exacto nuevo. Siguiente autorizado: solo preflight independiente de `F1N-TCP-50M-R03`.
 
 El cierre de `TCP-50M/R03` está en `docs/07-dataset-campanas/90-canario-TCP-50M-R03.md`: transferencia íntegra a 50 Mbit/s, 86,818 paquetes legítimos de 500–1500 bytes, cuatro retransmisiones sin causa atribuida y cero drops. Siguiente autorizado: solo preflight independiente de `F1N-TCP-100M-R03`.
+
+El cierre de `TCP-100M/R03` está en `docs/07-dataset-campanas/91-canario-TCP-100M-R03.md`: transferencia íntegra a 100 Mbit/s, 173,634 paquetes legítimos de 500–1500 bytes, siete retransmisiones sin causa atribuida y cero drops. Siguiente autorizado: solo preflight independiente de `F1N-TCP-200M-R03`.
