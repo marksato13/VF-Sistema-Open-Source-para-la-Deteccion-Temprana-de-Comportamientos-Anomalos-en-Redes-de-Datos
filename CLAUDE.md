@@ -357,3 +357,5 @@ El cierre de `TCP-REFUSED-5/R03` está en `docs/07-dataset-campanas/89-canario-T
 El cierre de `TCP-50M/R03` está en `docs/07-dataset-campanas/90-canario-TCP-50M-R03.md`: transferencia íntegra a 50 Mbit/s, 86,818 paquetes legítimos de 500–1500 bytes, cuatro retransmisiones sin causa atribuida y cero drops. Siguiente autorizado: solo preflight independiente de `F1N-TCP-100M-R03`.
 
 El cierre de `TCP-100M/R03` está en `docs/07-dataset-campanas/91-canario-TCP-100M-R03.md`: transferencia íntegra a 100 Mbit/s, 173,634 paquetes legítimos de 500–1500 bytes, siete retransmisiones sin causa atribuida y cero drops. Siguiente autorizado: solo preflight independiente de `F1N-TCP-200M-R03`.
+
+El cierre de `TCP-200M/R03` está en `docs/07-dataset-campanas/92-canario-TCP-200M-R03.md`: techo TCP íntegro a 200 Mbit/s, dos PCAP, 347,157 paquetes legítimos de 500–1500 bytes y cero drops. Siguiente autorizado: solo preflight independiente de `F1N-UDP-10M-R03`.
