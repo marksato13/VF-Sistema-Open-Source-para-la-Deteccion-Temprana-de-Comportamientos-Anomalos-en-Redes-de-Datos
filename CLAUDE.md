@@ -361,3 +361,5 @@ El cierre de `TCP-100M/R03` está en `docs/07-dataset-campanas/91-canario-TCP-10
 El cierre de `TCP-200M/R03` está en `docs/07-dataset-campanas/92-canario-TCP-200M-R03.md`: techo TCP íntegro a 200 Mbit/s, dos PCAP, 347,157 paquetes legítimos de 500–1500 bytes y cero drops. Siguiente autorizado: solo preflight independiente de `F1N-UDP-10M-R03`.
 
 El cierre de `UDP-10M/R03` está en `docs/07-dataset-campanas/93-canario-UDP-10M-R03.md`: 17,267 datagramas íntegros, cero pérdida/reordenamiento, cero drops y una fila exacta R01/R02. Siguiente autorizado: solo preflight independiente de `F1N-UDP-25M-R03`.
+
+El cierre de `UDP-25M/R03` está en `docs/07-dataset-campanas/94-canario-UDP-25M-R03.md`: 43,166 datagramas íntegros, cero pérdida/reordenamiento, cero drops y una fila exacta R01. Siguiente autorizado: solo preflight independiente de `F1N-UDP-50M-R03`.
