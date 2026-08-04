@@ -111,6 +111,7 @@ La vigesimosegunda campaña R03 reproduce cinco rechazos TCP legítimos mediante
 La vigesimotercera campaña R03 reproduce iperf3 TCP a 50 Mbit/s, aporta 86,818 paquetes legítimos de 500–1500 bytes y conserva cuatro retransmisiones sin causa atribuida, en `../07-dataset-campanas/90-canario-TCP-50M-R03.md`.
 La vigesimocuarta campaña R03 reproduce iperf3 TCP a 100 Mbit/s, aporta 173,634 paquetes legítimos de 500–1500 bytes y conserva siete retransmisiones sin causa atribuida, en `../07-dataset-campanas/91-canario-TCP-100M-R03.md`.
 La vigesimoquinta campaña R03 cierra el techo TCP a 200 Mbit/s con dos PCAP, cero drops y 347,157 paquetes legítimos de 500–1500 bytes en `../07-dataset-campanas/92-canario-TCP-200M-R03.md`.
+La vigesimosexta campaña R03 abre UDP a 10 Mbit/s con cero pérdida/reordenamiento, cero drops y 17,267 paquetes legítimos de 500–1500 bytes en `../07-dataset-campanas/93-canario-UDP-10M-R03.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
