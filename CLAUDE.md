@@ -363,3 +363,5 @@ El cierre de `TCP-200M/R03` está en `docs/07-dataset-campanas/92-canario-TCP-20
 El cierre de `UDP-10M/R03` está en `docs/07-dataset-campanas/93-canario-UDP-10M-R03.md`: 17,267 datagramas íntegros, cero pérdida/reordenamiento, cero drops y una fila exacta R01/R02. Siguiente autorizado: solo preflight independiente de `F1N-UDP-25M-R03`.
 
 El cierre de `UDP-25M/R03` está en `docs/07-dataset-campanas/94-canario-UDP-25M-R03.md`: 43,166 datagramas íntegros, cero pérdida/reordenamiento, cero drops y una fila exacta R01. Siguiente autorizado: solo preflight independiente de `F1N-UDP-50M-R03`.
+
+El cierre de `UDP-50M/R03` está en `docs/07-dataset-campanas/95-canario-UDP-50M-R03.md`: 86,329 datagramas coincidentes por extremo, secuencia binaria completa en Sensor, cero drops y ningún duplicado exacto nuevo. R03 no reproduce la discrepancia de R02, pero no prueba su causa ni la fiabilidad general de iperf3 3.20. Estado: 86/145, R03 28/29. Siguiente autorizado: solo preflight independiente de `F1N-MIXED-LIGHT-R03`.
