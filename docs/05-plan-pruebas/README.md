@@ -136,6 +136,7 @@ El decimocuarto canario R04 cierra HTTPS individual con 1 GiB, tres PCAP, 743,10
 El decimoquinto canario R04 reproduce cinco HTTP 404 legítimos, excluye probes de preflight y registra el quinto cruce exacto `seen` en `../07-dataset-campanas/112-canario-HTTP-404-5-R04.md`.
 El decimosexto canario R04 ejecuta veinte sesiones TLS 1.3 secuenciales, conserva dos ventanas correlacionadas sin duplicado exacto nuevo y queda documentado en `../07-dataset-campanas/113-canario-TLS-SESSIONS-20-R04.md`.
 El decimoséptimo canario R04 consulta tres VIP lógicas de una sola VM, reproduce una firma exacta R01–R03 y añade el sexto cruce `seen` en `../07-dataset-campanas/114-canario-HTTP-MULTI-1-R04.md`.
+El decimoctavo canario R04 ejecuta cinco health checks por cada una de tres VIP lógicas, reproduce la firma R01–R03 y añade el séptimo cruce `seen` en `../07-dataset-campanas/115-canario-HTTP-MULTI-5-R04.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
