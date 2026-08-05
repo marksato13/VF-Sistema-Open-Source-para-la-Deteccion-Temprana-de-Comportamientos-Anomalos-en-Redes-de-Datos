@@ -128,6 +128,7 @@ El sexto canario R04 genera cien pares ICMP íntegros en ventanas 76/98/26 y reg
 El séptimo canario R04 descarga 10 MiB por HTTP, aporta 7,245 paquetes legítimos de 500–1500 bytes y una fila nueva en `../07-dataset-campanas/104-canario-HTTP-10MB-R04.md`.
 El octavo canario R04 descarga 100 MiB por HTTP, aporta 72,459 paquetes legítimos de 500–1500 bytes y dos filas nuevas en `../07-dataset-campanas/105-canario-HTTP-100MB-R04.md`.
 El noveno canario R04 descarga 500 MiB por HTTP, rota dos PCAP, aporta 362,240 paquetes legítimos de 500–1500 bytes y tres filas nuevas en `../07-dataset-campanas/106-canario-HTTP-500MB-R04.md`.
+El décimo canario R04 descarga 1 GiB por HTTP, rota tres PCAP, aporta 742,012 paquetes legítimos de 500–1500 bytes y seis filas nuevas en `../07-dataset-campanas/107-canario-HTTP-1GB-R04.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
