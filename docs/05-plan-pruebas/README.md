@@ -132,6 +132,7 @@ El décimo canario R04 descarga 1 GiB por HTTP, rota tres PCAP, aporta 742,012 p
 El undécimo canario R04 transfiere 10 MiB por HTTPS, aporta 7,258 paquetes legítimos de 500–1500 bytes y una fila TLS nueva en `../07-dataset-campanas/108-canario-HTTPS-10MB-R04.md`.
 El duodécimo canario R04 transfiere 100 MiB por HTTPS, aporta 72,561 paquetes legítimos de 500–1500 bytes y dos filas nuevas en `../07-dataset-campanas/109-canario-HTTPS-100MB-R04.md`.
 El decimotercer canario R04 transfiere 500 MiB por HTTPS, rota dos PCAP, aporta 362,741 paquetes legítimos de 500–1500 bytes y cuatro filas nuevas en `../07-dataset-campanas/110-canario-HTTPS-500MB-R04.md`.
+El decimocuarto canario R04 cierra HTTPS individual con 1 GiB, tres PCAP, 743,106 paquetes legítimos de 500–1500 bytes y seis filas nuevas en `../07-dataset-campanas/111-canario-HTTPS-1GB-R04.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
