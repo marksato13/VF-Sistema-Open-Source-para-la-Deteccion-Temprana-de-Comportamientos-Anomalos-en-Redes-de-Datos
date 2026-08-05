@@ -124,6 +124,7 @@ El segundo canario R04 completa 200 transacciones DNS válidas en dos ventanas c
 El tercer canario R04 conserva 20 resoluciones válidas + 2 NXDOMAIN, un vector `seen` y un flow de preflight diferido fuera de PCAP/features en `../07-dataset-campanas/100-canario-DNS-MIXED-20-2-R04.md`.
 El cuarto canario R04 conserva 50 resoluciones válidas + 10 NXDOMAIN, un tercer vector `seen`, PCAP íntegro y delta Suricata +4 no atribuido en `../07-dataset-campanas/101-canario-DNS-MIXED-50-10-R04.md`.
 El quinto canario R04 genera diez pares ICMP íntegros en ventanas 16/4, sin cruce exacto nuevo, y conserva dos flows de preflight diferidos fuera del PCAP/features en `../07-dataset-campanas/102-canario-PING-10-R04.md`.
+El sexto canario R04 genera cien pares ICMP íntegros en ventanas 76/98/26 y registra la ventana central como cuarto cruce `seen` train↔validation en `../07-dataset-campanas/103-canario-PING-100-R04.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
