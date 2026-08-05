@@ -126,6 +126,7 @@ El cuarto canario R04 conserva 50 resoluciones válidas + 10 NXDOMAIN, un tercer
 El quinto canario R04 genera diez pares ICMP íntegros en ventanas 16/4, sin cruce exacto nuevo, y conserva dos flows de preflight diferidos fuera del PCAP/features en `../07-dataset-campanas/102-canario-PING-10-R04.md`.
 El sexto canario R04 genera cien pares ICMP íntegros en ventanas 76/98/26 y registra la ventana central como cuarto cruce `seen` train↔validation en `../07-dataset-campanas/103-canario-PING-100-R04.md`.
 El séptimo canario R04 descarga 10 MiB por HTTP, aporta 7,245 paquetes legítimos de 500–1500 bytes y una fila nueva en `../07-dataset-campanas/104-canario-HTTP-10MB-R04.md`.
+El octavo canario R04 descarga 100 MiB por HTTP, aporta 72,459 paquetes legítimos de 500–1500 bytes y dos filas nuevas en `../07-dataset-campanas/105-canario-HTTP-100MB-R04.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
