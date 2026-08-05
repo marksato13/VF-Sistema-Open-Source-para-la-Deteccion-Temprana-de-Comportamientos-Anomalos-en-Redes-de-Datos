@@ -122,6 +122,7 @@ La revisión adversarial, los dos bloqueos corregidos y las condiciones operativ
 El primer canario R04 reproduce diez resoluciones DNS válidas con PCAP/EVE íntegros, registra el primer vector exacto `seen` train↔validation y mantiene bloqueado el scoring hasta 29/29 en `../07-dataset-campanas/98-canario-DNS-VALID-10-R04.md`.
 El segundo canario R04 completa 200 transacciones DNS válidas en dos ventanas causales, sin vector exacto train y sin scoring, en `../07-dataset-campanas/99-canario-DNS-VALID-200-R04.md`.
 El tercer canario R04 conserva 20 resoluciones válidas + 2 NXDOMAIN, un vector `seen` y un flow de preflight diferido fuera de PCAP/features en `../07-dataset-campanas/100-canario-DNS-MIXED-20-2-R04.md`.
+El cuarto canario R04 conserva 50 resoluciones válidas + 10 NXDOMAIN, un tercer vector `seen`, PCAP íntegro y delta Suricata +4 no atribuido en `../07-dataset-campanas/101-canario-DNS-MIXED-50-10-R04.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
