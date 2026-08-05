@@ -112,7 +112,7 @@ El MVP afirma que StandardScaler era necesario porque Isolation Forest usa dista
 2. La etiqueta de campaña se une después de extraer features y nunca entra al vector.
 3. Todas las filas de una misma campaña pertenecen a una sola partición.
 4. Campañas de calibración quedan fuera de entrenamiento, validación y prueba.
-5. Scaler, selector, hiperparámetros y umbral se ajustan solo con entrenamiento.
+5. Scaler, selector e hiperparámetros se ajustan solo con R01–R03 `train`. El umbral operativo se calibra una vez con R04 normal completa y R05 queda retenida, conforme a `03-protocolo-modelado-F1-v2.md`; esta regla sustituye la redacción histórica antes de observar R04.
 6. Ventanas solapadas no se reparten aleatoriamente entre conjuntos.
 7. Se reportan resultados por escenario y campaña, no solo por fila altamente correlacionada.
 

@@ -39,15 +39,15 @@ La política evita dos extremos no defendibles: inflar silenciosamente episodios
 
 ## Uso de particiones
 
-- `train` R01–R03 permite ajustar los modelos conforme al protocolo que aún debe predefinirse.
-- La matriz G6 asigna R04 `validation` a selección de umbral y falsos positivos normales, mientras el diccionario G5 indica ajustar hiperparámetros y umbral sólo con train. Esa contradicción histórica debe resolverse explícitamente en el protocolo de modelado antes de ejecutar R04; no se elige una interpretación después de observar validation.
+- `train` R01–R03 ajusta transformaciones, modelos y parámetros conforme a `../06-features-modelado/03-protocolo-modelado-F1-v2.md`.
+- La contradicción histórica G5↔G6 quedó resuelta antes de ejecutar R04: ajustar el modelo y calibrar la frontera operativa son operaciones separadas. R04 normal completa calibra una vez el cuantil inferior predeclarado; no selecciona features, modelo ni hiperparámetros. G5 fue corregido para apuntar al mismo contrato.
 - `test` R05 se evalúa una sola vez después de congelar todas las decisiones. No se usa para elegir features, modelos, parámetros, pesos ni umbrales.
 - La revisión de integridad de R04/R05 no autoriza explorar resultados del modelo fuera del protocolo.
 
-No se encontró en el contrato F1-v2 un umbral heredado reproducible que pueda reutilizarse. Cualquier umbral o resultado del MVP es histórico y queda descartado para la evaluación final; el protocolo pendiente debe fijar desde cero su regla de selección sin consultar R05.
+No se encontró en el contrato F1-v2 un umbral heredado reproducible que pueda reutilizarse. Cualquier umbral o resultado del MVP es histórico y queda descartado para la evaluación final. `PM-F1-v1` fija desde cero `alpha=0.05`, cuantil inferior empírico estricto y prohíbe consultar R05.
 
 ## Gate antes de ejecutar R04
 
-El preflight de `F1N-DNS-VALID-10-R04` puede verificarse de forma independiente. Su ejecución queda condicionada a documentar el protocolo de modelado/selección: candidatos, preprocesamiento, semillas, rejillas, regla de umbral, métricas, sensibilidad por episodio, resolución G5↔G6 y criterio de congelamiento previo a R05.
+El preflight de `F1N-DNS-VALID-10-R04` puede verificarse de forma independiente. `03-protocolo-modelado-F1-v2.md` ya define candidatos, preprocesamiento, semillas, rejilla unitaria, regla de umbral, métricas, sensibilidad por episodio, resolución G5↔G6 y congelamiento previo a R05. La revisión adversarial cerró sus dos bloqueos en `../04-revisiones-claude/2026-08-04-protocolo-modelado-F1-v2.md`. Publicado el commit y verificados requisitos/escaneo, sólo queda repetir el preflight fresco para levantar el gate operativo.
 
 Hasta entonces no se ejecuta R04, no se construye el dataset incompleto y no se declara desempeño.

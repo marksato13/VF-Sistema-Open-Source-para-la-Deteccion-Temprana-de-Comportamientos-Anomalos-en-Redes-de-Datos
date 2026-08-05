@@ -117,6 +117,8 @@ La vigesimoctava campaña R03 cierra el techo UDP a 50 Mbit/s con 86,329 secuenc
 La vigesimonovena campaña R03 combina HTTP, TCP y DNS con solapamiento medido, captura íntegra, un `flow` de preflight diferido excluido de features y cero duplicados nuevos; cierra R03 29/29 en `../07-dataset-campanas/96-canario-MIXED-LIGHT-R03.md`.
 
 La auditoría agregada de R03 distingue 19.54 GB crudos de 87 episodios/224 ventanas train, valida las catorce features, registra diecisiete coincidencias y responde con alcance limitado a las observaciones del jurado en `../07-dataset-campanas/97-auditoria-agregada-R03-F1.md`. El contrato y la política de filas para R04/R05 quedan congelados en `18-congelamiento-protocolo-R04-R05.md`.
+El protocolo `PM-F1-v1` resuelve G5↔G6, congela Isolation Forest y comparadores, separa ajuste/calibración/test y define sensibilidades por campaña y vector exacto en `../06-features-modelado/03-protocolo-modelado-F1-v2.md`.
+La revisión adversarial, los dos bloqueos corregidos y las condiciones operativas para abrir R04 están en `../04-revisiones-claude/2026-08-04-protocolo-modelado-F1-v2.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
