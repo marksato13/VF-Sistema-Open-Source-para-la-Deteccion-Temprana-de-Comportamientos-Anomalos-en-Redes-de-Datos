@@ -144,6 +144,7 @@ El vigesimosegundo canario R04 reproduce cinco rechazos TCP activos legítimos, 
 El vigesimotercer canario R04 completa TCP iperf3 a 50 Mbit/s, aporta 86,816 paquetes legítimos de 500–1500 bytes y tres filas nuevas en `../07-dataset-campanas/120-canario-TCP-50M-R04.md`.
 El vigesimocuarto canario R04 completa TCP iperf3 a 100 Mbit/s, aporta 173,629 paquetes legítimos de 500–1500 bytes y tres filas nuevas en `../07-dataset-campanas/121-canario-TCP-100M-R04.md`.
 El vigesimoquinto canario R04 completa el techo TCP iperf3 a 200 Mbit/s, rota dos PCAP, aporta 347,166 paquetes legítimos de 500–1500 bytes y tres filas nuevas en `../07-dataset-campanas/122-canario-TCP-200M-R04.md`.
+El vigesimosexto canario R04 completa UDP iperf3 a 10 Mbit/s, valida la secuencia `1..17,267`, cero pérdida/drops y tres filas nuevas en `../07-dataset-campanas/123-canario-UDP-10M-R04.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
