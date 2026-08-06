@@ -147,6 +147,7 @@ El vigesimoquinto canario R04 completa el techo TCP iperf3 a 200 Mbit/s, rota do
 El vigesimosexto canario R04 completa UDP iperf3 a 10 Mbit/s, valida la secuencia `1..17,267`, cero pérdida/drops y tres filas nuevas en `../07-dataset-campanas/123-canario-UDP-10M-R04.md`.
 El vigesimoséptimo canario R04 completa UDP iperf3 a 25 Mbit/s, valida la secuencia `1..43,166`, cero pérdida/drops y registra el noveno cruce exacto `seen` en `../07-dataset-campanas/124-canario-UDP-25M-R04.md`.
 El vigesimoctavo canario R04 conserva la secuencia UDP `1..86,329` en el Sensor, reproduce el déficit receptor contradictorio de un datagrama y registra el décimo cruce `seen` en `../07-dataset-campanas/125-canario-UDP-50M-R04.md`.
+El vigesimonoveno canario R04 combina HTTP, TCP y DNS con solapamiento medido, PCAP íntegro y tres filas nuevas; cierra R04 29/29 en `../07-dataset-campanas/126-canario-MIXED-LIGHT-R04.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
