@@ -142,6 +142,7 @@ El vigésimo canario R04 completa cuatro descargas HTTP concurrentes, aporta 290
 El vigesimoprimer canario R04 completa ocho descargas HTTP concurrentes, rota dos PCAP, aporta 580,006 paquetes legítimos de 500–1500 bytes y seis filas nuevas en `../07-dataset-campanas/118-canario-HTTP-C8-R04.md`.
 El vigesimosegundo canario R04 reproduce cinco rechazos TCP activos legítimos, valida SYN/RST y añade el octavo cruce `seen` en `../07-dataset-campanas/119-canario-TCP-REFUSED-5-R04.md`.
 El vigesimotercer canario R04 completa TCP iperf3 a 50 Mbit/s, aporta 86,816 paquetes legítimos de 500–1500 bytes y tres filas nuevas en `../07-dataset-campanas/120-canario-TCP-50M-R04.md`.
+El vigesimocuarto canario R04 completa TCP iperf3 a 100 Mbit/s, aporta 173,629 paquetes legítimos de 500–1500 bytes y tres filas nuevas en `../07-dataset-campanas/121-canario-TCP-100M-R04.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
