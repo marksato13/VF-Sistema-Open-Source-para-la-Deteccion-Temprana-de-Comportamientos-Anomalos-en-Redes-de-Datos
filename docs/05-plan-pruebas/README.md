@@ -140,6 +140,7 @@ El decimoctavo canario R04 ejecuta cinco health checks por cada una de tres VIP 
 El decimonoveno canario R04 completa dos descargas HTTP concurrentes, aporta 145,016 paquetes legítimos de 500–1500 bytes y una fila nueva en `../07-dataset-campanas/116-canario-HTTP-C2-R04.md`.
 El vigésimo canario R04 completa cuatro descargas HTTP concurrentes, aporta 290,018 paquetes legítimos de 500–1500 bytes y tres filas nuevas en `../07-dataset-campanas/117-canario-HTTP-C4-R04.md`.
 El vigesimoprimer canario R04 completa ocho descargas HTTP concurrentes, rota dos PCAP, aporta 580,006 paquetes legítimos de 500–1500 bytes y seis filas nuevas en `../07-dataset-campanas/118-canario-HTTP-C8-R04.md`.
+El vigesimosegundo canario R04 reproduce cinco rechazos TCP activos legítimos, valida SYN/RST y añade el octavo cruce `seen` en `../07-dataset-campanas/119-canario-TCP-REFUSED-5-R04.md`.
 
 ## Grupo A: tráfico legítimo pesado
 
