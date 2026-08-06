@@ -65,4 +65,3 @@ El Sensor produjo 79 muestras: CPU 0–12.10 %, RSS constante 782,504 KiB, memor
 Cuatro episodios permiten una comparación descriptiva, no causal ni inferencial. El auditor limpio aceptó 111/145, R04 24/29, 34 faltantes, 25 coincidencias, ocho cruces y cero inválidas/advertencias.
 
 Claude dictaminó **ACEPTAR CON LÍMITES**: retransmisiones y delta sin causa, filas agrupadas por campaña y preflight fallidos conservados como no capturantes. Autoriza exclusivamente el preflight independiente `F1N-TCP-200M-R04`; no su captura ni scoring.
-
