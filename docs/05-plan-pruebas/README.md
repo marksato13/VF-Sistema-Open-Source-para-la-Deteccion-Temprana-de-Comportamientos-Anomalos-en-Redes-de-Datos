@@ -149,6 +149,7 @@ El vigesimoséptimo canario R04 completa UDP iperf3 a 25 Mbit/s, valida la secue
 El vigesimoctavo canario R04 conserva la secuencia UDP `1..86,329` en el Sensor, reproduce el déficit receptor contradictorio de un datagrama y registra el décimo cruce `seen` en `../07-dataset-campanas/125-canario-UDP-50M-R04.md`.
 El vigesimonoveno canario R04 combina HTTP, TCP y DNS con solapamiento medido, PCAP íntegro y tres filas nuevas; cierra R04 29/29 en `../07-dataset-campanas/126-canario-MIXED-LIGHT-R04.md`.
 La auditoría agregada cierra R04 con 29 episodios, 72 ventanas validation, cobertura de las catorce features, 58 ventanas con tráfico pesado y diez cruces `seen` preservados en `../07-dataset-campanas/127-auditoria-agregada-R04-F1.md`. Siguiente: preparar calibración atómica antes de abrir R05.
+La calibración atómica `PM-F1-v1` se ejecutó una sola vez y congeló el IF principal con umbral `-0.5667565423690721`; hashes, seis pipelines, estabilidad, diez cruces `seen` y sensibilidad al agrupamiento están en `../07-dataset-campanas/128-calibracion-PM-F1-v1.md`. R05 aún requiere procedimiento y revisión propios.
 
 ## Grupo A: tráfico legítimo pesado
 
