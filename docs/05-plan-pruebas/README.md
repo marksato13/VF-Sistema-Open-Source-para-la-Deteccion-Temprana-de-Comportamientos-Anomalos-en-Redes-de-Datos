@@ -151,6 +151,7 @@ El vigesimonoveno canario R04 combina HTTP, TCP y DNS con solapamiento medido, P
 La auditoría agregada cierra R04 con 29 episodios, 72 ventanas validation, cobertura de las catorce features, 58 ventanas con tráfico pesado y diez cruces `seen` preservados en `../07-dataset-campanas/127-auditoria-agregada-R04-F1.md`. Siguiente: preparar calibración atómica antes de abrir R05.
 La calibración atómica `PM-F1-v1` se ejecutó una sola vez y congeló el IF principal con umbral `-0.5667565423690721`; hashes, seis pipelines, estabilidad, diez cruces `seen` y sensibilidad al agrupamiento están en `../07-dataset-campanas/128-calibracion-PM-F1-v1.md`. R05 aún requiere procedimiento y revisión propios.
 La preparación R05 confirma 0/29 test y añade un preflight continuo versionado con nueve gates, logs atómicos y revisión adversarial en `../07-dataset-campanas/129-preparacion-R05-y-preflight-versionado.md`. Está autorizado sólo ejecutar el preflight de `DNS-VALID-10/R05`, no su captura.
+El primer canario R05 `DNS-VALID-10` fue aceptado con PCAP 20/20/20, cero drops, EVE 29/29 y una fila. Su vector repite exactamente R01–R04 y abre el primer cruce `train↔test`: se conserva como limitación de diversidad, no se deduplica ni se puntúa parcialmente. Auditor: 117/145, R05 1/29, 28 faltantes y cero inválidas/advertencias. Evidencia en `../07-dataset-campanas/130-canario-DNS-VALID-10-R05.md`. Siguiente: publicar el cierre y ejecutar sólo un preflight nuevo de `DNS-VALID-200/R05` contra el commit limpio.
 
 ## Grupo A: tráfico legítimo pesado
 
