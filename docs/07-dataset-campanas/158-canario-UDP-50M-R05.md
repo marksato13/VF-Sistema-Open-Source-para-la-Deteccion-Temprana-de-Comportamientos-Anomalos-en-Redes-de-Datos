@@ -33,7 +33,7 @@ Los bundles pasaron `sha256sum -c SHA256SUMS`. Hashes: preflight
 ## Auditoría y límites
 
 El auditor global queda en 145/145 campañas aceptadas, R05 29/29, cero celdas
-faltantes, 38 vectores duplicados, 21 cruces y cero campañas inválidas o
+faltantes, 41 vectores duplicados, 24 cruces y cero campañas inválidas o
 advertencias. El dataset está **listo para construir**, pero el cruce exacto
 UDP R03↔R05 y las ventanas autocorrelacionadas deben quedar excluidos de una
 estimación ingenua de independencia. No se ejecutó scoring ni se modificó el
