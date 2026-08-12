@@ -3,8 +3,13 @@
 Fecha: 2026-08-12. Estado: primer intento detenido por dos defectos de
 integración (permisos ejecutables del extractor y fase v2 no propagada). La
 captura produjo PCAP/EVE íntegros, pero no se acepta como dataset. Ambos
-defectos ya fueron corregidos; debe repetirse el piloto desde cero con un ID
-nuevo o archivando el artefacto fallido.
+defectos ya fueron corregidos. El artefacto fallido fue puesto en cuarentena
+en `/srv/ppi-evidence/artifacts/quarantine/` y no forma parte del dataset.
+
+El piloto de calibración `CAL-G6-DNS-MULTI-10-R01` pasó: fase `F2`, evidencia
+completa, 20 paquetes PCAP, 30 eventos EVE reconciliados, `kernel_drops=0`,
+`decoder_invalid=0`, CSV v2 con 28 columnas y una fila elegible. Queda fuera
+de train/test por `partition=excluded_calibration`.
 
 ## Orden obligatorio
 
