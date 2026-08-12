@@ -11,6 +11,13 @@ completa, 20 paquetes PCAP, 30 eventos EVE reconciliados, `kernel_drops=0`,
 `decoder_invalid=0`, CSV v2 con 28 columnas y una fila elegible. Queda fuera
 de train/test por `partition=excluded_calibration`.
 
+La batería completa de pilotos normales v2 también pasó. Perfiles aceptados:
+`DNS-MULTI-10`, `API-NORMAL-20`, `API-AUTH-FAIL-20`, `TCP-100M-V2`,
+`HTTPS-SESSIONS-V2`, `MIXED-V2`, `PING-V2`, `HTTP-404-V2`, `DNS-MIXED-V2` y
+`TCP-REFUSED-V2`. Cada uno tiene fase `F2`, evidencia completa, CSV v2 y al
+menos una fila elegible. Las filas siguen excluidas de entrenamiento por ser
+calibración.
+
 ## Orden obligatorio
 
 1. Confirmar Git limpio, volumen `/srv/ppi-evidence` montado y margen mínimo.
