@@ -78,6 +78,34 @@
         - /srv/ppi
         - /srv/ppi/files
 
+    - name: Crear directorios de la API local y su log
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: "/usr/local/lib/ppi-api", mode: "0755" }
+        - { path: "/var/log/ppi-api", mode: "0750", owner: "www-data", group: "www-data" }
+
+    - name: Instalar API local para escenarios L7
+      ansible.builtin.copy:
+        src: ../../configs/server/ppi-api.py
+        dest: /usr/local/lib/ppi-api/ppi-api.py
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Instalar unidad systemd de API local
+      ansible.builtin.copy:
+        src: ../../configs/server/ppi-api.service
+        dest: /etc/systemd/system/ppi-api.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reiniciar API local
+
     - name: Crear página de identificación del laboratorio
       ansible.builtin.copy:
         dest: /srv/ppi/index.html
@@ -165,6 +193,13 @@
       ansible.builtin.command: nginx -t
       changed_when: false
 
+    - name: Habilitar y arrancar API local
+      ansible.builtin.systemd:
+        name: ppi-api
+        enabled: true
+        state: started
+        daemon_reload: true
+
     - name: Validar configuración dnsmasq
       ansible.builtin.command: dnsmasq --test
       changed_when: false
@@ -187,6 +222,7 @@
         - dnsmasq
         - ppi-server-firewall
         - ppi-iperf3
+        - ppi-api
 
     - name: Verificar HTTP en cada dirección de servicio
       ansible.builtin.uri:
@@ -215,3 +251,9 @@
       loop: "{{ ppi_return_routes.results }}"
       loop_control:
         label: "{{ item.item }}"
+
+  handlers:
+    - name: Reiniciar API local
+      ansible.builtin.systemd:
+        name: ppi-api
+        state: restarted

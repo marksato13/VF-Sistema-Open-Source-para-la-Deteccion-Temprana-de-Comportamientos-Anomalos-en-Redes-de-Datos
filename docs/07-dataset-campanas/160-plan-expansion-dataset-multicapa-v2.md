@@ -91,6 +91,22 @@ timestamp y `episode_id`, generará CSV v2 y conservará hashes de cada entrada.
 Servicios internos requeridos: Nginx HTTPS, dnsmasq, iperf3, aplicación API de
 login y sincronización NTP. No se requiere salida a Internet.
 
+## Estado de habilitación de la API
+
+El Servidor ya dispone de Python 3.14, Nginx, dnsmasq e iperf3; no requiere
+Internet ni paquetes adicionales para la API propuesta. Se añadieron al
+repositorio `configs/server/ppi-api.py`, su unidad `ppi-api.service` y el
+proxy `/api/` de Nginx. La API usa únicamente la biblioteca estándar de Python
+y registra autenticaciones en JSONL.
+
+El despliegue remoto no se completó porque `useransible` no tiene actualmente
+permiso sudo en VM03 (`sudo: I'm sorry useransible. I'm afraid I can't do that`).
+No se modificó la VM ni se almacenaron contraseñas. Para continuar, desde la
+consola de VM03 se debe habilitar temporalmente sudo para `useransible`, ejecutar
+el playbook `ansible/playbooks/03-configurar-servicios-servidor.yml --limit
+ppi-server`, validar `systemctl is-active ppi-api` y retirar inmediatamente el
+permiso temporal. No se necesita conectar Internet.
+
 ## Criterios de aceptación
 
 Un episodio nuevo sólo entra al dataset si pasa preflight, captura íntegra,
