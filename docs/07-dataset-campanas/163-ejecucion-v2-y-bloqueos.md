@@ -1,6 +1,6 @@
 # Preparación de captura multicapa v2
 
-Fecha: 2026-08-12. Estado: preparación local completada; captura real pendiente.
+Fecha: 2026-08-12. Estado: servicios desplegados y pilotos de conectividad correctos; captura oficial pendiente.
 
 ## Ya preparado
 
@@ -12,6 +12,13 @@ Fecha: 2026-08-12. Estado: preparación local completada; captura real pendiente
   no pueden entrar al entrenamiento.
 - Escenarios de cliente `api-normal` y `api-auth-fail`, además de `dns-multi`.
 - Validación de sintaxis Bash, Python y Ansible ejecutada localmente.
+- VM03: `ppi-api` activo; `/api/health` HTTPS devuelve 200, login válido 200,
+  login inválido 401, PUT 204 y DELETE 403. Los logs JSONL de autenticación se
+  escriben correctamente.
+- VM05: `api-normal`, `api-auth-fail` y `dns-multi 10` ejecutados como pilotos;
+  DNS devolvió las cinco identidades internas esperadas.
+- VM02: Suricata activo con `kernel_drops=0`, `kernel_ifdrops=0` y
+  `decoder_invalid=0` en la verificación previa.
 
 ## Orden de ejecución pendiente
 
@@ -27,7 +34,8 @@ Fecha: 2026-08-12. Estado: preparación local completada; captura real pendiente
 
 ## Bloqueos honestos
 
-La API todavía no está desplegada porque `useransible` no tiene `sudo` remoto.
-Las matrices son planes ejecutables, no evidencia. No se afirma todavía que
+La API ya está desplegada. El permiso `sudo` total temporal fue retirado de
+VM03 después del despliegue; el sensor conserva únicamente los controladores
+restringidos previstos. Las matrices son planes ejecutables, no evidencia. No se afirma todavía que
 existan 2.000–3.000 filas ni que las features nuevas estén validadas en tráfico
 real. No se requiere Internet para estas campañas.
