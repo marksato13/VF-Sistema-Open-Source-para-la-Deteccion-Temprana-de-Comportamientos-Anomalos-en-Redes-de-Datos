@@ -8,7 +8,7 @@ TARGET_IP="${PPI_TARGET_IP:-10.30.0.10}"
 }
 
 usage() {
-  echo "Uso: $0 {http|https|http-concurrent|http-multi|http-missing|https-sessions|dns-valid|dns-nxdomain|dns-mixed|ping|tcp-refused|iperf-tcp|iperf-udp|mixed-light} argumentos" >&2
+  echo "Uso: $0 {http|https|http-concurrent|http-multi|http-missing|https-sessions|dns-valid|dns-nxdomain|dns-mixed|dns-multi|ping|tcp-refused|iperf-tcp|iperf-udp|mixed-light} argumentos" >&2
   exit 2
 }
 
@@ -130,6 +130,22 @@ case "$scenario" in
     done
     for ((i=1; i<=nxdomain_count; i++)); do
       dig +short "@$TARGET_IP" "error-legitimo-$i.ppi.lab" A
+    done
+    ;;
+  dns-multi)
+    count="${1:-}"
+    case "$count" in 4|10|50|200) ;; *) echo "ERROR: conteo dns-multi permitido: 4, 10, 50 o 200" >&2; exit 2;; esac
+    hostnames=(server.ppi.lab web.ppi.lab web-a.ppi.lab web-b.ppi.lab iperf.ppi.lab)
+    host_total="${#hostnames[@]}"
+    for ((i=1; i<=count; i++)); do
+      hostname="${hostnames[$(( (i - 1) % host_total ))]}"
+      answer="$(dig +short "@$TARGET_IP" "$hostname" A)"
+      address="$(printf '%s\n' "$answer" | grep -E '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' | head -n1)"
+      [[ -n "$address" ]] || {
+        echo "ERROR: $hostname no devolvió respuesta A desde $TARGET_IP" >&2
+        exit 1
+      }
+      printf '{"scenario":"dns-multi","query":%d,"hostname":"%s","address":"%s"}\n' "$i" "$hostname" "$address"
     done
     ;;
   ping)
