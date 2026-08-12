@@ -107,22 +107,29 @@ def main() -> int:
         )
     if args.no_cooldown and not args.pilot:
         raise SystemExit("ERROR: --no-cooldown solo se permite en un piloto")
-    if not args.pilot and (
-        args.matrix.resolve() != DEFAULT_MATRIX.resolve()
-        or args.feature_schema.resolve() != DEFAULT_FEATURE_SCHEMA.resolve()
-    ):
-        raise SystemExit("ERROR: una campaña oficial solo admite la matriz y esquema versionados por defecto")
+    v2_mode = (
+        args.matrix.resolve() == REPO / "configs/campaigns/multilayer-v2-normal.json"
+        and args.feature_schema.resolve() == REPO / "configs/features/multilayer-v2.json"
+    )
+    v1_mode = (
+        args.matrix.resolve() == DEFAULT_MATRIX.resolve()
+        and args.feature_schema.resolve() == DEFAULT_FEATURE_SCHEMA.resolve()
+    )
+    if not args.pilot and not (v1_mode or v2_mode):
+        raise SystemExit("ERROR: campaña oficial exige un par matriz/esquema versionado v1 o v2")
 
     profile = profiles[args.profile]
     scenario_args_sha256 = hashlib.sha256(
         json.dumps(profile["args"], ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
-    prefix = "CAL-G6" if args.pilot else "F1N"
+    prefix = "CAL-G6" if args.pilot else ("F2N" if v2_mode else "F1N")
     campaign_id = f"{prefix}-{args.profile}-R{args.repetition:02d}"
     purpose = "calibration" if args.pilot else "experiment"
     partition = "excluded_calibration" if args.pilot else matrix["partition_by_repetition"][str(args.repetition)]
+    phase = "F2" if v2_mode else "F1"
     plan = {
         "campaign_id": campaign_id,
+        "phase": phase,
         "purpose": purpose,
         "partition": partition,
         "profile": profile,
@@ -156,7 +163,7 @@ def main() -> int:
         )
 
     campaign_dir = artifacts_root / "campaigns" / campaign_id
-    feature_dir = artifacts_root / "features" / campaign_id
+    feature_dir = artifacts_root / ("features-v2" if v2_mode else "features") / campaign_id
     ledger_path = artifacts_root / "g6-ledger" / f"{campaign_id}.json"
     if campaign_dir.exists() or feature_dir.exists() or ledger_path.exists():
         raise SystemExit(f"ERROR: el ID ya posee artefactos: {campaign_id}")
@@ -201,8 +208,11 @@ def main() -> int:
     ]
     try:
         subprocess.run(run_command, cwd=REPO, env=env, check=True)
+        extractor_script = REPO / (
+            "scripts/features/extract_campaign_v2.sh" if v2_mode else "scripts/features/extract_campaign.sh"
+        )
         subprocess.run(
-            [str(REPO / "scripts/features/extract_campaign.sh"), campaign_id],
+            [str(extractor_script), campaign_id],
             cwd=REPO,
             env=env,
             check=True,

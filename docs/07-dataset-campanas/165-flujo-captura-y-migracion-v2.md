@@ -90,10 +90,10 @@ multilayer-v2.csv + reporte + hashes
 extract_campaign_v2.sh → build_multilayer_v2_dataset.py
 ```
 
-El pipeline v1 se conserva para reproducibilidad histórica. El lanzador v2
-actual todavía delega la ejecución al runner F1 y por eso mantiene una barrera
-de seguridad para no iniciar una campaña oficial con defaults v1; antes del
-primer piloto debe completarse esa compatibilidad del runner. El pipeline v2 se
+El pipeline v1 se conserva para reproducibilidad histórica. El lanzador v2 usa
+ahora el runner compartido con selección explícita de contrato: las campañas
+v2 reciben prefijo `F2N`, fase `F2`, salida `features-v2/` y extracción
+`extract_campaign_v2.sh`. El pipeline v2 se
 aceptará sólo después de un piloto que demuestre columnas, causalidad,
 reconciliación PCAP/EVE/logs y `episode_id`.
 
