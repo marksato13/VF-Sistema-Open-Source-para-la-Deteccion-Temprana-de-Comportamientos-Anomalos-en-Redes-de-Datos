@@ -19,6 +19,9 @@ Ejemplos:
 ./run-benign.sh iperf-tcp 100M 10
 ./run-benign.sh iperf-udp 25M 10
 ./run-benign.sh mixed-light
+./run-benign.sh dns-multi 10
+./run-benign.sh api-normal 20
+./run-benign.sh api-auth-fail 20
 ```
 
 No ampliar los valores permitidos hasta medir deltas de `kernel_drops`, `decoder.invalid` y `alert_queue_overflow`. La salida JSON de iperf3 se conserva fuera de Git junto con el manifiesto de campaña.
