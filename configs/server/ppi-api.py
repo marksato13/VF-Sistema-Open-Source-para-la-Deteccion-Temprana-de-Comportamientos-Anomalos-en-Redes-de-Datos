@@ -4,7 +4,7 @@ import json, os, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HOST, PORT = "127.0.0.1", 8090
-LOG = "/var/log/ppi-api/auth.jsonl"
+LOG = os.environ.get("PPI_API_LOG_PATH", "/var/log/ppi-api/auth.jsonl")
 
 def record(handler, result, username=""):
     os.makedirs(os.path.dirname(LOG), exist_ok=True)
@@ -28,6 +28,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/api/health": self.send_json(200, {"status":"ok","service":"ppi-api"}); return
         if self.path == "/api/profile": self.send_json(200, {"service":"ppi-api","version":"1.0"}); return
+        if self.path == "/api/error": record(self, "server_error"); self.send_json(500, {"error":"internal_error"}); return
         record(self, "not_found"); self.send_json(404, {"error":"not_found"})
     def do_POST(self):
         if self.path != "/api/login": record(self, "not_found"); self.send_json(404, {"error":"not_found"}); return
@@ -38,7 +39,7 @@ class Handler(BaseHTTPRequestHandler):
         expected = os.environ.get("PPI_API_DEMO_CREDENTIAL", "demo-pass-2026")
         if user == "demo" and credential == expected: record(self, "success", user); self.send_json(200, {"authenticated":True}); return
         record(self, "failure", user); self.send_json(401, {"authenticated":False,"error":"invalid_credentials"})
-    def do_PUT(self): self.send_json(204, {})
+    def do_PUT(self): self.send_response(204); self.end_headers()
     def do_DELETE(self): self.send_json(403, {"error":"forbidden"})
     def log_message(self, *_): pass
 

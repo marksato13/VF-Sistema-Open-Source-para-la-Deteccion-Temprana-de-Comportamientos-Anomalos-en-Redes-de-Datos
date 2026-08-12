@@ -152,12 +152,13 @@ case "$scenario" in
     count="${1:-}"
     case "$count" in 4|10|20|50) ;; *) echo "ERROR: conteo api-normal permitido: 4, 10, 20 o 50" >&2; exit 2;; esac
     for ((i=1; i<=count; i++)); do
-      case $(( (i - 1) % 5 )) in
+      case $(( (i - 1) % 6 )) in
         0) method=GET; path=/api/health; expected=200; body= ;;
         1) method=GET; path=/api/profile; expected=200; body= ;;
         2) method=PUT; path=/api/profile; expected=204; body='{"display_name":"lab"}' ;;
         3) method=DELETE; path=/api/profile; expected=403; body= ;;
         4) method=POST; path=/api/login; expected=200; body='{"username":"demo","password":"demo-pass-2026"}' ;;
+        5) method=GET; path=/api/error; expected=500; body= ;;
       esac
       if [[ "$method" == POST ]]; then
         code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' -H 'Content-Type: application/json' -X "$method" --data "$body" "http://$TARGET_IP$path")"

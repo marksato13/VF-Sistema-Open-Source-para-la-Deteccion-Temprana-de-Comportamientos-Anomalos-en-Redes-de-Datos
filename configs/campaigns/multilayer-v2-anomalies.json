@@ -4,7 +4,7 @@
   "label": "anomaly",
   "execution_policy": "evaluation_only",
   "profiles": [
-    {"id":"ANOM-SYN-RATE-50","scenario":"tcp-refused","args":["10"],"purpose":"controlled-evaluation","expected_signals":["syn_rate_10s","rst_ratio_10s"]},
+    {"id":"ANOM-SYN-RATE-10","scenario":"tcp-refused","args":["10"],"purpose":"controlled-evaluation","expected_signals":["syn_rate_10s","rst_ratio_10s"]},
     {"id":"ANOM-DNS-NX-200","scenario":"dns-nxdomain","args":["200"],"purpose":"controlled-evaluation","expected_signals":["dns_nxdomain_ratio_60s","dns_query_rate_60s"]},
     {"id":"ANOM-AUTH-FAIL-50","scenario":"api-auth-fail","args":["50"],"purpose":"controlled-evaluation","expected_signals":["http_auth_failure_ratio_60s","http_request_rate_60s"]}
   ],
