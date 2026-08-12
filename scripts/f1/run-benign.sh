@@ -8,7 +8,7 @@ TARGET_IP="${PPI_TARGET_IP:-10.30.0.10}"
 }
 
 usage() {
-  echo "Uso: $0 {http|https|http-concurrent|http-multi|http-missing|https-sessions|dns-valid|dns-nxdomain|dns-mixed|dns-multi|ping|tcp-refused|iperf-tcp|iperf-udp|mixed-light} argumentos" >&2
+  echo "Uso: $0 {http|https|http-concurrent|http-multi|http-missing|https-sessions|dns-valid|dns-nxdomain|dns-mixed|dns-multi|api-normal|api-auth-fail|ping|tcp-refused|iperf-tcp|iperf-udp|mixed-light} argumentos" >&2
   exit 2
 }
 
@@ -146,6 +146,37 @@ case "$scenario" in
         exit 1
       }
       printf '{"scenario":"dns-multi","query":%d,"hostname":"%s","address":"%s"}\n' "$i" "$hostname" "$address"
+    done
+    ;;
+  api-normal)
+    count="${1:-}"
+    case "$count" in 4|10|20|50) ;; *) echo "ERROR: conteo api-normal permitido: 4, 10, 20 o 50" >&2; exit 2;; esac
+    for ((i=1; i<=count; i++)); do
+      case $(( (i - 1) % 5 )) in
+        0) method=GET; path=/api/health; expected=200; body= ;;
+        1) method=GET; path=/api/profile; expected=200; body= ;;
+        2) method=PUT; path=/api/profile; expected=204; body='{"display_name":"lab"}' ;;
+        3) method=DELETE; path=/api/profile; expected=403; body= ;;
+        4) method=POST; path=/api/login; expected=200; body='{"username":"demo","password":"demo-pass-2026"}' ;;
+      esac
+      if [[ "$method" == POST ]]; then
+        code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' -H 'Content-Type: application/json' -X "$method" --data "$body" "http://$TARGET_IP$path")"
+      elif [[ "$method" == PUT ]]; then
+        code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' -H 'Content-Type: application/json' -X "$method" --data "$body" "http://$TARGET_IP$path")"
+      else
+        code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' -X "$method" "http://$TARGET_IP$path")"
+      fi
+      [[ "$code" == "$expected" ]] || { echo "ERROR: $method $path esperaba $expected, obtuvo $code" >&2; exit 1; }
+      printf '{"scenario":"api-normal","request":%d,"method":"%s","path":"%s","http_code":%s}\n' "$i" "$method" "$path" "$code"
+    done
+    ;;
+  api-auth-fail)
+    count="${1:-}"
+    case "$count" in 4|10|20|50) ;; *) echo "ERROR: conteo api-auth-fail permitido: 4, 10, 20 o 50" >&2; exit 2;; esac
+    for ((i=1; i<=count; i++)); do
+      code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' -H 'Content-Type: application/json' -X POST --data '{"username":"demo","password":"wrong-lab-credential"}' "http://$TARGET_IP/api/login")"
+      [[ "$code" == 401 ]] || { echo "ERROR: login fallido esperaba 401, obtuvo $code" >&2; exit 1; }
+      printf '{"scenario":"api-auth-fail","request":%d,"method":"POST","path":"/api/login","http_code":401}\n' "$i"
     done
     ;;
   ping)

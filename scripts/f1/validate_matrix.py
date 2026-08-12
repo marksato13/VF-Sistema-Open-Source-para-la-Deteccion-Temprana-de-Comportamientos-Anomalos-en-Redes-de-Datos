@@ -12,7 +12,7 @@ from pathlib import Path
 
 ALLOWED_SCENARIOS = {
     "http", "https", "http-concurrent", "http-multi", "http-missing", "https-sessions",
-    "dns-valid", "dns-nxdomain", "dns-mixed", "ping", "tcp-refused",
+    "dns-valid", "dns-nxdomain", "dns-mixed", "dns-multi", "api-normal", "api-auth-fail", "ping", "tcp-refused",
     "iperf-tcp", "iperf-udp", "mixed-light",
 }
 SAFE_ARGUMENT = re.compile(r"^[A-Za-z0-9._-]+$")
@@ -50,8 +50,9 @@ def load_and_validate(
         errors.append("warm-up oficial debe ser al menos 60 s")
 
     feature_names = {item["name"] for item in feature_schema.get("features", [])}
-    if len(feature_names) != 14:
-        errors.append(f"el esquema debe contener exactamente 14 features y contiene {len(feature_names)}")
+    expected_feature_count = 28 if feature_schema.get("schema_version") == "multilayer-v2" else 14
+    if len(feature_names) != expected_feature_count:
+        errors.append(f"el esquema debe contener exactamente {expected_feature_count} features y contiene {len(feature_names)}")
     covered: set[str] = set()
     seen_ids: set[str] = set()
     total_bytes = 0

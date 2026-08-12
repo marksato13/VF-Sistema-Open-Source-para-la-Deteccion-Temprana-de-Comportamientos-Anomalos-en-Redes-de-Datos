@@ -1,0 +1,19 @@
+{
+  "schema_version": "multilayer-v2-normal",
+  "feature_schema": "multilayer-v2",
+  "default_repetitions": 5,
+  "partition_by_repetition": {"1":"train","2":"train","3":"train","4":"validation","5":"test"},
+  "warmup_seconds": 60,
+  "settle_seconds": 9,
+  "cooldown_seconds": 30,
+  "minimum_free_after_plan_bytes": 21474836480,
+  "profiles": [
+    {"id":"DNS-MULTI-10","scenario":"dns-multi","args":["10"],"estimated_pcap_bytes":180000,"stratum":"dns-diversity","feature_coverage":["dns_query_rate_60s","unique_dns_name_ratio_60s","protocol_diversity_30s"]},
+    {"id":"API-NORMAL-20","scenario":"api-normal","args":["20"],"estimated_pcap_bytes":300000,"stratum":"api-methods","feature_coverage":["http_request_rate_60s","http_method_entropy_60s","http_status_5xx_ratio_60s"]},
+    {"id":"API-AUTH-FAIL-20","scenario":"api-auth-fail","args":["20"],"estimated_pcap_bytes":250000,"stratum":"api-auth-failure","feature_coverage":["http_auth_failure_ratio_60s","http_request_rate_60s"]},
+    {"id":"TCP-100M-V2","scenario":"iperf-tcp","args":["100M","20"],"estimated_pcap_bytes":280000000,"stratum":"tcp-heavy","feature_coverage":["tcp_retransmission_ratio_10s","flow_duration_mean_30s","tx_rx_byte_ratio_30s"]},
+    {"id":"HTTPS-SESSIONS-V2","scenario":"https-sessions","args":["20"],"estimated_pcap_bytes":1000000,"stratum":"tls-session","feature_coverage":["tls_handshake_failure_ratio_60s","tls_version_ratio_60s"]},
+    {"id":"MIXED-V2","scenario":"mixed-light","args":[],"estimated_pcap_bytes":220000000,"stratum":"multilayer-mixed","feature_coverage":["ttl_mean_10s","fragment_ratio_10s","protocol_diversity_30s","packet_rate_10s","byte_rate_10s","mean_ip_len_10s","large_ip_ratio_10s","unique_dst_ip_ratio_30s","icmp_ratio_10s","flow_attempt_rate_10s","syn_rate_10s","syn_completion_ratio_10s","rst_ratio_10s","unique_dst_port_ratio_30s","http_error_ratio_60s","dns_nxdomain_ratio_60s","tls_session_rate_60s","tcp_retransmission_ratio_10s","flow_duration_mean_30s","tx_rx_byte_ratio_30s","http_request_rate_60s","http_method_entropy_60s","http_auth_failure_ratio_60s","dns_query_rate_60s","unique_dns_name_ratio_60s","tls_handshake_failure_ratio_60s","tls_version_ratio_60s","http_status_5xx_ratio_60s"]}
+  ],
+  "known_gaps": ["L1 y L2 están fuera del alcance.","Las features v2 requieren validación contra evidencia real antes de entrenar.","Las IP .10/.11/.12 son identidades lógicas de VM03."]
+}
