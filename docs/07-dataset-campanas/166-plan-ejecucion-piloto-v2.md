@@ -18,6 +18,12 @@ La batería completa de pilotos normales v2 también pasó. Perfiles aceptados:
 menos una fila elegible. Las filas siguen excluidas de entrenamiento por ser
 calibración.
 
+El primer intento oficial `F2N-DNS-MULTI-10-R01` no se acepta: el proceso del
+orquestador terminó antes de ejecutar el cierre `stop.sh`, dejando manifiesto
+`running` y captura parcial. El sensor quedó inactivo y la evidencia fue puesta
+en cuarentena como `F2N-DNS-MULTI-10-R01-official-aborted`. No se avanzará a
+R02 ni a otro perfil hasta corregir y probar este cierre de proceso.
+
 ## Orden obligatorio
 
 1. Confirmar Git limpio, volumen `/srv/ppi-evidence` montado y margen mínimo.
