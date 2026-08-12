@@ -8,9 +8,11 @@ LOG = "/var/log/ppi-api/auth.jsonl"
 
 def record(handler, result, username=""):
     os.makedirs(os.path.dirname(LOG), exist_ok=True)
+    xff = handler.headers.get("X-Forwarded-For")
+    remote_addr = xff.split(",")[0].strip() if xff else handler.client_address[0]
     row = {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "remote_addr": handler.client_address[0], "method": handler.command,
+        "remote_addr": remote_addr, "method": handler.command,
         "path": handler.path.split("?", 1)[0], "username": username,
         "result": result,
     }

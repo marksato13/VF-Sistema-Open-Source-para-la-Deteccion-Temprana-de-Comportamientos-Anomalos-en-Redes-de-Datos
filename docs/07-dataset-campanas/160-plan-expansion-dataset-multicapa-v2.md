@@ -107,6 +107,15 @@ el playbook `ansible/playbooks/03-configurar-servicios-servidor.yml --limit
 ppi-server`, validar `systemctl is-active ppi-api` y retirar inmediatamente el
 permiso temporal. No se necesita conectar Internet.
 
+### Revisión cruzada Codex + Claude (2026-08-12)
+
+Claude Code participó en la implementación de dos correcciones acotadas, revisadas posteriormente por Codex:
+
+- `configs/server/ppi-api.py`: el registro JSONL conserva la primera dirección de `X-Forwarded-For` cuando la solicitud llega mediante Nginx; si no existe, usa la dirección del socket.
+- `configs/server/nginx-ppi.conf`: la ruta `/api/` queda publicada tanto en HTTP como en HTTPS, manteniendo el proxy hacia `127.0.0.1:8090` y las cabeceras de trazabilidad.
+
+Validaciones ejecutadas: `python3 -m py_compile configs/server/ppi-api.py`, `git diff --check` y comprobación de que existen exactamente dos bloques `location /api/` (uno por servidor). No se desplegaron cambios en las VMs. La activación remota continúa bloqueada hasta otorgar temporalmente privilegios `sudo` a `useransible` desde la consola de VM03; después deberán retirarse.
+
 ## Criterios de aceptación
 
 Un episodio nuevo sólo entra al dataset si pasa preflight, captura íntegra,
