@@ -74,10 +74,10 @@ salida                 → multilayer-v1.csv
 build_f1_dataset.py    → multilayer-v1
 ```
 
-La migración correcta debe crear un camino separado, sin sobrescribir F1:
+La migración v2 ya dispone de extracción y ensamblado separados:
 
 ```text
-run_matrix_profile_v2.py
+run_matrix_profile_v2.sh (selecciona contratos v2)
         ↓
 multilayer-v2-normal.json
         ↓
@@ -87,10 +87,13 @@ extract_multilayer_v2.py
         ↓
 multilayer-v2.csv + reporte + hashes
         ↓
-build_multilayer_v2_dataset.py
+extract_campaign_v2.sh → build_multilayer_v2_dataset.py
 ```
 
-El pipeline v1 se conserva para reproducibilidad histórica. El pipeline v2 se
+El pipeline v1 se conserva para reproducibilidad histórica. El lanzador v2
+actual todavía delega la ejecución al runner F1 y por eso mantiene una barrera
+de seguridad para no iniciar una campaña oficial con defaults v1; antes del
+primer piloto debe completarse esa compatibilidad del runner. El pipeline v2 se
 aceptará sólo después de un piloto que demuestre columnas, causalidad,
 reconciliación PCAP/EVE/logs y `episode_id`.
 
