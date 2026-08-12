@@ -76,8 +76,9 @@ L7 (3). La propuesta añade:
   `http_auth_failure_ratio_60s`, `dns_query_rate_60s`, `unique_dns_name_ratio_60s`,
   `tls_handshake_failure_ratio_60s`, `tls_version_ratio_60s`.
 
-El esquema v2 tendrá 26 features como máximo tras validar disponibilidad y
-causalidad. No se añadirá una variable sólo porque sea fácil de extraer: cada
+El contrato inicial v2 contiene **28 features**: las 14 heredadas y las 14
+variables nuevas enumeradas arriba. El número se corrigió al detectar que
+14+14 no puede producir 24 ni 26. No se añadirá una variable sólo porque sea fácil de extraer: cada
 feature deberá tener definición, unidad, ventana, fuente PCAP/EVE/log, prueba
 sintética y prueba real.
 

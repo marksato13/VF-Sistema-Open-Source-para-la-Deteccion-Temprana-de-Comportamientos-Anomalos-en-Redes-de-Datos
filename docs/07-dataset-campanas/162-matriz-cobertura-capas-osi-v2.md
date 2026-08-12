@@ -8,8 +8,8 @@ aparecer incidentalmente en un PCAP.
 
 | Capa | Estado | Evidencia o límite |
 |---|---|---|
-| L1 Física | Fuera de alcance | VMware/ESXi transporta los paquetes; no se miden señal, errores físicos ni negociación de enlace. |
-| L2 Enlace | No cubierta explícitamente | La captura trabaja sobre IP; no hay features de MAC, VLAN, ARP o errores Ethernet. |
+| L1 Física | Fuera de alcance por decisión de alcance | VMware/ESXi transporta los paquetes; no se medirán señal, errores físicos ni negociación de enlace en esta versión. |
+| L2 Enlace | Fuera de alcance por decisión de alcance | La captura se analizará desde IP; no se añadirán features de MAC, VLAN, ARP o errores Ethernet en esta versión. Podrá retomarse en una fase posterior. |
 | L3 Red | Cubierta | 6 features: tasa y bytes IP, longitud media, paquetes grandes, diversidad de IP destino e ICMP. Escenarios HTTP, DNS, ping y mezclas ya aportan tráfico real de laboratorio. |
 | L4 Transporte | Cubierta | 5 features: intentos, SYN, finalización SYN, RST y diversidad de puertos. TCP/UDP, conexiones rechazadas, iperf y HTTPS ejercitan estos casos. |
 | L5 Sesión | Parcial | Hay sesiones TCP/TLS, pero no existe una feature explícita de duración, reanudación o cierre de sesión. |
@@ -42,8 +42,8 @@ pero no permite afirmar cobertura completa del modelo OSI.
   no reutilizar las 145 campañas F1-R05.
 - Diseñar, capturar y reservar anomalías controladas para evaluación ciega;
   no deben contaminar el entrenamiento normal.
-- Tratar L2 como fuera de alcance salvo que se añada una captura específica de
-  ARP/VLAN/MAC y nuevas features; no se debe inferir desde la captura IP.
+- Mantener L1/L2 fuera del alcance; no se debe inferir cobertura de esas capas
+  desde una captura IP.
 
 La secuencia defendible es: desplegar servicios internos → validar un piloto
 por capa → revisar evidencia y causalidad → congelar normales → construir v2
