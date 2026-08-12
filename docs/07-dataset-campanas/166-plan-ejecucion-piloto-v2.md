@@ -1,7 +1,10 @@
 # Plan ordenado de ejecución v2
 
-Fecha: 2026-08-12. Estado inicial: listo para piloto, sin campañas oficiales
-masivas ejecutadas.
+Fecha: 2026-08-12. Estado: primer intento detenido por dos defectos de
+integración (permisos ejecutables del extractor y fase v2 no propagada). La
+captura produjo PCAP/EVE íntegros, pero no se acepta como dataset. Ambos
+defectos ya fueron corregidos; debe repetirse el piloto desde cero con un ID
+nuevo o archivando el artefacto fallido.
 
 ## Orden obligatorio
 

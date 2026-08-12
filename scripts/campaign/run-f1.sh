@@ -23,10 +23,11 @@ for argument in "$@"; do
 done
 
 purpose="${PPI_CAMPAIGN_PURPOSE:-experiment}"
+phase="${PPI_CAMPAIGN_PHASE:-F1}"
 warmup_seconds="${PPI_CAMPAIGN_WARMUP_SECONDS:-1}"
 [[ "$warmup_seconds" =~ ^[0-9]+$ ]] && (( warmup_seconds >= 1 && warmup_seconds <= 120 )) ||
   ppi_die "PPI_CAMPAIGN_WARMUP_SECONDS debe estar entre 1 y 120"
-"$SCRIPT_DIR/start.sh" "$id" F1 "$scenario" benign "$purpose" || exit $?
+"$SCRIPT_DIR/start.sh" "$id" "$phase" "$scenario" benign "$purpose" || exit $?
 campaign_dir="$(ppi_campaign_dir "$id")"
 campaign_closed=false
 

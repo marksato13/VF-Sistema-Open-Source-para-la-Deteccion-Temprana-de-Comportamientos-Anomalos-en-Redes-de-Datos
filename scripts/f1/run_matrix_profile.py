@@ -190,6 +190,7 @@ def main() -> int:
     env.update(
         {
             "PPI_CAMPAIGN_PURPOSE": purpose,
+            "PPI_CAMPAIGN_PHASE": phase,
             "PPI_CAMPAIGN_WARMUP_SECONDS": str(matrix["warmup_seconds"]),
             "PPI_CAMPAIGN_SETTLE_SECONDS": str(matrix["settle_seconds"]),
             "PPI_CAMPAIGN_MATRIX_SHA256": matrix_report["matrix_sha256"],
@@ -218,7 +219,12 @@ def main() -> int:
             check=True,
         )
         report_path = feature_dir / "extraction-report.json"
+        if not report_path.is_file() or report_path.stat().st_size == 0:
+            raise RuntimeError("el extractor no produjo un reporte JSON no vacío")
         extraction_report = json.loads(report_path.read_text(encoding="utf-8"))
+        expected_csv = feature_dir / ("multilayer-v2.csv" if v2_mode else "multilayer-v1.csv")
+        if not expected_csv.is_file() or expected_csv.stat().st_size == 0:
+            raise RuntimeError(f"el extractor no produjo CSV: {expected_csv}")
         if extraction_report.get("rows", 0) < 1:
             raise RuntimeError("el extractor no produjo filas")
         if not args.pilot and extraction_report.get("eligible_training_rows", 0) < 1:
