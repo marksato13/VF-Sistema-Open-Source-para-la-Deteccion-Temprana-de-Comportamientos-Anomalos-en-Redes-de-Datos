@@ -51,3 +51,9 @@ PPI_ARTIFACTS_ROOT=/srv/ppi-evidence/artifacts \
 
 El piloto usa la partición `train` sólo como clasificación provisional; no se
 congela ni se entrena hasta completar la auditoría del ciclo normal.
+
+Se añadió un cierre `EXIT` defensivo en `scripts/campaign/run-f1.sh`: si el
+escenario o el proceso termina antes de invocar explícitamente `stop.sh`, se
+intenta cerrar la captura y conservar el estado de evidencia. Las pruebas de
+sintaxis y las 25 pruebas v2 pasan; debe repetirse `R01` para validar este
+comportamiento en una captura real.

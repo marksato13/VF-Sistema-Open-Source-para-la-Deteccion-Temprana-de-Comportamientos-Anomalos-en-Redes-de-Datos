@@ -31,12 +31,22 @@ warmup_seconds="${PPI_CAMPAIGN_WARMUP_SECONDS:-1}"
 campaign_dir="$(ppi_campaign_dir "$id")"
 campaign_closed=false
 
+close_on_exit() {
+  local rc=$?
+  if [[ "$campaign_closed" == false && -d "$PPI_ACTIVE_LOCK" ]]; then
+    "$SCRIPT_DIR/stop.sh" "$id" "$rc" >/dev/null 2>&1 || true
+    campaign_closed=true
+  fi
+  return "$rc"
+}
+
 close_on_signal() {
   if [[ "$campaign_closed" == false && -d "$PPI_ACTIVE_LOCK" ]]; then
     "$SCRIPT_DIR/stop.sh" "$id" 130 || true
   fi
   exit 130
 }
+trap close_on_exit EXIT
 trap close_on_signal HUP INT TERM
 
 # F1 final usa 60 s para completar las ventanas causales; calibración usa 1 s.
