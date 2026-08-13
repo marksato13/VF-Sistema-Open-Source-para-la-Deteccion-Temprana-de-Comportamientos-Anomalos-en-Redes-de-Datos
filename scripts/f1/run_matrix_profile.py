@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -158,6 +159,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pilot", action="store_true", help="Marca propósito calibration y omite el gate global")
     parser.add_argument("--no-cooldown", action="store_true", help="Solo permitido con --pilot")
     parser.add_argument("--dry-run", action="store_true", help="Valida e imprime el plan sin ejecutar")
+    parser.add_argument("--attempt-suffix", default="", help="sufijo seguro para reintento de captura (p.ej. B)")
     return parser.parse_args()
 
 
@@ -191,8 +193,11 @@ def main() -> int:
     scenario_args_sha256 = hashlib.sha256(
         json.dumps(profile["args"], ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+    if args.attempt_suffix and not re.fullmatch(r"[A-Z0-9]{1,4}", args.attempt_suffix):
+        raise SystemExit("ERROR: --attempt-suffix debe ser 1-4 caracteres A-Z/0-9")
     prefix = "CAL-G6" if args.pilot else ("F2N" if v2_mode else "F1N")
-    campaign_id = f"{prefix}-{args.profile}-R{args.repetition:02d}"
+    suffix = f"-{args.attempt_suffix}" if args.attempt_suffix else ""
+    campaign_id = f"{prefix}-{args.profile}-R{args.repetition:02d}{suffix}"
     purpose = "calibration" if args.pilot else "experiment"
     partition = "excluded_calibration" if args.pilot else matrix["partition_by_repetition"][str(args.repetition)]
     phase = "F2" if v2_mode else "F1"
