@@ -11,8 +11,9 @@ PROFILES={
  "ANOM-AUTH-FAIL-50":("api-auth-fail",["50"],"http_auth_failure_ratio_60s,http_request_rate_60s"),
 }
 def main():
- p=argparse.ArgumentParser(); p.add_argument('--profile',required=True,choices=PROFILES); p.add_argument('--attempt-suffix',default='B'); a=p.parse_args()
- scenario,args,signals=PROFILES[a.profile]; cid=f"F2A-{a.profile}-E01-{a.attempt_suffix}"
+ p=argparse.ArgumentParser(); p.add_argument('--profile',required=True,choices=PROFILES); p.add_argument('--episode',type=int,default=1); p.add_argument('--attempt-suffix',default='B'); a=p.parse_args()
+ if not 1 <= a.episode <= 99: raise SystemExit('episode debe estar entre 1 y 99')
+ scenario,args,signals=PROFILES[a.profile]; cid=f"F2A-{a.profile}-E{a.episode:02d}-{a.attempt_suffix}"
  root=Path(os.environ.get('PPI_ARTIFACTS_ROOT','/srv/ppi-evidence/artifacts')).resolve(); cdir=root/'campaigns'/cid; fdir=root/'features-v2'/cid
  if cdir.exists() or fdir.exists(): raise SystemExit(f'ya existe evidencia: {cid}')
  env=os.environ.copy(); env.update(PPI_CAMPAIGN_PURPOSE='evaluation',PPI_CAMPAIGN_PHASE='F2',PPI_CAMPAIGN_WARMUP_SECONDS='60',PPI_CAMPAIGN_SETTLE_SECONDS='9',PPI_CAMPAIGN_PARTITION='evaluation_only',PPI_ARTIFACTS_ROOT=str(root))
