@@ -81,3 +81,9 @@ El artefacto queda en la partición provisional `train` y todavía no se
 congela el dataset. La fila se conserva en
 `/srv/ppi-evidence/artifacts/features-v2/F2N-DNS-MULTI-10-R01-B/`; las
 campañas abortadas anteriores siguen en cuarentena y no se mezclan.
+
+El segundo piloto oficial `F2N-API-NORMAL-20-R01-B` también fue aceptado:
+`status=completed`, `phase=F2`, código de escenario 0, evidencia completa,
+PCAP/EVE reconciliados, cero pérdidas del kernel y una ventana v2 elegible.
+La fila contiene tráfico HTTP legítimo con métodos variados y sin respuestas
+5xx, y queda provisionalmente en `train`.
