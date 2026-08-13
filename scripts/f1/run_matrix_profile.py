@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -19,6 +20,73 @@ DEFAULT_MATRIX = REPO / "configs/campaigns/f1-normal-v2.json"
 DEFAULT_FEATURE_SCHEMA = REPO / "configs/features/multilayer-v1.json"
 STORAGE_CONTRACT = REPO / "configs/storage/evidence-v1.json"
 OFFICIAL_PRE_CAPTURE_QUIET_SECONDS = 70
+# Margen para que run-f1.sh cierre por su cuenta (settle_seconds <= 15 más la
+# transferencia del PCAP rotado, con techo ~2 GiB, sobre la red local del
+# laboratorio) antes de escalar a kill() en el reenvío de terminación.
+CHILD_TERMINATION_GRACE_SECONDS = 300
+
+
+class TerminationRequested(RuntimeError):
+    """Señal de terminación recibida mientras la campaña está en curso."""
+
+    def __init__(self, signum: int) -> None:
+        super().__init__(f"señal de terminación recibida: {signum}")
+        self.signum = signum
+
+
+def _install_termination_handler() -> None:
+    def _handler(signum: int, _frame: object) -> None:
+        raise TerminationRequested(signum)
+
+    signal.signal(signal.SIGTERM, _handler)
+
+
+def _force_close_if_still_active(campaign_id: str, artifacts_root: Path) -> None:
+    """Red de seguridad: si run-f1.sh no llegó a cerrar la campaña (por
+    ejemplo porque el proceso fue interrumpido antes de su propio trap),
+    fuerza scripts/campaign/stop.sh para liberar evidencia y el bloqueo
+    activo en vez de dejar el manifiesto en "running" indefinidamente."""
+    id_file = artifacts_root / "campaigns" / ".active" / "id"
+    try:
+        active_id = id_file.read_text(encoding="utf-8").strip()
+    except OSError:
+        return
+    if active_id != campaign_id:
+        return
+    print(
+        f"AVISO: {campaign_id} seguía activo tras una interrupción; "
+        "forzando scripts/campaign/stop.sh para cerrar evidencia y bloqueo",
+        file=sys.stderr,
+        flush=True,
+    )
+    subprocess.run(
+        [str(REPO / "scripts/campaign/stop.sh"), campaign_id, "143"],
+        cwd=REPO,
+        check=False,
+    )
+
+
+def run_campaign_or_close(cmd: list, campaign_id: str, artifacts_root: Path, env: dict) -> None:
+    """Ejecuta run-f1.sh; si el propio orquestador recibe una señal de
+    terminación mientras el hijo sigue en curso, la reenvía para que el
+    trap de run-f1.sh pueda invocar stop.sh, espera un cierre acotado y,
+    si de todos modos queda activa, fuerza el cierre como último recurso."""
+    process = subprocess.Popen(cmd, cwd=REPO, env=env)
+    try:
+        returncode = process.wait()
+    except (KeyboardInterrupt, TerminationRequested):
+        if process.poll() is None:
+            process.send_signal(signal.SIGTERM)
+            try:
+                process.wait(timeout=CHILD_TERMINATION_GRACE_SECONDS)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+        _force_close_if_still_active(campaign_id, artifacts_root)
+        raise
+    if returncode != 0:
+        _force_close_if_still_active(campaign_id, artifacts_root)
+        raise subprocess.CalledProcessError(returncode, cmd)
 
 
 def git(*args: str) -> str:
@@ -94,6 +162,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    _install_termination_handler()
     args = parse_args()
     artifacts_root = selected_artifacts_root()
     matrix, matrix_report = load_and_validate(args.matrix, args.feature_schema, artifacts_root)
@@ -208,7 +277,7 @@ def main() -> int:
         *profile["args"],
     ]
     try:
-        subprocess.run(run_command, cwd=REPO, env=env, check=True)
+        run_campaign_or_close(run_command, campaign_id, artifacts_root, env)
         extractor_script = REPO / (
             "scripts/features/extract_campaign_v2.sh" if v2_mode else "scripts/features/extract_campaign.sh"
         )
@@ -229,7 +298,12 @@ def main() -> int:
             raise RuntimeError("el extractor no produjo filas")
         if not args.pilot and extraction_report.get("eligible_training_rows", 0) < 1:
             raise RuntimeError("la campaña oficial no produjo filas elegibles para entrenamiento")
-    except (subprocess.CalledProcessError, RuntimeError, KeyboardInterrupt) as exc:
+    except (Exception, KeyboardInterrupt) as exc:
+        # Red de seguridad final: cualquier fallo o interrupción no anticipados
+        # (no solo los tipos originalmente previstos) deben forzar el cierre
+        # de una campaña que haya quedado activa y marcar el ledger failed en
+        # vez de dejarlo "running" de forma silenciosa.
+        _force_close_if_still_active(campaign_id, artifacts_root)
         ledger.update(
             {
                 "status": "failed",
