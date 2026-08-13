@@ -62,3 +62,22 @@ La revisión posterior endureció también `stop.sh`: ante un fallo de cierre
 marca `close_failed` y conserva deliberadamente el lock, evitando iniciar una
 nueva captura sobre evidencia remota incierta. Los intentos oficiales
 abortados permanecen en cuarentena y no cuentan para el dataset.
+
+## Primer piloto oficial aceptado (R01-B)
+
+El piloto `F2N-DNS-MULTI-10-R01-B` se ejecutó con el orquestador persistente
+en `tmux`, usando el sufijo de intento `B` para evitar reutilizar evidencia
+de los intentos abortados. El resultado superó el gate:
+
+- manifiesto `status=completed`, `phase=F2`, `scenario_exit_code=0`;
+- `evidence.complete=true`, PCAP remoto/local verificado (2.300 bytes, 20
+  paquetes), `kernel_drops=0` y cero fallos de validación;
+- 30 eventos EVE reconciliados y 53 muestras del sensor, sin errores de
+  `stderr`;
+- extracción `multilayer-v2` con 28 columnas y una ventana elegible para
+  entrenamiento (`rows=1`, `eligible_training_rows=1`).
+
+El artefacto queda en la partición provisional `train` y todavía no se
+congela el dataset. La fila se conserva en
+`/srv/ppi-evidence/artifacts/features-v2/F2N-DNS-MULTI-10-R01-B/`; las
+campañas abortadas anteriores siguen en cuarentena y no se mezclan.
