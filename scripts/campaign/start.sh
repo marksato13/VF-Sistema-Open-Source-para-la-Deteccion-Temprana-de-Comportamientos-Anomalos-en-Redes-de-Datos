@@ -26,7 +26,7 @@ ppi_validate_id "$id"
 [[ "$traffic_class" =~ ^[a-z][a-z0-9_-]*$ ]] || ppi_die "clase de tráfico inválida"
 [[ "$purpose" =~ ^[a-z][a-z0-9_-]*$ ]] || ppi_die "propósito inválido"
 case "$campaign_partition" in
-  train|validation|test|excluded_calibration|unassigned) ;;
+  train|validation|test|excluded_calibration|evaluation_only|unassigned) ;;
   *) ppi_die "partición de campaña inválida" ;;
 esac
 [[ "$warmup_seconds" =~ ^[0-9]+$ ]] && (( warmup_seconds >= 1 && warmup_seconds <= 120 )) ||
