@@ -21,9 +21,57 @@ active_id="$(cat "$PPI_ACTIVE_LOCK/id")"
 campaign_dir="$(ppi_campaign_dir "$id")"
 [[ -d "$campaign_dir" ]] || ppi_die "no existe $campaign_dir"
 
+# Red de seguridad: bajo "set -e" cualquier comando remoto/local que falle a
+# partir de aquí (sensor inalcanzable, jq sin datos, tar/tcpdump, etc.) aborta
+# el script de inmediato. Sin este trap, un fallo a mitad de camino dejaba
+# manifest.json en "running" para siempre y el bloqueo activo silenciosamente
+# vigente, exactamente el defecto que produjo el primer aborto oficial
+# (docs/07-dataset-campanas/166-plan-ejecucion-piloto-v2.md). El trap marca
+# un estado terminal explícito sólo si el cierre normal (más abajo) no llegó
+# a escribirlo, nunca lo pisa, y deliberadamente NO libera PPI_ACTIVE_LOCK:
+# es más seguro bloquear una nueva captura que arriesgar una segunda captura
+# concurrente sobre un estado remoto incierto.
+finalize_manifest_close_failed() {
+  [[ -f "$campaign_dir/manifest.json" ]] || return 0
+  current_status="$(jq -r '.status // "running"' "$campaign_dir/manifest.json" 2>/dev/null || echo running)"
+  [[ "$current_status" == "running" ]] || return 0
+  manifest_error_tmp="$campaign_dir/manifest.json.tmp.error"
+  if jq \
+    --arg status "close_failed" \
+    --arg ended_at "$(date --iso-8601=seconds)" \
+    --arg ended_at_utc "$(date --utc --iso-8601=seconds)" \
+    --argjson scenario_exit_code "$scenario_exit_code" \
+    '. + {status: $status, ended_at: $ended_at, ended_at_utc: $ended_at_utc, scenario_exit_code: $scenario_exit_code}' \
+    "$campaign_dir/manifest.json" > "$manifest_error_tmp" 2>/dev/null; then
+    mv "$manifest_error_tmp" "$campaign_dir/manifest.json"
+  else
+    rm -f "$manifest_error_tmp"
+  fi
+}
+
+on_stop_error() {
+  local rc=$?
+  trap - ERR
+  finalize_manifest_close_failed
+  echo "ERROR: stop.sh no completó el cierre de $id (rc=$rc); el bloqueo activo se conserva a propósito. Revise evidencia parcial y estado remoto antes de reintentar." >&2
+  exit "$rc"
+}
+trap on_stop_error ERR
+
+# ppi_die() sale con "exit 1" explícito, lo que bash NO trata como un
+# comando fallido a efectos del trap ERR de arriba: sin este envoltorio,
+# las comprobaciones de consistencia de más abajo (segundos de espera
+# inválidos, sampler ajeno, sampler que no se detiene) dejarían el
+# manifiesto en "running" igual que el defecto original.
+stop_die() {
+  trap - ERR
+  finalize_manifest_close_failed
+  ppi_die "$*"
+}
+
 settle_seconds="${PPI_CAMPAIGN_SETTLE_SECONDS:-9}"
 [[ "$settle_seconds" =~ ^[0-9]+$ ]] && (( settle_seconds <= 15 )) ||
-  ppi_die "PPI_CAMPAIGN_SETTLE_SECONDS debe estar entre 0 y 15"
+  stop_die "PPI_CAMPAIGN_SETTLE_SECONDS debe estar entre 0 y 15"
 sleep "$settle_seconds"
 
 ppi_ssh "$PPI_SENSOR_IP" "sudo -n /usr/local/sbin/ppi-pcap-control stop '$id'" \

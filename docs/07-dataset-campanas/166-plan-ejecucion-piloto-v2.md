@@ -57,3 +57,8 @@ escenario o el proceso termina antes de invocar explícitamente `stop.sh`, se
 intenta cerrar la captura y conservar el estado de evidencia. Las pruebas de
 sintaxis y las 25 pruebas v2 pasan; debe repetirse `R01` para validar este
 comportamiento en una captura real.
+
+La revisión posterior endureció también `stop.sh`: ante un fallo de cierre
+marca `close_failed` y conserva deliberadamente el lock, evitando iniciar una
+nueva captura sobre evidencia remota incierta. Los intentos oficiales
+abortados permanecen en cuarentena y no cuentan para el dataset.

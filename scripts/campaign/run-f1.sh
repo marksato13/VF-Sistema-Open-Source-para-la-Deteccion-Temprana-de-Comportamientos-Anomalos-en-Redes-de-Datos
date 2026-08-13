@@ -29,21 +29,38 @@ warmup_seconds="${PPI_CAMPAIGN_WARMUP_SECONDS:-1}"
   ppi_die "PPI_CAMPAIGN_WARMUP_SECONDS debe estar entre 1 y 120"
 "$SCRIPT_DIR/start.sh" "$id" "$phase" "$scenario" benign "$purpose" || exit $?
 campaign_dir="$(ppi_campaign_dir "$id")"
+
 campaign_closed=false
+stop_rc=0
+scenario_rc=1
+
+# Cierra la campaña como máximo una vez, sin importar el resultado del
+# primer intento. "campaign_closed" se marca antes de invocar stop.sh (no
+# solo cuando tiene éxito) para que un stop.sh fallido no dispare una
+# segunda invocación desde el trap EXIT: reintentar ciegamente sobre
+# evidencia ya tocada (p. ej. "mkdir" en campaign_dir/pcap) es inseguro.
+# El trap EXIT queda como red de seguridad para cualquier salida (normal,
+# señal atrapable o un "exit" futuro no previsto) que no haya pasado por
+# aquí; no cubre SIGKILL, que ningún shell puede atrapar.
+close_campaign() {
+  local close_rc="$1"
+  [[ "$campaign_closed" == false ]] || return 0
+  campaign_closed=true
+  [[ -d "$PPI_ACTIVE_LOCK" ]] || return 0
+  "$SCRIPT_DIR/stop.sh" "$id" "$close_rc"
+  stop_rc=$?
+  return "$stop_rc"
+}
 
 close_on_exit() {
   local rc=$?
-  if [[ "$campaign_closed" == false && -d "$PPI_ACTIVE_LOCK" ]]; then
-    "$SCRIPT_DIR/stop.sh" "$id" "$rc" >/dev/null 2>&1 || true
-    campaign_closed=true
-  fi
+  close_campaign "$rc" || true
   return "$rc"
 }
 
 close_on_signal() {
-  if [[ "$campaign_closed" == false && -d "$PPI_ACTIVE_LOCK" ]]; then
-    "$SCRIPT_DIR/stop.sh" "$id" 130 || true
-  fi
+  close_campaign 130
+  trap - HUP INT TERM EXIT
   exit 130
 }
 trap close_on_exit EXIT
@@ -57,9 +74,7 @@ ppi_ssh "$PPI_CLIENT_IP" "$remote_command" \
   2> "$campaign_dir/scenario-stderr.txt"
 scenario_rc=$?
 
-"$SCRIPT_DIR/stop.sh" "$id" "$scenario_rc"
-stop_rc=$?
-(( stop_rc == 0 )) && campaign_closed=true
-trap - HUP INT TERM
+close_campaign "$scenario_rc"
+trap - HUP INT TERM EXIT
 (( stop_rc == 0 )) || exit "$stop_rc"
 exit "$scenario_rc"
