@@ -47,6 +47,35 @@ def ethernet_ipv4(
     return ethernet + ip_header + transport + payload
 
 
+def ethernet_ipv4_with_flags(
+    src_ip: str,
+    dst_ip: str,
+    protocol: int,
+    transport: bytes,
+    payload: bytes = b"",
+    ttl: int = 64,
+    flags_and_fragment_offset: int = 0x4000,
+) -> bytes:
+    """Igual que ``ethernet_ipv4`` pero permite fijar el campo IP flags/fragment-offset
+    explícitamente (por defecto DF=1, sin fragmentar, igual que ``ethernet_ipv4``)."""
+    total_length = 20 + len(transport) + len(payload)
+    ip_header = struct.pack(
+        "!BBHHHBBH4s4s",
+        0x45,
+        0,
+        total_length,
+        1,
+        flags_and_fragment_offset,
+        ttl,
+        protocol,
+        0,
+        socket.inet_aton(src_ip),
+        socket.inet_aton(dst_ip),
+    )
+    ethernet = bytes.fromhex("00112233445566778899aabb0800")
+    return ethernet + ip_header + transport + payload
+
+
 def tcp_segment(src_port: int, dst_port: int, flags: int, ip_length: int, seq: int = 0) -> tuple[bytes, bytes]:
     header = struct.pack("!HHIIBBHHH", src_port, dst_port, seq, 0, 5 << 4, flags, 65535, 0, 0)
     return header, bytes(max(0, ip_length - 20 - len(header)))
@@ -222,6 +251,79 @@ class MultilayerV2FeatureTests(unittest.TestCase):
         # El HTTP 500 de t=1011 queda fuera de la ventana causal de la primera fila.
         second = next(row for row in rows if row["window_end_utc"] > first["window_end_utc"])
         self.assertGreater(second["http_status_5xx_ratio_60s"], 0.0)
+
+    def test_fragment_ratio_10s_reports_intermediate_value(self) -> None:
+        # Caso positivo: 1 paquete con IP_FLAG_MF activo entre 4 paquetes totales
+        # dentro de la misma ventana de 10s -> ratio = 1/4 = 0.25 (ni 0.0 ni 1.0).
+        network = ipaddress.ip_network("10.20.0.0/24")
+        frames: list[tuple[float, bytes]] = []
+
+        udp, payload = udp_segment(51000, 9000, 80)
+        frames.append(
+            (
+                2001.0,
+                ethernet_ipv4_with_flags(
+                    self.client,
+                    self.server,
+                    17,
+                    udp,
+                    payload,
+                    flags_and_fragment_offset=extractor.IP_FLAG_MF,
+                ),
+            )
+        )
+        for offset, port in enumerate((9001, 9002, 9003), start=1):
+            udp, payload = udp_segment(51000 + offset, port, 80)
+            frames.append(
+                (2001.0 + offset, ethernet_ipv4_with_flags(self.client, self.server, 17, udp, payload))
+            )
+
+        pcap_path = self.directory / "fragment.pcap"
+        write_pcap(pcap_path, frames)
+
+        packets = extractor.load_packet_observations([pcap_path], network)
+        rows = extractor.build_rows("FRAG-TEST", packets, [])
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["packet_count_10s"], 4)
+        self.assertAlmostEqual(row["fragment_ratio_10s"], 0.25)
+
+    def test_tls_handshake_failure_ratio_60s_reports_intermediate_value(self) -> None:
+        # Caso positivo: 1 evento TLS sin "version" (incompleto) entre 3 eventos TLS
+        # totales dentro de la misma ventana de 60s -> ratio = 1/3 (ni 0.0 ni 1.0).
+        network = ipaddress.ip_network("10.20.0.0/24")
+        events = [
+            {
+                "timestamp": iso_timestamp(5001.0),
+                "event_type": "tls",
+                "src_ip": self.client,
+                "dest_ip": self.server,
+                "tls": {},
+            },
+            {
+                "timestamp": iso_timestamp(5001.1),
+                "event_type": "tls",
+                "src_ip": self.client,
+                "dest_ip": self.server,
+                "tls": {"version": "TLS 1.2"},
+            },
+            {
+                "timestamp": iso_timestamp(5001.2),
+                "event_type": "tls",
+                "src_ip": self.client,
+                "dest_ip": self.server,
+                "tls": {"version": "TLS 1.3"},
+            },
+        ]
+        eve_path = self.directory / "tls_partial.jsonl"
+        eve_path.write_text("".join(json.dumps(item) + "\n" for item in events), encoding="utf-8")
+
+        apps = extractor.load_app_observations(eve_path, network)
+        rows = extractor.build_rows("TLS-PARTIAL", [], apps)
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["tls_observation_count_60s"], 3)
+        self.assertAlmostEqual(row["tls_handshake_failure_ratio_60s"], 1 / 3)
 
     def test_missing_signals_degrade_to_zero(self) -> None:
         network = ipaddress.ip_network("10.20.0.0/24")
