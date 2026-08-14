@@ -17,6 +17,7 @@ readonly PPI_KALI_IP="${PPI_KALI_IP:-10.10.10.40}"
 readonly PPI_CLIENT_IP="${PPI_CLIENT_IP:-10.10.10.50}"
 
 PPI_SSH_OPTIONS=(
+  -F /dev/null
   -i "$PPI_SSH_KEY"
   -o BatchMode=yes
   -o ConnectTimeout=8

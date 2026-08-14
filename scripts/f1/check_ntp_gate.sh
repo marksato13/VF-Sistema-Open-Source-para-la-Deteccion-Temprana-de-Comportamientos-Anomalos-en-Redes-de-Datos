@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# LC_ALL=C evita que awk formatee decimales con coma en locales como
+# es_ES.UTF-8 (LC_NUMERIC), lo que rompía la validación de offset de
+# check_timesyncd() para hosts sin chronyc (Kali) con un falso "offset NTP
+# inválido" pese a un NTP realmente sincronizado.
+export LC_ALL=C
+
 readonly PPI_SSH_KEY="${PPI_SSH_KEY:-/home/m4rk/.ssh/id_ed25519_ppi_ansible}"
 readonly PPI_SSH_USER="${PPI_SSH_USER:-useransible}"
 readonly PPI_SENSOR_IP="${PPI_SENSOR_IP:-10.10.10.20}"
@@ -10,6 +16,7 @@ readonly PPI_CLIENT_IP="${PPI_CLIENT_IP:-10.10.10.50}"
 readonly MAX_ABS_OFFSET_SECONDS="${PPI_NTP_MAX_ABS_OFFSET_SECONDS:-0.1}"
 
 ssh_options=(
+  -F /dev/null
   -i "$PPI_SSH_KEY"
   -o BatchMode=yes
   -o ConnectTimeout=8

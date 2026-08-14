@@ -8,7 +8,7 @@ TARGET_IP="${PPI_TARGET_IP:-10.30.0.10}"
 }
 
 usage() {
-  echo "Uso: $0 {http|https|http-concurrent|http-multi|http-missing|https-sessions|dns-valid|dns-nxdomain|dns-mixed|dns-multi|api-normal|api-auth-fail|ping|tcp-refused|iperf-tcp|iperf-udp|mixed-light} argumentos" >&2
+  echo "Uso: $0 {http|https|http-concurrent|http-multi|http-missing|https-sessions|dns-valid|dns-nxdomain|dns-mixed|dns-multi|api-normal|api-auth-fail|ping|tcp-refused|iperf-tcp|iperf-udp|frag-udp|mixed-light} argumentos" >&2
   exit 2
 }
 
@@ -215,6 +215,13 @@ case "$scenario" in
     case "$rate" in 1M|10M|25M|50M) ;; *) echo "ERROR: bitrate UDP permitido: 1M, 10M, 25M o 50M" >&2; exit 2;; esac
     require_duration "$duration"
     iperf3 -c "$TARGET_IP" -u -b "$rate" -t "$duration" -J
+    ;;
+  frag-udp)
+    length="${1:-}"
+    duration="${2:-}"
+    case "$length" in 2000|3000) ;; *) echo "ERROR: longitud UDP permitida: 2000 o 3000 bytes" >&2; exit 2;; esac
+    require_duration "$duration"
+    iperf3 -c "$TARGET_IP" -u -b 5M -l "$length" -t "$duration" -J
     ;;
   mixed-light)
     [[ $# == 0 ]] || { echo "ERROR: mixed-light no acepta argumentos" >&2; exit 2; }
