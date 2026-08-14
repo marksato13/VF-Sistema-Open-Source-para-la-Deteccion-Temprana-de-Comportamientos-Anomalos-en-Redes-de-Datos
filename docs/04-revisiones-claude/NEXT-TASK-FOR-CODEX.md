@@ -193,12 +193,66 @@ tls-handshake-fail)
 
 ---
 
+## Tarea 5 — Investigar por qué el pipeline de modelado no aprovecha la separación univariante existente (sin tocar el dataset)
+
+**Objetivo:** explicar la brecha entre la separación univariante fuerte que ya existe en 18 de las 28 features oficiales y el AUC multivariante bajo del modelo (0.6007 por ventana, 0/12 por episodio), antes de asumir que la causa es "falta de datos".
+
+**Motivo:** hice un análisis rápido, no destructivo (solo lectura de `artifacts/dataset/multilayer-v2-normal.csv` y `-anomalies.csv`, sin tocar nada), restringido a las 28 features del esquema oficial (`configs/features/multilayer-v2.json`). Resultado (Cohen's d aproximado con medias/desviación pooled entre normal y anomalía, sin ajustar por correlación entre features):
+
+- **3/28 constantes en ambas clases** (ya cubiertas en Tareas 3-4): `fragment_ratio_10s`, `tls_handshake_failure_ratio_60s`, `http_status_5xx_ratio_60s`.
+- **18/28 con separación univariante notable (d>0.5)**, varias muy fuertes: `large_ip_ratio_10s` d=1.60, `mean_ip_len_10s` d=1.57, `flow_duration_mean_30s` d=1.36, `dns_nxdomain_ratio_60s` d=1.32, `byte_rate_10s` d=1.23, `packet_rate_10s` d=1.21, `flow_attempt_rate_10s` d=1.19, `dns_query_rate_60s` d=1.17, `unique_dns_name_ratio_60s` d=0.94, `http_request_rate_60s` d=0.74, `http_auth_failure_ratio_60s` d=0.70, `tls_version_ratio_60s` d=0.69, `rst_ratio_10s` d=0.68, `syn_rate_10s` d=0.68, `tls_session_rate_60s` d=0.66, `icmp_ratio_10s` d=0.64, `unique_dst_ip_ratio_30s` d=0.56, `http_method_entropy_60s` d=0.53.
+- **7/28 con separación débil (d<0.5):** `http_error_ratio_60s`, `ttl_mean_10s`, `protocol_diversity_30s`, `tcp_retransmission_ratio_10s`, `unique_dst_port_ratio_30s`, `syn_completion_ratio_10s`, `tx_rx_byte_ratio_30s`.
+
+Con esta cantidad de señal univariante, un AUC multivariante de apenas 0.6007 es sospechoso. No sé todavía si la causa es del **pipeline** (escalado ausente, hiperparámetros de Isolation Forest, redundancia/correlación entre las 18 features separables) o si es genuinamente un techo por **composición de la muestra** (18 ventanas anómalas de solo 3 familias tipo flood, correlacionadas dentro de episodio). Esta tarea es para acotarlo con evidencia — no para "arreglar" el modelo oficial todavía.
+
+**Archivos a revisar (diagnóstico, no reemplazar nada oficial):**
+- `scripts/modeling/train_multilayer_v2.py` (`episode_mean()`, ajuste de `IsolationForest(n_estimators=500, contamination='auto', max_features=1.0, random_state=20260813)`, umbral por percentil de `validation`).
+- `artifacts/dataset/multilayer-v2-normal.csv`, `multilayer-v2-anomalies.csv`, `multilayer-v2-model-report-expanded.json`.
+
+**Análisis exactos a realizar (todos de solo lectura/diagnóstico):**
+
+1. **Escalado.** Confirma si `train_multilayer_v2.py` aplica `StandardScaler`/equivalente antes de `IsolationForest.fit()`. Si no lo hace, en un script *experimental aparte* prueba si escalar las 28 features cambia el AUC. Reporta la cifra exacta, no la estimes.
+2. **`max_samples`.** Con solo 44 filas de train, revisa qué valor efectivo toma `max_samples` (por defecto `min(256, n_samples)` en sklearn → 44 aquí, es decir cada árbol ve casi siempre las mismas 44 filas, reduciendo la diversidad entre los 500 árboles). Prueba con un `max_samples` explícito menor (p. ej. 32) en el mismo script experimental y reporta el efecto.
+3. **Redundancia entre features.** Calcula la matriz de correlación (Pearson) entre las 18 features con separación univariante notable, sobre `train`+`validation` únicamente (nunca sobre `test`). Si varias están altamente correlacionadas (p. ej. `packet_rate_10s`/`byte_rate_10s`/conteos derivados todos del mismo volumen de tráfico), documenta cuántas dimensiones *independientes* de señal existen realmente — puede que "18 features separables" sean en la práctica 4-5 señales independientes.
+4. **Selección/reducción de features (solo diagnóstico).** En el script experimental, entrena variantes de Isolation Forest usando únicamente las top-N features por separación univariante (N=5, 10, 15) y compara AUC/AP contra el modelo de 28 features. Esto es solo diagnóstico — no se declara como nuevo modelo oficial.
+5. **Reconfirmar la dilución por episodio.** Cuantifica cuántas de las 18 ventanas anómalas quedan "diluidas" cuando `episode_mean()` las promedia con ventanas de cola/calma del mismo episodio (fork previo ya confirmó que la agregación por episodio da peor resultado — 0/12 vs 7/18 por ventana; esta tarea es cuantificar el mecanismo, no repetir la comprobación de que existe).
+
+**Comandos exactos:**
+```bash
+cd /home/m4rk/Documentos/pronteacomopepa/vf-sistema-final
+# Crea un script experimental NUEVO, no toques train_multilayer_v2.py:
+# scripts/modeling/experiments/diagnose_v2_pipeline.py
+python3 scripts/modeling/experiments/diagnose_v2_pipeline.py \
+  --normal artifacts/dataset/multilayer-v2-normal.csv \
+  --anomalies artifacts/dataset/multilayer-v2-anomalies.csv \
+  --schema configs/features/multilayer-v2.json \
+  --output artifacts/dataset/multilayer-v2-pipeline-diagnosis.json
+```
+
+**Criterios de aceptación:**
+- El modelo oficial congelado (`train_multilayer_v2.py` y `multilayer-v2-model-report-expanded.json`) no se modifica ni se sobrescribe.
+- El script experimental es nuevo, vive en `scripts/modeling/experiments/`, y está marcado explícitamente como diagnóstico, no como candidato a producción.
+- El reporte de salida incluye, con cifras exactas: efecto del escalado, efecto de `max_samples`, matriz/resumen de correlación entre las 18 features separables, efecto de selección top-N, y cuantificación de la dilución por episodio.
+- No se declara "modelo mejorado" ni se cambia ningún umbral oficial — la decisión de adoptar cualquier cambio al pipeline oficial es mía, después de revisar esta evidencia.
+
+**Evidencia esperada:** `artifacts/dataset/multilayer-v2-pipeline-diagnosis.json` + un documento nuevo en `docs/06-features-modelado/` resumiendo los 5 hallazgos con cifras exactas.
+
+**Riesgos:** ninguno — análisis puramente computacional sobre datos ya congelados, sin tocar VMs ni generar tráfico.
+
+**Permisos requeridos:** ninguno.
+
+**VM involucrada:** ninguna (VM01, entorno local).
+
+---
+
 ## Orden sugerido
 
-1. Tarea 1 (tests) → 2. Tarea 2 (auditor) → 3. Tarea 3 (calibración fragmentación) → 4. Tarea 4 (calibración TLS, mayor incertidumbre).
+1. Tarea 1 (tests) → 2. Tarea 2 (auditor) → 3. Tarea 5 (diagnóstico del pipeline, sin VM, informa si vale la pena seguir) → 4. Tarea 3 (calibración fragmentación) → 5. Tarea 4 (calibración TLS, mayor incertidumbre).
 
-Las Tareas 1 y 2 no requieren autorización adicional del usuario (son seguras, reversibles, documentales). Las Tareas 3 y 4 tampoco deberían requerirla si no aparece ninguna necesidad de sudo/cambio de red — pero si `preflight_profile.sh` u otro gate exige algo que no tienes, detente y repórtalo en vez de improvisar.
+Adelanté la Tarea 5 antes que las calibraciones de laboratorio (3 y 4) a propósito: si el diagnóstico muestra que el techo de AUC es sobre todo culpa del pipeline (escalado/`max_samples`/redundancia) y no de features faltantes, puede cambiar la prioridad relativa de correr calibraciones de laboratorio vs. ajustar el modelo. Aun así, ejecuta 3 y 4 salvo que yo indique lo contrario — cerrar las features constantes es necesario de cualquier forma.
+
+Las Tareas 1, 2 y 5 no requieren autorización adicional del usuario (son seguras, reversibles, documentales, sin VM). Las Tareas 3 y 4 tampoco deberían requerirla si no aparece ninguna necesidad de sudo/cambio de red — pero si `preflight_profile.sh` u otro gate exige algo que no tienes, detente y repórtalo en vez de improvisar.
 
 ## Qué necesito de vuelta al cerrar el ciclo
 
-Para cada tarea: qué verificaste, qué evidencia adjuntaste (ruta exacta), y si algún criterio de aceptación no se cumplió. Yo reviso, decido si se acepta, y preparo la siguiente tarea (probablemente: diseño formal de perfiles v2.1 `FRAG-UDP-V2`/`TLS-HANDSHAKE-FAIL-V2` para incorporarlos a `multilayer-v2-normal.json`, solo si la calibración es exitosa).
+Para cada tarea: qué verificaste, qué evidencia adjuntaste (ruta exacta), y si algún criterio de aceptación no se cumplió. Yo reviso, decido si se acepta, y preparo la siguiente tarea (probablemente: diseño formal de perfiles v2.1 `FRAG-UDP-V2`/`TLS-HANDSHAKE-FAIL-V2` para incorporarlos a `multilayer-v2-normal.json` si la calibración es exitosa, y/o ajustes al pipeline oficial de modelado si el diagnóstico de la Tarea 5 los justifica).
