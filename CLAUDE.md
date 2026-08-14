@@ -2,6 +2,30 @@
 
 ## Propósito
 
+## Estado vigente — 2026-08-14
+
+La recolección v2 normal ya terminó: 50 episodios y 75 ventanas, repartidas
+en train (44), validation (15) y test (16). La evaluación ciega ampliada
+contiene 12 episodios y 18 ventanas con `label=anomaly` y
+`partition=evaluation_only`. La auditoría estructural pasa sin faltantes, sin
+episodios repartidos y sin duplicados exactos.
+
+El modelo Isolation Forest v2 aún no está aprobado: con el protocolo por
+ventana detecta 7/18 anomalías, marca 2/16 normales de test, ROC-AUC 0.6007 y
+average precision 0.6124. La variante agregada por episodio detecta 0/12.
+No declarar rendimiento productivo ni entrenar con anomalías.
+
+Brechas activas: `fragment_ratio_10s` y `tls_handshake_failure_ratio_60s`
+siguen constantes; `http_status_5xx_ratio_60s` ya fue validada en la
+calibración excluida `CAL-G7-API-5XX-R02` (valor 0.15), tras sincronizar
+`ppi-api` en VM03. Esa calibración no se incorpora retroactivamente al dataset
+normal. El siguiente trabajo es diseñar una futura ampliación v2.1 y repetir
+la evaluación sin contaminar train/validation/test.
+
+No hay campañas activas actualmente. Los artefactos runtime permanecen fuera
+de Git; los reportes y procedimientos se documentan en
+`docs/07-dataset-campanas/`.
+
 Este repositorio documenta y construye la versión final de un sistema open source para la detección temprana de comportamientos anómalos en redes de datos. Es un proyecto ingenieril desplegado en un laboratorio virtualizado sobre VMware ESXi.
 
 Repositorio oficial:
