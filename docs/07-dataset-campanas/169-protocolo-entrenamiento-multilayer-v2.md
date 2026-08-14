@@ -25,3 +25,9 @@ tres anomalías controladas actuales se solapan con la normalidad capturada o
 son demasiado pocas para separar estadísticamente. Antes de afirmar
 desempeño se requiere ampliar episodios anómalos independientes y revisar el
 diseño de señales/etiquetas, sin reutilizar `test` para ajustar el modelo.
+
+También se ejecutó una variante que promedia las ventanas por episodio antes
+de ajustar el modelo (30 episodios train, 10 validation, 10 test y 12
+anómalos). Detectó 0/12 episodios anómalos, marcó 1/10 episodios normales y
+obtuvo ROC-AUC 0.5417/AP 0.5506. Se conserva como análisis de sensibilidad; no
+se selecciona el método por producir una métrica más conveniente.
