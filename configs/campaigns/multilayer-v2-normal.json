@@ -45,7 +45,13 @@
     {"id":"HTTPS-SESSIONS-50-V2","scenario":"https-sessions","args":["50"],"estimated_pcap_bytes":370000,"stratum":"tls-session","feature_coverage":["tls_session_rate_60s"]},
     {"id":"HTTPS-SESSIONS-100-V2","scenario":"https-sessions","args":["100"],"estimated_pcap_bytes":740000,"stratum":"tls-session","feature_coverage":["tls_session_rate_60s"]},
     {"id":"PING-100-V2","scenario":"ping","args":["100","0.2"],"estimated_pcap_bytes":24000,"stratum":"icmp-l3","feature_coverage":["icmp_ratio_10s"]},
-    {"id":"PING-50-SLOW-V2","scenario":"ping","args":["50","1"],"estimated_pcap_bytes":12000,"stratum":"icmp-l3","feature_coverage":["icmp_ratio_10s"]}
+    {"id":"PING-50-SLOW-V2","scenario":"ping","args":["50","1"],"estimated_pcap_bytes":12000,"stratum":"icmp-l3","feature_coverage":["icmp_ratio_10s"]},
+    {"id":"HTTP-1GB-SLOW-V2","scenario":"http","args":["1GB","2M"],"estimated_pcap_bytes":1150000000,"stratum":"http-duration-diversity","feature_coverage":["byte_rate_10s","packet_rate_10s","flow_duration_mean_30s"]},
+    {"id":"HTTPS-1GB-SLOW-V2","scenario":"https","args":["1GB","2M"],"estimated_pcap_bytes":1150000000,"stratum":"http-duration-diversity","feature_coverage":["byte_rate_10s","packet_rate_10s","flow_duration_mean_30s","tls_session_rate_60s"]},
+    {"id":"HTTP-500MB-SLOW-V2","scenario":"http","args":["500MB","2M"],"estimated_pcap_bytes":570000000,"stratum":"http-duration-diversity","feature_coverage":["byte_rate_10s","packet_rate_10s","flow_duration_mean_30s"]},
+    {"id":"HTTPS-500MB-SLOW-V2","scenario":"https","args":["500MB","2M"],"estimated_pcap_bytes":570000000,"stratum":"http-duration-diversity","feature_coverage":["byte_rate_10s","packet_rate_10s","flow_duration_mean_30s","tls_session_rate_60s"]},
+    {"id":"HTTP-1GB-MED-V2","scenario":"http","args":["1GB","5M"],"estimated_pcap_bytes":1150000000,"stratum":"http-duration-diversity","feature_coverage":["byte_rate_10s","packet_rate_10s","flow_duration_mean_30s"]},
+    {"id":"HTTPS-1GB-MED-V2","scenario":"https","args":["1GB","5M"],"estimated_pcap_bytes":1150000000,"stratum":"http-duration-diversity","feature_coverage":["byte_rate_10s","packet_rate_10s","flow_duration_mean_30s","tls_session_rate_60s"]}
   ],
   "known_gaps": [
     "L1 y L2 están fuera del alcance.",

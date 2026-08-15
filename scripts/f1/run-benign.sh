@@ -20,7 +20,26 @@ require_count() {
 }
 
 require_duration() {
-  case "$1" in 5|10|20|30) ;; *) echo "ERROR: duración permitida: 5, 10, 20 o 30 s" >&2; exit 2;; esac
+  case "$1" in 5|10|20|30|60|120|300|600) ;; *) echo "ERROR: duración permitida: 5, 10, 20, 30, 60, 120, 300 o 600 s" >&2; exit 2;; esac
+}
+
+# require_duration() no conoce la tasa: valida cada dimensión por separado.
+# Esta función rechaza combinaciones tasa×duración cuyo volumen estimado
+# exceda el presupuesto seguro de captura de una sola campaña (75% del techo
+# duro de stop.sh: pcap_total_bytes < 1,945,600,000 bytes). Sin esto, un
+# valor individualmente válido en cada whitelist (p.ej. 200M + 600s) podría
+# combinarse en una campaña que satura la rotación de PCAP (4 archivos de
+# 512MB) y falla evidence_complete, o peor, satura el enlace del laboratorio
+# de forma no calibrada.
+require_safe_volume() {
+  local rate_mbit="${1%M}" duration="$2"
+  [[ "$rate_mbit" =~ ^[0-9]+$ ]] || { echo "ERROR: formato de tasa inválido: $1" >&2; exit 2; }
+  local safe_budget_bytes=1459200000
+  local estimated_bytes=$(( rate_mbit * duration * 132500 ))
+  (( estimated_bytes <= safe_budget_bytes )) || {
+    echo "ERROR: la combinación ${rate_mbit}M por ${duration}s excede el presupuesto seguro de captura (~$((estimated_bytes / 1000000))MB > $((safe_budget_bytes / 1000000))MB)" >&2
+    exit 2
+  }
 }
 
 scenario="${1:-}"
@@ -207,6 +226,7 @@ case "$scenario" in
     duration="${2:-}"
     case "$rate" in 10M|25M|50M|100M|200M) ;; *) echo "ERROR: bitrate TCP permitido: 10M, 25M, 50M, 100M o 200M" >&2; exit 2;; esac
     require_duration "$duration"
+    require_safe_volume "$rate" "$duration"
     iperf3 -c "$TARGET_IP" -b "$rate" -t "$duration" -J
     ;;
   iperf-udp)
@@ -214,6 +234,7 @@ case "$scenario" in
     duration="${2:-}"
     case "$rate" in 1M|10M|25M|50M) ;; *) echo "ERROR: bitrate UDP permitido: 1M, 10M, 25M o 50M" >&2; exit 2;; esac
     require_duration "$duration"
+    require_safe_volume "$rate" "$duration"
     iperf3 -c "$TARGET_IP" -u -b "$rate" -t "$duration" -J
     ;;
   frag-udp)
@@ -221,6 +242,7 @@ case "$scenario" in
     duration="${2:-}"
     case "$length" in 2000|3000) ;; *) echo "ERROR: longitud UDP permitida: 2000 o 3000 bytes" >&2; exit 2;; esac
     require_duration "$duration"
+    require_safe_volume 5M "$duration"
     iperf3 -c "$TARGET_IP" -u -b 5M -l "$length" -t "$duration" -J
     ;;
   mixed-light)
