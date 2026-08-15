@@ -17,13 +17,16 @@
     {"id":"PING-V2","scenario":"ping","args":["10","0.5"],"estimated_pcap_bytes":2304,"stratum":"icmp-l3","feature_coverage":["icmp_ratio_10s"]},
     {"id":"HTTP-404-V2","scenario":"http-missing","args":["5"],"estimated_pcap_bytes":6309,"stratum":"http-error","feature_coverage":["http_error_ratio_60s"]},
     {"id":"DNS-MIXED-V2","scenario":"dns-mixed","args":["20","2"],"estimated_pcap_bytes":5092,"stratum":"dns-nxdomain","feature_coverage":["dns_nxdomain_ratio_60s"]},
-    {"id":"TCP-REFUSED-V2","scenario":"tcp-refused","args":["5"],"estimated_pcap_bytes":824,"stratum":"tcp-rst","feature_coverage":["rst_ratio_10s"]}
+    {"id":"TCP-REFUSED-V2","scenario":"tcp-refused","args":["5"],"estimated_pcap_bytes":824,"stratum":"tcp-rst","feature_coverage":["rst_ratio_10s"]},
+    {"id":"FRAG-UDP-V2","scenario":"frag-udp","args":["3000","10"],"estimated_pcap_bytes":7000000,"stratum":"ip-fragmentation","feature_coverage":["fragment_ratio_10s"]},
+    {"id":"API-5XX-V2","scenario":"api-normal","args":["20"],"estimated_pcap_bytes":300000,"stratum":"api-5xx","feature_coverage":["http_status_5xx_ratio_60s","http_request_rate_60s","http_method_entropy_60s"]}
   ],
   "known_gaps": [
     "L1 y L2 están fuera del alcance.",
-    "Las features v2 requieren validación contra evidencia real antes de entrenar; ningún perfil de esta matriz se ha ejecutado.",
     "Las IP .10/.11/.12 son identidades lógicas de VM03.",
-    "fragment_ratio_10s queda declarada en MIXED-V2 por tener denominador real (paquetes IP genuinos), pero ningún escenario de esta matriz fuerza fragmentación IP: la MTU de laboratorio (1500) y los tamaños de payload usados nunca fragmentan. El valor esperado es 0.0 de forma estructural, no por ausencia de evidencia; no debe leerse como validación de la fórmula bajo fragmentación real.",
-    "MIXED-V2 ya no declara icmp_ratio_10s, tls_session_rate_60s, http_auth_failure_ratio_60s, http_method_entropy_60s, http_status_5xx_ratio_60s, http_error_ratio_60s ni dns_nxdomain_ratio_60s: mixed-light (HTTP plano + iperf TCP + dns-valid) no puede producir ICMP, TLS, llamadas a /api/*, errores HTTP ni NXDOMAIN; esas features se cubren en perfiles dedicados (PING-V2, HTTPS-SESSIONS-V2, API-AUTH-FAIL-20, API-NORMAL-20, HTTP-404-V2, DNS-MIXED-V2)."
+    "fragment_ratio_10s quedó declarada en MIXED-V2 sin producir fragmentación real (MTU 1500, payloads que nunca fragmentan) durante la matriz original R01-R05; esa limitación se documentó en docs/06-features-modelado/05-diagnostico-pipeline-multilayer-v2.md y se cerró con la calibración CAL-FRAG-UDP-01-R01 (docs/07-dataset-campanas/174-cierre-calibracion-fragmentacion-ip-real.md). El perfil FRAG-UDP-V2, agregado 2026-08-14, fuerza fragmentación real vía iperf3 UDP con payload > MTU (frag-udp 3000 10) y es la fuente oficial de esta señal a partir de su primera repetición.",
+    "http_status_5xx_ratio_60s quedó declarada en API-NORMAL-20, pero sus repeticiones R01-R05 se ejecutaron antes de corregir /api/error en VM03 (devolvía 404, no 500) — ver docs/07-dataset-campanas/172-brecha-api-5xx-y-permisos.md. El servicio se corrigió de forma persistente (verificado 2026-08-14) y el perfil API-5XX-V2, mismo escenario api-normal con el servicio ya corregido, es la fuente oficial de esta señal a partir de su primera repetición. Los episodios de API-NORMAL-20 no se modifican ni se re-etiquetan.",
+    "tls_handshake_failure_ratio_60s sigue sin técnica confirmada para producir un evento tls de EVE sin campo version usando tráfico benigno controlado — ver docs/07-dataset-campanas/175-limite-tls-handshake-failure-ratio.md. Sigue constante en toda la matriz, incluyendo los perfiles nuevos.",
+    "MIXED-V2 ya no declara icmp_ratio_10s, tls_session_rate_60s, http_auth_failure_ratio_60s, http_method_entropy_60s, http_status_5xx_ratio_60s, http_error_ratio_60s ni dns_nxdomain_ratio_60s: mixed-light (HTTP plano + iperf TCP + dns-valid) no puede producir ICMP, TLS, llamadas a /api/*, errores HTTP ni NXDOMAIN; esas features se cubren en perfiles dedicados (PING-V2, HTTPS-SESSIONS-V2, API-AUTH-FAIL-20, API-NORMAL-20/API-5XX-V2, HTTP-404-V2, DNS-MIXED-V2)."
   ]
 }

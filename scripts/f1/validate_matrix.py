@@ -13,7 +13,7 @@ from pathlib import Path
 ALLOWED_SCENARIOS = {
     "http", "https", "http-concurrent", "http-multi", "http-missing", "https-sessions",
     "dns-valid", "dns-nxdomain", "dns-mixed", "dns-multi", "api-normal", "api-auth-fail", "ping", "tcp-refused",
-    "iperf-tcp", "iperf-udp", "mixed-light",
+    "iperf-tcp", "iperf-udp", "frag-udp", "mixed-light",
 }
 SAFE_ARGUMENT = re.compile(r"^[A-Za-z0-9._-]+$")
 SAFE_ID = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,47}$")
