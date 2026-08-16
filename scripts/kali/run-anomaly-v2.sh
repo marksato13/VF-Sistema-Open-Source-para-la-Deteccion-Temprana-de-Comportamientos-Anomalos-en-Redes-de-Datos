@@ -11,7 +11,20 @@ shift || true
 case "$scenario" in
   tcp-syn-rate)
     count="${1:-10}"; case "$count" in 10|25|50) ;; *) echo "ERROR: conteo permitido 10,25,50" >&2; exit 2;; esac
-    exec nping --tcp --flags syn -p 80,443 --count "$count" --rate 10 "$TARGET" ;;
+    # nping --tcp requiere sockets crudos (root); useransible no tiene sudo en
+    # Kali. Se sustituye por intentos de conexión reales y rápidos (cada uno
+    # envía un SYN igual que nping, solo que vía connect() en vez de un
+    # paquete crudo) alternando puerto abierto/cerrado, sin privilegios.
+    ports=(80 443 65000)
+    for ((i=1; i<=count; i++)); do
+      port="${ports[$(( (i - 1) % ${#ports[@]} ))]}"
+      timeout 1 bash -c "exec 3<>/dev/tcp/$TARGET/$port" 2>/dev/null && result=connected || result=refused_or_timeout
+      exec 3<&- 2>/dev/null || true
+      exec 3>&- 2>/dev/null || true
+      printf '{"scenario":"tcp-syn-rate","attempt":%d,"port":%d,"result":"%s"}\n' "$i" "$port" "$result"
+      sleep 0.1
+    done
+    ;;
   tcp-port-scan)
     exec nmap --max-retries 1 --host-timeout 20s -Pn -p 80,443,65000 "$TARGET" ;;
   udp-probe)
