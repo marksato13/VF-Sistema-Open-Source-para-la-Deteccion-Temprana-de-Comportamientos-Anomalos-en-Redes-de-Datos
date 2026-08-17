@@ -15,6 +15,7 @@ ExecStart=/home/useransible/ppi-motor-venv/bin/python3 \
     --eve-path /var/log/suricata/eve.json \
     --capture-dir /var/lib/ppi-motor-capture \
     --model-path /home/useransible/ppi-motor-model/ocsvm_scaled.joblib \
+    --manifest-path /home/useransible/ppi-motor-model/manifest.json \
     --schema /home/useransible/vf-sistema-final/configs/features/multilayer-v2.json \
     --log-path /home/useransible/ppi-motor-logs/motor_decision.log
 Restart=always
