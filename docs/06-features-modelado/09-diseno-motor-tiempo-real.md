@@ -1,7 +1,30 @@
 # Diseño del motor de decisión en tiempo real — bloqueo de infraestructura encontrado
 
 - **Fecha:** 2026-08-17
-- **Estado:** diseño definido, **ejecución bloqueada por permisos** — necesita tu decisión antes de continuar.
+- **Estado:** confirmaste la opción 1 (acceso root temporal en VM02). Los cuatro artefactos ya están escritos, versionados y probados con un smoke test sintético contra el modelo congelado real — falta únicamente el despliegue, que requiere el acceso root que ya autorizaste.
+
+## Actualización — artefactos listos (2026-08-17, después de tu confirmación)
+
+Los cuatro artefactos que se listaban abajo como "lo que puedo hacer ahora mismo" ya están escritos:
+
+1. `configs/sensor/ppi-motor-capture.service` — captura continua en anillo (`tcpdump -G 15 -W 8`, ~120s de historia, mismo patrón de privilegios que `ppi-pcap-control` ya validado en 145+ campañas: arranca root, suelta a `tcpdump` con `-Z`). Directorio `/var/lib/ppi-motor-capture` con setgid a `useransible` para que el motor pueda leer sin sudo.
+2. `configs/sensor/ppi-motor.service` — corre como `useransible`, sin privilegios nuevos, con `ProtectSystem=strict` y solo lectura sobre captura/EVE.
+3. `configs/sensor/install-ppi-motor.sh` — instalación única e idempotente (unidades systemd, ACL de lectura sobre `/var/log/suricata`, venv con las versiones exactas de `requirements-model.txt`, copia del `.joblib` verificando su SHA-256 real contra el manifiesto de calibración). Requiere root real, no sudo de `useransible` — **no se agregó ninguna línea nueva al sudoers**, porque el diseño final no la necesita (ver siguiente punto).
+4. `scripts/engine/motor_decision.py` — el motor mismo: tail incremental de `eve.json` con detección de rotación/truncamiento, lectura de los PCAP ya cerrados del anillo (excluye siempre el más reciente, que tcpdump sigue escribiendo), llamadas directas a `load_packet_observations`/`load_app_observations`/`build_rows` del extractor congelado (cero fórmulas reimplementadas), umbral leído del `manifest.json` de la calibración (no hardcodeado — mismo principio que el MVP aplicaba con `metricas_offline.txt`), log JSONL de decisiones.
+
+**Cambio de diseño respecto al plan original:** no hace falta una línea sudoers nueva para `useransible`. `ppi-motor-capture.service` corre siempre activo como servicio systemd (arranca solo, no requiere que `useransible` lo controle en cada ejecución) y `ppi-motor.service` corre como `useransible` sin sudo, leyendo captura y EVE por ACL (`setfacl`, no por pertenencia a grupo ni por sudo). Root real solo se necesita **una vez**, para la instalación.
+
+**Verificación hecha antes de darlo por bueno** (no solo "compila"): smoke test con PCAP y EVE sintéticos que ejercita el pipeline completo — exclusión del archivo PCAP activo, parseo real de paquetes, tail incremental de EVE, `build_rows` produciendo filas elegibles, carga del umbral real (`1.8126087939765134`) desde el manifiesto real, y scoring real con `ocsvm_scaled.joblib` sin excepciones. `systemd-analyze verify` sobre ambas unidades no reportó errores de sintaxis (solo la advertencia esperada de que el venv de VM02 todavía no existe en esta máquina).
+
+**Limitación declarada, no oculta:** el anillo de ~120s de PCAP es más corto que una campaña offline completa. Un flujo que ya llevaba más de ~120s abierto la primera vez que el motor lo ve puede tener su IP iniciadora mal atribuida si el paquete que abrió el flujo ya rotó fuera del buffer — documentado en el docstring de `motor_decision.py`. Para tráfico de ataque real (ráfagas cortas, según la evaluación bloqueada) esto no debería aplicar en la práctica, pero no se afirma como resuelto sin medirlo en producción.
+
+**Pendiente exclusivamente de tu acceso root en VM02:**
+- Completar `EXPECTED_PYTHON_MAJOR_MINOR` en `install-ppi-motor.sh` si la versión de Python de VM02 difiere de 3.14 (verificar con `python3 --version` antes de correr el script).
+- Ejecutar `install-ppi-motor.sh` como root.
+- Verificar manualmente que `ppi-motor-capture.service` está activo y que `useransible` puede leer los archivos rotados.
+- Habilitar `ppi-motor.service` a mano (deliberadamente NO automático dentro del script de instalación) y observar `journalctl -u ppi-motor.service -f` un rato antes de dejarlo desatendido.
+
+## Estado original de este documento (antes de tu confirmación), para trazabilidad
 
 ## Lo que ya está resuelto (sin bloqueos)
 

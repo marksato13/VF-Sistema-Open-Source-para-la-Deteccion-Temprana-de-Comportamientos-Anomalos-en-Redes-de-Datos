@@ -1,0 +1,33 @@
+[Unit]
+Description=PPI - motor de decision en tiempo real (OCSVM, scoring de solo lectura)
+Documentation=file:///home/useransible/vf-sistema-final/docs/06-features-modelado/09-diseno-motor-tiempo-real.md
+After=network-online.target suricata.service ppi-motor-capture.service
+Wants=network-online.target
+Requires=ppi-motor-capture.service
+
+[Service]
+Type=simple
+User=useransible
+Group=useransible
+WorkingDirectory=/home/useransible/vf-sistema-final
+ExecStart=/home/useransible/ppi-motor-venv/bin/python3 \
+    /home/useransible/vf-sistema-final/scripts/engine/motor_decision.py \
+    --eve-path /var/log/suricata/eve.json \
+    --capture-dir /var/lib/ppi-motor-capture \
+    --model-path /home/useransible/ppi-motor-model/ocsvm_scaled.joblib \
+    --schema /home/useransible/vf-sistema-final/configs/features/multilayer-v2.json \
+    --log-path /home/useransible/ppi-motor-logs/motor_decision.log
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Fase actual: solo deteccion y registro, sin enforcement (nftables). No
+# necesita privilegios de root ni acceso de escritura fuera de su propio log.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/useransible/ppi-motor-logs
+ReadOnlyPaths=/var/lib/ppi-motor-capture /var/log/suricata
+
+[Install]
+WantedBy=multi-user.target
