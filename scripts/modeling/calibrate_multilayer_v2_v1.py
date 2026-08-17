@@ -288,6 +288,7 @@ def make_if(seed: int, scaled: bool = False) -> Any:
 
 
 def detector_factories() -> dict[str, Callable[[], Any]]:
+    from sklearn.covariance import EllipticEnvelope
     from sklearn.neighbors import LocalOutlierFactor
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
@@ -307,6 +308,16 @@ def detector_factories() -> dict[str, Callable[[], Any]]:
         "ocsvm_scaled": lambda: Pipeline(
             [("scaler", StandardScaler()), ("detector", OneClassSVM(kernel="rbf", gamma="scale", nu=0.05, cache_size=200))]
         ),
+        # Comparador adicional, familia de algoritmo distinta (covarianza robusta,
+        # no árboles/vecindades/margen). Parámetros de fábrica de scikit-learn
+        # (contamination=0.1 es el default de la clase, no se ajustó buscando el
+        # mejor resultado). Se espera, sin darlo por sentado, que rinda peor: las
+        # 28 features son acotadas, discretas y con varias constantes en cero, sin
+        # una hipótesis gaussiana demostrada -- el propio ajuste ya advierte
+        # "covariance matrix ... not full rank" en este dataset.
+        "elliptic_envelope_scaled": lambda: Pipeline(
+            [("scaler", StandardScaler()), ("detector", EllipticEnvelope(contamination=0.1, random_state=PRIMARY_SEED))]
+        ),
     }
 
 
@@ -323,11 +334,16 @@ def fit_weighted(model: Any, train_matrix: Any, weights: list[float]) -> None:
 
 
 def fit_and_score(name: str, model: Any, train_matrix: Any, weights: list[float] | None, eval_matrix: Any) -> tuple[Any, list[float], dict[str, float]]:
+    import warnings
+
     fit_started = time.perf_counter_ns()
-    if name in FIT_WEIGHT_BRANCHES and weights is not None:
-        fit_weighted(model, train_matrix, weights)
-    else:
-        model.fit(train_matrix)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        if name in FIT_WEIGHT_BRANCHES and weights is not None:
+            fit_weighted(model, train_matrix, weights)
+        else:
+            model.fit(train_matrix)
+    sklearn_warnings = [f"{w.category.__name__}: {w.message}" for w in caught]
     fit_seconds = (time.perf_counter_ns() - fit_started) / 1_000_000_000
     score_started = time.perf_counter_ns()
     scores = [float(v) for v in model.score_samples(eval_matrix)]
@@ -339,6 +355,7 @@ def fit_and_score(name: str, model: Any, train_matrix: Any, weights: list[float]
         "score_batch_seconds": score_seconds,
         "score_seconds_per_window": score_seconds / len(scores),
         "timing_scope": "descriptive_single_batch_on_vm01_not_production_benchmark",
+        "fit_warnings": sklearn_warnings,
     }
 
 
@@ -418,6 +435,7 @@ def execute_calibration(repo: Path, artifacts_root: Path, output_dir: Path, expe
         "if_exact_collapsed": x_train[collapsed],
         "lof_scaled": x_train,
         "ocsvm_scaled": x_train,
+        "elliptic_envelope_scaled": x_train,
     }
     training_weights: dict[str, list[float] | None] = {
         "if_primary_weighted": weights,
