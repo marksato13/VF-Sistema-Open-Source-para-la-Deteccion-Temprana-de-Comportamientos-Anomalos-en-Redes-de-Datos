@@ -2,14 +2,17 @@
 
 - **Fecha:** 2026-08-17
 - **Ejecutor:** Claude
-- **Estado:** calibración completa, evaluación en un solo paso bloqueado, hashes verificados. **Decisión de modelo final pendiente de tu confirmación** (ver sección final).
-- **Artefacto:** `/srv/ppi-evidence/artifacts/models/pm-multilayer-v2-v1-calibration/` (fuera de Git), `manifest.json` + 6 modelos `.joblib`, `SHA256SUMS` verificado íntegro.
+- **Estado:** calibración completa (7 modelos), evaluación en un solo paso bloqueado, hashes verificados. **Decisión de modelo final pendiente de tu confirmación** (ver sección final).
+- **Artefactos:**
+  - `/srv/ppi-evidence/artifacts/models/pm-multilayer-v2-v1-calibration/` — corrida inicial, 6 modelos (IF×4, LOF, OCSVM). Conservada, no se borró.
+  - `/srv/ppi-evidence/artifacts/models/pm-multilayer-v2-v1-calibration-7models/` — corrida final, 7 modelos (agrega `EllipticEnvelope`), a pedido explícito de probar más modelos "de la forma correcta". **Esta es la que se usa para la decisión final.**
+  - Ambas con `manifest.json` + modelos `.joblib`, `SHA256SUMS` verificado íntegro en las dos.
 
 ## Resumen ejecutivo
 
-Se calibraron y evaluaron 6 pipelines (Isolation Forest en 4 variantes + LOF + OCSVM) sobre el dataset ampliado (824 filas train / 273 validation / 276 test / 179 evaluación de anomalías), en un único paso bloqueado siguiendo `PM-multilayer-v2-v1` (`06-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md`). Ningún modelo se re-entrenó después de ver resultados.
+Se calibraron y evaluaron 7 pipelines sobre el dataset ampliado (824 filas train / 273 validation / 276 test / 179 evaluación de anomalías), en un único paso bloqueado siguiendo `PM-multilayer-v2-v1`. Ningún modelo se re-entrenó después de ver resultados. El séptimo modelo (`EllipticEnvelope`) se agregó como familia de algoritmo genuinamente distinta (covarianza robusta, no árboles/vecindades/margen) en vez de buscar hiperparámetros dentro de una familia ya probada — eso sí habría violado la disciplina de "no hay rejilla de búsqueda" que rige este protocolo. Sus parámetros son los de fábrica de scikit-learn (`contamination=0.1`), no ajustados.
 
-**Hallazgo principal: OCSVM detecta sustancialmente mejor que todas las variantes de Isolation Forest, con FPR comparable.**
+**Hallazgo principal: OCSVM detecta sustancialmente mejor que las otras 6 opciones, con FPR comparable.**
 
 | Modelo | Umbral (score) | FPR test (276 ventanas) | Detección anomalías (179 ventanas) | Detección Kali real (161 ventanas) |
 |---|---|---|---|---|
@@ -19,6 +22,9 @@ Se calibraron y evaluaron 6 pipelines (Isolation Forest en 4 variantes + LOF + O
 | `if_exact_collapsed` | -0.5543 | 5.07% | 57.5% (103/179) | 55.9% |
 | `lof_scaled` (comparador) | -2.9405 | 3.62% | 43.0% (77/179) | 40.4% |
 | **`ocsvm_scaled` (comparador)** | **1.8126** | **4.71%** | **88.3% (158/179)** | **88.8%** |
+| `elliptic_envelope_scaled` (comparador) | -95.06 | 5.07% | 27.4% (49/179) | 26.7% |
+
+**Confirmación de la hipótesis sobre `EllipticEnvelope`:** durante el ajuste emitió `UserWarning: The covariance matrix associated to your dataset is not full rank` — exactamente el problema anticipado (features acotadas, discretas, varias constantes en cero, sin hipótesis gaussiana sostenible). Es el peor de los 7 (27.4% de detección). Se probó la hipótesis en vez de asumirla y se confirmó; el warning quedó capturado y registrado en el manifiesto (`detectors.elliptic_envelope_scaled.timing.fit_warnings`), no oculto en stderr.
 
 ## Desviación documentada del protocolo original (`PM-F1-v1`)
 
@@ -59,7 +65,7 @@ Isolation Forest **no detecta absolutamente nada** de las familias `tcp-syn-rate
 
 `PM-F1-v1` (el protocolo original que sirvió de plantilla) tenía la regla explícita "IF sigue siendo la conclusión principal aunque un comparador gane una métrica posterior". Pero **tu instrucción explícita para este proyecto** fue: *"la elección del modelo será de acuerdo a pruebas, ver con cuál funciona mejor"* — lo cual contradice esa regla heredada a propósito.
 
-Dado ese mandato tuyo, mi recomendación es: **OCSVM como modelo líder** — detecta 88% de las anomalías reales (incluyendo las dos familias que IF no detecta en absoluto) con un FPR comparable (4.71% vs 4.35%). No es un caso de "espiar el test y elegir a posteriori": los 6 modelos se evaluaron una sola vez, en el mismo paso bloqueado, sin re-entrenar nada después de ver resultados — esto es exactamente la comparación empírica que pediste, no una fuga.
+Dado ese mandato tuyo, mi recomendación es: **OCSVM como modelo líder** — detecta 88% de las anomalías reales (incluyendo las dos familias que IF no detecta en absoluto) con un FPR comparable (4.71% vs 4.35%), y sigue siendo el mejor incluso ampliando la comparación a 7 modelos de 4 familias de algoritmo distintas. No es un caso de "espiar el test y elegir a posteriori": los 7 modelos se evaluaron una sola vez, en el mismo paso bloqueado, sin re-entrenar nada después de ver resultados — esto es exactamente la comparación empírica que pediste, no una fuga. `EllipticEnvelope` se agregó específicamente para no dejar la comparación corta, y confirmó su propia hipótesis de bajo rendimiento en vez de simplemente omitirse.
 
 Advertencia honesta: OCSVM con `nu=0.05` está diseñado para considerar ~5% del propio train como atípico, lo que lo hace estructuralmente más "agresivo" — su FPR en test (dato nunca visto) sigue siendo bajo (4.71%), así que no parece ser solo agresividad sin fundamento, pero es una diferencia de naturaleza del modelo que vale la pena declarar, no ocultar.
 
