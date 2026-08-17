@@ -35,6 +35,12 @@ readonly REPO_ROOT="/home/useransible/vf-sistema-final"
 # calibro el modelo). Si esto cambia en una reinstalacion futura, el script
 # aborta en vez de instalar en silencio un entorno distinto al validado.
 readonly EXPECTED_PYTHON_MAJOR_MINOR="3.14"
+# VM02 esta aislada de internet (confirmado: pip no resuelve pypi.org).
+# Los wheels se descargaron en VM01 con exactamente las versiones de
+# requirements-model.txt para cp314-manylinux_2_27/2_28-x86_64 (misma
+# Ubuntu 26.04 "resolute", mismo CPython 3.14.4 que VM02) y se
+# transfirieron aqui via rsync con verificacion SHA-256.
+readonly WHEELS_STAGED="$REPO_ROOT/artifacts/wheels"
 readonly MODEL_STAGED="$REPO_ROOT/artifacts/model/ocsvm_scaled.joblib"
 readonly MANIFEST_STAGED="$REPO_ROOT/artifacts/model/manifest.json"
 # Ambos verificados en VM01 el 2026-08-17 contra SHA256SUMS del propio
@@ -61,8 +67,9 @@ python_version="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.
 if [[ "$python_version" != "$EXPECTED_PYTHON_MAJOR_MINOR" ]]; then
   die "python3 del Sensor es $python_version, se esperaba $EXPECTED_PYTHON_MAJOR_MINOR (mismatch de version = riesgo real de resultados de scoring distintos a los calibrados; no continuar sin decidir esto explícitamente)"
 fi
+[[ -d "$WHEELS_STAGED" ]] || die "no se encuentra $WHEELS_STAGED (¿faltó el rsync de artifacts/wheels/ desde VM01?)"
 sudo -u useransible python3 -m venv /home/useransible/ppi-motor-venv
-sudo -u useransible /home/useransible/ppi-motor-venv/bin/pip install --no-input -r "$REPO_ROOT/requirements-model.txt"
+sudo -u useransible /home/useransible/ppi-motor-venv/bin/pip install --no-input --no-index --find-links="$WHEELS_STAGED" -r "$REPO_ROOT/requirements-model.txt"
 installed_sklearn="$(sudo -u useransible /home/useransible/ppi-motor-venv/bin/python3 -c 'import sklearn; print(sklearn.__version__)')"
 [[ "$installed_sklearn" == "1.9.0" ]] || die "scikit-learn instalado ($installed_sklearn) no coincide con el congelado (1.9.0)"
 
