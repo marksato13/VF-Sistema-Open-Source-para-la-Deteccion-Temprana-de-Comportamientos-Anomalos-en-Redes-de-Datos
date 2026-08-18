@@ -29,6 +29,7 @@ HTML = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PPI &middot; motor en vivo</title>
+<link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%235eead4'/%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #0a0f1a;
@@ -198,6 +199,47 @@ const DETECTOR_LABEL = {
 const SERVICE_LABEL = { 'ppi-motor.service': 'Motor', 'ppi-motor-capture.service': 'Captura', 'suricata.service': 'Suricata' };
 let currentRange = '1h';
 
+// Alerta visual en vivo (Seccion B): el dashboard hace polling cada 5s, no
+// push -- sin esto, un ALERT real puede pasar desapercibido si el analista
+// no esta mirando la tabla justo en ese momento. Solo cambia titulo/favicon
+// del propio navegador, no notificaciones del sistema operativo (mas
+// invasivo e innecesario para un panel de solo lectura).
+const BASE_TITLE = document.title;
+const BASE_FAVICON = document.getElementById('favicon').href;
+const ALERT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%235eead4'/%3E%3Ccircle cx='24' cy='9' r='7' fill='%23f87171' stroke='%230a0f1a' stroke-width='1.5'/%3E%3C/svg%3E";
+const seenDecisionKeys = new Set();
+let unseenAlertCount = 0;
+let sessionStart = true; // evita contar todo el historial como "nuevo" en la primera carga
+
+function markSeenAndCountNewAlerts(decisions) {
+  let newAlerts = 0;
+  for (const d of decisions) {
+    const key = d.entity_ip + '|' + d.window_end_utc;
+    if (seenDecisionKeys.has(key)) continue;
+    seenDecisionKeys.add(key);
+    if (!sessionStart && d.decision === 'ALERT') newAlerts++;
+  }
+  sessionStart = false;
+  if (seenDecisionKeys.size > 5000) {
+    // evita crecimiento sin limite en una sesion de navegador larga
+    const it = seenDecisionKeys.values();
+    for (let i = 0; i < 1000; i++) seenDecisionKeys.delete(it.next().value);
+  }
+  if (newAlerts > 0 && document.visibilityState !== 'visible') {
+    unseenAlertCount += newAlerts;
+    document.title = `(${unseenAlertCount}) ` + BASE_TITLE;
+    document.getElementById('favicon').href = ALERT_FAVICON;
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && unseenAlertCount > 0) {
+    unseenAlertCount = 0;
+    document.title = BASE_TITLE;
+    document.getElementById('favicon').href = BASE_FAVICON;
+  }
+});
+
 function card(label, value, cls) {
   return `<div class="card ${cls||''}"><div class="label">${label}</div><div class="value">${value}</div></div>`;
 }
@@ -293,6 +335,7 @@ async function refresh() {
     else loadActivity(currentRange);
 
     const decisions = await (await fetch('/api/decisions?limit=100')).json();
+    markSeenAndCountNewAlerts(decisions);
     document.getElementById('decisions').innerHTML = decisions.length ? decisions.map(d => {
       const isAlert = d.decision === 'ALERT';
       const badge = isAlert ? `<span class="badge alert">${ICON.bad} ALERT</span>` : `<span class="badge permit">${ICON.ok} PERMIT</span>`;
