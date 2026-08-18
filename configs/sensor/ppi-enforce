@@ -37,6 +37,13 @@ validate_ip() {
   for whitelisted in "${WHITELIST[@]}"; do
     [[ "$ip" == "$whitelisted" ]] && die "IP en whitelist, nunca se bloquea: $ip"
   done
+  # Sin esto, bajo "set -e" el codigo de salida de la ULTIMA comparacion del
+  # bucle (falsa para cualquier IP normal, ya que no coincide con el ultimo
+  # elemento de WHITELIST) se propaga como el retorno de la funcion entera,
+  # matando el script en silencio para el caso normal/exitoso -- sin pasar
+  # nunca por die(). Bug real encontrado probando el helper ya desplegado
+  # contra una IP valida (las pruebas locales previas solo cubrian rechazos).
+  return 0
 }
 
 ensure_setup() {
@@ -54,6 +61,12 @@ table inet $NFT_TABLE {
 }
 NFTEOF
   fi
+  # Igual que en validate_ip: sin esto, cuando la tabla YA existe (el caso
+  # normal en llamadas repetidas -- el motor reinvoca esto en cada ALERT) el
+  # "if" no ejecuta su cuerpo y el codigo de salida de la funcion queda
+  # determinado por la condicion negada, arriesgando otra muerte silenciosa
+  # bajo "set -e" en la ruta mas comun, no en la primera-vez.
+  return 0
 }
 
 [[ $# -ge 1 ]] || die "uso: ppi-enforce {block IP TIMEOUT_SEG|unblock IP|status IP}"

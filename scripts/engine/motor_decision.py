@@ -69,6 +69,11 @@ except ImportError as exc:  # pragma: no cover - fallo de despliegue, no de logi
         "creado por configs/sensor/install-ppi-motor.sh (requirements-model.txt)"
     ) from exc
 
+# Tope FIFO de scored_windows, no una estimacion de trafico real esperado:
+# solo acota memoria en un despliegue de muy larga duracion. Ver comentario
+# junto a su uso en main() sobre por que no se poda por antiguedad de reloj.
+MAX_SCORED_WINDOWS = 20000
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -263,8 +268,21 @@ def main() -> int:
         cutoff = cycle_start - args.history_seconds
         while eve_buffer and eve_buffer[0][0] < cutoff:
             eve_buffer.popleft()
-        for stale_key in [key for key, anchor in scored_windows.items() if anchor < cutoff]:
-            del scored_windows[stale_key]
+        # NO se poda scored_windows por antiguedad de reloj real: se
+        # encontro en produccion que un PCAP viejo del anillo (tcpdump con
+        # -G solo rota al llegar un paquete nuevo; en tramos ociosos un
+        # archivo puede tardar mucho en rotar) puede seguir aportando
+        # paquetes con timestamps antiguos ciclo tras ciclo. Podar por
+        # "mas viejo que cutoff" borraba esa ventana de la memoria de
+        # deduplicacion justo despues de registrarla, permitiendo que se
+        # re-puntuara y re-bloqueara la MISMA ventana en cada ciclo,
+        # indefinidamente -- bucle real observado bloqueando al cliente sin
+        # parar. En vez de podar por edad, se acota por tamano (FIFO): una
+        # vez puntuada, una ventana queda recordada durante mucho tiempo sin
+        # importar su timestamp.
+        while len(scored_windows) > MAX_SCORED_WINDOWS:
+            oldest_key = next(iter(scored_windows))
+            del scored_windows[oldest_key]
 
         with eve_slice_path.open("w", encoding="utf-8") as handle:
             for _, raw_line in eve_buffer:
