@@ -74,6 +74,14 @@ HTML = """<!doctype html>
   .sec-head { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.8rem; color: var(--text-dim); }
   .sec-head svg { color: var(--accent); flex: none; }
   .sec-head h2 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin: 0; color: var(--text-dim); }
+  .sec-head-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; }
+  .sec-head-row .sec-head { margin-bottom: 0; }
+  .range-toggle { display: flex; gap: 0.3rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.2rem; }
+  .range-toggle button {
+    font-family: var(--sans); font-size: 0.78rem; border: none; background: transparent; color: var(--text-dim);
+    padding: 0.3rem 0.7rem; border-radius: 6px; cursor: pointer;
+  }
+  .range-toggle button.active { background: var(--accent); color: var(--bg); font-weight: 600; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; }
   .card {
@@ -137,15 +145,21 @@ HTML = """<!doctype html>
   </section>
 
   <section>
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg><h2>Actividad &middot; última hora</h2></div>
+    <div class="sec-head-row">
+      <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg><h2>Actividad</h2></div>
+      <div class="range-toggle" id="rangeToggle">
+        <button data-range="1h" class="active">Última hora</button>
+        <button data-range="24h">Últimas 24h</button>
+      </div>
+    </div>
     <div class="grid" id="counters"></div>
     <div class="spark-wrap">
       <svg id="spark" width="100%" height="46" viewBox="0 0 610 46" preserveAspectRatio="none"></svg>
       <div class="spark-legend">
-        <span><i class="swatch" style="background:var(--danger)"></i>minuto con ALERT</span>
+        <span><i class="swatch" style="background:var(--danger)"></i>intervalo con ALERT</span>
         <span><i class="swatch" style="background:var(--accent)"></i>solo PERMIT</span>
         <span><i class="swatch" style="background:var(--border)"></i>sin tráfico</span>
-        <span>&larr; hace 60 min&nbsp;&nbsp;&nbsp;ahora &rarr;</span>
+        <span id="sparkRangeLabel">&larr; hace 60 min&nbsp;&nbsp;&nbsp;ahora &rarr;</span>
       </div>
     </div>
   </section>
@@ -176,8 +190,13 @@ const ICON = {
   bad: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>',
 };
 
-const DETECTOR_LABEL = { empty_window_heuristic: 'sin tráfico (heurístico)', ocsvm_scaled: 'modelo (OCSVM)' };
+const DETECTOR_LABEL = {
+  empty_window_heuristic: 'sin tráfico (heurístico)',
+  ocsvm_scaled: 'modelo (OCSVM)',
+  auth_failure_heuristic: 'fuerza bruta (heurístico)',
+};
 const SERVICE_LABEL = { 'ppi-motor.service': 'Motor', 'ppi-motor-capture.service': 'Captura', 'suricata.service': 'Suricata' };
+let currentRange = '1h';
 
 function card(label, value, cls) {
   return `<div class="card ${cls||''}"><div class="label">${label}</div><div class="value">${value}</div></div>`;
@@ -192,9 +211,10 @@ function renderHealthbar(services, counters) {
   if (!allUp) {
     el.className = 'healthbar bad';
     el.innerHTML = `<span class="dot"></span><div><div class="msg">Atención: un servicio no está activo</div><div class="sub">Revisar con journalctl -- el motor puede no estar observando tráfico real ahora mismo.</div></div>`;
-  } else if (counters.alert_model > 0) {
+  } else if (counters.alert_model + counters.alert_auth_heuristic > 0) {
+    const n = counters.alert_model + counters.alert_auth_heuristic;
     el.className = 'healthbar warn';
-    el.innerHTML = `<span class="dot"></span><div><div class="msg">Servicios activos &middot; ${counters.alert_model} alerta(s) real(es) en la última hora</div><div class="sub">El sistema está funcionando y respondiendo -- revisar la tabla de decisiones abajo.</div></div>`;
+    el.innerHTML = `<span class="dot"></span><div><div class="msg">Servicios activos &middot; ${n} alerta(s) real(es) en la última hora</div><div class="sub">El sistema está funcionando y respondiendo -- revisar la tabla de decisiones abajo.</div></div>`;
   } else {
     el.className = 'healthbar ok';
     el.innerHTML = `<span class="dot"></span><div><div class="msg">Todo operando con normalidad</div><div class="sub">Servicios activos, sin alertas reales en la última hora.</div></div>`;
@@ -219,6 +239,22 @@ function renderSparkline(activity) {
   });
   svg.innerHTML = bars;
 }
+
+async function loadActivity(range) {
+  const data = await (await fetch('/api/activity?range=' + range)).json();
+  renderSparkline(data.activity);
+  document.getElementById('sparkRangeLabel').textContent = range === '24h'
+    ? '← hace 24h    ahora →'
+    : '← hace 60 min    ahora →';
+}
+
+document.getElementById('rangeToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-range]');
+  if (!btn) return;
+  currentRange = btn.dataset.range;
+  document.querySelectorAll('#rangeToggle button').forEach(b => b.classList.toggle('active', b === btn));
+  loadActivity(currentRange);
+});
 
 async function refresh() {
   try {
@@ -248,11 +284,13 @@ async function refresh() {
     counters.innerHTML = [
       card('Total', c.total),
       card('ALERT (modelo)', c.alert_model, c.alert_model > 0 ? 'bad' : ''),
+      card('ALERT (fuerza bruta)', c.alert_auth_heuristic, c.alert_auth_heuristic > 0 ? 'bad' : ''),
       card('PERMIT (modelo)', c.permit_model, 'ok'),
       card('PERMIT (sin tráfico)', c.permit_heuristic),
     ].join('');
 
-    renderSparkline(status.activity);
+    if (currentRange === '1h') renderSparkline(status.activity);
+    else loadActivity(currentRange);
 
     const decisions = await (await fetch('/api/decisions?limit=100')).json();
     document.getElementById('decisions').innerHTML = decisions.length ? decisions.map(d => {
@@ -286,9 +324,9 @@ def tail_lines(path: Path, max_bytes: int = 1_048_576) -> list[str]:
     ]
 
 
-def read_decisions(log_path: Path, limit: int) -> list[dict]:
+def read_decisions(log_path: Path, limit: int, max_bytes: int = 1_048_576) -> list[dict]:
     records = []
-    for line in tail_lines(log_path):
+    for line in tail_lines(log_path, max_bytes=max_bytes):
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
@@ -302,35 +340,44 @@ def read_decisions(log_path: Path, limit: int) -> list[dict]:
 def compute_counters(decisions: list[dict], window_seconds: int = 3600) -> dict:
     now = time.time()
     recent = [d for d in decisions if now - d.get("logged_at", 0) <= window_seconds]
-    alert_model = sum(1 for d in recent if d["decision"] == "ALERT")
+    # Los dos detectores reales que pueden producir ALERT se cuentan por
+    # separado -- mezclarlos en un solo numero oculta cual esta disparando,
+    # justo cuando el motor ya tiene dos caminos distintos hacia ALERT
+    # (ocsvm_scaled y el heuristico de fuerza bruta agregado despues).
+    alert_ocsvm = sum(1 for d in recent if d["decision"] == "ALERT" and d.get("detector_name") == "ocsvm_scaled")
+    alert_auth_heuristic = sum(
+        1 for d in recent if d["decision"] == "ALERT" and d.get("detector_name") == "auth_failure_heuristic"
+    )
     permit_heuristic = sum(1 for d in recent if d.get("detector_name") == "empty_window_heuristic")
     permit_model = sum(
         1 for d in recent if d["decision"] == "PERMIT" and d.get("detector_name") != "empty_window_heuristic"
     )
     return {
         "total": len(recent),
-        "alert_model": alert_model,
+        "alert_model": alert_ocsvm,
+        "alert_auth_heuristic": alert_auth_heuristic,
         "permit_model": permit_model,
         "permit_heuristic": permit_heuristic,
     }
 
 
-def bucket_by_minute(decisions: list[dict], minutes: int = 60) -> list[dict]:
-    """Agrega decisiones en cubos de 1 minuto para el sparkline de actividad.
+def bucket_activity(decisions: list[dict], bucket_seconds: int, count: int) -> list[dict]:
+    """Agrega decisiones en cubos de tamano fijo para graficar actividad.
 
-    Cubos vacios (sin ninguna decision en ese minuto) se incluyen con
-    ceros -- el frontend los necesita para dibujar una linea de tiempo
-    continua, no solo los minutos con actividad.
+    Generaliza el sparkline de 60 minutos (bucket_seconds=60, count=60) y el
+    de 24 horas (bucket_seconds=3600, count=24) con la misma logica. Cubos
+    vacios se incluyen con ceros -- el frontend los necesita para dibujar
+    una linea de tiempo continua, no solo los intervalos con actividad.
     """
     now = time.time()
-    buckets = [{"offset_min": i, "alert": 0, "permit": 0} for i in range(minutes, -1, -1)]
-    index_by_offset = {b["offset_min"]: b for b in buckets}
+    buckets = [{"offset": i, "alert": 0, "permit": 0} for i in range(count, -1, -1)]
+    index_by_offset = {b["offset"]: b for b in buckets}
     for item in decisions:
         age_seconds = now - item.get("logged_at", 0)
-        if age_seconds < 0 or age_seconds > minutes * 60:
+        if age_seconds < 0 or age_seconds > count * bucket_seconds:
             continue
-        offset_min = int(age_seconds // 60)
-        bucket = index_by_offset.get(offset_min)
+        offset = int(age_seconds // bucket_seconds)
+        bucket = index_by_offset.get(offset)
         if bucket is None:
             continue
         if item["decision"] == "ALERT":
@@ -338,6 +385,10 @@ def bucket_by_minute(decisions: list[dict], minutes: int = 60) -> list[dict]:
         else:
             bucket["permit"] += 1
     return buckets
+
+
+def bucket_by_minute(decisions: list[dict], minutes: int = 60) -> list[dict]:
+    return bucket_activity(decisions, bucket_seconds=60, count=minutes)
 
 
 def service_status(names: list[str]) -> dict[str, bool]:
@@ -449,6 +500,22 @@ def main() -> int:
                 params = dict(pair.split("=") for pair in query.split("&") if "=" in pair)
                 limit = int(params.get("limit", "100"))
                 self._send_json(read_decisions(args.log_path, limit=limit))
+                return
+            if path == "/api/activity":
+                params = dict(pair.split("=") for pair in query.split("&") if "=" in pair)
+                range_param = params.get("range", "1h")
+                if range_param == "24h":
+                    # Lee mas atras en el archivo (16 MiB en vez de 1 MiB) para
+                    # tener una chance real de cubrir 24h de historia. Si el
+                    # log no llega tan atras (rotacion, reinicio reciente), los
+                    # cubos mas viejos simplemente quedan en cero -- no se
+                    # rellena con datos inventados.
+                    decisions = read_decisions(args.log_path, limit=200_000, max_bytes=16_777_216)
+                    activity = bucket_activity(decisions, bucket_seconds=3600, count=24)
+                else:
+                    decisions = read_decisions(args.log_path, limit=2000)
+                    activity = bucket_activity(decisions, bucket_seconds=60, count=60)
+                self._send_json({"range": range_param, "activity": activity})
                 return
             self.send_error(404)
 
