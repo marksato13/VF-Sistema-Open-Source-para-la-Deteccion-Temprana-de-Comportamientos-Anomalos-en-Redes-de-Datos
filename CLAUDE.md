@@ -58,6 +58,10 @@ múltiples corridas midiendo FPR operativo, latencia, disponibilidad y
 lead-time de detección). No hay campañas de recolección activas. Los artefactos runtime
 (modelos, PCAP, datasets) permanecen fuera de Git.
 
+**Debilidades y mejoras futuras** recolectadas punto por punto, cada una con
+su evidencia y costo/riesgo de mejora (sin implementar ninguna sin
+calibración/evaluación nueva): `docs/07-mejoras-futuras/01-debilidades-y-mejoras.md`.
+
 Este repositorio documenta y construye la versión final de un sistema open source para la detección temprana de comportamientos anómalos en redes de datos. Es un proyecto ingenieril desplegado en un laboratorio virtualizado sobre VMware ESXi.
 
 Repositorio oficial:
