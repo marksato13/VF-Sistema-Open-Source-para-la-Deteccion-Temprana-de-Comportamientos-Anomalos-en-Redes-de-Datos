@@ -24,6 +24,20 @@ Los cuatro artefactos que se listaban abajo como "lo que puedo hacer ahora mismo
 - Verificar manualmente que `ppi-motor-capture.service` está activo y que `useransible` puede leer los archivos rotados.
 - Habilitar `ppi-motor.service` a mano (deliberadamente NO automático dentro del script de instalación) y observar `journalctl -u ppi-motor.service -f` un rato antes de dejarlo desatendido.
 
+## Despliegue real en VM02 (2026-08-17/18) — hallazgos y correcciones
+
+Instalado con acceso root temporal (cuenta `sensor_motor`, otorgado por el usuario y luego revocado). Tres fallos reales encontrados y corregidos durante el despliegue, ninguno visible en el smoke test sintético previo:
+
+1. **`python3.14-venv` no instalado y VM02 sin internet.** `install-ppi-motor.sh` fallaba en la creación del venv. Se descargaron los `.deb` exactos (`python3.14-venv`, `python3-pip-whl`, `python3-setuptools-whl`) en VM01 —misma Ubuntu 26.04 "resolute", mismo CPython 3.14.4— y se instalaron offline con `dpkg -i` (no `apt-get install ./archivo.deb`: ese comando usa un usuario sandbox `_apt` sin permiso para leer el home de `useransible`). Igual para las dependencias Python (`joblib`, `numpy`, `scikit-learn`, `scipy`, etc. de `requirements-model.txt`): se descargaron como wheels en VM01 y se instalaron con `pip install --no-index --find-links=artifacts/wheels`.
+2. **`capture_start` implícito causaba `eligible_training=False` tras cualquier pausa de tráfico.** Corregido fijando `capture_epoch` al arrancar el proceso. Luego se encontró que esto por sí solo causaba un **bucle de reinicio real** (`ValueError` en `build_rows`) porque el anillo de captura sigue corriendo aunque el motor se reinicie, y puede tener paquetes más viejos que ese piso fijo. Corrección final: `min(capture_epoch, primera_observación_real_del_ciclo)` — evita la excepción y además aprovecha el historial genuino del anillo en vez de descartarlo en cada reinicio.
+3. **`EveTail` releía el `eve.json` completo (162 MB) en el primer ciclo** en vez de arrancar desde el final del archivo — coincidía con una memoria inicial de 429 MB frente a ~80 MB tras el fix.
+
+**Validación real end-to-end**: tras los fixes, el motor procesó una ráfaga real de 10 ICMP echo (generada con `scripts/f1/run-benign.sh ping 10 0.5` desde VM05) y produjo la decisión correcta: `packet_count_10s=20`, `score=2.0678`, `threshold=1.8126` → **PERMIT**, con el `.joblib` congelado real, no un mock.
+
+**Cuarto hallazgo, de diseño no de bug**: 774/774 alertas iniciales fueron ventanas sin ningún paquete (`packet_count_10s=0`) — el modelo OCSVM nunca vio vectores "todo ceros" en el entrenamiento offline (las campañas siempre tenían algo de tráfico dentro de su ventana), así que las clasifica como fuera de distribución. El usuario decidió (opción recomendada) agregar un heurístico explícito: si `packet_count_10s=0` y no hay observaciones de aplicación (HTTP/DNS/TLS) en la ventana, se registra `PERMIT` sin llamar al modelo — mismo patrón que los detectores heurísticos ya previstos en la hoja de ruta (complementan al modelo, nunca lo reemplazan). Queda registrado en el log con `detector_name="empty_window_heuristic"` para distinguirlo de una decisión real del modelo.
+
+Acceso root temporal (clave SSH agregada a `sensor_motor` + `/etc/sudoers.d/90-temporal-claude-motor`) pendiente de revocar al cerrar esta sesión de despliegue, siguiendo el mismo patrón ya usado en el proyecto.
+
 ## Estado original de este documento (antes de tu confirmación), para trazabilidad
 
 ## Lo que ya está resuelto (sin bloqueos)

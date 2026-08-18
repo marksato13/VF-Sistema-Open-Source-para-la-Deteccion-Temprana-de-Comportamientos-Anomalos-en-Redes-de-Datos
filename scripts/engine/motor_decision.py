@@ -264,9 +264,29 @@ def main() -> int:
                     continue
                 scored_windows[window_key] = extractor.parse_eve_timestamp(row["window_end_utc"])
 
-                feature_vector = [[float(row[name]) for name in feature_names]]
-                score = float(pipeline.score_samples(feature_vector)[0])
-                decision = "ALERT" if score < threshold else "PERMIT"
+                # Heuristico explicito, no un ajuste silencioso del modelo
+                # congelado: ocsvm_scaled nunca vio ventanas "todo ceros" en
+                # el entrenamiento offline (las campanas siempre tenian algo
+                # de trafico dentro de su ventana de captura), asi que las
+                # puntua como fuera de distribucion y alerta en CADA ventana
+                # sin trafico -- confirmado en produccion real (774/774
+                # alertas iniciales eran ventanas vacias, 0 relacionadas con
+                # trafico real). Silencio de red no es un ataque. Decision
+                # explicita del usuario, documentada en
+                # docs/06-features-modelado/09-diseno-motor-tiempo-real.md.
+                empty_window = (
+                    row["packet_count_10s"] == 0
+                    and row["http_request_count_60s"] == 0
+                    and row["dns_query_count_60s"] == 0
+                    and row["tls_observation_count_60s"] == 0
+                )
+                if empty_window:
+                    score = None
+                    decision = "PERMIT"
+                else:
+                    feature_vector = [[float(row[name]) for name in feature_names]]
+                    score = float(pipeline.score_samples(feature_vector)[0])
+                    decision = "ALERT" if score < threshold else "PERMIT"
 
                 record = {
                     "event": "decision",
@@ -275,7 +295,7 @@ def main() -> int:
                     "window_end_utc": row["window_end_utc"],
                     "history_coverage_s": row["history_coverage_s"],
                     "packet_count_10s": row["packet_count_10s"],
-                    "detector_name": args.detector_name,
+                    "detector_name": "empty_window_heuristic" if empty_window else args.detector_name,
                     "score": score,
                     "threshold": threshold,
                     "decision": decision,
