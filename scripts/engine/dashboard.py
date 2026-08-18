@@ -84,6 +84,20 @@ HTML = """<!doctype html>
   }
   .range-toggle button.active { background: var(--accent); color: var(--bg); font-weight: 600; }
 
+  .toolbar { display: flex; gap: 0.5rem; align-items: center; }
+  .ip-filter {
+    font-family: var(--mono); font-size: 0.85rem; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem 0.7rem; width: 160px;
+  }
+  .ip-filter:focus { outline: 1.5px solid var(--accent); border-color: var(--accent); }
+  .export-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--sans); font-size: 0.82rem;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.4rem 0.8rem; cursor: pointer;
+  }
+  .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .toolbar-hint { font-size: 0.78rem; color: var(--text-dim); margin: 0.4rem 0 0; min-height: 1em; }
+
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; }
   .card {
     background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border);
@@ -173,7 +187,17 @@ HTML = """<!doctype html>
   </section>
 
   <section>
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg><h2>Decisiones recientes</h2></div>
+    <div class="sec-head-row">
+      <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg><h2>Decisiones recientes</h2></div>
+      <div class="toolbar">
+        <input type="text" id="ipFilter" placeholder="Filtrar por IP..." class="ip-filter">
+        <button id="exportCsv" class="export-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7,10 12,15 17,10"/><path d="M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          Exportar CSV
+        </button>
+      </div>
+    </div>
+    <p class="toolbar-hint" id="filterHint"></p>
     <div class="tbl-wrap">
       <table>
         <thead><tr><th>Hora</th><th>IP</th><th>Decisión</th><th>Motivo</th><th>Score</th><th>Paquetes</th></tr></thead>
@@ -334,19 +358,59 @@ async function refresh() {
     if (currentRange === '1h') renderSparkline(status.activity);
     else loadActivity(currentRange);
 
-    const decisions = await (await fetch('/api/decisions?limit=100')).json();
-    markSeenAndCountNewAlerts(decisions);
-    document.getElementById('decisions').innerHTML = decisions.length ? decisions.map(d => {
-      const isAlert = d.decision === 'ALERT';
-      const badge = isAlert ? `<span class="badge alert">${ICON.bad} ALERT</span>` : `<span class="badge permit">${ICON.ok} PERMIT</span>`;
-      return `<tr class="${isAlert ? 'row-alert' : ''}"><td>${fmtTime(d.logged_at)}</td><td class="ip">${d.entity_ip}</td>` +
-        `<td>${badge}</td><td class="why">${DETECTOR_LABEL[d.detector_name] || d.detector_name}</td>` +
-        `<td class="num">${d.score != null ? d.score.toFixed(4) : '&mdash;'}</td><td class="num">${d.packet_count_10s}</td></tr>`;
-    }).join('') : '<tr class="empty-row"><td colspan="6">Sin decisiones recientes.</td></tr>';
+    lastDecisions = await (await fetch('/api/decisions?limit=100')).json();
+    markSeenAndCountNewAlerts(lastDecisions);
+    renderDecisionsTable();
   } catch (e) {
     stamp.textContent = 'Error al actualizar: ' + e;
   }
 }
+
+// Seccion C: el filtro y la exportacion trabajan sobre lastDecisions (lo
+// que ya esta cargado en el navegador), sin pedir nada nuevo al backend.
+let lastDecisions = [];
+
+function renderDecisionsTable() {
+  const query = document.getElementById('ipFilter').value.trim();
+  const rows = query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions;
+  document.getElementById('filterHint').textContent = query
+    ? `${rows.length} de ${lastDecisions.length} decisiones coinciden con "${query}"`
+    : '';
+  document.getElementById('decisions').innerHTML = rows.length ? rows.map(d => {
+    const isAlert = d.decision === 'ALERT';
+    const badge = isAlert ? `<span class="badge alert">${ICON.bad} ALERT</span>` : `<span class="badge permit">${ICON.ok} PERMIT</span>`;
+    return `<tr class="${isAlert ? 'row-alert' : ''}"><td>${fmtTime(d.logged_at)}</td><td class="ip">${d.entity_ip}</td>` +
+      `<td>${badge}</td><td class="why">${DETECTOR_LABEL[d.detector_name] || d.detector_name}</td>` +
+      `<td class="num">${d.score != null ? d.score.toFixed(4) : '&mdash;'}</td><td class="num">${d.packet_count_10s}</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="6">${query ? 'Ninguna decisión coincide con el filtro.' : 'Sin decisiones recientes.'}</td></tr>`;
+}
+
+document.getElementById('ipFilter').addEventListener('input', renderDecisionsTable);
+
+document.getElementById('exportCsv').addEventListener('click', () => {
+  const query = document.getElementById('ipFilter').value.trim();
+  const rows = query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions;
+  const header = ['hora_utc', 'ip', 'decision', 'motivo', 'score', 'paquetes_10s'];
+  const csvRows = rows.map(d => [
+    d.window_end_utc,
+    d.entity_ip,
+    d.decision,
+    DETECTOR_LABEL[d.detector_name] || d.detector_name,
+    d.score != null ? d.score : '',
+    d.packet_count_10s,
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+  const csv = [header.join(','), ...csvRows].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ppi-decisiones-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
 refresh();
 setInterval(refresh, 5000);
 </script>
