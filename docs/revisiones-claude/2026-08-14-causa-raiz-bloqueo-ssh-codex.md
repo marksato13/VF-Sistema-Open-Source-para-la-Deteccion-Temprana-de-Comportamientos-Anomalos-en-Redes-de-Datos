@@ -1,7 +1,7 @@
 # Causa raíz del bloqueo SSH de Codex en la calibración CAL-FRAG-UDP-01
 
 - **Fecha:** 2026-08-14
-- **Autor:** Claude, tras dos intentos fallidos de Codex documentados en `docs/07-dataset-campanas/173-calibracion-fragmentacion-ip-real.md`.
+- **Autor:** Claude, tras dos intentos fallidos de Codex documentados en `docs/fase03-dataset/173-calibracion-fragmentacion-ip-real.md`.
 
 ## Hecho observado
 

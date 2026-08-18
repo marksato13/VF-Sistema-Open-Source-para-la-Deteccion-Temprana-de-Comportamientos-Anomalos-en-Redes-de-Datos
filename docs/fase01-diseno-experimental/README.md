@@ -12,8 +12,8 @@ Este plan separa las campañas para que el entrenamiento y la evaluación sean d
 El procedimiento automatizado, la estructura de evidencia y los criterios de aceptación se describen en `09-sistema-campanas-F1.md`.
 La validación extremo a extremo y los dos fallos corregidos se registran en `10-validacion-orquestador-G3.md`.
 El diseño y la validación PCAP están en `11-diseno-captura-PCAP-G4.md` y `12-validacion-captura-PCAP-G4.md`.
-El contrato de las 14 variables causales se define en `../06-features-modelado/01-diccionario-multicapa-G5.md`.
-Su validación sintética y real está en `../06-features-modelado/02-validacion-extractor-G5.md`.
+El contrato de las 14 variables causales se define en `../F4-modelado/01-diccionario-multicapa-G5.md`.
+Su validación sintética y real está en `../F4-modelado/02-validacion-extractor-G5.md`.
 La matriz ejecutable F1, su partición y el gate de almacenamiento están en `../07-dataset-campanas/01-matriz-F1-normal-G6.md`.
 Los primeros pilotos DNS/HTTP y el bloqueo negativo de capacidad están en `../07-dataset-campanas/02-validacion-pilotos-G6.md`.
 El ensamblador con gates anti-contaminación y sus pruebas están en `../07-dataset-campanas/03-ensamblador-seguro-F1-G6.md`.
@@ -117,7 +117,7 @@ La vigesimoctava campaña R03 cierra el techo UDP a 50 Mbit/s con 86,329 secuenc
 La vigesimonovena campaña R03 combina HTTP, TCP y DNS con solapamiento medido, captura íntegra, un `flow` de preflight diferido excluido de features y cero duplicados nuevos; cierra R03 29/29 en `../07-dataset-campanas/96-canario-MIXED-LIGHT-R03.md`.
 
 La auditoría agregada de R03 distingue 19.54 GB crudos de 87 episodios/224 ventanas train, valida las catorce features, registra diecisiete coincidencias y responde con alcance limitado a las observaciones del jurado en `../07-dataset-campanas/97-auditoria-agregada-R03-F1.md`. El contrato y la política de filas para R04/R05 quedan congelados en `18-congelamiento-protocolo-R04-R05.md`.
-El protocolo `PM-F1-v1` resuelve G5↔G6, congela Isolation Forest y comparadores, separa ajuste/calibración/test y define sensibilidades por campaña y vector exacto en `../06-features-modelado/03-protocolo-modelado-F1-v2.md`.
+El protocolo `PM-F1-v1` resuelve G5↔G6, congela Isolation Forest y comparadores, separa ajuste/calibración/test y define sensibilidades por campaña y vector exacto en `../F4-modelado/03-protocolo-modelado-F1-v2.md`.
 La revisión adversarial, los dos bloqueos corregidos y las condiciones operativas para abrir R04 están en `../04-revisiones-claude/2026-08-04-protocolo-modelado-F1-v2.md`.
 El primer canario R04 reproduce diez resoluciones DNS válidas con PCAP/EVE íntegros, registra el primer vector exacto `seen` train↔validation y mantiene bloqueado el scoring hasta 29/29 en `../07-dataset-campanas/98-canario-DNS-VALID-10-R04.md`.
 El segundo canario R04 completa 200 transacciones DNS válidas en dos ventanas causales, sin vector exacto train y sin scoring, en `../07-dataset-campanas/99-canario-DNS-VALID-200-R04.md`.

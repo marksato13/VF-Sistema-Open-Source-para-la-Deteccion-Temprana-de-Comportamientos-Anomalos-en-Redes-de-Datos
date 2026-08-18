@@ -48,4 +48,4 @@ Fecha: 22 de julio de 2026. Claude Code fue usado como segundo revisor, sin perm
 
 ## Dictamen cruzado
 
-Claude y Codex coinciden en **NO APTO**. La corrección no consiste en borrar direcciones desde Linux: debe desconectarse cada NIC externa en ESXi y desactivarse su reconexión automática. Después se ejecutará el gate positivo y negativo descrito en `docs/05-plan-pruebas/13-auditoria-preexperimental-G7.md`.
+Claude y Codex coinciden en **NO APTO**. La corrección no consiste en borrar direcciones desde Linux: debe desconectarse cada NIC externa en ESXi y desactivarse su reconexión automática. Después se ejecutará el gate positivo y negativo descrito en `docs/fase01-diseno-experimental/13-auditoria-preexperimental-G7.md`.

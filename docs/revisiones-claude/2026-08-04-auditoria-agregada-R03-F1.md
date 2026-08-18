@@ -6,7 +6,7 @@ Claude emitió **APTO CON CONDICIONES** para cerrar R03. Reconoció 29/29 perfil
 
 Conservó como límites la autocorrelación, topología fija, mayor peso temporal de web/TLS, cobertura L7 de error escasa, diecisiete coincidencias exactas dentro de `train`, ausencia actual de validation/test y falta de modelo o métricas.
 
-Claude exigió dos condiciones antes de R04: congelar matriz/esquema/generador/topología/software y registrar la política de filas/duplicados. Ambas quedaron formalizadas en `docs/05-plan-pruebas/18-congelamiento-protocolo-R04-R05.md`.
+Claude exigió dos condiciones antes de R04: congelar matriz/esquema/generador/topología/software y registrar la política de filas/duplicados. Ambas quedaron formalizadas en `docs/fase01-diseno-experimental/18-congelamiento-protocolo-R04-R05.md`.
 
 Una revisión adversarial posterior declaró la política **APTA PARA DOCUMENTAR**. Se precisó que peso uno por ventana es siempre el resultado principal; balance por episodio y colapso determinista de duplicados `train` son sensibilidades obligatorias separadas. También se fijaron igualdad decimal exacta en catorce dimensiones como definición de vector visto y la partición atómica mediante la matriz/ensamblador.
 

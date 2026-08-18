@@ -18,7 +18,7 @@
   `partition=evaluation_only` y `label=anomaly`; nunca se agrega al CSV normal.
 - `run_v2_anomaly_kali.py` es el equivalente para las anomalías reales
   originadas en Kali (`10.20.0.100`), vía `scripts/campaign/run-f1-kali.sh` —
-  ver `docs/07-dataset-campanas/` para el detalle de cada familia de ataque.
+  ver `docs/fase03-dataset/` para el detalle de cada familia de ataque.
 - `audit_multilayer_v2.py` audita el CSV consolidado (esquema, particiones,
   duplicados, cobertura de features) sin escribir nada; es el gate que corren
   también el calibrador (`scripts/modeling/calibrate_multilayer_v2_v1.py`) y
@@ -31,8 +31,8 @@ Extracción por campaña individual: `scripts/features/extract_multilayer_v2.py`
 
 `build_f1_dataset.py` es el ensamblador del dataset **anterior** (14 features,
 `f1-normal-v2`, 145 celdas), superado por `multilayer-v2`. Se conserva sin
-modificar porque construyó la evidencia histórica de `docs/07-dataset-campanas/01`
-a `05` y `docs/06-features-modelado/03-protocolo-modelado-F1-v2.md`; no se usa
+modificar porque construyó la evidencia histórica de `docs/fase03-dataset/01`
+a `05` y `docs/fase04-modelado/01-protocolo-modelado-F1-v2.md`; no se usa
 para trabajo nuevo.
 
 ```bash

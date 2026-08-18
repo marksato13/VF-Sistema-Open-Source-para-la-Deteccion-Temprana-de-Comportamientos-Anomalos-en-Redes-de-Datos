@@ -1,6 +1,6 @@
 [Unit]
 Description=PPI - motor de decision en tiempo real (OCSVM + enforcement inline)
-Documentation=file:///home/useransible/vf-sistema-final/docs/06-features-modelado/09-diseno-motor-tiempo-real.md
+Documentation=file:///home/useransible/vf-sistema-final/docs/fase05-motor-tiempo-real/01-diseno-motor-tiempo-real.md
 After=network-online.target suricata.service ppi-motor-capture.service
 Wants=network-online.target
 Requires=ppi-motor-capture.service

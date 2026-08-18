@@ -4,7 +4,7 @@
 Adaptación de calibrate_pm_f1_v1.py (protocolo PM-F1-v1, 2026-08-04) al
 dataset multilayer-v2 ampliado (28 features, 220 episodios normales, 132
 episodios de anomalías reales/heredadas). Ver
-docs/06-features-modelado/06-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md.
+docs/fase04-modelado/04-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md.
 
 Diferencia deliberada respecto a PM-F1-v1, documentada y verificada, no
 copiada a ciegas: la rama de sensibilidad "expansión exacta por MCM" del

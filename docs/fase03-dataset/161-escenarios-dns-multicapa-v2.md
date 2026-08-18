@@ -16,7 +16,7 @@ generados) contra el mismo destino `10.30.0.10`. Ese diseño no ejercita
 apuntan a una sola IP y el propio backend de resolución es la misma máquina.
 
 `dns-multi` responde a la brecha identificada en el plan de expansión
-`docs/07-dataset-campanas/160-plan-expansion-dataset-multicapa-v2.md` (grupo
+`docs/fase03-dataset/160-plan-expansion-dataset-multicapa-v2.md` (grupo
 N2, "DNS con dominios únicos, repetidos... y respuestas de distintos
 tamaños"): genera consultas DNS legítimas hacia **varios nombres distintos**
 que resuelven a **direcciones IPv4 distintas**, para producir episodios donde
@@ -146,7 +146,7 @@ expectativa de diseño, no evidencia observada.
 Ninguna feature de `multilayer-v1` mide directamente la diversidad de
 *nombres* consultados (solo de IP destino y de puerto). El plan v2 propone
 `unique_dns_name_ratio_60s` y `dns_query_rate_60s`
-(`docs/07-dataset-campanas/160-plan-expansion-dataset-multicapa-v2.md`,
+(`docs/fase03-dataset/160-plan-expansion-dataset-multicapa-v2.md`,
 sección "Esquema de features v2 propuesto") precisamente para capturar esa
 señal; ninguna de las dos está implementada en
 `scripts/features/extract_multilayer.py` a la fecha de este documento. Hasta

@@ -151,7 +151,7 @@ Las huellas deberán confirmarse desde la consola de cada VM antes de agregarlas
 
 Estos playbooks requieren privilegios. `useransible` no pertenece a sudoers de forma permanente: durante la ejecución se autorizó mediante un archivo temporal validado con `visudo`, que fue eliminado inmediatamente en Servidor, Cliente y Sensor. Las NIC externas de Servidor y Cliente se habilitaron solo para descargar paquetes y volvieron a estado `DOWN` al finalizar.
 
-Las únicas excepciones permanentes son `/usr/local/sbin/ppi-suricata-metrics` y `/usr/local/sbin/ppi-pcap-control` en el Sensor. Ambos son propiedad de `root`; el primero no acepta argumentos y el segundo limita las acciones a `start`, `stop`, `status` y `archive`, valida el ID y, para archivar, una etiqueta `attempt-NN`. La interfaz, filtro, destinos y rotación permanecen fijos. Las pruebas negativas confirmaron que `useransible` no puede ejecutar directamente `/usr/bin/id` ni `/usr/bin/tcpdump`. El razonamiento está en `docs/05-plan-pruebas/09-sistema-campanas-F1.md`, `11-diseno-captura-PCAP-G4.md` y `17-archivado-intentos-fallidos.md`.
+Las únicas excepciones permanentes son `/usr/local/sbin/ppi-suricata-metrics` y `/usr/local/sbin/ppi-pcap-control` en el Sensor. Ambos son propiedad de `root`; el primero no acepta argumentos y el segundo limita las acciones a `start`, `stop`, `status` y `archive`, valida el ID y, para archivar, una etiqueta `attempt-NN`. La interfaz, filtro, destinos y rotación permanecen fijos. Las pruebas negativas confirmaron que `useransible` no puede ejecutar directamente `/usr/bin/id` ni `/usr/bin/tcpdump`. El razonamiento está en `docs/fase01-diseno-experimental/09-sistema-campanas-F1.md`, `11-diseno-captura-PCAP-G4.md` y `17-archivado-intentos-fallidos.md`.
 
 ## NTP interno con las NIC externas aisladas
 
@@ -163,6 +163,6 @@ Después de aplicar, el gate de solo lectura se ejecuta desde la raíz:
 scripts/f1/check_ntp_gate.sh
 ```
 
-No se debe reconectar una NIC externa para superar este control. El procedimiento y el bloqueo preventivo de C8 están en `docs/05-plan-pruebas/16-correccion-ntp-interno-G7.md`.
+No se debe reconectar una NIC externa para superar este control. El procedimiento y el bloqueo preventivo de C8 están en `docs/fase01-diseno-experimental/16-correccion-ntp-interno-G7.md`.
 
-El playbook `07` se ejecuta localmente en VM01 y es deliberadamente destructivo sobre el dispositivo indicado. No selecciona discos automáticamente: exige una ruta estable de disco completo, comprueba que no sea el disco raíz, que mida al menos 100 GiB y que no tenga particiones, montajes, sistema de archivos ni firmas. El procedimiento exacto está en `docs/08-almacenamiento/01-disco-evidencias-vm01.md`.
+El playbook `07` se ejecuta localmente en VM01 y es deliberadamente destructivo sobre el dispositivo indicado. No selecciona discos automáticamente: exige una ruta estable de disco completo, comprueba que no sea el disco raíz, que mida al menos 100 GiB y que no tenga particiones, montajes, sistema de archivos ni firmas. El procedimiento exacto está en `docs/fase00-infraestructura/almacenamiento/01-disco-evidencias-vm01.md`.

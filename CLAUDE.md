@@ -11,9 +11,9 @@ heredadas de una generación anterior). 28 features (14 v1 + 14 nuevas L3/L4/L7)
 `gates.pass=true`, sin episodios repartidos entre particiones, sin
 duplicados exactos nuevos sin declarar. Limitación conocida y no resuelta:
 `tls_handshake_failure_ratio_60s` sigue constante en todo el dataset (ver
-`docs/07-dataset-campanas/175-limite-tls-handshake-failure-ratio.md`). El
+`docs/fase03-dataset/175-limite-tls-handshake-failure-ratio.md`). El
 tamaño real queda por debajo de la meta aspiracional de 2,000–3,000 ventanas
-independientes (`docs/07-dataset-campanas/160-plan-expansion-dataset-multicapa-v2.md`).
+independientes (`docs/fase03-dataset/160-plan-expansion-dataset-multicapa-v2.md`).
 
 **Modelo congelado: OCSVM** (`ocsvm_scaled`, `nu=0.05`, sobre features
 estandarizadas). Umbral `score < 1.8126` (calibrado con `alpha=0.05`).
@@ -24,8 +24,8 @@ familias de fallo de autenticación (`ANOM-AUTH-FAIL-50` 50%,
 desempeño empírico medido (instrucción explícita del usuario), no por regla
 por defecto — IF tiene puntos ciegos reales y medidos en `tcp-syn-rate` y
 `udp-probe` (0% de detección) que OCSVM sí resuelve. Detalle completo:
-`docs/06-features-modelado/07-resultado-calibracion-multilayer-v2-v1.md` y
-`docs/06-features-modelado/08-modelo-final-congelado-ocsvm.md`.
+`docs/fase04-modelado/05-resultado-calibracion-multilayer-v2-v1.md` y
+`docs/fase04-modelado/06-modelo-final-congelado-ocsvm.md`.
 
 **Motor de decisión en tiempo real y enforcement inline: desplegados y
 activos en VM02** (`ppi-motor-capture.service` + `ppi-motor.service`).
@@ -40,7 +40,7 @@ re-bloqueo infinito por una poda de memoria basada en reloj en vez de
 tamaño. Detalle completo, incluidas las limitaciones declaradas (sin nivel
 `LIMIT` intermedio porque exigiría un segundo umbral sin calibrar; ~120 s de
 buffer en anillo, menor que una campaña offline completa):
-`docs/06-features-modelado/09-diseno-motor-tiempo-real.md`.
+`docs/fase05-motor-tiempo-real/01-diseno-motor-tiempo-real.md`.
 
 **Dashboard operativo del motor: desplegado** (`ppi-dashboard.service`, VM02,
 puerto `8788` solo en loopback, acceso remoto exclusivamente por túnel SSH).
@@ -50,9 +50,9 @@ métricas leídas del `manifest.json` congelado, no hardcodeadas), IPs
 bloqueadas en vivo y actividad reciente. Validado end-to-end contra tráfico
 real (una IP bloqueada automáticamente por el motor apareció en el panel con
 su expiración exacta). Arquitectura completa, justificación técnica y manual
-de instalación/usuario: `docs/06-features-modelado/10-diseno-dashboard-motor.md`.
+de instalación/usuario: `docs/fase06-dashboard/01-diseno-dashboard-motor.md`.
 
-**Siguiente en la hoja de ruta** (`docs/06-features-modelado/06-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md`):
+**Siguiente en la hoja de ruta** (`docs/fase04-modelado/04-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md`):
 validación final con el motor activo (equivalente al F6 del MVP anterior:
 múltiples corridas midiendo FPR operativo, latencia, disponibilidad y
 lead-time de detección). No hay campañas de recolección activas. Los artefactos runtime
@@ -75,12 +75,12 @@ Claude debe trabajar como revisor técnico adversarial y segundo ingeniero. Code
 Al comenzar una sesión:
 
 1. Ejecutar `git status --short --branch` y no sobrescribir cambios ajenos.
-2. Leer `docs/01-infraestructura-virtual/README.md`.
-3. Leer `docs/02-mejoras-observadas-por-el-jurado/README.md`.
-4. Leer `docs/03-procedimiento-ansible/README.md`.
+2. Leer `docs/fase00-infraestructura/virtualizacion/README.md`.
+3. Leer `docs/requisitos-jurado/README.md`.
+4. Leer `docs/fase00-infraestructura/ansible/README.md`.
 5. Leer `ansible/README.md`, el inventario y los playbooks relacionados con la tarea.
 6. Para el historial detallado de una campaña o revisión específica, buscarla en
-   `docs/07-dataset-campanas/README.md` o `docs/04-revisiones-claude/README.md`
+   `docs/fase03-dataset/README.md` o `docs/revisiones-claude/README.md`
    antes de asumir que no existe evidencia — este archivo ya no repite ese
    historial en prosa, solo el estado vigente.
 7. Distinguir entre diseño planificado, configuración aplicada y evidencia validada.
@@ -125,17 +125,17 @@ Las NIC externas de `172.17.25.0/24` todavía existen para instalación y recupe
 - La captura se validó con alertas ICMP y un evento HTTP completo. Sensor y Servidor superaron reinicios controlados con configuración persistente; todavía faltan ataques reales, protocolos restantes y pruebas de carga.
 - La calibración segura fijó techos de F1 en 200 Mbit/s TCP, 50 Mbit/s UDP y 20 MB/s por transferencia HTTP/HTTPS; todas las pruebas acotadas posteriores registraron cero drops de Suricata.
 - Existe un orquestador reproducible en `scripts/campaign/`: manifiesto, inventario, contadores, serie temporal del Sensor, segmento EVE y hashes por campaña. Los artefactos runtime permanecen fuera de Git.
-- En VM02–VM05, `useransible` puede ejecutar únicamente el reinicio exacto `/usr/bin/systemctl reboot --no-wall`; en el Sensor también puede usar los helpers versionados `ppi-suricata-metrics`, `ppi-pcap-control` y, desde el despliegue del motor, `ppi-enforce` (bloqueo nftables, ver `docs/06-features-modelado/09-diseno-motor-tiempo-real.md`). No dispone de sudo general ni de permiso directo sobre `tcpdump`; la prueba negativa con `/usr/bin/id` falla en las cuatro VMs. `ppi-motor-capture.service` y `ppi-motor.service` corren de forma autónoma vía systemd, sin necesitar sudo en operación diaria.
-- G4 incorpora PCAP por campaña mediante un helper raíz que fija `ens35`, filtro LAN↔DMZ, snaplen completo y rotación máxima aproximada de 2.048 GB. El diseño y riesgos están en `docs/05-plan-pruebas/11-diseno-captura-PCAP-G4.md`.
-- G4 pasó con DNS y HTTP. En `CAL-G4-HTTP-001`, 7,242 de 8,484 paquetes IPv4 (85.36 %) midieron 500–1500 bytes, con cero drops y SHA remoto/local verificado. Resultados: `docs/05-plan-pruebas/12-validacion-captura-PCAP-G4.md`.
-- G5 define `multilayer-v1`: 14 features causales por IP iniciadora, con ventanas de 10/30/60 s y tres señales L7 pasivas. Diccionario: `docs/06-features-modelado/01-diccionario-multicapa-G5.md`; extractor: `scripts/features/`.
-- G5 pasó pruebas sintéticas, regresión HTTP y una campaña DNS con warm-up de 60 s. La fila resultó `eligible_training=true`, pero conserva propósito `calibration` y no entra al dataset. Evidencia: `docs/06-features-modelado/02-validacion-extractor-G5.md`.
+- En VM02–VM05, `useransible` puede ejecutar únicamente el reinicio exacto `/usr/bin/systemctl reboot --no-wall`; en el Sensor también puede usar los helpers versionados `ppi-suricata-metrics`, `ppi-pcap-control` y, desde el despliegue del motor, `ppi-enforce` (bloqueo nftables, ver `docs/fase05-motor-tiempo-real/01-diseno-motor-tiempo-real.md`). No dispone de sudo general ni de permiso directo sobre `tcpdump`; la prueba negativa con `/usr/bin/id` falla en las cuatro VMs. `ppi-motor-capture.service` y `ppi-motor.service` corren de forma autónoma vía systemd, sin necesitar sudo en operación diaria.
+- G4 incorpora PCAP por campaña mediante un helper raíz que fija `ens35`, filtro LAN↔DMZ, snaplen completo y rotación máxima aproximada de 2.048 GB. El diseño y riesgos están en `docs/fase01-diseno-experimental/11-diseno-captura-PCAP-G4.md`.
+- G4 pasó con DNS y HTTP. En `CAL-G4-HTTP-001`, 7,242 de 8,484 paquetes IPv4 (85.36 %) midieron 500–1500 bytes, con cero drops y SHA remoto/local verificado. Resultados: `docs/fase01-diseno-experimental/12-validacion-captura-PCAP-G4.md`.
+- G5 define `multilayer-v1`: 14 features causales por IP iniciadora, con ventanas de 10/30/60 s y tres señales L7 pasivas. Diccionario: `docs/fase02-features-multicapa/01-diccionario-multicapa-G5.md`; extractor: `scripts/features/`.
+- G5 pasó pruebas sintéticas, regresión HTTP y una campaña DNS con warm-up de 60 s. La fila resultó `eligible_training=true`, pero conserva propósito `calibration` y no entra al dataset. Evidencia: `docs/fase02-features-multicapa/02-validacion-extractor-G5.md`.
 - El gate G3 del orquestador pasó con `CAL-F1-DNS-003`: 6 paquetes, cero drops/errores/overflow, 7 registros EVE exactos y 7 muestras del Sensor. Esta ejecución es calibración y no pertenece al dataset.
-- VM01 conserva su disco raíz de 70 GiB y ya posee un segundo VMDK thin de 150 GiB: ext4 por UUID en `/srv/ppi-evidence`, aproximadamente 140 GiB disponibles. El montaje persistió tras reiniciar VM01 con el mismo UUID y opciones `rw,nosuid,nodev,noexec,noatime`; RustDesk volvió `active/enabled`. Los gates de capacidad e identidad de F1 están en PASS. Diseño y evidencia: `docs/08-almacenamiento/01-disco-evidencias-vm01.md`.
-- El preflight de `HTTP-C8/R01` se detuvo sin crear artefactos porque el Sensor perdió la marca `NTPSynchronized=yes` después de unas 18 horas sin alcanzar sus fuentes públicas por la NIC externa aislada. Se aplicó la jerarquía VM01 `10.10.10.10`→Sensor→VM03–VM05. `prefer require` —sin `trust`— resolvió la espera causada por `authselectmode mix`: el Sensor seleccionó VM01, pasó a estrato 4 y recuperó `Leap status: Normal`. Tres gates consecutivos pasaron con offsets máximos inferiores a 100 ms; Kali se valida mediante `systemd-timesyncd`, no `chronyc`. Hashes desplegados y Git coinciden, las NIC externas siguen abajo y el bypass continúa bloqueado. Se autoriza repetir el preflight completo de C8. Evidencia: `docs/05-plan-pruebas/16-correccion-ntp-interno-G7.md`.
-- El intento rechazado `F1N-HTTP-C8-R01` se archivó sin eliminación como `attempt-01` en VM01 y Sensor mediante el commit `3860c864`. Los hashes del manifest, ledger, lista del bundle y ambos PCAP se volvieron a verificar; las rutas activas quedaron libres. El ensamblador regresó al estado esperado: 15 aceptadas, 0 inválidas, 0 advertencias y 130 faltantes; la calibración sigue excluida. El reintento debe reutilizar el ID canónico y ejecutar nuevamente todos los gates. Evidencia: `docs/05-plan-pruebas/17-archivado-intentos-fallidos.md`.
+- VM01 conserva su disco raíz de 70 GiB y ya posee un segundo VMDK thin de 150 GiB: ext4 por UUID en `/srv/ppi-evidence`, aproximadamente 140 GiB disponibles. El montaje persistió tras reiniciar VM01 con el mismo UUID y opciones `rw,nosuid,nodev,noexec,noatime`; RustDesk volvió `active/enabled`. Los gates de capacidad e identidad de F1 están en PASS. Diseño y evidencia: `docs/fase00-infraestructura/almacenamiento/01-disco-evidencias-vm01.md`.
+- El preflight de `HTTP-C8/R01` se detuvo sin crear artefactos porque el Sensor perdió la marca `NTPSynchronized=yes` después de unas 18 horas sin alcanzar sus fuentes públicas por la NIC externa aislada. Se aplicó la jerarquía VM01 `10.10.10.10`→Sensor→VM03–VM05. `prefer require` —sin `trust`— resolvió la espera causada por `authselectmode mix`: el Sensor seleccionó VM01, pasó a estrato 4 y recuperó `Leap status: Normal`. Tres gates consecutivos pasaron con offsets máximos inferiores a 100 ms; Kali se valida mediante `systemd-timesyncd`, no `chronyc`. Hashes desplegados y Git coinciden, las NIC externas siguen abajo y el bypass continúa bloqueado. Se autoriza repetir el preflight completo de C8. Evidencia: `docs/fase01-diseno-experimental/16-correccion-ntp-interno-G7.md`.
+- El intento rechazado `F1N-HTTP-C8-R01` se archivó sin eliminación como `attempt-01` en VM01 y Sensor mediante el commit `3860c864`. Los hashes del manifest, ledger, lista del bundle y ambos PCAP se volvieron a verificar; las rutas activas quedaron libres. El ensamblador regresó al estado esperado: 15 aceptadas, 0 inválidas, 0 advertencias y 130 faltantes; la calibración sigue excluida. El reintento debe reutilizar el ID canónico y ejecutar nuevamente todos los gates. Evidencia: `docs/fase01-diseno-experimental/17-archivado-intentos-fallidos.md`.
 
-Historial completo campaña por campaña (180 documentos) en [`docs/07-dataset-campanas/README.md`](docs/07-dataset-campanas/README.md); cada uno con su revisión adversarial independiente en [`docs/04-revisiones-claude/README.md`](docs/04-revisiones-claude/README.md).
+Historial completo campaña por campaña (180 documentos) en [`docs/fase03-dataset/README.md`](docs/fase03-dataset/README.md); cada uno con su revisión adversarial independiente en [`docs/revisiones-claude/README.md`](docs/revisiones-claude/README.md).
 
 ## Observaciones obligatorias del jurado
 
@@ -269,7 +269,7 @@ git switch -c claude/revision-<tema>
 Las revisiones de Claude deben guardarse preferentemente en:
 
 ```text
-docs/04-revisiones-claude/
+docs/revisiones-claude/
 ```
 
 Si el usuario solicita una corrección documental directa y no hay cambios concurrentes, puede actualizar el documento correspondiente. Para cambios de código, infraestructura, firewall, red, Suricata o ML, se recomienda una rama separada y revisión de Codex antes de integrar a `main`.
@@ -311,7 +311,7 @@ El objetivo final no es demostrar que el sistema siempre tiene razón, sino deli
 
 ## Rediseño experimental vigente
 
-Antes de ejecutar escenarios, Claude debe leer `docs/05-plan-pruebas/01-diseno-defendible.md` y `docs/05-plan-pruebas/README.md`. La campaña vigente se organiza como F0 (calibración), F1 (normalidad para entrenamiento), F2 (estrés legítimo), F3 (anomalías L3/L4/L7) y F4 (mixto). No se deben ejecutar ataques ni capturar el dataset final mientras Kali no tenga NTP sincronizado y las NIC externas estén aisladas.
+Antes de ejecutar escenarios, Claude debe leer `docs/fase01-diseno-experimental/01-diseno-defendible.md` y `docs/fase01-diseno-experimental/README.md`. La campaña vigente se organiza como F0 (calibración), F1 (normalidad para entrenamiento), F2 (estrés legítimo), F3 (anomalías L3/L4/L7) y F4 (mixto). No se deben ejecutar ataques ni capturar el dataset final mientras Kali no tenga NTP sincronizado y las NIC externas estén aisladas.
 
 El propósito es producir ventanas etiquetadas y reproducibles para Isolation Forest y modelos futuros. Las features nuevas deben demostrar código, diccionario, prueba y ablación; nunca deben marcarse como implementadas solo por estar planificadas. Claude debe revisar cada campaña contra MITRE ATT&CK, NIST y la documentación oficial de Suricata, y cuestionar tamaño de muestra, contaminación entre particiones, falsos positivos y pérdida de paquetes.
 
@@ -321,4 +321,4 @@ La calibración posterior fijó máximos F1 de 200 Mbit/s TCP y 50 Mbit/s UDP. T
 
 HTTP/HTTPS quedó calibrado con 10 MB, 100 MB, 500 MB y 1 GB, además de 2/4/8 flujos concurrentes. Suricata terminó con cero drops y una muestra tcpdump registró 90.84 % de payloads TCP entre 500 y 1500 bytes. Los detalles están en `08-resultados-http-https-G2.md`; estos datos también son calibración y no entrenamiento.
 
-Historial completo de calibraciones y canarios R01–R05 (180 documentos) en [`docs/07-dataset-campanas/README.md`](docs/07-dataset-campanas/README.md); revisión adversarial de cada uno en [`docs/04-revisiones-claude/README.md`](docs/04-revisiones-claude/README.md).
+Historial completo de calibraciones y canarios R01–R05 (180 documentos) en [`docs/fase03-dataset/README.md`](docs/fase03-dataset/README.md); revisión adversarial de cada uno en [`docs/revisiones-claude/README.md`](docs/revisiones-claude/README.md).

@@ -670,7 +670,7 @@ Hallazgos principales:
 - El Cliente sí conserva un disco virtual de 60 GiB frente a los 100 GiB previstos.
 - VM02–VM05 conservan una interfaz externa temporal en `172.17.25.0/24`.
 
-La tabla completa de recursos, interfaces y diferencias se mantiene en `docs/01-infraestructura-virtual/README.md`.
+La tabla completa de recursos, interfaces y diferencias se mantiene en `docs/fase00-infraestructura/virtualizacion/README.md`.
 
 Estado: **auditoría validada; los ajustes posteriores de CPU, RAM y disco del Cliente se registran en la sección 21**.
 

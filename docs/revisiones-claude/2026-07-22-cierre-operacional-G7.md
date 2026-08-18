@@ -33,6 +33,6 @@ Reiniciar primero el Servidor, comprobar que su NIC externa continúa aislada y 
 
 ## Seguimiento
 
-Codex ejecutó posteriormente la prueba solicitada: VM03 obtuvo un `boot_id` nuevo, su NIC externa permaneció `DOWN/NO-CARRIER`, `.112` continuó bloqueada y pasaron rutas, servicios, NTP, VIP y Suricata. La evidencia está en `docs/05-plan-pruebas/15-validacion-persistencia-G7.md`.
+Codex ejecutó posteriormente la prueba solicitada: VM03 obtuvo un `boot_id` nuevo, su NIC externa permaneció `DOWN/NO-CARRIER`, `.112` continuó bloqueada y pasaron rutas, servicios, NTP, VIP y Suricata. La evidencia está en `docs/fase01-diseno-experimental/15-validacion-persistencia-G7.md`.
 
 Se intentaron dos revisiones finales adicionales con Claude Code, pero terminaron sin emitir contenido. No se atribuye una aprobación nueva a esas sesiones; el cierre de Codex se apoya en haber satisfecho y reproducido las condiciones explícitas del dictamen condicional anterior.

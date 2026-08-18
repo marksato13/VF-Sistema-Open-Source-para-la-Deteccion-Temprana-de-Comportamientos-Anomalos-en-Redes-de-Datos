@@ -11,8 +11,8 @@ El usuario pidió planificar el mejor flujo posible para el sistema completo, s�
 ## Lo que ya existe y se reutiliza
 
 **De este repo:**
-- `docs/05-plan-pruebas/01-diseno-defendible.md`: fases F0-F4 con puertas de decisión G0-G9, criterio train=solo normal/test=separado, ablación L3/L4/L7, split por sesión no aleatorio.
-- `docs/06-features-modelado/03-protocolo-modelado-F1-v2.md` (`PM-F1-v1`, congelado 2026-08-04): protocolo estadístico ya validado para el dataset anterior (14 features) — Isolation Forest principal con hiperparámetros fijos, LOF/OCSVM como comparadores (nunca reemplazan a IF por ganar una métrica), regla de umbral por cuantil (`alpha=0.05` en validación, desigualdad estricta), evaluación bloqueada en un solo paso por partición, sensibilidad por semilla/ponderación/colapso de duplicados, gates de ejecución explícitos.
+- `docs/fase01-diseno-experimental/01-diseno-defendible.md`: fases F0-F4 con puertas de decisión G0-G9, criterio train=solo normal/test=separado, ablación L3/L4/L7, split por sesión no aleatorio.
+- `docs/fase04-modelado/01-protocolo-modelado-F1-v2.md` (`PM-F1-v1`, congelado 2026-08-04): protocolo estadístico ya validado para el dataset anterior (14 features) — Isolation Forest principal con hiperparámetros fijos, LOF/OCSVM como comparadores (nunca reemplazan a IF por ganar una métrica), regla de umbral por cuantil (`alpha=0.05` en validación, desigualdad estricta), evaluación bloqueada en un solo paso por partición, sensibilidad por semilla/ponderación/colapso de duplicados, gates de ejecución explícitos.
 - `scripts/modeling/calibrate_pm_f1_v1.py` (776 líneas, ya implementado y probado): código real de ese protocolo — validación de candidatos por hash, salida atómica, seis pipelines (IF ventana/escalado/expandido por campaña/colapsado + LOF + OCSVM), diez semillas.
 
 **Del MVP** (`sistema-implementable`, revisado solo lectura):

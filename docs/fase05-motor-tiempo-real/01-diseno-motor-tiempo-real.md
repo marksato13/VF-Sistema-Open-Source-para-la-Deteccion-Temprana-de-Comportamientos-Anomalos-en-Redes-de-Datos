@@ -66,7 +66,7 @@ Para calcular features a nivel de paquete (SYN, RST, TTL, fragmentación, retran
 
 Necesito un mecanismo de captura **separado**, exclusivo para el motor, corriendo en paralelo al de campañas. Eso implica:
 
-1. Un nuevo servicio systemd en VM02 (`ppi-motor-capture.service` o similar) con `tcpdump` en rotación continua (buffer, tamaño de archivo y filtro similares a los ya calibrados: interfaz `ens35`, filtro LAN↔DMZ, snaplen completo, rotación acotada — mismos parámetros ya validados en `docs/05-plan-pruebas/11-diseno-captura-PCAP-G4.md`, solo que perpetuo en vez de por campaña).
+1. Un nuevo servicio systemd en VM02 (`ppi-motor-capture.service` o similar) con `tcpdump` en rotación continua (buffer, tamaño de archivo y filtro similares a los ya calibrados: interfaz `ens35`, filtro LAN↔DMZ, snaplen completo, rotación acotada — mismos parámetros ya validados en `docs/fase01-diseno-experimental/11-diseno-captura-PCAP-G4.md`, solo que perpetuo en vez de por campaña).
 2. Una nueva regla en el sudoers de `useransible` en VM02 para poder iniciar/detener/consultar ese servicio (el archivo actual, `configs/sensor/useransible-ppi-metrics.sudoers`, solo autoriza exactamente `ppi-suricata-metrics` y `ppi-pcap-control` — nada más, sin comodines).
 
 **`useransible` no tiene sudo general en VM02** (confirmado, mismo patrón que bloqueó el fix de `/api/error` y el ajuste del servicio iperf3 anteriormente en este proyecto). Desplegar un servicio nuevo + una regla sudoers nueva requiere acceso root real en VM02, que no tengo.

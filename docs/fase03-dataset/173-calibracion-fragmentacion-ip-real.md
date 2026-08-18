@@ -93,7 +93,7 @@ El reintento se clasifica `RECHAZAR`: no existe evidencia de calibración.
 
 ## 1. Pasos ejecutados (qué hiciste, en orden).
 
-1. Se leyeron completos `docs/04-revisiones-claude/NEXT-TASK-FOR-CODEX.md` y `docs/07-dataset-campanas/172-brecha-api-5xx-y-permisos.md`.
+1. Se leyeron completos `docs/revisiones-claude/NEXT-TASK-FOR-CODEX.md` y `docs/fase03-dataset/172-brecha-api-5xx-y-permisos.md`.
 2. Se calcularon los SHA-256 iniciales de los dos CSV congelados.
 3. Se inspeccionó la evidencia real de `CAL-G7-API-5XX-R02` y el mecanismo `start.sh`/`stop.sh`, PCAP remoto/local, EVE, hashes y extracción v2.
 4. Se añadió a `scripts/f1/run-benign.sh` el caso `frag-udp` y su entrada en `usage()`, exactamente con la lista blanca especificada. No se modificó ningún caso existente.

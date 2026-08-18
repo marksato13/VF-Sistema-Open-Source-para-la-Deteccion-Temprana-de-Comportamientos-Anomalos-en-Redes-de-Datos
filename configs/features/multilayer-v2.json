@@ -3,7 +3,7 @@
   "observation_unit": "initiator_ip_at_causal_window_end",
   "emission_step_seconds": 10,
   "maximum_history_seconds": 60,
-  "notes": "Conserva las 14 features de multilayer-v1 (orders 1-14, idénticas) y añade 14 features nuevas (orders 15-28). Resuelve la inconsistencia de docs/07-dataset-campanas/160: el plan v2 listaba 13 features nuevas y mencionaba un techo de 26; este contrato fija 28 features totales (14+14) añadiendo http_server_error_ratio_60s como octava feature L7 nueva.",
+  "notes": "Conserva las 14 features de multilayer-v1 (orders 1-14, idénticas) y añade 14 features nuevas (orders 15-28). Resuelve la inconsistencia de docs/fase03-dataset/160: el plan v2 listaba 13 features nuevas y mencionaba un techo de 26; este contrato fija 28 features totales (14+14) añadiendo http_server_error_ratio_60s como octava feature L7 nueva.",
   "features": [
     {"order": 1, "name": "packet_rate_10s", "layer": "L3", "window_seconds": 10, "unit": "packets_per_second", "source": "pcap"},
     {"order": 2, "name": "byte_rate_10s", "layer": "L3", "window_seconds": 10, "unit": "ip_bytes_per_second", "source": "pcap"},

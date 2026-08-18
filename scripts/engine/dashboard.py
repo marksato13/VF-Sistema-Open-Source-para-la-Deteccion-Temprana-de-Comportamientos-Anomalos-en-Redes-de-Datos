@@ -7,7 +7,7 @@ el log del motor, el estado del set nftables de enforcement (via el mismo
 helper root ya autorizado, subcomando "list" de solo lectura) y el estado de
 los servicios systemd relevantes. Ver diseno completo, justificacion de
 arquitectura y manual de instalacion/usuario en
-docs/06-features-modelado/10-diseno-dashboard-motor.md.
+docs/fase06-dashboard/01-diseno-dashboard-motor.md.
 
 Sin dependencias externas a proposito: corre con /usr/bin/python3 del
 sistema, no con el venv del motor (que tiene scikit-learn/numpy, innecesario

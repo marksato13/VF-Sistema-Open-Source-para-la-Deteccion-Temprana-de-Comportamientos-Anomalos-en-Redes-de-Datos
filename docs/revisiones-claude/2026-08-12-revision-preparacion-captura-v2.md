@@ -12,7 +12,7 @@ nuevo (`957a96e docs: registrar despliegue y pilotos v2`) que Codex publicó en
 paralelo, registrando que la API ya fue desplegada en VM03 y que los pilotos
 `api-normal`, `api-auth-fail` y `dns-multi 10` ya se ejecutaron contra el
 código **previo** a las correcciones F2, F5 y F6 de este documento. Ese
-commit sólo tocó `docs/07-dataset-campanas/163-ejecucion-v2-y-bloqueos.md`, no
+commit sólo tocó `docs/fase03-dataset/163-ejecucion-v2-y-bloqueos.md`, no
 los archivos de código revisados aquí, así que no hubo conflicto de edición.
 Pero las correcciones de este documento (endpoint `/api/error`, rotación de
 seis casos en `api-normal`, fin del cuerpo en 204, los cuatro perfiles nuevos

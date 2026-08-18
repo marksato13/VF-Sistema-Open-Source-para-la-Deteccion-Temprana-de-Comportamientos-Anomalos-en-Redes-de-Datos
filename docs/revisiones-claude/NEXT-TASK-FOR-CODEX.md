@@ -7,7 +7,7 @@
 
 ## Contexto (verificado, no repetir investigación)
 
-Ya audité el código y la documentación existente (`docs/07-dataset-campanas/160-172`, `configs/features/multilayer-v2.json`, `scripts/features/extract_multilayer_v2.py`, `scripts/dataset/audit_multilayer_v2.py`, `scripts/modeling/train_multilayer_v2.py`, `tests/test_multilayer_v2_features.py`). Resumen de hechos confirmados, para que no los reinvestigues:
+Ya audité el código y la documentación existente (`docs/fase03-dataset/160-172`, `configs/features/multilayer-v2.json`, `scripts/features/extract_multilayer_v2.py`, `scripts/dataset/audit_multilayer_v2.py`, `scripts/modeling/train_multilayer_v2.py`, `tests/test_multilayer_v2_features.py`). Resumen de hechos confirmados, para que no los reinvestigues:
 
 1. **No hay ningún bug en el extractor.** `fragment_ratio_10s` (`scripts/features/extract_multilayer_v2.py:230,595`) y `tls_handshake_failure_ratio_60s` (líneas 444,452,611-613) leen correctamente el header IP (`IP_FLAG_MF`/offset, líneas 109-110) y el campo `tls.version` de EVE. Están constantes en el dataset v2 (75 ventanas normales + 18 anómalas) porque **ningún escenario ejecutado hasta ahora genera tráfico que dispare esas condiciones** — no porque falte lógica. Esto ya está reconocido como brecha en `known_gaps` de `configs/campaigns/multilayer-v2-normal.json` y en el doc 171 (auditoría de calidad v2).
 2. **Brecha de tests, además de la de datos.** `tests/test_multilayer_v2_features.py:197-220` solo cubre el caso trivial (`==0.0`) de ambas features. Ningún test ejercita la rama `fragmented=True` (línea 230) ni `tls_incomplete=True` (línea 452).
@@ -123,7 +123,7 @@ frag-udp)
 
 **Ejecución (calibración única, NO oficial):**
 1. Confirma que el servidor `iperf3` sigue escuchando en VM03 (10.30.0.10) — es el mismo que usan `iperf-tcp`/`iperf-udp`, no requiere despliegue nuevo.
-2. Reutiliza exactamente el mecanismo de captura/evidencia que documentaste para `CAL-G7-API-5XX-R02` en `docs/07-dataset-campanas/172-brecha-api-5xx-y-permisos.md` (preflight, PCAP+EVE del Sensor con hash, ledger con `purpose=calibration`, `partition=excluded_calibration`, ID `CAL-FRAG-UDP-01-R01`).
+2. Reutiliza exactamente el mecanismo de captura/evidencia que documentaste para `CAL-G7-API-5XX-R02` en `docs/fase03-dataset/172-brecha-api-5xx-y-permisos.md` (preflight, PCAP+EVE del Sensor con hash, ledger con `purpose=calibration`, `partition=excluded_calibration`, ID `CAL-FRAG-UDP-01-R01`).
 3. Ejecuta **una sola vez**: `./run-benign.sh frag-udp 3000 10` desde VM05 hacia 10.30.0.10.
 4. Pasa el PCAP/EVE resultante por `scripts/features/extract_multilayer_v2.py` igual que cualquier otro perfil, y confirma en el CSV/JSON de salida que al menos una ventana de 10s tiene `fragment_ratio_10s > 0`.
 
@@ -133,7 +133,7 @@ frag-udp)
 - Evidencia con `purpose=calibration` y `partition=excluded_calibration`, hashes SHA-256 de PCAP/EVE/CSV.
 - El dataset congelado (`multilayer-v2-normal.csv`/`-anomalies.csv`) permanece con el mismo hash que antes de esta tarea — verifícalo explícitamente con `sha256sum` antes y después.
 
-**Evidencia esperada:** documento nuevo en `docs/07-dataset-campanas/` (siguiente número correlativo tras 172) siguiendo el mismo formato que los cierres de canario anteriores; ledger/manifest de la calibración; salida de `extract_multilayer_v2.py` mostrando el valor no-cero.
+**Evidencia esperada:** documento nuevo en `docs/fase03-dataset/` (siguiente número correlativo tras 172) siguiendo el mismo formato que los cierres de canario anteriores; ledger/manifest de la calibración; salida de `extract_multilayer_v2.py` mostrando el valor no-cero.
 
 **Riesgos:** tráfico UDP a 5 Mbit/s durante 10s (~6.25 MB) — muy por debajo del techo calibrado de 50 Mbit/s UDP (G2). Riesgo de red: ninguno nuevo. Riesgo de captura: ninguno distinto a las campañas ya ejecutadas cientos de veces con este mismo generador.
 
@@ -183,7 +183,7 @@ tls-handshake-fail)
 - O bien (a) al menos una ventana con `tls_handshake_failure_ratio_60s > 0` con evidencia del evento EVE exacto, o (b) si no se logra, un reporte claro de qué ocurrió realmente en EVE (para rediseñar la técnica), sin inventar ni forzar el resultado.
 - El dataset congelado permanece con el mismo hash que antes de esta tarea.
 
-**Evidencia esperada:** documento nuevo en `docs/07-dataset-campanas/`; salida cruda de `openssl s_client`; fragmento del evento `tls` en EVE (JSON); resultado de `extract_multilayer_v2.py`.
+**Evidencia esperada:** documento nuevo en `docs/fase03-dataset/`; salida cruda de `openssl s_client`; fragmento del evento `tls` en EVE (JSON); resultado de `extract_multilayer_v2.py`.
 
 **Riesgos:** ninguno operativo — es tráfico de diagnóstico TLS estándar, no ofensivo, tres intentos de handshake fallido en ~2 segundos totales. Riesgo real es solo de **resultado incierto** (que la hipótesis no se confirme), lo cual es aceptable y esperado en una calibración.
 
@@ -235,7 +235,7 @@ python3 scripts/modeling/experiments/diagnose_v2_pipeline.py \
 - El reporte de salida incluye, con cifras exactas: efecto del escalado, efecto de `max_samples`, matriz/resumen de correlación entre las 18 features separables, efecto de selección top-N, y cuantificación de la dilución por episodio.
 - No se declara "modelo mejorado" ni se cambia ningún umbral oficial — la decisión de adoptar cualquier cambio al pipeline oficial es mía, después de revisar esta evidencia.
 
-**Evidencia esperada:** `artifacts/dataset/multilayer-v2-pipeline-diagnosis.json` + un documento nuevo en `docs/06-features-modelado/` resumiendo los 5 hallazgos con cifras exactas.
+**Evidencia esperada:** `artifacts/dataset/multilayer-v2-pipeline-diagnosis.json` + un documento nuevo en `docs/fase04-modelado/` resumiendo los 5 hallazgos con cifras exactas.
 
 **Riesgos:** ninguno — análisis puramente computacional sobre datos ya congelados, sin tocar VMs ni generar tráfico.
 

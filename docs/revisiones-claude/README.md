@@ -3,7 +3,7 @@
 Una revisión independiente por campaña, canario o cambio de infraestructura
 revisado, en orden cronológico (por fecha en el nombre del archivo). Cada
 revisión audita un documento correspondiente en
-[`docs/07-dataset-campanas/`](../07-dataset-campanas/README.md) u otra
+[`docs/fase03-dataset/`](../fase03-dataset/README.md) u otra
 carpeta de `docs/`, según el flujo de revisión cruzada de `CLAUDE.md`.
 
 No editar ni fusionar estos documentos: son parte del rastro de

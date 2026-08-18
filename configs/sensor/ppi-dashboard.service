@@ -1,6 +1,6 @@
 [Unit]
 Description=PPI - dashboard operativo de solo lectura del motor en vivo
-Documentation=file:///home/useransible/vf-sistema-final/docs/06-features-modelado/10-diseno-dashboard-motor.md
+Documentation=file:///home/useransible/vf-sistema-final/docs/fase06-dashboard/01-diseno-dashboard-motor.md
 After=network.target ppi-motor.service
 Wants=ppi-motor.service
 

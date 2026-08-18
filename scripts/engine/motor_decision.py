@@ -7,7 +7,7 @@ Reusa directamente las funciones del extractor congelado
 formulas de features. Esta es la leccion explicita que se tomo del MVP
 anterior, donde el motor y el entrenamiento duplicaron manualmente la logica
 de extraccion y podian desincronizarse; ver
-docs/06-features-modelado/06-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md.
+docs/fase04-modelado/04-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md.
 
 Arquitectura de entrada, distinta a una campana offline:
 
@@ -336,7 +336,7 @@ def main() -> int:
                 # alertas iniciales eran ventanas vacias, 0 relacionadas con
                 # trafico real). Silencio de red no es un ataque. Decision
                 # explicita del usuario, documentada en
-                # docs/06-features-modelado/09-diseno-motor-tiempo-real.md.
+                # docs/fase05-motor-tiempo-real/01-diseno-motor-tiempo-real.md.
                 empty_window = (
                     row["packet_count_10s"] == 0
                     and row["http_request_count_60s"] == 0

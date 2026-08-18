@@ -41,7 +41,7 @@ Coincide exactamente con el resultado de la calibración `CAL-G7-API-5XX-R02` (`
 
 ## Verificación de no contaminación
 
-- Hashes del dataset ya congelado (`artifacts/dataset/multilayer-v2-normal.csv`, `-anomalies.csv`) verificados **sin cambios** — estos dos canarios generaron features en `artifacts/features-v2/F2N-FRAG-UDP-V2-R01-B/` y `artifacts/features-v2/F2N-API-5XX-V2-R01-B/`, separados del CSV consolidado. **El dataset consolidado NO se reconstruyó** — `scripts/dataset/build_multilayer_v2_dataset.py` no se ejecutó. Esa es una decisión aparte, pendiente, con implicaciones sobre las particiones train/validation/test y sobre el análisis de diagnóstico del pipeline (`docs/06-features-modelado/05-diagnostico-pipeline-multilayer-v2.md`) hecho hoy contra el CSV congelado actual.
+- Hashes del dataset ya congelado (`artifacts/dataset/multilayer-v2-normal.csv`, `-anomalies.csv`) verificados **sin cambios** — estos dos canarios generaron features en `artifacts/features-v2/F2N-FRAG-UDP-V2-R01-B/` y `artifacts/features-v2/F2N-API-5XX-V2-R01-B/`, separados del CSV consolidado. **El dataset consolidado NO se reconstruyó** — `scripts/dataset/build_multilayer_v2_dataset.py` no se ejecutó. Esa es una decisión aparte, pendiente, con implicaciones sobre las particiones train/validation/test y sobre el análisis de diagnóstico del pipeline (`docs/fase04-modelado/03-diagnostico-pipeline-multilayer-v2.md`) hecho hoy contra el CSV congelado actual.
 - `configs/campaigns/multilayer-v2-normal.json` fue modificado (commit `1fcccba`) para *declarar* los dos perfiles nuevos — eso ya estaba autorizado por el plan v2.1. Ningún episodio previamente congelado se tocó.
 
 ## Pendiente explícito

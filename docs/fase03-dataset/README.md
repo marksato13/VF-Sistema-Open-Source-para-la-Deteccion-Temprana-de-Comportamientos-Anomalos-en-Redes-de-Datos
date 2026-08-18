@@ -2,7 +2,7 @@
 
 Un archivo por campaña, calibración o hito de ensamblado, en orden cronológico/numérico.
 Cada canario oficial tiene además una revisión adversarial independiente en
-[`docs/04-revisiones-claude/`](../04-revisiones-claude/README.md).
+[`docs/revisiones-claude/`](../revisiones-claude/README.md).
 
 No editar ni fusionar estos documentos: son la evidencia reproducible que
 exige el criterio de finalización de `CLAUDE.md`. Este índice es solo un

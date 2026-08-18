@@ -10,7 +10,7 @@
 ## Por qué existe
 
 El motor y el enforcement ya corren de forma autónoma en VM02
-(`docs/06-features-modelado/09-diseno-motor-tiempo-real.md`), pero su única
+(`docs/fase05-motor-tiempo-real/01-diseno-motor-tiempo-real.md`), pero su única
 salida visible hasta ahora es un archivo JSONL (`motor_decision.log`) y
 comandos SSH puntuales (`ppi-enforce status <ip>`, `journalctl`). Este
 dashboard da una vista humana de ese estado sin sustituir esas herramientas:

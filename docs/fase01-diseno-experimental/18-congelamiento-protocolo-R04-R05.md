@@ -39,7 +39,7 @@ La política evita dos extremos no defendibles: inflar silenciosamente episodios
 
 ## Uso de particiones
 
-- `train` R01–R03 ajusta transformaciones, modelos y parámetros conforme a `../06-features-modelado/03-protocolo-modelado-F1-v2.md`.
+- `train` R01–R03 ajusta transformaciones, modelos y parámetros conforme a `../F4-modelado/03-protocolo-modelado-F1-v2.md`.
 - La contradicción histórica G5↔G6 quedó resuelta antes de ejecutar R04: ajustar el modelo y calibrar la frontera operativa son operaciones separadas. R04 normal completa calibra una vez el cuantil inferior predeclarado; no selecciona features, modelo ni hiperparámetros. G5 fue corregido para apuntar al mismo contrato.
 - `test` R05 se evalúa una sola vez después de congelar todas las decisiones. No se usa para elegir features, modelos, parámetros, pesos ni umbrales.
 - La revisión de integridad de R04/R05 no autoriza explorar resultados del modelo fuera del protocolo.

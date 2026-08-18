@@ -49,7 +49,7 @@ Dos ventanas de 10 s producidas (`eligible_training_rows=0` en ambas — no cali
 | 2026-08-14T18:16:20Z | 4732 | **0.99661877** |
 | 2026-08-14T18:16:30Z | 1549 | **0.99160749** |
 
-**Objetivo de la Tarea 3 cumplido:** `fragment_ratio_10s` deja de ser estructuralmente constante en 0.0 cuando existe tráfico IP genuinamente fragmentado en el PCAP. El extractor (`scripts/features/extract_multilayer_v2.py`, líneas ~230/595) funciona correctamente — la brecha era enteramente de generación de tráfico, como ya se había concluido en el análisis previo (`docs/06-features-modelado/05-diagnostico-pipeline-multilayer-v2.md`), no de código.
+**Objetivo de la Tarea 3 cumplido:** `fragment_ratio_10s` deja de ser estructuralmente constante en 0.0 cuando existe tráfico IP genuinamente fragmentado en el PCAP. El extractor (`scripts/features/extract_multilayer_v2.py`, líneas ~230/595) funciona correctamente — la brecha era enteramente de generación de tráfico, como ya se había concluido en el análisis previo (`docs/fase04-modelado/03-diagnostico-pipeline-multilayer-v2.md`), no de código.
 
 ## Verificación de no contaminación
 

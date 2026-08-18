@@ -28,7 +28,7 @@ La ejecución oficial ya terminó una sola vez el 6 de agosto de 2026 contra el
 commit `b94035e9b343c0da3144169fb970eb5c096ae0f0`. No vuelva a ejecutar el comando
 ni cambie de destino para eludir el gate. El umbral, los hashes y las
 limitaciones congeladas están en
-`docs/07-dataset-campanas/128-calibracion-PM-F1-v1.md`.
+`docs/fase03-dataset/128-calibracion-PM-F1-v1.md`.
 
 Los artefactos incluyen selección canónica, scores R04, scores de estabilidad,
 seis modelos `joblib`, manifest y `SHA256SUMS`. Los hashes de los tres CSV se

@@ -26,7 +26,7 @@ campaign_dir="$(ppi_campaign_dir "$id")"
 # el script de inmediato. Sin este trap, un fallo a mitad de camino dejaba
 # manifest.json en "running" para siempre y el bloqueo activo silenciosamente
 # vigente, exactamente el defecto que produjo el primer aborto oficial
-# (docs/07-dataset-campanas/166-plan-ejecucion-piloto-v2.md). El trap marca
+# (docs/fase03-dataset/166-plan-ejecucion-piloto-v2.md). El trap marca
 # un estado terminal explícito sólo si el cierre normal (más abajo) no llegó
 # a escribirlo, nunca lo pisa, y deliberadamente NO libera PPI_ACTIVE_LOCK:
 # es más seguro bloquear una nueva captura que arriesgar una segunda captura

@@ -45,7 +45,7 @@ readonly MODEL_STAGED="$REPO_ROOT/artifacts/model/ocsvm_scaled.joblib"
 readonly MANIFEST_STAGED="$REPO_ROOT/artifacts/model/manifest.json"
 # Ambos verificados en VM01 el 2026-08-17 contra SHA256SUMS del propio
 # directorio de calibracion y vueltos a verificar tras el rsync a VM02
-# (docs/06-features-modelado/08-modelo-final-congelado-ocsvm.md).
+# (docs/fase04-modelado/06-modelo-final-congelado-ocsvm.md).
 readonly MODEL_SHA256_EXPECTED="af9b50c29f839037b2bda380fc197e017dea482d403c61fa7ae3df79cbff7236"
 readonly MANIFEST_SHA256_EXPECTED="0a1e8c52dc3282029d9aa1c9a0adbe7cc03c28bbce48bd5b76959e46bdbf5b1b"
 

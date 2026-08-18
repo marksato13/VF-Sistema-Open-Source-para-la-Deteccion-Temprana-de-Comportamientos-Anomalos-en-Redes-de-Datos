@@ -169,7 +169,7 @@ Recursos:
 
 Los 20 vCPU representan sobreasignación controlada respecto de la capacidad física expresada en GHz. Es aceptable para este laboratorio siempre que no todas las VMs utilicen el 100 % de CPU simultáneamente. Durante ataques de alta tasa se detendrán tareas no esenciales y se registrará `CPU ready` del hipervisor para comprobar que la contención no invalide los resultados. No se aumentará nuevamente el total de vCPU hasta confirmar el número de sockets, núcleos e hilos físicos del host.
 
-El total de disco es capacidad virtual thin, no consumo físico inmediato. Antes de cada fase se controlará el espacio real del datastore. El disco separado de VM01 evita llenar la raíz por PCAP y permite desmontar o respaldar las evidencias sin mezclar el sistema operativo. El procedimiento y sus bloqueos están en `docs/08-almacenamiento/01-disco-evidencias-vm01.md`.
+El total de disco es capacidad virtual thin, no consumo físico inmediato. Antes de cada fase se controlará el espacio real del datastore. El disco separado de VM01 evita llenar la raíz por PCAP y permite desmontar o respaldar las evidencias sin mezclar el sistema operativo. El procedimiento y sus bloqueos están en `docs/fase00-infraestructura/almacenamiento/01-disco-evidencias-vm01.md`.
 
 ## 6. Segmentos virtuales
 
