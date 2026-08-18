@@ -97,6 +97,7 @@ HTML = """<!doctype html>
   }
   .export-btn:hover { border-color: var(--accent); color: var(--accent); }
   .toolbar-hint { font-size: 0.78rem; color: var(--text-dim); margin: 0.4rem 0 0; min-height: 1em; }
+  .lede-small { font-size: 0.86rem; color: var(--text-dim); margin: -0.3rem 0 0.8rem; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; }
   .card {
@@ -157,6 +158,15 @@ HTML = """<!doctype html>
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg><h2>Modelo congelado</h2></div>
     <div class="grid" id="model"></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="16.5" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Punto débil conocido:</strong> este modelo detecta peor la fuerza bruta de contraseñas (50&ndash;55%) que el resto de familias de ataque (&gt;80%). Una decisión PERMIT en ese escenario es menos confiable que en otros.</span></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg><h2>Distribución de scores recientes</h2></div>
+    <p class="lede-small">Qué tan cerca del umbral está pasando el tráfico reciente &mdash; no solo si alertó o no, sino cuánto margen hubo. La línea marca el umbral operativo.</p>
+    <div class="spark-wrap">
+      <svg id="histogram" width="100%" height="90" viewBox="0 0 610 90" preserveAspectRatio="none"></svg>
+      <p class="toolbar-hint" id="histogramHint"></p>
+    </div>
   </section>
 
   <section>
@@ -306,6 +316,36 @@ function renderSparkline(activity) {
   svg.innerHTML = bars;
 }
 
+function renderHistogram(data) {
+  const svg = document.getElementById('histogram');
+  const hint = document.getElementById('histogramHint');
+  if (!data.buckets.length) {
+    svg.innerHTML = '';
+    hint.textContent = 'Sin scores recientes para graficar (solo hay decisiones del heurístico de ventana vacía).';
+    return;
+  }
+  const w = 610, h = 90, padBottom = 14;
+  const maxCount = Math.max(...data.buckets.map(b => b.count), 1);
+  const bw = w / data.buckets.length;
+  let bars = '';
+  data.buckets.forEach((b, i) => {
+    const barH = b.count > 0 ? Math.max(3, (b.count / maxCount) * (h - padBottom - 4)) : 0;
+    const x = i * bw;
+    // Rojo: cubo enteramente en zona ALERT (por debajo del umbral). Verde:
+    // enteramente en zona PERMIT. Ambar: el cubo cruza el umbral -- scores
+    // ahi mezclan ambas decisiones, la zona mas interesante para mirar.
+    let color = 'var(--accent)';
+    if (b.hi <= data.threshold) color = 'var(--danger)';
+    else if (b.lo < data.threshold) color = 'var(--amber)';
+    bars += `<rect x="${x.toFixed(1)}" y="${(h - padBottom - barH).toFixed(1)}" width="${Math.max(1, bw - 1.2).toFixed(1)}" height="${barH.toFixed(1)}" rx="1" fill="${color}"/>`;
+  });
+  const thresholdX = ((data.threshold - data.min) / (data.max - data.min)) * w;
+  bars += `<line x1="${thresholdX.toFixed(1)}" y1="0" x2="${thresholdX.toFixed(1)}" y2="${h - padBottom}" stroke="var(--text)" stroke-width="1.3" stroke-dasharray="3 2"/>`;
+  bars += `<text x="${thresholdX.toFixed(1)}" y="${h - 3}" font-size="9" fill="var(--text-dim)" text-anchor="middle" font-family="ui-monospace, monospace">umbral</text>`;
+  svg.innerHTML = bars;
+  hint.textContent = `${data.n} score(s) real(es) de las últimas 500 decisiones, entre ${data.min.toFixed(2)} y ${data.max.toFixed(2)}. Rojo = zona ALERT, ámbar = cruza el umbral, verde = zona PERMIT.`;
+}
+
 async function loadActivity(range) {
   const data = await (await fetch('/api/activity?range=' + range)).json();
   renderSparkline(data.activity);
@@ -357,6 +397,9 @@ async function refresh() {
 
     if (currentRange === '1h') renderSparkline(status.activity);
     else loadActivity(currentRange);
+
+    const histogramData = await (await fetch('/api/score-histogram')).json();
+    renderHistogram(histogramData);
 
     lastDecisions = await (await fetch('/api/decisions?limit=100')).json();
     markSeenAndCountNewAlerts(lastDecisions);
@@ -498,6 +541,32 @@ def bucket_by_minute(decisions: list[dict], minutes: int = 60) -> list[dict]:
     return bucket_activity(decisions, bucket_seconds=60, count=minutes)
 
 
+def histogram_scores(decisions: list[dict], threshold: float, num_buckets: int = 16) -> dict:
+    """Distribucion de los scores reales del modelo, no solo ALERT/PERMIT binario.
+
+    Responde "que tan cerca del umbral esta pasando el trafico reciente" --
+    encontrado como pregunta real en esta misma sesion (rafagas de ping
+    puntuaron de forma inconsistente cerca del umbral, 1.24 vs 1.87, algo
+    invisible en un simple conteo de ALERT/PERMIT). El rango incluye
+    siempre el umbral, aunque todos los scores recientes caigan de un solo
+    lado, para que la linea de referencia del umbral siempre sea visible.
+    """
+    scores = [d["score"] for d in decisions if d.get("score") is not None]
+    if not scores:
+        return {"buckets": [], "threshold": threshold, "min": None, "max": None}
+    lo = min(min(scores), threshold)
+    hi = max(max(scores), threshold)
+    if lo == hi:
+        lo -= 0.5
+        hi += 0.5
+    width = (hi - lo) / num_buckets
+    buckets = [{"lo": lo + i * width, "hi": lo + (i + 1) * width, "count": 0} for i in range(num_buckets)]
+    for score in scores:
+        index = min(num_buckets - 1, max(0, int((score - lo) / width)))
+        buckets[index]["count"] += 1
+    return {"buckets": buckets, "threshold": threshold, "min": lo, "max": hi, "n": len(scores)}
+
+
 def service_status(names: list[str]) -> dict[str, bool]:
     try:
         result = subprocess.run(
@@ -623,6 +692,10 @@ def main() -> int:
                     decisions = read_decisions(args.log_path, limit=2000)
                     activity = bucket_activity(decisions, bucket_seconds=60, count=60)
                 self._send_json({"range": range_param, "activity": activity})
+                return
+            if path == "/api/score-histogram":
+                decisions = read_decisions(args.log_path, limit=500)
+                self._send_json(histogram_scores(decisions, model_summary["threshold"]))
                 return
             self.send_error(404)
 
