@@ -1,6 +1,6 @@
 [Unit]
 Description=PPI - dashboard operativo de solo lectura del motor en vivo
-Documentation=file:///home/useransible/vf-sistema-final/docs/fase06-dashboard/01-diseno-dashboard-motor.md
+Documentation=https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/blob/main/docs/fase06-dashboard/01-diseno-dashboard-motor.md
 After=network.target ppi-motor.service
 Wants=ppi-motor.service
 
@@ -11,7 +11,7 @@ Group=useransible
 WorkingDirectory=/home/useransible/vf-sistema-final
 # /usr/bin/python3 del sistema a proposito, no el venv del motor: el
 # dashboard no usa scikit-learn/numpy, solo libreria estandar. Ver
-# justificacion completa en 10-diseno-dashboard-motor.md.
+# justificacion completa en docs/fase06-dashboard/01-diseno-dashboard-motor.md.
 ExecStart=/usr/bin/python3 /home/useransible/vf-sistema-final/scripts/engine/dashboard.py \
     --log-path /home/useransible/ppi-motor-logs/motor_decision.log \
     --manifest-path /home/useransible/ppi-motor-model/manifest.json \
