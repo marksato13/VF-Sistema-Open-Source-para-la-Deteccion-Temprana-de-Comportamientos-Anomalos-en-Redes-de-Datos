@@ -52,11 +52,22 @@ real (una IP bloqueada automáticamente por el motor apareció en el panel con
 su expiración exacta). Arquitectura completa, justificación técnica y manual
 de instalación/usuario: `docs/fase06-dashboard/01-diseno-dashboard-motor.md`.
 
-**Siguiente en la hoja de ruta** (`docs/fase04-modelado/04-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md`):
-validación final con el motor activo (equivalente al F6 del MVP anterior:
-múltiples corridas midiendo FPR operativo, latencia, disponibilidad y
-lead-time de detección). No hay campañas de recolección activas. Los artefactos runtime
-(modelos, PCAP, datasets) permanecen fuera de Git.
+**Validación final F6: ejecutada** (`docs/fase07-validacion-final/`): 2 pases
+de 29 corridas con el motor activo + 2 pruebas de aislamiento. Confirmado:
+detección + bloqueo inline con lead-time ~8 s (motor al día), heurístico de
+fuerza bruta disparando en producción, disponibilidad 100 % en 57 corridas.
+**Dos limitaciones nuevas medidas y declaradas** (no ocultas): (1) el FPR
+benigno offline de 4.71 % **no se sostiene** sobre tráfico legítimo pesado —
+`iperf-tcp 200M` en aislamiento produjo un FP genuino que bloqueó al cliente
+legítimo (scores del tráfico pesado apiñados en el margen del umbral); es la
+debilidad más importante para el jurado. (2) el motor se atrasa bajo carga
+sostenida (hasta 161 s) por reparsear el anillo de PCAP completo cada ciclo.
+Detalle: `docs/fase07-validacion-final/02-resultados-f6.md`; mejoras
+candidatas (recalibración con tráfico pesado, parseo incremental) en
+`docs/07-mejoras-futuras/01-debilidades-y-mejoras.md` filas #11 y #12, sin
+implementar sin calibración nueva. No hay campañas de recolección activas.
+Los artefactos runtime (modelos, PCAP, datasets) permanecen fuera de Git; la
+evidencia agregada de F6 (`results/f6/*.jsonl`, pequeña) sí se versiona.
 
 **Debilidades y mejoras futuras** recolectadas punto por punto, cada una con
 su evidencia y costo/riesgo de mejora (sin implementar ninguna sin
