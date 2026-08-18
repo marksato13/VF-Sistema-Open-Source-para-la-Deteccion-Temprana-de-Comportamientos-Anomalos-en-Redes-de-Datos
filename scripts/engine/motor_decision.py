@@ -234,13 +234,27 @@ def main() -> int:
                 if eve_buffer
                 else []
             )
-            rows = extractor.build_rows(
-                "motor-live",
-                packets,
-                apps,
-                step_seconds=args.step_seconds,
-                capture_start=capture_epoch,
-            )
+            observation_timestamps = [item.timestamp for item in packets] + [
+                item.timestamp for item in apps
+            ]
+            if observation_timestamps:
+                # capture_epoch es un piso fijo (arranque del proceso), pero el
+                # anillo de captura sigue corriendo aunque el motor se
+                # reinicie -- puede haber paquetes reales mas viejos que ese
+                # piso. build_rows() exige capture_start <= primera
+                # observacion real; usar el minimo respeta esa invariante Y
+                # aprovecha historia genuina ya existente en vez de
+                # descartarla en cada reinicio del proceso de scoring.
+                effective_capture_start = min(capture_epoch, min(observation_timestamps))
+                rows = extractor.build_rows(
+                    "motor-live",
+                    packets,
+                    apps,
+                    step_seconds=args.step_seconds,
+                    capture_start=effective_capture_start,
+                )
+            else:
+                rows = []
 
             for row in rows:
                 window_key = (str(row["entity_ip"]), str(row["window_end_utc"]))
