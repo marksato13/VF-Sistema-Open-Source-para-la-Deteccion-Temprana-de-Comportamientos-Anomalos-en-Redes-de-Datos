@@ -1,0 +1,33 @@
+[Unit]
+Description=PPI - dashboard operativo de solo lectura del motor en vivo
+Documentation=file:///home/useransible/vf-sistema-final/docs/06-features-modelado/10-diseno-dashboard-motor.md
+After=network.target ppi-motor.service
+Wants=ppi-motor.service
+
+[Service]
+Type=simple
+User=useransible
+Group=useransible
+WorkingDirectory=/home/useransible/vf-sistema-final
+# /usr/bin/python3 del sistema a proposito, no el venv del motor: el
+# dashboard no usa scikit-learn/numpy, solo libreria estandar. Ver
+# justificacion completa en 10-diseno-dashboard-motor.md.
+ExecStart=/usr/bin/python3 /home/useransible/vf-sistema-final/scripts/engine/dashboard.py \
+    --log-path /home/useransible/ppi-motor-logs/motor_decision.log \
+    --manifest-path /home/useransible/ppi-motor-model/manifest.json \
+    --detector-name ocsvm_scaled \
+    --host 127.0.0.1 --port 8788
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Solo lectura por diseno: sin privilegios nuevos (systemctl is-active no
+# necesita sudo; "ppi-enforce list" ya esta cubierto por el sudoers
+# existente, useransible-ppi-enforce.sudoers). Escucha solo en loopback --
+# el acceso remoto es exclusivamente via tunel SSH, nunca expuesto.
+NoNewPrivileges=false
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target

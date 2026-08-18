@@ -69,7 +69,7 @@ NFTEOF
   return 0
 }
 
-[[ $# -ge 1 ]] || die "uso: ppi-enforce {block IP TIMEOUT_SEG|unblock IP|status IP}"
+[[ $# -ge 1 ]] || die "uso: ppi-enforce {block IP TIMEOUT_SEG|unblock IP|status IP|list}"
 action="$1"
 
 case "$action" in
@@ -105,6 +105,18 @@ case "$action" in
       state="not_blocked"
     fi
     /usr/bin/jq -n --arg ip "$ip" --arg state "$state" '{ip: $ip, status: $state}'
+    ;;
+  list)
+    [[ $# == 1 ]] || die "uso: ppi-enforce list"
+    ensure_setup
+    /usr/sbin/nft -j list set inet "$NFT_TABLE" blocked_ips 2>/dev/null | /usr/bin/jq '
+      [ (.nftables[]? | select(.set != null) | .set.elem // [])[]
+        | if type == "object" then
+            {ip: .elem.val, expires_seconds: (.elem.expires // null)}
+          else
+            {ip: ., expires_seconds: null}
+          end
+      ]'
     ;;
   *)
     die "accion no permitida: $action"
