@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Motor de decision en tiempo real (fase de solo lectura, sin enforcement).
+"""Motor de decision en tiempo real, con enforcement inline opcional.
 
 Reusa directamente las funciones del extractor congelado
 ``scripts/features/extract_multilayer_v2.py`` (``load_packet_observations``,
@@ -32,6 +32,18 @@ llevaba mas de ~120s abierto cuando el motor lo observa por primera vez
 puede tener su IP iniciadora mal atribuida si el paquete que abrio el flujo
 ya rotó fuera del buffer. Para flujos cortos (la inmensa mayoria del trafico
 de ataque real medido en la evaluacion bloqueada) esto no aplica.
+
+Enforcement (opcional, ``--enforce``): VM02 (Sensor) ya es el router entre
+LAN y DMZ (``ip_forward=1`` + nftables), asi que un ALERT real del modelo
+(no del heuristico de ventana vacia) invoca localmente
+``sudo -n /usr/local/sbin/ppi-enforce block <ip> <timeout>`` -- sin SSH a
+otra maquina, sin credencial nueva entre VMs. Ese helper agrega una tabla
+nftables SEPARADA y aditiva (prioridad -300 en el hook forward), con
+expiracion nativa del bloqueo (sin cron ni limpieza manual) y su propia
+whitelist interna (nunca confia solo en el llamador). Solo hay UN umbral
+calibrado (PM-multilayer-v2-v1); no existe un nivel intermedio tipo LIMIT
+todavia porque eso exigiria un segundo umbral sin calibrar -- se documenta
+como limitacion, no se inventa un numero.
 """
 
 from __future__ import annotations
@@ -39,6 +51,7 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -80,7 +93,39 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--state-dir", type=Path, default=None)
     parser.add_argument("--step-seconds", type=int, default=10)
     parser.add_argument("--history-seconds", type=int, default=110)
+    parser.add_argument(
+        "--enforce",
+        action="store_true",
+        help="invocar sudo -n /usr/local/sbin/ppi-enforce block <ip> <timeout> en cada ALERT real",
+    )
+    parser.add_argument(
+        "--enforce-command",
+        default="/usr/local/sbin/ppi-enforce",
+        help="ruta del helper raiz de enforcement (ver configs/sensor/ppi-enforce)",
+    )
+    parser.add_argument(
+        "--block-timeout-seconds",
+        type=int,
+        default=120,
+        help="expiracion nativa nftables del bloqueo; se renueva si el ALERT se repite",
+    )
     return parser.parse_args()
+
+
+def apply_enforcement(enforce_command: str, ip: str, timeout_seconds: int) -> dict[str, object]:
+    try:
+        result = subprocess.run(
+            ["sudo", "-n", enforce_command, "block", ip, str(timeout_seconds)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return {"applied": False, "error": str(exc)}
+    if result.returncode != 0:
+        return {"applied": False, "error": (result.stderr or result.stdout).strip()[:500]}
+    return {"applied": True, "helper_output": result.stdout.strip()}
 
 
 def load_threshold(manifest_path: Path, detector_name: str) -> float:
@@ -300,6 +345,11 @@ def main() -> int:
                     "threshold": threshold,
                     "decision": decision,
                 }
+                if args.enforce and decision == "ALERT" and not empty_window:
+                    record["enforcement"] = apply_enforcement(
+                        args.enforce_command, row["entity_ip"], args.block_timeout_seconds
+                    )
+
                 with args.log_path.open("a", encoding="utf-8") as handle:
                     handle.write(json.dumps(record, sort_keys=True) + "\n")
                 if decision == "ALERT":

@@ -1,5 +1,5 @@
 [Unit]
-Description=PPI - motor de decision en tiempo real (OCSVM, scoring de solo lectura)
+Description=PPI - motor de decision en tiempo real (OCSVM + enforcement inline)
 Documentation=file:///home/useransible/vf-sistema-final/docs/06-features-modelado/09-diseno-motor-tiempo-real.md
 After=network-online.target suricata.service ppi-motor-capture.service
 Wants=network-online.target
@@ -17,15 +17,18 @@ ExecStart=/home/useransible/ppi-motor-venv/bin/python3 \
     --model-path /home/useransible/ppi-motor-model/ocsvm_scaled.joblib \
     --manifest-path /home/useransible/ppi-motor-model/manifest.json \
     --schema /home/useransible/vf-sistema-final/configs/features/multilayer-v2.json \
-    --log-path /home/useransible/ppi-motor-logs/motor_decision.log
+    --log-path /home/useransible/ppi-motor-logs/motor_decision.log \
+    --enforce --block-timeout-seconds 120
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
 
-# Fase actual: solo deteccion y registro, sin enforcement (nftables). No
-# necesita privilegios de root ni acceso de escritura fuera de su propio log.
-NoNewPrivileges=true
+# Enforcement real (nftables via sudo -n a un helper root estrecho, ver
+# configs/sensor/ppi-enforce + useransible-ppi-enforce.sudoers). Por eso
+# NoNewPrivileges ya NO puede ser true: bloquearia el propio setuid de sudo
+# necesario para escalar al helper, sin importar la politica de sudoers.
+NoNewPrivileges=false
 ProtectSystem=strict
 ReadWritePaths=/home/useransible/ppi-motor-logs
 ReadOnlyPaths=/var/lib/ppi-motor-capture /var/log/suricata
