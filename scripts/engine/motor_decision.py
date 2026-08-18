@@ -197,9 +197,35 @@ class EveTail:
         return [raw.decode("utf-8", errors="replace") for raw in parts[:-1] if raw.strip()]
 
 
-def list_closed_pcap_files(capture_dir: Path, pattern: str) -> list[Path]:
+def list_closed_pcap_files(
+    capture_dir: Path,
+    pattern: str,
+    max_age_seconds: float | None = None,
+    now: float | None = None,
+) -> list[Path]:
     files = sorted(capture_dir.glob(pattern))
-    return files[:-1] if len(files) > 1 else []
+    closed = files[:-1] if len(files) > 1 else []
+    if max_age_seconds is None:
+        return closed
+    # Acota el lookback de PCAP por antiguedad de mtime, igual que el
+    # eve_buffer se acota por history_seconds. Sin esto, un PCAP rancio que
+    # quedo en el anillo (tcpdump -G solo rota al llegar un paquete; en un
+    # tramo ocioso largo un archivo persiste con timestamp viejo, y ademas
+    # tcpdump -W no borra archivos de corridas previas) hace que build_rows()
+    # genere una ventana por cada paso de 10s desde ese timestamp hasta ahora
+    # al reiniciar el motor -> replay de miles de ventanas y re-bloqueo de
+    # ALERTs antiguas (MOTOR-OBS-02). Filtrar por mtime deja solo la historia
+    # genuinamente reciente (<= history_seconds), coherente con el diseno del
+    # anillo. Ver docs/fase05-motor-tiempo-real/02-fp-ventana-sin-paquetes.md.
+    reference = time.time() if now is None else now
+    fresh: list[Path] = []
+    for pcap in closed:
+        try:
+            if reference - pcap.stat().st_mtime <= max_age_seconds:
+                fresh.append(pcap)
+        except OSError:
+            continue
+    return fresh
 
 
 def main() -> int:
@@ -297,7 +323,12 @@ def main() -> int:
             for _, raw_line in eve_buffer:
                 handle.write(raw_line + "\n")
 
-        pcap_files = list_closed_pcap_files(args.capture_dir, args.capture_glob)
+        pcap_files = list_closed_pcap_files(
+            args.capture_dir,
+            args.capture_glob,
+            max_age_seconds=args.history_seconds,
+            now=cycle_start,
+        )
 
         if pcap_files or eve_buffer:
             packets = extractor.load_packet_observations(pcap_files, entity_network) if pcap_files else []
