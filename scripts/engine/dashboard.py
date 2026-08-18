@@ -281,9 +281,10 @@ function fmtTime(t) {
   return new Date(t * 1000).toLocaleTimeString();
 }
 
-function renderHealthbar(services, counters) {
+function renderHealthbar(services, counters, captureMetrics) {
   const allUp = Object.values(services).every(Boolean);
   const el = document.getElementById('healthbar');
+  const hasDrops = captureMetrics && (captureMetrics.kernel_drops > 0 || captureMetrics.kernel_ifdrops > 0);
   if (!allUp) {
     el.className = 'healthbar bad';
     el.innerHTML = `<span class="dot"></span><div><div class="msg">Atención: un servicio no está activo</div><div class="sub">Revisar con journalctl -- el motor puede no estar observando tráfico real ahora mismo.</div></div>`;
@@ -291,9 +292,12 @@ function renderHealthbar(services, counters) {
     const n = counters.alert_model + counters.alert_auth_heuristic;
     el.className = 'healthbar warn';
     el.innerHTML = `<span class="dot"></span><div><div class="msg">Servicios activos &middot; ${n} alerta(s) real(es) en la última hora</div><div class="sub">El sistema está funcionando y respondiendo -- revisar la tabla de decisiones abajo.</div></div>`;
+  } else if (hasDrops) {
+    el.className = 'healthbar warn';
+    el.innerHTML = `<span class="dot"></span><div><div class="msg">Atención: Suricata está descartando paquetes</div><div class="sub">Las features del motor pueden estar incompletas mientras esto ocurra -- ver "Paquetes capturados" abajo.</div></div>`;
   } else {
     el.className = 'healthbar ok';
-    el.innerHTML = `<span class="dot"></span><div><div class="msg">Todo operando con normalidad</div><div class="sub">Servicios activos, sin alertas reales en la última hora.</div></div>`;
+    el.innerHTML = `<span class="dot"></span><div><div class="msg">Todo operando con normalidad</div><div class="sub">Servicios activos, sin alertas reales en la última hora, sin drops de captura.</div></div>`;
   }
 }
 
@@ -367,11 +371,26 @@ async function refresh() {
     const status = await (await fetch('/api/status')).json();
     stamp.textContent = 'Actualizado ' + new Date().toLocaleTimeString();
 
-    renderHealthbar(status.services, status.counters);
+    renderHealthbar(status.services, status.counters, status.capture_metrics);
 
-    health.innerHTML = Object.entries(status.services).map(([name, active]) =>
+    const healthCards = Object.entries(status.services).map(([name, active]) =>
       card(SERVICE_LABEL[name] || name, active ? ICON.ok + ' activo' : ICON.bad + ' inactivo', active ? 'ok' : 'bad')
-    ).join('');
+    );
+    const cm = status.capture_metrics;
+    if (cm) {
+      const hasDrops = cm.kernel_drops > 0 || cm.kernel_ifdrops > 0;
+      healthCards.push(card(
+        'Paquetes capturados',
+        cm.kernel_packets.toLocaleString('es'),
+        'accent'
+      ));
+      healthCards.push(card(
+        'Drops de captura',
+        (cm.kernel_drops + cm.kernel_ifdrops).toLocaleString('es'),
+        hasDrops ? 'bad' : 'ok'
+      ));
+    }
+    health.innerHTML = healthCards.join('');
 
     const m = status.model;
     model.innerHTML = [
@@ -601,6 +620,41 @@ def enforcement_list(enforce_command: str) -> list[dict]:
         return []
 
 
+def suricata_metrics(command: str) -> dict | None:
+    """Metricas reales de captura via el helper ya autorizado en sudoers.
+
+    "activo/inactivo" del servicio no dice si esta PERDIENDO paquetes --
+    un analista necesita saber eso, no solo si el proceso vive. Sin
+    argumentos: la regla sudoers exige exactamente cero argumentos
+    (el "" en el sudoers es la sintaxis de sudo para "sin argumentos",
+    no un argumento vacio literal -- confirmado contra el uso real ya
+    existente en scripts/campaign/start.sh y stop.sh).
+    """
+    try:
+        result = subprocess.run(
+            ["sudo", "-n", command],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    if result.returncode != 0:
+        return None
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+    capture = data.get("suricata", {}).get("capture", {})
+    return {
+        "service_state": data.get("suricata", {}).get("service_state"),
+        "kernel_packets": capture.get("kernel_packets", 0),
+        "kernel_drops": capture.get("kernel_drops", 0),
+        "kernel_ifdrops": capture.get("kernel_ifdrops", 0),
+    }
+
+
 def load_model_summary(manifest_path: Path, detector_name: str) -> dict:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     detector_eval = manifest["evaluation"][detector_name]
@@ -627,6 +681,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--detector-name", default="ocsvm_scaled")
     parser.add_argument("--enforce-command", default="/usr/local/sbin/ppi-enforce")
+    parser.add_argument("--suricata-metrics-command", default="/usr/local/sbin/ppi-suricata-metrics")
     parser.add_argument(
         "--services",
         default="ppi-motor.service,ppi-motor-capture.service,suricata.service",
@@ -669,6 +724,7 @@ def main() -> int:
                         "blocked": enforcement_list(args.enforce_command),
                         "counters": compute_counters(decisions),
                         "activity": bucket_by_minute(decisions),
+                        "capture_metrics": suricata_metrics(args.suricata_metrics_command),
                     }
                 )
                 return
