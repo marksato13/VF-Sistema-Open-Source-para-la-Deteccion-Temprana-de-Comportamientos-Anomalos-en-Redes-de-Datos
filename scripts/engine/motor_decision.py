@@ -99,8 +99,18 @@ class EveTail:
 
     def __init__(self, path: Path) -> None:
         self.path = path
-        self._offset = 0
-        self._inode: tuple[int, int] | None = None
+        # Arranca en el final del archivo (como "tail -f"), no en el byte 0.
+        # eve.json de Suricata es un unico archivo continuo que puede llevar
+        # horas/dias acumulando lineas; empezar en offset 0 releeria todo su
+        # historial en el primer ciclo (costoso e irrelevante, ya que
+        # build_rows solo usa la ventana reciente igualmente).
+        try:
+            stat_result = path.stat()
+            self._offset = stat_result.st_size
+            self._inode = (stat_result.st_dev, stat_result.st_ino)
+        except FileNotFoundError:
+            self._offset = 0
+            self._inode = None
         self._partial = b""
 
     def poll(self) -> list[str]:
@@ -178,6 +188,16 @@ def main() -> int:
         handle.write(json.dumps(startup_record, sort_keys=True) + "\n")
     print(json.dumps(startup_record, sort_keys=True), flush=True)
 
+    # Piso fijo de cobertura: el proceso del motor arranca despues de que
+    # ppi-motor-capture.service ya esta activo (Requires= en la unidad), asi
+    # que este instante es una cota conservadora de cuanto tiempo lleva el
+    # anillo de captura observando la red. Sin este piso, build_rows() infiere
+    # la cobertura del primer paquete presente en el buffer de ESTE ciclo, lo
+    # que marcaria como "sin suficiente historia" cualquier rafaga que llegue
+    # despues de un periodo sin trafico -- aunque el motor llevara minutos
+    # observando. Se fija una sola vez al arrancar, no se recalcula por ciclo.
+    capture_epoch = time.time()
+
     while True:
         cycle_start = time.time()
 
@@ -215,7 +235,11 @@ def main() -> int:
                 else []
             )
             rows = extractor.build_rows(
-                "motor-live", packets, apps, step_seconds=args.step_seconds
+                "motor-live",
+                packets,
+                apps,
+                step_seconds=args.step_seconds,
+                capture_start=capture_epoch,
             )
 
             for row in rows:
