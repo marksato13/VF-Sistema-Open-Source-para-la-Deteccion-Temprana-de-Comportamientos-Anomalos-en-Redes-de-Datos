@@ -36,7 +36,7 @@ Instalado con acceso root temporal (cuenta `sensor_motor`, otorgado por el usuar
 
 **Cuarto hallazgo, de diseño no de bug**: 774/774 alertas iniciales fueron ventanas sin ningún paquete (`packet_count_10s=0`) — el modelo OCSVM nunca vio vectores "todo ceros" en el entrenamiento offline (las campañas siempre tenían algo de tráfico dentro de su ventana), así que las clasifica como fuera de distribución. El usuario decidió (opción recomendada) agregar un heurístico explícito: si `packet_count_10s=0` y no hay observaciones de aplicación (HTTP/DNS/TLS) en la ventana, se registra `PERMIT` sin llamar al modelo — mismo patrón que los detectores heurísticos ya previstos en la hoja de ruta (complementan al modelo, nunca lo reemplazan). Queda registrado en el log con `detector_name="empty_window_heuristic"` para distinguirlo de una decisión real del modelo.
 
-Acceso root temporal (clave SSH agregada a `sensor_motor` + `/etc/sudoers.d/90-temporal-claude-motor`) pendiente de revocar al cerrar esta sesión de despliegue, siguiendo el mismo patrón ya usado en el proyecto.
+Acceso root temporal revocado al cerrar esta sesión de despliegue: se eliminó `/etc/sudoers.d/90-temporal-claude-motor` y se vació `~/.ssh/authorized_keys` de `sensor_motor`. Verificado con una conexión SSH real que ahora es rechazada (`Permission denied (publickey,password)`), no solo asumido. El motor y la captura siguen corriendo de forma autónoma (systemd, `Restart=always`), sin necesitar ningún acceso privilegiado adicional para operar día a día.
 
 ## Estado original de este documento (antes de tu confirmación), para trazabilidad
 
