@@ -12,7 +12,8 @@ docs/fase04-modelado/04-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md.
 Arquitectura de entrada, distinta a una campana offline:
 
 - PCAP: ``ppi-motor-capture.service`` mantiene un buffer en anillo de
-  archivos rotados por tiempo (``-G 15 -W 8`` => ~120s de historia) en
+  archivos rotados por tiempo (``-G 15 -W 16`` => ~240s de historia,
+  ampliado desde ~120s tras ``docs/07-mejoras-futuras/01-debilidades-y-mejoras.md``) en
   ``--capture-dir``. Cada ciclo se listan los archivos YA CERRADOS (se
   excluye siempre el mas reciente, que tcpdump todavia esta escribiendo) y
   se pasan tal cual a ``load_packet_observations`` -- sin reimplementar el
@@ -27,8 +28,8 @@ Arquitectura de entrada, distinta a una campana offline:
 
 Limitacion conocida y declarada, no oculta: a diferencia de una campana
 offline (PCAP completo desde el primer paquete del episodio),
-``attribute_packets`` solo ve el buffer en anillo de ~120s. Un flujo que ya
-llevaba mas de ~120s abierto cuando el motor lo observa por primera vez
+``attribute_packets`` solo ve el buffer en anillo de ~240s. Un flujo que ya
+llevaba mas de ~240s abierto cuando el motor lo observa por primera vez
 puede tener su IP iniciadora mal atribuida si el paquete que abrio el flujo
 ya rotó fuera del buffer. Para flujos cortos (la inmensa mayoria del trafico
 de ataque real medido en la evaluacion bloqueada) esto no aplica.
@@ -73,6 +74,14 @@ except ImportError as exc:  # pragma: no cover - fallo de despliegue, no de logi
 # solo acota memoria en un despliegue de muy larga duracion. Ver comentario
 # junto a su uso en main() sobre por que no se poda por antiguedad de reloj.
 MAX_SCORED_WINDOWS = 20000
+
+# Umbrales del heuristico de fuerza bruta/password-spray (ver uso en main()).
+# Elegidos por criterio razonado -- mismo patron que el heuristico SSH del
+# MVP anterior (5 intentos en 60s) -- NO calibrados estadisticamente sobre
+# datos de validation como el umbral del modelo. Se documenta la diferencia
+# explicitamente: esto es una regla de sentido comun, no una calibracion.
+AUTH_FAILURE_MIN_REQUESTS = 5
+AUTH_FAILURE_MIN_RATIO = 0.8
 
 
 def parse_args() -> argparse.Namespace:
@@ -343,13 +352,36 @@ def main() -> int:
                     and row["dns_query_count_60s"] == 0
                     and row["tls_observation_count_60s"] == 0
                 )
+                detector_name = args.detector_name
                 if empty_window:
                     score = None
                     decision = "PERMIT"
+                    detector_name = "empty_window_heuristic"
                 else:
                     feature_vector = [[float(row[name]) for name in feature_names]]
                     score = float(pipeline.score_samples(feature_vector)[0])
                     decision = "ALERT" if score < threshold else "PERMIT"
+
+                    # Heuristico complementario, no un reemplazo del modelo: la
+                    # evaluacion bloqueada real midio que ocsvm_scaled es el
+                    # mas debil de los 7 modelos comparados justo en fuerza
+                    # bruta/password-spray (50-55% de deteccion, ver
+                    # docs/fase04-modelado/06-modelo-final-congelado-ocsvm.md).
+                    # Si el modelo dice PERMIT pero la ventana ya tiene una
+                    # firma clara de fuerza bruta (>=5 peticiones HTTP en 60s,
+                    # >=80% con 401/403), se escala a ALERT sin tocar el score
+                    # ni el umbral del modelo. Umbrales elegidos por criterio
+                    # razonado (mismo patron que el MVP anterior, 5 intentos
+                    # en 60s), NO calibrados estadisticamente como el umbral
+                    # del modelo -- documentado como tal, no se disfraza de
+                    # rigor que no tiene.
+                    if (
+                        decision == "PERMIT"
+                        and row["http_request_count_60s"] >= AUTH_FAILURE_MIN_REQUESTS
+                        and row["http_auth_failure_ratio_60s"] >= AUTH_FAILURE_MIN_RATIO
+                    ):
+                        decision = "ALERT"
+                        detector_name = "auth_failure_heuristic"
 
                 record = {
                     "event": "decision",
@@ -358,7 +390,7 @@ def main() -> int:
                     "window_end_utc": row["window_end_utc"],
                     "history_coverage_s": row["history_coverage_s"],
                     "packet_count_10s": row["packet_count_10s"],
-                    "detector_name": "empty_window_heuristic" if empty_window else args.detector_name,
+                    "detector_name": detector_name,
                     "score": score,
                     "threshold": threshold,
                     "decision": decision,

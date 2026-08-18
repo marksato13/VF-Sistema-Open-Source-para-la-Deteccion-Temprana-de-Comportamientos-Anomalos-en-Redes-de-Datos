@@ -18,7 +18,7 @@ ExecStart=/home/useransible/ppi-motor-venv/bin/python3 \
     --manifest-path /home/useransible/ppi-motor-model/manifest.json \
     --schema /home/useransible/vf-sistema-final/configs/features/multilayer-v2.json \
     --log-path /home/useransible/ppi-motor-logs/motor_decision.log \
-    --enforce --block-timeout-seconds 120
+    --enforce --block-timeout-seconds 120 --history-seconds 230
 Restart=always
 RestartSec=5
 StandardOutput=journal

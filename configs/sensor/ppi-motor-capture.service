@@ -11,8 +11,16 @@ Type=simple
 # ens35 -- mismo patron ya validado en 145+ campanas del dataset, no una
 # alternativa sin probar basada en capabilities del binario.
 ExecStartPre=/usr/bin/install -d -o tcpdump -g useransible -m 2750 /var/lib/ppi-motor-capture
+# -W 16 x -G 15s = ~240s de historia en anillo (antes 8x15s=120s). Ampliado
+# a pedido del usuario tras el analisis en docs/07-mejoras-futuras/01-
+# debilidades-y-mejoras.md (debilidad #4): mas margen para que un flujo
+# largo no quede mal atribuido si su primer paquete ya roto fuera del
+# anillo. Costo conocido y aceptado: el motor reparsea todo el anillo cada
+# ciclo (no incrementalmente), asi que esto duplica aproximadamente el
+# trabajo de parseo por ciclo -- ver --history-seconds correspondiente en
+# ppi-motor.service, debe mantenerse coherente con este valor.
 ExecStart=/usr/bin/tcpdump -i ens35 -n -s 0 -U -B 65536 \
-    -Z tcpdump -w /var/lib/ppi-motor-capture/live-%%Y%%m%%d%%H%%M%%S.pcap -G 15 -W 8 \
+    -Z tcpdump -w /var/lib/ppi-motor-capture/live-%%Y%%m%%d%%H%%M%%S.pcap -G 15 -W 16 \
     (src net 10.20.0.0/24 and dst net 10.30.0.0/24) or (src net 10.30.0.0/24 and dst net 10.20.0.0/24)
 UMask=0027
 Restart=always
