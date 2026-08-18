@@ -1,7 +1,7 @@
 # Debilidades y mejoras — análisis punto por punto
 
 - **Fecha:** 2026-08-18
-- **Estado:** filas #1 y #4 implementadas y desplegadas en VM02 el mismo día; el resto sigue siendo análisis, no implementación.
+- **Estado:** filas #1, #4, #8 y #9 implementadas/corregidas y desplegadas en VM02 el mismo día, cada una con prueba real en producción; la #9 (falso positivo) se encontró y corrigió durante la validación en vivo del propio heurístico de la #1. El resto sigue siendo análisis, no implementación.
 
 ## Propósito
 
@@ -21,6 +21,8 @@ No es una lista de "cosas por hacer" genérica: cada fila cita el documento dond
 | 6 | Enforcement es solo por IP — vulnerable a rotación de IP del atacante | Limitación estructural conocida de cualquier bloqueo por IP; no medida específicamente en este proyecto | No hay mitigación de bajo costo real dentro del alcance de esta tesis | **N/A** — se declara como límite del diseño, no se intenta resolver |
 | 7 | Sin monitoreo de deriva del modelo (¿sigue siendo válido el umbral con el tiempo?) | No hay proceso definido todavía en ningún documento | Documentar (no implementar) un procedimiento de re-evaluación periódica como trabajo futuro explícito | **Bajo** costo de documentar; implementarlo queda fuera de alcance |
 | 8 | ✅ Dashboard sin tendencia histórica más allá de la última hora visible | `docs/fase06-dashboard/01-diseno-dashboard-motor.md` (rediseño original, solo 60 min) | **Implementado (2026-08-18, sección A del rediseño):** selector 1h/24h en `/api/activity`, respaldado por agregación horaria sobre el mismo `motor_decision.log` — sin persistencia nueva. Verificado en VM02: `/api/activity?range=24h` devuelve 25 buckets reales. Límite que sigue vigente: no hay historial más allá de lo que retiene el propio log (sin rotación/persistencia de agregados diarios) | **Bajo** — ya desplegado. Ampliar más allá de 24h sí exigiría persistencia nueva, fuera de este alcance |
+| 9 | ✅ Falso positivo: bloqueo de cliente legítimo por ventana `packet_count_10s==0` con señal L7 residual (desincronización PCAP/EVE) | Reproducido en producción: un `GET /→200` benigno de `10.20.0.20` provocó `ALERT score=0.0 pkts10=0 enforced=true`. Detalle: `docs/fase05-motor-tiempo-real/02-fp-ventana-sin-paquetes.md` (`MOTOR-FP-01`) | **Corregido (2026-08-18):** el modelo ya no puntúa ventanas sin paquetes (fuera-de-distribución); el heurístico de fuerza bruta se movió fuera del `else` del modelo para seguir disparando sobre L7. Verificado en vivo: GET benigno → `PERMIT no_live_packets_heuristic` sin bloqueo; fuerza bruta 10×401 → `ALERT auth_failure_heuristic` con bloqueo (Kali cortada a mitad del ataque) | **Bajo** — sin tocar modelo ni umbral; prueba positiva + negativa + no-regresión reales en VM02 |
+| 10 | Replay de backlog al reiniciar el motor si el anillo conserva PCAP rancios | Observado esta sesión (`MOTOR-OBS-02` en `docs/fase05-motor-tiempo-real/02-fp-ventana-sin-paquetes.md`). No es bucle (dedup por ventana) y los bloqueos expiran, pero re-emite decisiones y re-aplica bloqueos viejos al arrancar | Que el servicio de captura limpie `live-*.pcap` rancios al arrancar, o que el motor acote el lookback por reloj además de `min(observaciones)` | **Bajo-medio** — cambio acotado, pero toca el arranque del motor; requiere su propia prueba. Mitigación operativa ya conocida: limpiar el anillo antes de reiniciar |
 
 ## Qué NO se va a hacer sin evidencia nueva
 

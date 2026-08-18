@@ -352,36 +352,68 @@ def main() -> int:
                     and row["dns_query_count_60s"] == 0
                     and row["tls_observation_count_60s"] == 0
                 )
+                # Guard ampliado: ademas del caso "todo cero", CUALQUIER ventana
+                # con packet_count_10s == 0 es fuera-de-distribucion para el
+                # modelo. ocsvm_scaled se entreno solo con ventanas que tenian
+                # paquetes L3/L4 dentro de su ventana de captura, asi que
+                # puntua un vector sin paquetes (~todo ceros) como ~0.0, muy
+                # por debajo del umbral -> ALERT espurio. Esto ocurre de verdad
+                # con trafico legitimo: eve.json (L7) es continuo y se adelanta
+                # al anillo de PCAP de tcpdump, que bufferiza antes de escribir
+                # a disco; el motor puede ver el evento HTTP de una peticion
+                # antes que sus paquetes -> http_request_count_60s>=1 con
+                # packet_count_10s=0. Reproducido en produccion (2026-08-18): un
+                # GET benigno (200) de 10.20.0.20 provoco ALERT score=0.0
+                # pkts10=0 con bloqueo aplicado a un cliente legitimo. Ausencia
+                # de paquetes no es un ataque; los paquetes reales de cualquier
+                # ataque SI caen en ventanas con pkts10>0, que se siguen
+                # puntuando y bloqueando. No se toca el modelo ni el umbral.
+                # Ver docs/fase05-motor-tiempo-real/02-fp-ventana-sin-paquetes.md.
+                no_live_packets = row["packet_count_10s"] == 0
                 detector_name = args.detector_name
-                if empty_window:
+                if no_live_packets:
+                    # El MODELO no se puntua sin paquetes L3/L4 (seria un ALERT
+                    # espurio, ver arriba), pero la senal L7 de eve.json SI es
+                    # valida aunque el anillo de PCAP aun no haya volcado los
+                    # paquetes -- el heuristico de fuerza bruta, que depende solo
+                    # de features L7 de 60s, se evalua igual mas abajo.
                     score = None
                     decision = "PERMIT"
-                    detector_name = "empty_window_heuristic"
+                    detector_name = (
+                        "empty_window_heuristic"
+                        if empty_window
+                        else "no_live_packets_heuristic"
+                    )
                 else:
                     feature_vector = [[float(row[name]) for name in feature_names]]
                     score = float(pipeline.score_samples(feature_vector)[0])
                     decision = "ALERT" if score < threshold else "PERMIT"
 
-                    # Heuristico complementario, no un reemplazo del modelo: la
-                    # evaluacion bloqueada real midio que ocsvm_scaled es el
-                    # mas debil de los 7 modelos comparados justo en fuerza
-                    # bruta/password-spray (50-55% de deteccion, ver
-                    # docs/fase04-modelado/06-modelo-final-congelado-ocsvm.md).
-                    # Si el modelo dice PERMIT pero la ventana ya tiene una
-                    # firma clara de fuerza bruta (>=5 peticiones HTTP en 60s,
-                    # >=80% con 401/403), se escala a ALERT sin tocar el score
-                    # ni el umbral del modelo. Umbrales elegidos por criterio
-                    # razonado (mismo patron que el MVP anterior, 5 intentos
-                    # en 60s), NO calibrados estadisticamente como el umbral
-                    # del modelo -- documentado como tal, no se disfraza de
-                    # rigor que no tiene.
-                    if (
-                        decision == "PERMIT"
-                        and row["http_request_count_60s"] >= AUTH_FAILURE_MIN_REQUESTS
-                        and row["http_auth_failure_ratio_60s"] >= AUTH_FAILURE_MIN_RATIO
-                    ):
-                        decision = "ALERT"
-                        detector_name = "auth_failure_heuristic"
+                # Heuristico complementario, no un reemplazo del modelo: la
+                # evaluacion bloqueada real midio que ocsvm_scaled es el mas
+                # debil de los 7 modelos comparados justo en fuerza
+                # bruta/password-spray (50-55% de deteccion, ver
+                # docs/fase04-modelado/06-modelo-final-congelado-ocsvm.md). Si la
+                # decision vigente es PERMIT pero la ventana ya tiene una firma
+                # clara de fuerza bruta (>=5 peticiones HTTP en 60s, >=80% con
+                # 401/403), se escala a ALERT sin tocar el score ni el umbral del
+                # modelo. Se evalua tanto tras el modelo (pkts10>0) COMO en las
+                # ventanas no_live_packets: sus features son L7 (eve.json), que
+                # son validas aunque el PCAP aun no haya volcado los paquetes del
+                # ataque, asi que una rafaga rapida de 401 se detecta sin esperar
+                # al vuelco del anillo. Un GET benigno aislado (http60=1<5) nunca
+                # dispara esto, asi que el FP de ventana sin paquetes sigue
+                # corregido. Umbrales por criterio razonado (mismo patron que el
+                # MVP anterior, 5 intentos en 60s), NO calibrados
+                # estadisticamente como el umbral del modelo -- documentado como
+                # tal, no se disfraza de rigor que no tiene.
+                if (
+                    decision == "PERMIT"
+                    and row["http_request_count_60s"] >= AUTH_FAILURE_MIN_REQUESTS
+                    and row["http_auth_failure_ratio_60s"] >= AUTH_FAILURE_MIN_RATIO
+                ):
+                    decision = "ALERT"
+                    detector_name = "auth_failure_heuristic"
 
                 record = {
                     "event": "decision",
@@ -395,7 +427,12 @@ def main() -> int:
                     "threshold": threshold,
                     "decision": decision,
                 }
-                if args.enforce and decision == "ALERT" and not empty_window:
+                # decision == "ALERT" solo ocurre por (modelo con pkts10>0) o
+                # (heuristico de fuerza bruta sobre L7); ambos son bloqueos
+                # legitimos. Las ventanas vacias / sin paquetes son PERMIT salvo
+                # que el heuristico dispare, en cuyo caso SI se debe bloquear
+                # (rafaga de 401 detectada por L7 antes del vuelco del PCAP).
+                if args.enforce and decision == "ALERT":
                     record["enforcement"] = apply_enforcement(
                         args.enforce_command, row["entity_ip"], args.block_timeout_seconds
                     )
