@@ -1,7 +1,7 @@
 # Diseño del dashboard operativo del motor — arquitectura, instalación y manual de usuario
 
 - **Fecha:** 2026-08-18
-- **Estado:** diseño confirmado con el usuario, en implementación.
+- **Estado:** desplegado y validado end-to-end contra datos reales en VM02.
 - **Alcance confirmado:** sistema en vivo completo (decisiones del motor,
   estado de enforcement, salud de servicios, contexto del modelo), estrictamente
   de solo lectura, complementario a otras herramientas de monitoreo — no las
@@ -121,3 +121,30 @@ La página tiene cuatro secciones, de arriba hacia abajo:
    `PERMIT` (y si fue por el modelo o por el heurístico de ventana vacía).
 
 La página se actualiza sola cada 5 segundos; no hace falta recargar.
+
+## Validación real (2026-08-18)
+
+Desplegado con acceso root temporal (mismo patrón ya usado para el motor y
+el enforcement, revocado y verificado al cerrar). El único punto que no se
+pudo probar sin la infraestructura real —el filtro `jq` sobre la salida
+`nft -j list set`— funcionó correctamente a la primera contra el set real,
+tanto vacío como con contenido.
+
+Prueba end-to-end completa: generé una ráfaga de ping real desde el cliente,
+el motor la marcó `ALERT` y bloqueó la IP automáticamente, y **el dashboard
+mostró esa IP bloqueada con su tiempo de expiración exacto** vía
+`GET /api/status`, sin intervención manual. `/api/decisions` devolvió el
+registro correcto en orden cronológico inverso. Los tres servicios
+(`ppi-motor`, `ppi-motor-capture`, `suricata`) y las métricas del modelo
+(umbral `1.8126`, FPR `4.71%`, detección `88.3%`/`88.9%` Kali-real)
+coincidieron exactamente con los valores ya documentados en
+`08-modelo-final-congelado-ocsvm.md`, confirmando que se leen del
+`manifest.json` real y no están hardcodeados.
+
+Bug encontrado y corregido **antes** de desplegar (durante el smoke test
+local, no en producción): `load_model_summary` asumía
+`manifest["evaluation"]["threshold_used"]` plano, pero el manifiesto real
+indexa `evaluation` por nombre de detector
+(`manifest["evaluation"]["ocsvm_scaled"]["threshold_used"]`). Verificado
+también contra el `manifest.json` real de `/srv/ppi-evidence` antes de
+tocar VM02.

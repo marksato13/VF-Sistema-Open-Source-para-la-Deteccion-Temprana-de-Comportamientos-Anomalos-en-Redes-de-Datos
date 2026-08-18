@@ -42,11 +42,20 @@ tamaño. Detalle completo, incluidas las limitaciones declaradas (sin nivel
 buffer en anillo, menor que una campaña offline completa):
 `docs/06-features-modelado/09-diseno-motor-tiempo-real.md`.
 
+**Dashboard operativo del motor: desplegado** (`ppi-dashboard.service`, VM02,
+puerto `8788` solo en loopback, acceso remoto exclusivamente por túnel SSH).
+Solo lectura, complementario a otras herramientas de monitoreo — no ejecuta
+ninguna acción. Muestra salud de servicios, contexto del modelo (umbral y
+métricas leídas del `manifest.json` congelado, no hardcodeadas), IPs
+bloqueadas en vivo y actividad reciente. Validado end-to-end contra tráfico
+real (una IP bloqueada automáticamente por el motor apareció en el panel con
+su expiración exacta). Arquitectura completa, justificación técnica y manual
+de instalación/usuario: `docs/06-features-modelado/10-diseno-dashboard-motor.md`.
+
 **Siguiente en la hoja de ruta** (`docs/06-features-modelado/06-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md`):
-dashboard simple de solo lectura sobre el log del motor, y después validación
-final con el motor activo (equivalente al F6 del MVP anterior: múltiples
-corridas midiendo FPR operativo, latencia, disponibilidad y lead-time de
-detección). No hay campañas de recolección activas. Los artefactos runtime
+validación final con el motor activo (equivalente al F6 del MVP anterior:
+múltiples corridas midiendo FPR operativo, latencia, disponibilidad y
+lead-time de detección). No hay campañas de recolección activas. Los artefactos runtime
 (modelos, PCAP, datasets) permanecen fuera de Git.
 
 Este repositorio documenta y construye la versión final de un sistema open source para la detección temprana de comportamientos anómalos en redes de datos. Es un proyecto ingenieril desplegado en un laboratorio virtualizado sobre VMware ESXi.
