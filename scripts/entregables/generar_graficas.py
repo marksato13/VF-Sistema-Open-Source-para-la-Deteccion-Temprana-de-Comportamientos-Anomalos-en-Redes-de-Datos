@@ -500,6 +500,89 @@ def fig_dataset(d):
     save(fig, "D1-composicion-dataset.png")
 
 
+# ===================================================== E · topología ========
+def fig_topologia():
+    """Diagrama de la topología del laboratorio.
+
+    Sustituye al bloque de arte ASCII del informe, que pierde la alineación al
+    convertirlo a Word (la fuente deja de ser monoespaciada).
+    """
+    from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+
+    fig, ax = plt.subplots(figsize=(11.0, 4.4))
+    ax.set_xlim(0, 100); ax.set_ylim(0, 44)
+    ax.axis("off")
+
+    def caja(x, y, w, h, titulo, sub, color, ancho=1.8):
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.6",
+                                    linewidth=ancho, edgecolor=color,
+                                    facecolor="white", zorder=3))
+        ax.text(x + w / 2, y + h * 0.63, titulo, ha="center", va="center",
+                fontsize=10.5, fontweight="bold", color=INK, zorder=4)
+        ax.text(x + w / 2, y + h * 0.27, sub, ha="center", va="center",
+                fontsize=8.6, color=DIM, zorder=4)
+
+    def flecha(x1, y1, x2, y2, color=DIM, texto=None, ty=0):
+        ax.add_patch(FancyArrowPatch((x1, y1), (x2, y2),
+                                     arrowstyle="-|>", mutation_scale=17,
+                                     linewidth=1.9, color=color, zorder=2))
+        if texto:
+            ax.text((x1 + x2) / 2, (y1 + y2) / 2 + ty, texto, ha="center",
+                    fontsize=8, color=color, zorder=4,
+                    bbox=dict(boxstyle="round,pad=0.25", facecolor="white",
+                              edgecolor="none"))
+
+    # zonas de red
+    ax.add_patch(FancyBboxPatch((1.5, 3), 24, 38, boxstyle="round,pad=0.4",
+                                linewidth=0, facecolor="#eef1f8", zorder=0))
+    ax.text(13.5, 39.6, "LAN · 10.20.0.0/24", ha="center", fontsize=9,
+            color=DIM, fontweight="bold", zorder=1)
+    ax.add_patch(FancyBboxPatch((74, 3), 24.5, 38, boxstyle="round,pad=0.4",
+                                linewidth=0, facecolor="#eef1f8", zorder=0))
+    ax.text(86, 39.6, "DMZ · 10.30.0.0/24", ha="center", fontsize=9,
+            color=DIM, fontweight="bold", zorder=1)
+
+    caja(3, 25, 21, 11, "Cliente legítimo", "10.20.0.20", OK)
+    caja(3, 10, 21, 11, "Kali · atacante", "10.20.0.100", DANGER)
+    caja(76, 20, 21, 12, "Servidor protegido", "10.30.0.10", VIOLET)
+
+    # Sensor dibujado a mano: necesita cuatro líneas de texto sin solapes,
+    # así que no puede usar la plantilla de dos líneas de caja().
+    ax.add_patch(FancyBboxPatch((35, 15), 30, 21, boxstyle="round,pad=0.6",
+                                linewidth=2.6, edgecolor=ACCENT,
+                                facecolor="white", zorder=3))
+    ax.text(50, 33.0, "SENSOR  (VM02)", ha="center", va="center",
+            fontsize=11, fontweight="bold", color=INK, zorder=4)
+    ax.text(50, 29.8, "router inline LAN ↔ DMZ", ha="center", va="center",
+            fontsize=8.4, color=DIM, zorder=4)
+    for i, t in enumerate(["Suricata · captura",
+                           "Motor ML · OCSVM",
+                           "nftables · bloqueo"]):
+        ax.text(50, 25.5 - i * 3.4, t, ha="center", va="center",
+                fontsize=8.8, color=INK, zorder=4)
+
+    flecha(24.5, 30.5, 34.4, 28.5, OK)
+    flecha(24.5, 15.5, 34.4, 20.5, DANGER)
+    flecha(65.6, 26.5, 75.5, 26.0, DIM, "tráfico reenviado", 2.4)
+    # bloqueo: sale del sensor y vuelve al atacante
+    ax.add_patch(FancyArrowPatch((44, 14.4), (16, 9.4),
+                                 connectionstyle="arc3,rad=-0.28",
+                                 arrowstyle="-|>", mutation_scale=16,
+                                 linewidth=1.9, color=DANGER, ls=(0, (5, 3)),
+                                 zorder=2))
+    ax.text(31, 3.6, "bloqueo nftables · expira en 120 s", ha="center",
+            fontsize=8.6, color=DANGER, style="italic", zorder=4)
+
+    ax.set_title("Topología del laboratorio: el sensor es el punto de decisión",
+                 loc="left", color=INK, pad=18)
+    ax.text(0, 1.005, "Todo el tráfico entre LAN y DMZ atraviesa el sensor, "
+                      "que captura, puntúa y bloquea en el mismo lugar",
+            transform=ax.transAxes, fontsize=9, color=DIM, va="bottom")
+    fig.text(0.005, 0.005, "Fuente: docs/fase00-infraestructura/ · sistema desplegado en VM02",
+             fontsize=7.4, color=DIM)
+    save(fig, "E1-topologia.png")
+
+
 def main():
     print("Cargando artefactos y re-puntuando con el modelo congelado…")
     d = load_all()
@@ -522,6 +605,7 @@ def main():
     fig_leadtime()
     fig_scores_pesado(d)
     fig_dataset(d)
+    fig_topologia()
 
     tp = int((d["s_anom"] < d["thr"]).sum()); fn = len(d["s_anom"]) - tp
     fp = int((d["s_test"] < d["thr"]).sum()); tn = len(d["s_test"]) - fp

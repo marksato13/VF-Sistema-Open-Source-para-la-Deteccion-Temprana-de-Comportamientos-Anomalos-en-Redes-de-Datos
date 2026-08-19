@@ -35,6 +35,7 @@ El script **re-puntúa los conjuntos con el modelo congelado** (`ocsvm_scaled.jo
 | **B · Comparación de modelos** | `B1` detección frente a FPR · `B2` mapa de calor por familia | Por qué se eligió OCSVM y dónde falla frente a las alternativas |
 | **C · Operación real (F6)** | `C1` FPR offline vs operativo · `C2` lead-time · `C3` scores de tráfico pesado | Comportamiento del sistema desplegado, incluidos los resultados negativos |
 | **D · Dataset y variables** | `D1` particiones, familias y features por capa | Composición y alcance de los datos |
+| **E · Infraestructura** | `E1` topología del laboratorio | Dónde se captura, se decide y se bloquea |
 
 ## Aportes propios del informe
 

@@ -25,11 +25,7 @@
 
 Sistema de detección de anomalías de red desplegado sobre un laboratorio virtualizado de 5 máquinas, con el sensor actuando como router inline entre LAN y DMZ:
 
-```
-Cliente 10.20.0.20 ─┐
-                     ├─► Sensor 10.20.0.1 / 10.30.0.1 ─► Servidor 10.30.0.10
-Kali    10.20.0.100 ─┘        (Suricata + motor ML + nftables)
-```
+![Topología del laboratorio](graficas/E1-topologia.png)
 
 | Componente | Estado |
 |---|---|
@@ -302,6 +298,7 @@ Corregidas, la tesis sostiene con solidez una afirmación acotada y verdadera:
 | `C2-lead-time.png` | Tiempo hasta el bloqueo por familia | `f6_resultados.jsonl` |
 | `C3-scores-trafico-pesado.png` | Tráfico legítimo pesado dentro del margen del umbral | F6 |
 | `D1-composicion-dataset.png` | Particiones, familias de ataque y features por capa | `manifest.json` + contrato |
+| `E1-topologia.png` | Topología del laboratorio y punto de decisión | `docs/fase00-infraestructura/` |
 
 ## Anexo B — Trazabilidad
 
