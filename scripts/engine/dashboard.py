@@ -462,7 +462,7 @@ document.getElementById('exportCsv').addEventListener('click', () => {
     d.score != null ? d.score : '',
     d.packet_count_10s,
   ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
-  const csv = [header.join(','), ...csvRows].join('\r\n');
+  const csv = [header.join(','), ...csvRows].join('\\r\\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
