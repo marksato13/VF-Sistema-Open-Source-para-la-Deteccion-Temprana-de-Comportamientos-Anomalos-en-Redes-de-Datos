@@ -227,6 +227,7 @@ const ICON = {
 
 const DETECTOR_LABEL = {
   empty_window_heuristic: 'sin tráfico (heurístico)',
+  no_live_packets_heuristic: 'sin paquetes aún (heurístico)',
   ocsvm_scaled: 'modelo (OCSVM)',
   auth_failure_heuristic: 'fuerza bruta (heurístico)',
 };
@@ -517,9 +518,19 @@ def compute_counters(decisions: list[dict], window_seconds: int = 3600) -> dict:
     alert_auth_heuristic = sum(
         1 for d in recent if d["decision"] == "ALERT" and d.get("detector_name") == "auth_failure_heuristic"
     )
-    permit_heuristic = sum(1 for d in recent if d.get("detector_name") == "empty_window_heuristic")
+    # PERMIT por heuristico = ventana vacia O sin paquetes (el modelo NO puntuo
+    # ninguna de las dos). permit_model = solo los PERMIT que el modelo SI
+    # puntuo (ocsvm_scaled). Sin esta distincion, los PERMIT de
+    # no_live_packets_heuristic se contarian erroneamente como decisiones del
+    # modelo, aunque el modelo nunca los vio.
+    heuristic_permit_detectors = {"empty_window_heuristic", "no_live_packets_heuristic"}
+    permit_heuristic = sum(
+        1 for d in recent
+        if d["decision"] == "PERMIT" and d.get("detector_name") in heuristic_permit_detectors
+    )
     permit_model = sum(
-        1 for d in recent if d["decision"] == "PERMIT" and d.get("detector_name") != "empty_window_heuristic"
+        1 for d in recent
+        if d["decision"] == "PERMIT" and d.get("detector_name") == "ocsvm_scaled"
     )
     return {
         "total": len(recent),

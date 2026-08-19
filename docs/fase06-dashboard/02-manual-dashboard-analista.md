@@ -52,7 +52,11 @@ La tabla con el detalle. Dos herramientas encima:
 - **Filtrar por IP** — escribe parte de una IP y la tabla se reduce a esa IP en el momento, sin recargar nada.
 - **Exportar CSV** — descarga lo que ves actualmente (respeta el filtro si hay uno activo) como un archivo `.csv`, útil para adjuntar a un reporte de incidente.
 
-La columna "Motivo" te dice cuál de los dos detectores decidió: el modelo (OCSVM) o el heurístico de fuerza bruta o de ventana vacía.
+La columna "Motivo" te dice qué detector decidió cada ventana:
+- **modelo (OCSVM)** — la ventana tenía paquetes y el modelo la puntuó.
+- **fuerza bruta (heurístico)** — un PERMIT que se escaló a ALERT por ≥5 peticiones HTTP con ≥80% de fallos de login (401/403), detectado por L7.
+- **sin tráfico (heurístico)** — ventana totalmente vacía; PERMIT sin consultar al modelo.
+- **sin paquetes aún (heurístico)** — la ventana tenía señal L7 pero aún no sus paquetes (el anillo de PCAP no había volcado); PERMIT sin puntuar, para no generar un falso positivo. Es esperado y benigno.
 
 ### Si la pestaña no está abierta
 
