@@ -9,10 +9,13 @@ Documentos de cara al evaluador, construidos sobre la evidencia registrada fase 
 | 01 | [Informe de resultados y evaluación crítica](01-informe-evaluacion-critica.md) | **Listo** | Documento extenso, con las 11 gráficas y el detalle completo de cada hallazgo |
 | 02 | [Informe de validación y confiabilidad](02-informe-validacion-confiabilidad.md) | **Listo** | Versión breve (4 páginas) con la estructura exacta pedida en clase: validación interna, externa y confiabilidad |
 | 03 | [Auditoría comparativa: MVP vs versión final](03-auditoria-comparativa-mvp-vs-version-final.md) | **Listo** | Contrasta repositorios, arquitectura, modelo, dataset y cumplimiento de las observaciones del jurado |
-| 04 | Manual de implementación técnica | Pendiente | |
-| 05 | Actualización del PPI | Pendiente | |
+| 04 | [Ficha de auditoría del producto](04-ficha-auditoria.md) · [Word](Ficha-auditoria-producto.docx) | **Listo** | Auditoría en tres dimensiones (confiabilidad, replicabilidad, pertinencia) con puntaje final: **32/51 = 62,7 %** |
+| 05 | Manual de implementación técnica | Pendiente | |
+| 06 | Actualización del PPI | Pendiente | |
 
-El documento 02 es el **entregable del curso**; el 01 funciona como su anexo técnico. El documento 03 conserva la auditoría longitudinal y la justificación de los cambios respecto al MVP del ciclo anterior.
+Los documentos **02 y 04 son los entregables del curso**; el 01 funciona como su anexo técnico. El documento 03 conserva la auditoría longitudinal y la justificación de los cambios respecto al MVP del ciclo anterior.
+
+Cada entregable del curso tiene su fuente en Markdown (versionable y revisable en GitHub) y su versión en Word generada por script, de modo que si cambia una cifra el documento presentable se regenera sin editarlo a mano.
 
 ## Estructura del documento 01
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Genera la Ficha de auditoría del producto de ingeniería en formato Word.
 
-Mismo contenido que `docs/entregables/03-ficha-auditoria.md`, con la
+Mismo contenido que `docs/entregables/04-ficha-auditoria.md`, con la
 presentación formal del curso. Los subtotales y el puntaje final se **calculan
 aquí**, no se escriben a mano, de modo que la ficha no puede quedar
 descuadrada si cambia una puntuación.
