@@ -1,0 +1,108 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="topologia-ppi" name="Topología del laboratorio">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ============================== TÍTULO ============================== -->
+        <mxCell id="titulo" value="Topología del laboratorio &#8212; el Sensor es el punto de decisión" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#131B2E;" vertex="1" parent="1">
+          <mxGeometry x="40" y="24" width="700" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitulo" value="Todo el tráfico entre LAN y DMZ atraviesa VM02, que captura, puntúa y bloquea en el mismo lugar" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#5B6B8C;" vertex="1" parent="1">
+          <mxGeometry x="40" y="52" width="760" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- ============================== ZONA MGMT ============================== -->
+        <mxCell id="zona_mgmt" value="PPI-MGMT &#183; 10.10.10.0/24 &#8212; administración, no participa del tráfico de datos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F4F6FB;strokeColor=#C3CCDF;dashed=1;verticalAlign=top;fontSize=11;fontColor=#5B6B8C;fontStyle=1;align=left;spacingLeft=12;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="96" width="1080" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="vm01" value="VM01 &#183; Admin&#10;10.10.10.10&#10;Ansible" style="sketch=0;html=1;strokeColor=none;fillColor=#5B6B8C;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.networks.pc;fontSize=10;fontColor=#131B2E;" vertex="1" parent="1">
+          <mxGeometry x="516" y="122" width="70" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ============================== ZONA LAN ============================== -->
+        <mxCell id="zona_lan" value="PPI-LAN &#183; 10.20.0.0/24" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEF1F8;strokeColor=#C3CCDF;verticalAlign=top;fontSize=12;fontColor=#5B6B8C;fontStyle=1;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="300" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="cliente" value="VM05 &#183; Cliente legítimo&#10;10.20.0.20" style="sketch=0;html=1;strokeColor=none;fillColor=#15803D;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.networks.pc;fontSize=11;fontColor=#131B2E;" vertex="1" parent="1">
+          <mxGeometry x="120" y="310" width="80" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="kali" value="VM04 &#183; Kali (atacante)&#10;10.20.0.100" style="sketch=0;html=1;strokeColor=none;fillColor=#B91C1C;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.networks.pc;fontSize=11;fontColor=#131B2E;" vertex="1" parent="1">
+          <mxGeometry x="120" y="480" width="80" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ============================== SENSOR ============================== -->
+        <mxCell id="zona_sensor" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0F8A7D;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="420" y="270" width="320" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="sensor_titulo" value="VM02 &#183; SENSOR" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=15;fontStyle=1;fontColor=#0F8A7D;" vertex="1" parent="1">
+          <mxGeometry x="440" y="284" width="280" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="sensor_sub" value="router inline LAN &#8596; DMZ&#10;10.20.0.1 / 10.30.0.1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=10;fontColor=#5B6B8C;" vertex="1" parent="1">
+          <mxGeometry x="440" y="308" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ico_firewall" value="" style="sketch=0;html=1;strokeColor=none;fillColor=#0F8A7D;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.networks.firewall;" vertex="1" parent="1">
+          <mxGeometry x="530" y="344" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="comp_suricata" value="Suricata &#183; captura AF_PACKET" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D9F2EE;strokeColor=#0F8A7D;fontSize=10;fontColor=#131B2E;" vertex="1" parent="1">
+          <mxGeometry x="450" y="424" width="260" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="comp_motor" value="Motor ML &#183; OCSVM (umbral 1.8126)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D9F2EE;strokeColor=#0F8A7D;fontSize=10;fontColor=#131B2E;" vertex="1" parent="1">
+          <mxGeometry x="450" y="468" width="260" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="comp_nft" value="nftables &#183; bloqueo inline (120 s)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBE3E1;strokeColor=#B91C1C;fontSize=10;fontColor=#131B2E;" vertex="1" parent="1">
+          <mxGeometry x="450" y="512" width="260" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="comp_dash" value="Dashboard :8788 (solo lectura)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F4F6FB;strokeColor=#C3CCDF;fontSize=10;fontColor=#5B6B8C;" vertex="1" parent="1">
+          <mxGeometry x="450" y="556" width="260" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- ============================== ZONA DMZ ============================== -->
+        <mxCell id="zona_dmz" value="PPI-DMZ &#183; 10.30.0.0/24" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEF1F8;strokeColor=#C3CCDF;verticalAlign=top;fontSize=12;fontColor=#5B6B8C;fontStyle=1;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="820" y="250" width="300" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="servidor" value="VM03 &#183; Servidor protegido&#10;10.30.0.10&#10;NGINX &#183; DNS &#183; API &#183; SSH" style="sketch=0;html=1;strokeColor=none;fillColor=#6D28D9;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.networks.server;fontSize=11;fontColor=#131B2E;" vertex="1" parent="1">
+          <mxGeometry x="920" y="380" width="70" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ============================== CONEXIONES ============================== -->
+        <mxCell id="e_cliente" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#15803D;strokeWidth=2.5;endArrow=blockThin;endFill=1;fontSize=10;fontColor=#15803D;" edge="1" parent="1" source="cliente" target="zona_sensor">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_cliente_lbl" value="tráfico legítimo" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#15803D;" vertex="1" connectable="0" parent="e_cliente">
+          <mxGeometry x="-0.1" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e_kali" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#B91C1C;strokeWidth=2.5;endArrow=blockThin;endFill=1;fontSize=10;fontColor=#B91C1C;" edge="1" parent="1" source="kali" target="zona_sensor">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_kali_lbl" value="ataques (6 familias)" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#B91C1C;" vertex="1" connectable="0" parent="e_kali">
+          <mxGeometry x="-0.1" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e_dmz" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5B6B8C;strokeWidth=2.5;endArrow=blockThin;endFill=1;fontSize=10;fontColor=#5B6B8C;" edge="1" parent="1" source="zona_sensor" target="servidor">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_dmz_lbl" value="reenvío autorizado" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#5B6B8C;" vertex="1" connectable="0" parent="e_dmz">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e_bloqueo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#B91C1C;strokeWidth=2.5;dashed=1;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="zona_sensor" target="kali">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="580" y="660" /><mxPoint x="260" y="660" /><mxPoint x="260" y="515" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_bloqueo_lbl" value="bloqueo nftables &#183; expira en 120 s" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontColor=#B91C1C;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="e_bloqueo">
+          <mxGeometry x="0.1" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- ============================== NOTA ============================== -->
+        <mxCell id="nota" value="Las NIC externas de VM02&#8211;VM05 permanecen desconectadas durante las campañas oficiales: no existe ruta que evada el Sensor." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDECD2;strokeColor=#B45309;align=left;spacingLeft=10;fontSize=10;fontColor=#131B2E;" vertex="1" parent="1">
+          <mxGeometry x="40" y="690" width="1080" height="34" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
