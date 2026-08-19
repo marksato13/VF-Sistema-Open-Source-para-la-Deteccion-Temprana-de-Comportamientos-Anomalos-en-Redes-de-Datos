@@ -12,6 +12,7 @@ Documentos de cara al evaluador, construidos sobre la evidencia registrada fase 
 | [`04-ficha-auditoria/`](04-ficha-auditoria/) | Ficha de auditoría del producto | **Listo** · *entregable del curso* | Auditoría en tres dimensiones (confiabilidad, replicabilidad, pertinencia). Puntaje: **32/51 = 62,7 %** |
 | [`05-ppi/`](05-ppi/) | PPI — Proyecto de Investigación | **Pendiente** | Documento del proyecto. Debe subirse actualizado (versión 2) al sistema LAM Research |
 | [`diagramas/`](diagramas/) | Diagramas editables (draw.io) | — | Fuentes editables con iconos, para el PPI y los demás entregables |
+| [`06-plan-de-mejora/`](06-plan-de-mejora/) | Plan de mejora del producto | **Listo** | Registro único de las **28 debilidades abiertas** con evidencia, impacto, esfuerzo y mitigación, más el checklist de ejecución |
 | — | Manual de implementación técnica | Pendiente | |
 
 ## Organización
@@ -32,7 +33,8 @@ docs/entregables/
 ├── 04-ficha-auditoria/
 │   ├── ficha-auditoria.md
 │   └── Ficha-auditoria-producto.docx
-└── 05-ppi/                          documento del PPI (pendiente de actualizar)
+├── 05-ppi/                          documento del PPI (pendiente de actualizar)
+└── 06-plan-de-mejora/               debilidades, mitigaciones y checklist
 ```
 
 **Figuras y diagramas son cosas distintas.** `graficas/` contiene lo que se *genera* con matplotlib desde los datos reales; se regenera con un script y no se edita a mano. `diagramas/` contiene lo que se *dibuja*: topologías, arquitecturas y flujos, en draw.io con iconos. Las figuras viven en una sola carpeta y no dentro de cada entregable porque los informes 01 y 02 comparten varias; los documentos las referencian como `../graficas/`.
