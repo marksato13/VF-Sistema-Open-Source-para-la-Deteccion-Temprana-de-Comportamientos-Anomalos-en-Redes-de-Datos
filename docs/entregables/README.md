@@ -1,36 +1,49 @@
 # Entregables académicos
 
-Documentos preparados para la sustentación y la evaluación de la tesis. A diferencia del resto de `docs/` —que registra la evidencia fase por fase a medida que se produjo— esta carpeta contiene documentos **de cara al evaluador**, construidos sobre esa evidencia y sin repetirla.
+Documentos de cara al evaluador, construidos sobre la evidencia registrada fase por fase en el resto de `docs/`.
 
 ## Índice
 
-| # | Documento | Estado | Contenido |
-|---|---|---|---|
-| 01 | [Informe de evaluación crítica](01-informe-evaluacion-critica.md) | **Entregado** | Autoevaluación crítica de los resultados bajo criterios de validez, confiabilidad y evaluación técnica. Cubre dataset, 28 features, modelo OCSVM, métricas, pruebas con tráfico normal y anómalo, funcionamiento en tiempo real y mecanismo de bloqueo. Diferencia lo validado, lo pendiente y el trabajo futuro, y propone una priorización realista |
-| 02 | Manual de implementación técnica | Pendiente | Instalación reproducible del sistema completo desde cero |
-| 03 | Actualización del PPI | Pendiente | Documento del proyecto, actualizado al estado final |
+| # | Documento | Estado |
+|---|---|---|
+| 01 | [Informe de resultados y evaluación crítica](01-informe-evaluacion-critica.md) | **Entregado** |
+| 02 | Manual de implementación técnica | Pendiente |
+| 03 | Actualización del PPI | Pendiente |
 
-## Sobre el documento 01
+## Estructura del documento 01
 
-Fusiona deliberadamente los dos encargos recibidos, porque analizados son el mismo entregable: uno aporta el título formal y el formato académico (breve, crítico, diferenciando validado / pendiente / futuro), y el otro el alcance técnico obligatorio y los criterios de evaluación. Separarlos habría producido dos documentos casi idénticos.
+Un solo informe con dos partes, porque los dos encargos recibidos son complementarios y no independientes:
 
-**Aporte propio del informe.** Además de evaluar lo existente, calcula **intervalos de confianza de Wilson al 95 %** sobre las proporciones ya medidas —una magnitud que el trabajo original nunca computó—. Esto no repite ningún experimento: es aritmética sobre cifras existentes, y revela dos hechos que las estimaciones puntuales ocultaban:
+- **Parte I — Resultados.** Qué se obtuvo, con gráficas y tablas. Descriptivo.
+- **Parte II — Evaluación crítica.** Si esos resultados valen, bajo criterios de validez, confiabilidad y evaluación técnica. Analítico: dictamina, prioriza y propone.
 
-- La detección del 50 % en `ANOM-AUTH-FAIL-50` tiene un intervalo de 18,8 % – 81,2 % con n = 6: **no sostiene ninguna conclusión**.
-- La diferencia entre el FPR offline (4,71 %) y el operativo (23–26 %) **no se solapa**, luego no se explica por azar muestral.
+La diferencia entre ambos géneros: los resultados son *el análisis de sangre*; la evaluación crítica es *el diagnóstico*.
 
-## Figuras
+## Gráficas
 
-Generadas desde los artefactos reales, sin dependencias externas, mediante `scripts/entregables/generar_figuras_informe.py`:
+Las 10 figuras se generan desde artefactos reales con:
 
 ```bash
-python3 scripts/entregables/generar_figuras_informe.py
+.venv/bin/python3 scripts/entregables/generar_graficas.py
 ```
 
-El script escribe los tres SVG de `figuras/` e imprime la tabla completa de intervalos de confianza citada en el informe, de modo que cualquier cifra pueda reproducirse y verificarse.
+El script **re-puntúa los conjuntos con el modelo congelado** (`ocsvm_scaled.joblib`) y verifica que reproduce exactamente el manifiesto (13/276 y 158/179) antes de dibujar nada. También imprime la tabla de intervalos de confianza de Wilson usada en el informe, de modo que cualquier cifra sea reproducible y verificable.
 
-| Figura | Muestra |
-|---|---|
-| `fig1-fpr-offline-vs-operativo.svg` | El hallazgo central: el FPR medido offline no se sostiene en operación |
-| `fig2-deteccion-por-familia.svg` | Detección por familia, OCSVM frente a Isolation Forest, con los puntos ciegos |
-| `fig3-scores-trafico-pesado.svg` | Los cuatro scores reales de una transferencia legítima frente al umbral |
+| Grupo | Figuras | Qué muestran |
+|---|---|---|
+| **A · Modelo congelado** | `A1` curva ROC · `A2` distribución de scores · `A3` matriz de confusión · `A4` barrido de umbral | Capacidad discriminante, dónde se solapan las clases y qué se gana o pierde al mover el umbral |
+| **B · Comparación de modelos** | `B1` detección frente a FPR · `B2` mapa de calor por familia | Por qué se eligió OCSVM y dónde falla frente a las alternativas |
+| **C · Operación real (F6)** | `C1` FPR offline vs operativo · `C2` lead-time · `C3` scores de tráfico pesado | Comportamiento del sistema desplegado, incluidos los resultados negativos |
+| **D · Dataset y variables** | `D1` particiones, familias y features por capa | Composición y alcance de los datos |
+
+## Aportes propios del informe
+
+Además de evaluar lo existente, el informe **calcula magnitudes que el trabajo original nunca computó**:
+
+- **ROC-AUC = 0,974** y curva completa, recall, especificidad y F1 (antes solo había FPR y detección en un único punto de operación).
+- **Intervalos de confianza de Wilson 95 %** sobre todas las proporciones. Revelan, por ejemplo, que el "50 % de detección en fuerza bruta" tiene un intervalo de 18,8 % – 81,2 % con n = 6 y por tanto no sostiene ninguna conclusión.
+- **Verificación independiente** de que el modelo congelado reproduce sus propias métricas al re-puntuar.
+
+## Capturas pendientes
+
+El informe deja dos espacios señalados para capturas que deben tomarse manualmente del panel en vivo (`http://127.0.0.1:8788/` mediante túnel SSH): el panel operativo y una IP bloqueada durante un ataque.
