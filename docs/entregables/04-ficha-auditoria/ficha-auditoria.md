@@ -10,6 +10,27 @@
 
 ---
 
+## Procedimiento seguido
+
+La consigna planteaba seis pasos. Se dejan explícitos para que pueda verificarse que se siguieron y no solo que se entregó la ficha:
+
+- **Paso 1 — Conformación del equipo.** Rubén Mark Salazar Tocas y Uziel Elias Sauñe Fernandez, los mismos integrantes del proyecto auditado.
+- **Paso 2 — Análisis del producto validado.** Se auditó el sistema **realmente desplegado** en VM02, no su especificación: motor de decisión, mecanismo de bloqueo y panel de observación, en el estado en que quedaron tras la validación operativa.
+- **Paso 3 — Evidencia de confiabilidad.** Se revisaron las tres vías nombradas (Alfa, Kappa, validación cruzada) y las que corresponden a un sistema de software. → *Sección 1*
+- **Paso 4 — Evidencia de replicabilidad.** Se comprobó, ejecutando y no solo leyendo documentación, qué está publicado y qué no: código, datos y entorno. → *Sección 2*
+- **Paso 5 — Evidencia de pertinencia.** Se contrastó el producto con el problema declarado y con los requisitos comprometidos. → *Sección 3*
+- **Paso 6 — Diligenciamiento y cálculo.** Puntuación ítem por ítem, subtotales por dimensión y puntaje final. → *Secciones 4 y 5*
+
+## Cómo se realizó la auditoría
+
+Para que la ficha sea verificable y no una autoevaluación complaciente, se fijó de antemano qué se aceptaría como evidencia:
+
+- **Solo cuenta lo que puede comprobar un tercero.** Una afirmación documentada pero no ejecutada se puntúa como *declarada*, nunca como *completa*.
+- **Se verificó ejecutando, no leyendo.** La reproducibilidad (ítem 1.4) se comprobó volviendo a evaluar el modelo congelado sobre los mismos conjuntos; la disponibilidad de datos (ítem 2.2), inspeccionando qué excluye realmente el repositorio y cuánto ocupa cada artefacto.
+- **Las cifras del proyecto no se transcriben a mano.** Se leen del manifiesto de calibración y de los registros de la validación operativa.
+- **Lo ausente se puntúa como ausente.** No se compensa una carencia con una fortaleza de otra dimensión: cada ítem se juzga por sí mismo.
+- **Lo que no aplica se excluye del cálculo**, en vez de puntuarse con cero. Un criterio que no corresponde al tipo de producto no debe penalizar el resultado (ver escala).
+
 ## Escala de valoración
 
 | Puntos | Nivel | Significado |
@@ -128,8 +149,38 @@ Ordenadas por costo. Las de horas y días no requieren capturar datos nuevos.
 
 ---
 
-## 6. Conclusión de la auditoría
+## 6. Correspondencia con la norma ISO/IEC 25010
+
+La norma de calidad de producto de software permite situar los resultados en un marco reconocido. Se declara solo lo que el proyecto **midió**; el resto se marca como no evaluado, en lugar de suponerlo:
+
+| Característica ISO/IEC 25010 | ¿Se evaluó? | Evidencia en este proyecto |
+|---|---|---|
+| **Fiabilidad** — madurez, disponibilidad, tolerancia a fallos | **Sí** | 100 % de disponibilidad en 57 corridas, sin pérdida de paquetes. Tres fallos de producción detectados y corregidos con prueba positiva y negativa |
+| **Eficiencia de desempeño** — comportamiento temporal | **Sí** | Bloqueo en una mediana de 8 s. Límite declarado: bajo carga sostenida el motor acumula retraso |
+| **Adecuación funcional** — completitud y corrección | **Parcial** | Detecta y bloquea las 6 familias previstas (88,8 %), pero la corrección funcional se degrada con tráfico legítimo intenso (error 23–26 %) |
+| **Seguridad** — confidencialidad, integridad, no repudio | **Parcial** | Integridad verificable por SHA-256 y control de acceso por helper de alcance estrecho. **No se evaluó el sistema como objetivo de ataque**: no se probó evasión del detector ni abuso del bloqueo mediante suplantación de IP |
+| **Mantenibilidad** — modularidad, reusabilidad, analizabilidad | **Parcial** | El motor reutiliza el extractor congelado sin duplicar fórmulas; 514 archivos versionados con historial trazable. Sin métricas formales de mantenibilidad |
+| **Usabilidad** | **No** | El panel no se sometió a ninguna evaluación de uso (ver ítems 3.1 y 3.2) |
+| **Portabilidad** | **No** | Desplegado sobre una única configuración de laboratorio; no se probó en otro entorno |
+| **Compatibilidad** | **No** | No se evaluó la coexistencia con otras herramientas de monitoreo |
+
+**Lectura.** Las dos características que el producto sí demuestra con evidencia —fiabilidad y eficiencia de desempeño— son precisamente las críticas en un sistema de detección en tiempo real. Las no evaluadas coinciden con las carencias que ya señala la ficha: usabilidad con la ausencia de validación con usuarios, y seguridad con la ausencia de pruebas de evasión.
+
+---
+
+## 7. Conclusión de la auditoría
 
 El producto **está validado como artefacto de ingeniería**: funciona, se midió en operación real y sus resultados se pueden reproducir exactamente. Lo que la auditoría expone no son fallos del sistema, sino **huecos en la evidencia que lo respalda**: falta validación cruzada, faltan los datos publicados y falta que alguien ajeno al equipo lo haya usado.
 
 La ventaja es que **la mayor parte de esos huecos se cierra en horas**, porque el material ya existe y solo requiere publicarse o ejecutarse. La excepción es la validación con usuarios, que exige planificar una sesión con evaluadores externos.
+
+---
+
+## Referencias
+
+- **ISO/IEC 25010:2011.** *Systems and software engineering — Systems and software Quality Requirements and Evaluation (SQuaRE) — System and software quality models.* International Organization for Standardization.
+- **Cronbach, L. J. (1951).** Coefficient alpha and the internal structure of tests. *Psychometrika, 16*(3), 297–334. — Origen del criterio del ítem 1.1.
+- **Cohen, J. (1960).** A coefficient of agreement for nominal scales. *Educational and Psychological Measurement, 20*(1), 37–46. — Origen del criterio del ítem 1.2.
+- **Wilson, E. B. (1927).** Probable inference, the law of succession, and statistical inference. *Journal of the American Statistical Association, 22*(158), 209–212. — Método usado para los intervalos de confianza del ítem 1.6.
+- **Wilkinson, M. D., et al. (2016).** The FAIR Guiding Principles for scientific data management and stewardship. *Scientific Data, 3*, 160018. — Marco de referencia para los criterios de replicabilidad (sección 2).
+- **Peng, R. D. (2011).** Reproducible research in computational science. *Science, 334*(6060), 1226–1227. — Distinción entre reproducibilidad y replicabilidad aplicada en los ítems 1.4 y 2.1–2.6.

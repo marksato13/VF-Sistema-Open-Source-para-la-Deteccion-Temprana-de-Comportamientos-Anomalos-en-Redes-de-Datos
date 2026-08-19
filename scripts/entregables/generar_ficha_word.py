@@ -167,6 +167,43 @@ def main() -> int:
 
     doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
 
+    # -------------------------------------------- PROCEDIMIENTO / MÉTODO ---
+    h1(doc, "Procedimiento seguido")
+    parrafo(doc, "La consigna planteaba seis pasos. Se dejan explícitos para que pueda verificarse que se "
+                 "siguieron y no solo que se entregó la ficha:")
+    for t in [
+        "**Paso 1 — Conformación del equipo.** Rubén Mark Salazar Tocas y Uziel Elias Sauñe Fernandez, los mismos "
+        "integrantes del proyecto auditado.",
+        "**Paso 2 — Análisis del producto validado.** Se auditó el sistema realmente desplegado en VM02, no su "
+        "especificación: motor de decisión, mecanismo de bloqueo y panel de observación.",
+        "**Paso 3 — Evidencia de confiabilidad.** Las tres vías nombradas (Alfa, Kappa, validación cruzada) más las "
+        "que corresponden a un sistema de software. → Sección 1",
+        "**Paso 4 — Evidencia de replicabilidad.** Se comprobó ejecutando, no solo leyendo documentación, qué está "
+        "publicado y qué no. → Sección 2",
+        "**Paso 5 — Evidencia de pertinencia.** Se contrastó el producto con el problema declarado y con los "
+        "requisitos comprometidos. → Sección 3",
+        "**Paso 6 — Diligenciamiento y cálculo.** Puntuación ítem por ítem, subtotales y puntaje final. → Secciones 4 y 5",
+    ]:
+        vineta(doc, t)
+
+    doc.add_paragraph()
+    h1(doc, "Cómo se realizó la auditoría")
+    parrafo(doc, "Para que la ficha sea verificable y no una autoevaluación complaciente, se fijó de antemano qué "
+                 "se aceptaría como evidencia:")
+    for t in [
+        "**Solo cuenta lo que puede comprobar un tercero.** Una afirmación documentada pero no ejecutada se puntúa "
+        "como declarada, nunca como completa.",
+        "**Se verificó ejecutando, no leyendo.** La reproducibilidad se comprobó reevaluando el modelo congelado; la "
+        "disponibilidad de datos, inspeccionando qué excluye el repositorio y cuánto ocupa cada artefacto.",
+        "**Las cifras del proyecto no se transcriben a mano.** Se leen del manifiesto de calibración y de los "
+        "registros de la validación operativa.",
+        "**Lo ausente se puntúa como ausente.** No se compensa una carencia con una fortaleza de otra dimensión.",
+        "**Lo que no aplica se excluye del cálculo**, en vez de puntuarse con cero.",
+    ]:
+        vineta(doc, t)
+
+    doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
+
     # ---------------------------------------------------------- ESCALA -----
     h1(doc, "Escala de valoración")
     tabla(doc, ["Puntos", "Nivel", "Significado"],
@@ -246,9 +283,40 @@ def main() -> int:
          f"**{proy}/{M} ({100*proy/M:.1f} %)** sin experimentación nueva. Añadiendo el manual técnico y la "
          f"evaluación con usuarios, superaría el **85 %**.")
 
+    # -------------------------------------------------- ISO/IEC 25010 -----
+    doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
+    h1(doc, "6.  Correspondencia con la norma ISO/IEC 25010")
+    parrafo(doc, "La norma de calidad de producto de software permite situar los resultados en un marco reconocido. "
+                 "Se declara solo lo que el proyecto **midió**; el resto se marca como no evaluado, en lugar de "
+                 "suponerlo.")
+    tabla(doc, ["Característica ISO/IEC 25010", "¿Se evaluó?", "Evidencia en este proyecto"],
+          [("Fiabilidad — madurez, disponibilidad, tolerancia a fallos", ("Sí", F_OK),
+            "100 % de disponibilidad en 57 corridas, sin pérdida de paquetes. Tres fallos de producción detectados y corregidos con prueba positiva y negativa"),
+           ("Eficiencia de desempeño — comportamiento temporal", ("Sí", F_OK),
+            "Bloqueo en una mediana de 8 s. Límite declarado: bajo carga sostenida el motor acumula retraso"),
+           ("Adecuación funcional — completitud y corrección", ("Parcial", F_AMBER),
+            "Detecta y bloquea las 6 familias previstas (88,8 %), pero la corrección se degrada con tráfico legítimo intenso (error 23–26 %)"),
+           ("Seguridad — confidencialidad, integridad, no repudio", ("Parcial", F_AMBER),
+            "Integridad verificable por SHA-256 y acceso por helper de alcance estrecho. NO se evaluó el sistema como objetivo de ataque (evasión, suplantación de IP)"),
+           ("Mantenibilidad — modularidad, reusabilidad", ("Parcial", F_AMBER),
+            f"El motor reutiliza el extractor congelado sin duplicar fórmulas; {N_ARCHIVOS} archivos versionados. Sin métricas formales"),
+           ("Usabilidad", ("No", F_DANGER),
+            "El panel no se sometió a ninguna evaluación de uso (ver ítems 3.1 y 3.2)"),
+           ("Portabilidad", ("No", F_DANGER),
+            "Desplegado sobre una única configuración de laboratorio; no se probó en otro entorno"),
+           ("Compatibilidad", ("No", F_DANGER),
+            "No se evaluó la coexistencia con otras herramientas de monitoreo")],
+          widths=[5.4, 2.2, 8.9])
+    doc.add_paragraph()
+    caja(doc, "Lectura",
+         "Las dos características que el producto **sí demuestra con evidencia** —fiabilidad y eficiencia de "
+         "desempeño— son precisamente las críticas en un sistema de detección en tiempo real. Las no evaluadas "
+         "coinciden con las carencias que ya señala la ficha: usabilidad con la ausencia de validación con usuarios, "
+         "y seguridad con la ausencia de pruebas de evasión.")
+
     # ----------------------------------------------------- CONCLUSIÓN -----
     doc.add_paragraph()
-    h1(doc, "6.  Conclusión de la auditoría")
+    h1(doc, "7.  Conclusión de la auditoría")
     parrafo(doc, "El producto **está validado como artefacto de ingeniería**: funciona, se midió en operación real "
                  "y sus resultados se pueden reproducir exactamente. Lo que la auditoría expone no son fallos del "
                  "sistema, sino **huecos en la evidencia que lo respalda**: falta validación cruzada, faltan los "
@@ -256,6 +324,25 @@ def main() -> int:
     parrafo(doc, "La ventaja es que **la mayor parte de esos huecos se cierra en horas**, porque el material ya "
                  "existe y solo requiere publicarse o ejecutarse. La excepción es la validación con usuarios, que "
                  "exige planificar una sesión con evaluadores externos.")
+
+    # ----------------------------------------------------- REFERENCIAS ----
+    doc.add_paragraph()
+    h1(doc, "Referencias")
+    for ref in [
+        "**ISO/IEC 25010:2011.** Systems and software engineering — SQuaRE — System and software quality models. "
+        "International Organization for Standardization.",
+        "**Cronbach, L. J. (1951).** Coefficient alpha and the internal structure of tests. Psychometrika, 16(3), "
+        "297–334. — Origen del criterio del ítem 1.1.",
+        "**Cohen, J. (1960).** A coefficient of agreement for nominal scales. Educational and Psychological "
+        "Measurement, 20(1), 37–46. — Origen del criterio del ítem 1.2.",
+        "**Wilson, E. B. (1927).** Probable inference, the law of succession, and statistical inference. Journal of "
+        "the American Statistical Association, 22(158), 209–212. — Método usado para los intervalos del ítem 1.6.",
+        "**Wilkinson, M. D., et al. (2016).** The FAIR Guiding Principles for scientific data management and "
+        "stewardship. Scientific Data, 3, 160018. — Marco de referencia de la sección 2.",
+        "**Peng, R. D. (2011).** Reproducible research in computational science. Science, 334(6060), 1226–1227. — "
+        "Distinción entre reproducibilidad y replicabilidad, ítems 1.4 y 2.1–2.6.",
+    ]:
+        vineta(doc, ref)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     doc.save(OUT)

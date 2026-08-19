@@ -143,3 +143,14 @@ Los resultados sostienen una afirmación **acotada y verdadera**: se demostró l
 No sostienen todavía que el sistema sea apto para operación desatendida: sobre tráfico legítimo de alto volumen el error alcanza 23–26 %. Esa limitación **está medida, cuantificada y declarada**, que es la condición que la hace defendible ante una revisión por pares.
 
 La prioridad antes de cerrar no es mejorar el sistema, sino **corregir la inferencia**: declarar la selección posterior del modelo, acompañar cada cifra de su intervalo de confianza y ejecutar la ablación pendiente.
+
+---
+
+## Referencias
+
+- **Campbell, D. T., & Stanley, J. C. (1963).** *Experimental and quasi-experimental designs for research.* Rand McNally. — Marco clásico de validez interna y externa aplicado en las secciones 2 y 3.
+- **Wilson, E. B. (1927).** Probable inference, the law of succession, and statistical inference. *Journal of the American Statistical Association, 22*(158), 209–212. — Método empleado para todos los intervalos de confianza de este informe.
+- **Cronbach, L. J. (1951).** Coefficient alpha and the internal structure of tests. *Psychometrika, 16*(3), 297–334. — Referencia del criterio de consistencia interna, no aplicable a este producto por no emplear instrumentos psicométricos (sección 4).
+- **Peng, R. D. (2011).** Reproducible research in computational science. *Science, 334*(6060), 1226–1227. — Distinción entre reproducibilidad y replicabilidad usada en la sección 4.
+- **Kapoor, S., & Narayanan, A. (2023).** Leakage and the reproducibility crisis in machine-learning-based science. *Patterns, 4*(9), 100804. — Tipología de fugas de datos y del sesgo por selección de modelo sobre el conjunto de prueba, aplicada en la sección 2.
+- **ISO/IEC 25010:2011.** *Systems and software engineering — SQuaRE — System and software quality models.* — Marco de calidad de producto; su correspondencia detallada se desarrolla en la ficha de auditoría del producto.

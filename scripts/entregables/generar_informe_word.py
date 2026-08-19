@@ -428,6 +428,25 @@ def main() -> int:
                  "la selección posterior del modelo, acompañar cada cifra de su intervalo de confianza y ejecutar "
                  "la ablación pendiente.")
 
+    # ----------------------------------------------------- REFERENCIAS ----
+    doc.add_paragraph()
+    h1(doc, "Referencias")
+    for ref in [
+        "**Campbell, D. T., & Stanley, J. C. (1963).** Experimental and quasi-experimental designs for research. "
+        "Rand McNally. — Marco de validez interna y externa aplicado en las secciones 2 y 3.",
+        "**Wilson, E. B. (1927).** Probable inference, the law of succession, and statistical inference. Journal of "
+        "the American Statistical Association, 22(158), 209–212. — Método de los intervalos de confianza.",
+        "**Cronbach, L. J. (1951).** Coefficient alpha and the internal structure of tests. Psychometrika, 16(3), "
+        "297–334. — Criterio de consistencia interna, no aplicable por no emplear instrumentos psicométricos.",
+        "**Peng, R. D. (2011).** Reproducible research in computational science. Science, 334(6060), 1226–1227. — "
+        "Distinción entre reproducibilidad y replicabilidad, sección 4.",
+        "**Kapoor, S., & Narayanan, A. (2023).** Leakage and the reproducibility crisis in machine-learning-based "
+        "science. Patterns, 4(9), 100804. — Tipología de fugas y del sesgo por selección sobre el conjunto de prueba.",
+        "**ISO/IEC 25010:2011.** Systems and software engineering — SQuaRE — System and software quality models. — "
+        "Su correspondencia detallada se desarrolla en la ficha de auditoría del producto.",
+    ]:
+        vineta(doc, ref)
+
     doc.add_paragraph()
     caja(doc, "Anexo técnico",
          "El análisis completo, con las 11 figuras, la comparación de los 7 modelos evaluados y el detalle de cada "
