@@ -26,6 +26,10 @@
 
 *¿Los resultados son estables y consistentes al repetir la medición?*
 
+> **Consigna (paso 3).** *"Identifiquen qué evidencia de confiabilidad utilizaron (o debería reportar): Alfa, Kappa, validación cruzada u otra."*
+>
+> Se evalúan las tres vías nombradas más las que corresponden a un sistema de software. **Alfa y Kappa no aplican por igual a todo producto**: Alfa mide consistencia interna de un cuestionario y Kappa el acuerdo entre jueces; ninguno de los dos instrumentos existe aquí. Por eso se evalúan explícitamente —para dejar constancia de que se consideraron— y se documenta por qué uno se descarta y el otro se puntúa como ausente.
+
 | # | Criterio | Evidencia concreta en el proyecto | Punt. |
 |---|---|---|---|
 | 1.1 | **Alfa de Cronbach** (consistencia interna de instrumento) | El producto no emplea cuestionarios ni escalas psicométricas; no hay ítems que correlacionar | **N/A** |
@@ -45,10 +49,14 @@
 
 *¿Puede un tercero reconstruir el estudio y obtener lo mismo?*
 
+> **Consigna (paso 4).** *"Identifiquen qué evidencia de replicabilidad ofrece: ¿datos y código disponibles? ¿entorno documentado?"*
+>
+> Las dos preguntas se responden por separado porque **el proyecto está en situación asimétrica**: el código sí está publicado y el entorno sí está documentado con versiones exactas, pero los datos no. Se añaden tres criterios que la replicación real exige y que la pregunta no menciona: determinismo, integridad verificable e instrucciones de reproducción.
+
 | # | Criterio | Evidencia concreta en el proyecto | Punt. |
 |---|---|---|---|
-| 2.1 | **Código disponible** | Repositorio público en GitHub con 507 archivos versionados y 330 registros de cambios trazables | **3** |
-| 2.2 | **Datos disponibles** | **Los datasets no están publicados**: `artifacts/` está excluido del repositorio por tamaño. Un tercero no puede reproducir el entrenamiento sin solicitarlos | **1** |
+| 2.1 | **Código disponible** | Repositorio público en GitHub con 514 archivos versionados y 340 registros de cambios trazables | **3** |
+| 2.2 | **Datos disponibles** | **Los datasets no están publicados.** El repositorio excluye `artifacts/` en bloque, y esa regla arrastra al dataset y al modelo junto con lo que sí es pesado (60 MB de dependencias y 24 MB de capturas). El dataset ocupa **708 KB** y el modelo **8 KB**: son publicables sin dificultad técnica. Hoy un tercero no puede reproducir el entrenamiento sin solicitarlos | **1** |
 | 2.3 | **Entorno documentado** | Versiones exactas fijadas (`requirements-model.txt`), script de instalación idempotente y playbooks de Ansible para el despliegue completo | **3** |
 | 2.4 | **Determinismo y semillas** | 10 semillas registradas para el análisis de estabilidad, pero **no cubren el modelo finalmente elegido**. El modelo es determinista dados los datos, aunque esto no se declara como protocolo | **2** |
 | 2.5 | **Integridad verificable** | SHA-256 de los datos, del modelo y del programa de calibración; commit del repositorio verificado limpio antes y después de la ejecución | **3** |
@@ -63,6 +71,10 @@
 ## 3. Evidencia de PERTINENCIA
 
 *¿El producto responde al problema real y su utilidad está demostrada?*
+
+> **Consigna (paso 5).** *"Identifiquen qué evidencia de pertinencia presenta: ¿validación con usuarios reales? ¿trazabilidad de requisitos?"*
+>
+> Las dos preguntas apuntan a cosas distintas y **el proyecto responde muy diferente a cada una**: la trazabilidad existe pero está incompleta, mientras que la validación con usuarios no se realizó en absoluto. Se añaden tres criterios que completan la pertinencia de un producto de ingeniería: si se probó en operación real, si resuelve el problema declarado y si su alcance está delimitado.
 
 | # | Criterio | Evidencia concreta en el proyecto | Punt. |
 |---|---|---|---|
@@ -104,7 +116,7 @@ Ordenadas por costo. Las de horas y días no requieren capturar datos nuevos.
 
 | Acción | Sube | De → a | Tiempo |
 |---|---|---|---|
-| Publicar los datasets (o un subconjunto) con DOI o enlace citable | 2.2 | 1 → 3 | Horas |
+| Publicar el dataset y el modelo en el repositorio (716 KB en total; basta excluirlos de la regla que ignora `artifacts/`) | 2.2 | 1 → 3 | **Minutos** |
 | Ejecutar validación cruzada sobre el modelo congelado | 1.3 | 1 → 3 | Horas |
 | Completar el manual de implementación técnica | 2.6 | 2 → 3 | 1 día |
 | Cerrar y actualizar la matriz de trazabilidad de requisitos | 3.3 | 1 → 3 | Horas |

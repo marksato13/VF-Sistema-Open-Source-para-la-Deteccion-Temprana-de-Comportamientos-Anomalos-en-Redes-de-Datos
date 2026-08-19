@@ -25,6 +25,8 @@
 
 *¿Los resultados obtenidos se deben realmente a lo que el estudio dice haber probado?*
 
+> **Qué se pidió evaluar.** El grado en que el diseño garantiza que los resultados observados se deben a la variable estudiada y no a factores ajenos. En un producto de software esto significa verificar tres cosas concretas: que **no exista fuga de datos** (*data leak*), que las **condiciones de prueba estén controladas**, y que la **cantidad de experimentos sea representativa**. Se responde punto por punto a continuación.
+
 ### Abordado de manera concreta
 
 | Aspecto | Evidencia verificable |
@@ -49,6 +51,8 @@
 ## 3. Validación externa
 
 *¿Los resultados se generalizan a otros contextos, poblaciones o condiciones de uso?*
+
+> **Qué se pidió evaluar.** Si los resultados se sostienen fuera de las condiciones en que se midieron: *¿el algoritmo rinde igual sobre otro conjunto de datos?, ¿la arquitectura funciona en un entorno de producción real?* Se pidió revisar además si la **muestra es representativa**, si hay **sesgo**, y si existen problemas de **balanceo de datos o sobreajuste**. Este proyecto pudo responderlo de forma directa, porque el sistema no se quedó en laboratorio: se midió desplegado y en operación.
 
 ### Abordado de manera concreta
 
@@ -81,6 +85,8 @@ Los intervalos **no se solapan**, de modo que la diferencia no se explica por az
 ## 4. Confiabilidad
 
 *¿Repetir el procedimiento produce los mismos resultados?*
+
+> **Qué se pidió evaluar.** La consistencia al repetir la medición. Se señalaron varias vías según el tipo de trabajo: **Alfa de Cronbach** cuando hay instrumentos tipo cuestionario, **acuerdo inter-evaluador** cuando hay jueces, y **estabilidad del comportamiento ante entradas similares** cuando se trata de un sistema. También se pidieron técnicas cuantitativas concretas: **intervalos de confianza**, pruebas de significancia (*t*, Wilcoxon) y métricas de modelo como **F1**. Este proyecto corresponde al tercer caso —es un sistema, no un instrumento de percepción—, por lo que la confiabilidad se evidencia por reproducibilidad y estabilidad, no por Alfa.
 
 ### Abordado de manera concreta
 

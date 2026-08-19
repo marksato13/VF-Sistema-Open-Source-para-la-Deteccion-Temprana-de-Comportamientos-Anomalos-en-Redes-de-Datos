@@ -25,6 +25,17 @@ from generar_informe_word import (  # reutiliza el formato ya definido
 )
 
 REPO = Path(__file__).resolve().parents[2]
+
+# Cifras del repositorio leídas en tiempo de generación: escritas a mano
+# envejecen en cuanto se hace un commit más.
+def _git(*args) -> int:
+    import subprocess
+    r = subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True)
+    return r.stdout.count("\n")
+
+
+N_ARCHIVOS = _git("ls-files")
+N_COMMITS = _git("log", "--oneline")
 OUT = (REPO / "docs" / "entregables" / "04-ficha-auditoria"
        / "Ficha-auditoria-producto.docx")
 LOGO = Path("/tmp/claude-1000/-home-m4rk-Documentos-pronteacomopepa-vf-sistema-final/"
@@ -48,9 +59,10 @@ CONFIABILIDAD = [
 ]
 REPLICABILIDAD = [
     ("2.1", "Código disponible",
-     "Repositorio público con 507 archivos versionados y 330 registros de cambios trazables", 3),
+     f"Repositorio público con {N_ARCHIVOS} archivos versionados y {N_COMMITS} registros de cambios trazables", 3),
     ("2.2", "Datos disponibles",
-     "Los datasets NO están publicados: excluidos del repositorio por tamaño. Impide reproducir el entrenamiento", 1),
+     "NO publicados. El repositorio excluye artifacts/ en bloque y esa regla arrastra al dataset (708 KB) y al "
+     "modelo (8 KB) junto con lo que sí pesa: 60 MB de dependencias y 24 MB de capturas", 1),
     ("2.3", "Entorno documentado",
      "Versiones exactas fijadas, script de instalación idempotente y playbooks de Ansible", 3),
     ("2.4", "Determinismo y semillas",
