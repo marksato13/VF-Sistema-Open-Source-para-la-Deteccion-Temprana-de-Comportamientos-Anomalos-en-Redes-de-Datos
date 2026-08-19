@@ -4,11 +4,14 @@ Documentos de cara al evaluador, construidos sobre la evidencia registrada fase 
 
 ## Índice
 
-| # | Documento | Estado |
-|---|---|---|
-| 01 | [Informe de resultados y evaluación crítica](01-informe-evaluacion-critica.md) | **Entregado** |
-| 02 | Manual de implementación técnica | Pendiente |
-| 03 | Actualización del PPI | Pendiente |
+| # | Documento | Estado | Para qué |
+|---|---|---|---|
+| 01 | [Informe de resultados y evaluación crítica](01-informe-evaluacion-critica.md) | **Listo** | Documento extenso, con las 11 gráficas y el detalle completo de cada hallazgo |
+| 02 | [Informe de validación y confiabilidad](02-informe-validacion-confiabilidad.md) | **Listo** | Versión breve (4 páginas) con la estructura exacta pedida en clase: validación interna, externa y confiabilidad |
+| 03 | Manual de implementación técnica | Pendiente | |
+| 04 | Actualización del PPI | Pendiente | |
+
+El documento 02 es el **entregable del curso**; el 01 funciona como su anexo técnico.
 
 ## Estructura del documento 01
 
