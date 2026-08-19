@@ -1,23 +1,46 @@
 # Entregables académicos
 
-Documentos de cara al evaluador, construidos sobre la evidencia registrada fase por fase en el resto de `docs/`.
+Documentos de cara al evaluador, construidos sobre la evidencia registrada fase por fase en el resto de `docs/`. Cada entregable tiene su **carpeta propia** con su fuente en Markdown y, cuando corresponde, su versión en Word.
 
 ## Índice
 
-| # | Documento | Estado | Para qué |
+| Carpeta | Entregable | Estado | Para qué |
 |---|---|---|---|
-| 01 | [Informe de resultados y evaluación crítica](01-informe-evaluacion-critica.md) | **Listo** | Documento extenso, con las 11 gráficas y el detalle completo de cada hallazgo |
-| 02 | [Informe de validación y confiabilidad](02-informe-validacion-confiabilidad.md) | **Listo** | Versión breve (4 páginas) con la estructura exacta pedida en clase: validación interna, externa y confiabilidad |
-| 03 | [Auditoría comparativa: MVP vs versión final](03-auditoria-comparativa-mvp-vs-version-final.md) | **Listo** | Contrasta repositorios, arquitectura, modelo, dataset y cumplimiento de las observaciones del jurado |
-| 04 | [Ficha de auditoría del producto](04-ficha-auditoria.md) · [Word](Ficha-auditoria-producto.docx) | **Listo** | Auditoría en tres dimensiones (confiabilidad, replicabilidad, pertinencia) con puntaje final: **32/51 = 62,7 %** |
-| 05 | Manual de implementación técnica | Pendiente | |
-| 06 | Actualización del PPI | Pendiente | |
+| [`01-evaluacion-critica/`](01-evaluacion-critica/) | Informe de resultados y evaluación crítica | **Listo** | Documento extenso con las 11 gráficas y el detalle completo de cada hallazgo. Funciona como **anexo técnico** de los demás |
+| [`02-validacion-y-confiabilidad/`](02-validacion-y-confiabilidad/) | Informe de validación y confiabilidad | **Listo** · *entregable del curso* | Versión breve (4 páginas) con la estructura exacta pedida en clase: validación interna, externa y confiabilidad |
+| [`03-auditoria-comparativa/`](03-auditoria-comparativa/) | Auditoría comparativa MVP vs versión final | **Listo** | Contrasta repositorios, arquitectura, modelo, dataset y cumplimiento de las observaciones del jurado |
+| [`04-ficha-auditoria/`](04-ficha-auditoria/) | Ficha de auditoría del producto | **Listo** · *entregable del curso* | Auditoría en tres dimensiones (confiabilidad, replicabilidad, pertinencia). Puntaje: **32/51 = 62,7 %** |
+| — | Manual de implementación técnica | Pendiente | |
+| — | Actualización del PPI | Pendiente | |
 
-Los documentos **02 y 04 son los entregables del curso**; el 01 funciona como su anexo técnico. El documento 03 conserva la auditoría longitudinal y la justificación de los cambios respecto al MVP del ciclo anterior.
+## Organización
 
-Cada entregable del curso tiene su fuente en Markdown (versionable y revisable en GitHub) y su versión en Word generada por script, de modo que si cambia una cifra el documento presentable se regenera sin editarlo a mano.
+```
+docs/entregables/
+├── graficas/                        11 figuras, compartidas por los informes
+├── 01-evaluacion-critica/
+│   └── informe-evaluacion-critica.md
+├── 02-validacion-y-confiabilidad/
+│   ├── informe-validacion-confiabilidad.md
+│   └── Informe-validacion-confiabilidad.docx
+├── 03-auditoria-comparativa/
+│   └── auditoria-comparativa-mvp-vs-version-final.md
+└── 04-ficha-auditoria/
+    ├── ficha-auditoria.md
+    └── Ficha-auditoria-producto.docx
+```
 
-## Estructura del documento 01
+Las figuras viven en `graficas/` y no dentro de cada carpeta, porque los informes 01 y 02 comparten varias. Los documentos las referencian como `../graficas/`.
+
+**Markdown como fuente, Word como presentación.** El `.md` es la versión versionable y revisable en GitHub; el `.docx` se genera por script, de modo que si cambia una cifra el documento presentable se regenera sin editarlo a mano:
+
+```bash
+.venv/bin/python3 scripts/entregables/generar_graficas.py       # las 11 figuras + intervalos de confianza
+.venv/bin/python3 scripts/entregables/generar_informe_word.py   # Word del entregable 02
+.venv/bin/python3 scripts/entregables/generar_ficha_word.py     # Word del entregable 04
+```
+
+## Estructura del entregable 01
 
 Un solo informe con dos partes, porque los dos encargos recibidos son complementarios y no independientes:
 
@@ -26,15 +49,19 @@ Un solo informe con dos partes, porque los dos encargos recibidos son complement
 
 La diferencia entre ambos géneros: los resultados son *el análisis de sangre*; la evaluación crítica es *el diagnóstico*.
 
+## Trazabilidad de las cifras
+
+Ninguna cifra de estos documentos está escrita a mano: todas se leen de artefactos verificables (`artifacts/model/manifest.json`, `results/f6/f6_resultados.jsonl`) o se recalculan re-puntuando el modelo congelado. El script de gráficas **verifica antes de dibujar** que la re-puntuación reproduce exactamente el manifiesto (13/276 y 158/179); si no coincidiera, falla en vez de generar figuras engañosas.
+
+## Aportes propios de los informes
+
+Además de evaluar lo existente, estos documentos **calculan magnitudes que el trabajo original nunca computó**:
+
+- **ROC-AUC = 0,974**, curva completa, recall, especificidad y F1 (antes solo había FPR y detección en un único punto de operación).
+- **Intervalos de confianza de Wilson 95 %** sobre todas las proporciones. Revelan, por ejemplo, que el "50 % de detección en fuerza bruta" tiene un intervalo de 18,8 % – 81,2 % con n = 6 y por tanto no sostiene ninguna conclusión.
+- **Verificación independiente** de que el modelo congelado reproduce sus propias métricas al re-puntuar.
+
 ## Gráficas
-
-Las 10 figuras se generan desde artefactos reales con:
-
-```bash
-.venv/bin/python3 scripts/entregables/generar_graficas.py
-```
-
-El script **re-puntúa los conjuntos con el modelo congelado** (`ocsvm_scaled.joblib`) y verifica que reproduce exactamente el manifiesto (13/276 y 158/179) antes de dibujar nada. También imprime la tabla de intervalos de confianza de Wilson usada en el informe, de modo que cualquier cifra sea reproducible y verificable.
 
 | Grupo | Figuras | Qué muestran |
 |---|---|---|
@@ -44,14 +71,6 @@ El script **re-puntúa los conjuntos con el modelo congelado** (`ocsvm_scaled.jo
 | **D · Dataset y variables** | `D1` particiones, familias y features por capa | Composición y alcance de los datos |
 | **E · Infraestructura** | `E1` topología del laboratorio | Dónde se captura, se decide y se bloquea |
 
-## Aportes propios del informe
-
-Además de evaluar lo existente, el informe **calcula magnitudes que el trabajo original nunca computó**:
-
-- **ROC-AUC = 0,974** y curva completa, recall, especificidad y F1 (antes solo había FPR y detección en un único punto de operación).
-- **Intervalos de confianza de Wilson 95 %** sobre todas las proporciones. Revelan, por ejemplo, que el "50 % de detección en fuerza bruta" tiene un intervalo de 18,8 % – 81,2 % con n = 6 y por tanto no sostiene ninguna conclusión.
-- **Verificación independiente** de que el modelo congelado reproduce sus propias métricas al re-puntuar.
-
 ## Capturas pendientes
 
-El informe deja dos espacios señalados para capturas que deben tomarse manualmente del panel en vivo (`http://127.0.0.1:8788/` mediante túnel SSH): el panel operativo y una IP bloqueada durante un ataque.
+El informe 01 deja dos espacios señalados para capturas que deben tomarse manualmente del panel en vivo (`http://127.0.0.1:8788/` mediante túnel SSH): el panel operativo y una IP bloqueada durante un ataque.

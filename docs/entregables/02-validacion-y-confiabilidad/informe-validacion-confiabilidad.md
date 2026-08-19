@@ -5,7 +5,7 @@
 **Curso:** Investigación V · **Docente:** Ing. Nemias Saboya Ríos
 **Fecha:** 19 de agosto de 2026
 
-> Informe breve solicitado en la sesión del 12 de agosto. El análisis completo, con las 11 figuras y el detalle de cada hallazgo, está en `docs/entregables/01-informe-evaluacion-critica.md` del repositorio del proyecto.
+> Informe breve solicitado en la sesión del 12 de agosto. El análisis completo, con las 11 figuras y el detalle de cada hallazgo, está en [`01-evaluacion-critica/`](../01-evaluacion-critica/informe-evaluacion-critica.md) del repositorio del proyecto.
 
 ---
 
@@ -66,7 +66,7 @@ Es el hallazgo más importante y se reporta aunque sea desfavorable:
 | Operación real, pase 1 | **25,8 %** (16/62) | 16,6 % – 37,9 % |
 | Operación real, pase 2 | **23,0 %** (17/74) | 14,9 % – 33,7 % |
 
-![Falsos positivos: laboratorio frente a operación real](graficas/C1-fpr-offline-vs-operativo.png)
+![Falsos positivos: laboratorio frente a operación real](../graficas/C1-fpr-offline-vs-operativo.png)
 
 Los intervalos **no se solapan**, de modo que la diferencia no se explica por azar muestral. Además se reprodujo **en aislamiento**: una transferencia legítima de 200 Mbit/s generó una ventana que cruzó el umbral y **bloqueó a un cliente legítimo durante 120 segundos**. Otra ventana de la misma transferencia se permitió por apenas 0,0014 puntos de score, lo que indica que el tráfico legítimo intenso cae dentro del margen de decisión del modelo.
 

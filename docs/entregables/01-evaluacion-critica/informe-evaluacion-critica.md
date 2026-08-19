@@ -25,7 +25,7 @@
 
 Sistema de detección de anomalías de red desplegado sobre un laboratorio virtualizado de 5 máquinas, con el sensor actuando como router inline entre LAN y DMZ:
 
-![Topología del laboratorio](graficas/E1-topologia.png)
+![Topología del laboratorio](../graficas/E1-topologia.png)
 
 | Componente | Estado |
 |---|---|
@@ -37,7 +37,7 @@ Sistema de detección de anomalías de red desplegado sobre un laboratorio virtu
 
 ## 2. Dataset y variables
 
-![Composición del dataset](graficas/D1-composicion-dataset.png)
+![Composición del dataset](../graficas/D1-composicion-dataset.png)
 
 | Magnitud | Valor |
 |---|---|
@@ -54,21 +54,21 @@ Sistema de detección de anomalías de red desplegado sobre un laboratorio virtu
 
 ### 3.1 Capacidad discriminante
 
-![Curva ROC](graficas/A1-curva-roc.png)
+![Curva ROC](../graficas/A1-curva-roc.png)
 
 **ROC-AUC = 0,974.** Métrica calculada en este informe: el trabajo original nunca la computó. Indica que el modelo ordena correctamente casi cualquier par (benigno, anómalo), independientemente del umbral elegido.
 
 ### 3.2 Dónde está el umbral y por qué hay errores
 
-![Distribución de scores](graficas/A2-distribucion-scores.png)
+![Distribución de scores](../graficas/A2-distribucion-scores.png)
 
 Las dos poblaciones se separan bien en conjunto, pero **se solapan en la franja 1,6 – 2,0**, justo donde cae el umbral. Ese solapamiento es el origen material de los falsos positivos y negativos.
 
-![Barrido de umbral](graficas/A4-barrido-umbral.png)
+![Barrido de umbral](../graficas/A4-barrido-umbral.png)
 
 ### 3.3 Resultado en el punto de operación
 
-![Matriz de confusión](graficas/A3-matriz-confusion.png)
+![Matriz de confusión](../graficas/A3-matriz-confusion.png)
 
 | Métrica | Valor | k / n | IC 95 % (Wilson) |
 |---|---|---|---|
@@ -83,11 +83,11 @@ Las dos poblaciones se separan bien en conjunto, pero **se solapan en la franja 
 
 ## 4. Comparación de modelos
 
-![Comparación de los 7 modelos](graficas/B1-comparacion-modelos.png)
+![Comparación de los 7 modelos](../graficas/B1-comparacion-modelos.png)
 
 Siete configuraciones de cuatro familias de algoritmos, evaluadas en un solo paso bloqueado. Todas con FPR comparable (3,6 – 5,1 %); **la diferencia real está en la detección**.
 
-![Detección por familia y modelo](graficas/B2-heatmap-familias.png)
+![Detección por familia y modelo](../graficas/B2-heatmap-familias.png)
 
 | Modelo | Umbral | FPR test | Detección | Kali-real |
 |---|---|---|---|---|
@@ -105,7 +105,7 @@ Siete configuraciones de cuatro familias de algoritmos, evaluadas en un solo pas
 
 Sistema desplegado, motor y enforcement activos: 2 pases de 29 corridas + 2 pruebas de aislamiento.
 
-![Lead-time de detección](graficas/C2-lead-time.png)
+![Lead-time de detección](../graficas/C2-lead-time.png)
 
 | Métrica operativa | Resultado |
 |---|---|
@@ -113,9 +113,9 @@ Sistema desplegado, motor y enforcement activos: 2 pases de 29 corridas + 2 prue
 | Disponibilidad de servicios | **100 %** en 57 corridas |
 | Pérdida de paquetes en captura | **0 drops** |
 
-![FPR offline frente a operativo](graficas/C1-fpr-offline-vs-operativo.png)
+![FPR offline frente a operativo](../graficas/C1-fpr-offline-vs-operativo.png)
 
-![Scores de tráfico legítimo pesado](graficas/C3-scores-trafico-pesado.png)
+![Scores de tráfico legítimo pesado](../graficas/C3-scores-trafico-pesado.png)
 
 **Resultado negativo, reportado como tal:** el FPR benigno **no se sostiene** en operación. En aislamiento, una transferencia legítima `iperf-tcp 200M` produjo una ventana de score 1,689 que cruzó el umbral y **bloqueó a un cliente legítimo durante 120 s**.
 

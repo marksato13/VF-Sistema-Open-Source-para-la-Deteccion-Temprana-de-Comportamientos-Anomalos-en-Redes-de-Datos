@@ -74,7 +74,7 @@ No debe afirmarse que el sistema está listo para producción ni que OCSVM es un
 
 ## 3. Qué pidió el jurado y qué se hizo
 
-La fuente primaria dentro del repositorio es la [matriz de requisitos del jurado](../requisitos-jurado/README.md). Las observaciones centrales fueron:
+La fuente primaria dentro del repositorio es la [matriz de requisitos del jurado](../../requisitos-jurado/README.md). Las observaciones centrales fueron:
 
 - No asumir que un paquete de 500–1.500 bytes es malicioso: el tráfico legítimo pesado también produce paquetes grandes.
 - Ampliar la representación hacia capas L3, L4 y L7.
@@ -89,7 +89,7 @@ La fuente primaria dentro del repositorio es la [matriz de requisitos del jurado
 | Requisito | Evidencia actual | Estado auditado |
 |---|---|---|
 | Tratar tráfico pesado como potencialmente legítimo | Existen perfiles HTTP/HTTPS/TCP/UDP intensos y una prueba aislada `iperf-tcp 200M` | **Parcial**: se capturó, pero todavía produjo un bloqueo falso |
-| Incorporar L3/L4/L7 | Contrato de 28 variables en [`configs/features/multilayer-v2.json`](../../configs/features/multilayer-v2.json) | **Cumplido técnicamente** |
+| Incorporar L3/L4/L7 | Contrato de 28 variables en [`configs/features/multilayer-v2.json`](../../../configs/features/multilayer-v2.json) | **Cumplido técnicamente** |
 | Frecuencia de SYN | `syn_rate_10s` y razón de finalización | **Cumplido** |
 | Proporción de destinos/IP únicas | `unique_dst_ip_ratio_30s` | **Cumplido** |
 | Fallos de autenticación | Razón de respuestas HTTP 401/403 | **Parcial**: no equivale a observar fallos SSH cifrados |
@@ -166,7 +166,7 @@ La versión final usa cinco máquinas virtuales:
 | VM04 | Kali / origen de ataques controlados |
 | VM05 | Cliente legítimo |
 
-Las redes se separan en administración `10.10.10.0/24`, LAN `10.20.20.0/24` y DMZ `10.30.30.0/24`. Las interfaces externas se aíslan durante campañas. La infraestructura está documentada en la [guía de virtualización](../fase00-infraestructura/virtualizacion/README.md) y automatizada con Ansible.
+Las redes se separan en administración `10.10.10.0/24`, LAN `10.20.20.0/24` y DMZ `10.30.30.0/24`. Las interfaces externas se aíslan durante campañas. La infraestructura está documentada en la [guía de virtualización](../../fase00-infraestructura/virtualizacion/README.md) y automatizada con Ansible.
 
 El sensor inline procesa PCAP y eventos EVE de Suricata, construye ventanas causales, puntúa con el modelo congelado y aplica bloqueos locales mediante nftables. El dashboard se expone en loopback y funciona como superficie de observación, no como autoridad de decisión.
 
@@ -208,7 +208,7 @@ La unidad es una ventana causal asociada a la IP iniciadora, cerrada cada 10 s y
 | L4 | 8 | tasa SYN, finalización TCP, puertos y comportamiento UDP |
 | L7 | 11 | DNS, HTTP, TLS y errores de autenticación HTTP |
 
-La extracción causal está protegida por pruebas: un evento futuro no debe modificar una ventana ya cerrada. El contrato canónico está en [`configs/features/multilayer-v2.json`](../../configs/features/multilayer-v2.json).
+La extracción causal está protegida por pruebas: un evento futuro no debe modificar una ventana ya cerrada. El contrato canónico está en [`configs/features/multilayer-v2.json`](../../../configs/features/multilayer-v2.json).
 
 ### 6.2 Modelo congelado
 
@@ -434,7 +434,7 @@ El datasheet debe describir **lo que realmente se capturó**, no únicamente lo 
 
 ## 9. Validación operacional F6
 
-La campaña final ejecutó dos pases de 29 corridas y pruebas aisladas. Hubo disponibilidad completa en 57 comprobaciones de servicio y una latencia mediana cercana a 8 s cuando el motor estaba al día. Los resultados completos están en [`docs/fase07-validacion-final/02-resultados-f6.md`](../fase07-validacion-final/02-resultados-f6.md).
+La campaña final ejecutó dos pases de 29 corridas y pruebas aisladas. Hubo disponibilidad completa en 57 comprobaciones de servicio y una latencia mediana cercana a 8 s cuando el motor estaba al día. Los resultados completos están en [`docs/fase07-validacion-final/02-resultados-f6.md`](../../fase07-validacion-final/02-resultados-f6.md).
 
 ### 9.1 Resultado decisivo
 
@@ -638,15 +638,15 @@ Por tanto, la versión final es claramente más sólida que el MVP, pero su esta
 
 ## 15. Fuentes internas principales
 
-- [Requisitos y observaciones del jurado](../requisitos-jurado/README.md)
+- [Requisitos y observaciones del jurado](../../requisitos-jurado/README.md)
 - [Informe extenso de resultados y evaluación crítica](01-informe-evaluacion-critica.md)
 - [Informe de validación y confiabilidad](02-informe-validacion-confiabilidad.md)
-- [Diccionario multicapa G5](../fase02-features-multicapa/01-diccionario-multicapa-G5.md)
-- [Cierre del dataset normal v2](../fase03-dataset/167-cierre-normales-v2-y-consolidacion.md)
-- [Auditoría de calidad del dataset](../fase03-dataset/171-auditoria-calidad-dataset-v2.md)
-- [Protocolo de entrenamiento multicapa](../fase03-dataset/169-protocolo-entrenamiento-multilayer-v2.md)
-- [Resultado de calibración](../fase04-modelado/05-resultado-calibracion-multilayer-v2-v1.md)
-- [Diseño del motor en tiempo real](../fase05-motor-tiempo-real/01-diseno-motor-tiempo-real.md)
-- [Protocolo F6](../fase07-validacion-final/01-protocolo-f6.md)
-- [Resultados F6](../fase07-validacion-final/02-resultados-f6.md)
-- [Contrato canónico de 28 variables](../../configs/features/multilayer-v2.json)
+- [Diccionario multicapa G5](../../fase02-features-multicapa/01-diccionario-multicapa-G5.md)
+- [Cierre del dataset normal v2](../../fase03-dataset/167-cierre-normales-v2-y-consolidacion.md)
+- [Auditoría de calidad del dataset](../../fase03-dataset/171-auditoria-calidad-dataset-v2.md)
+- [Protocolo de entrenamiento multicapa](../../fase03-dataset/169-protocolo-entrenamiento-multilayer-v2.md)
+- [Resultado de calibración](../../fase04-modelado/05-resultado-calibracion-multilayer-v2-v1.md)
+- [Diseño del motor en tiempo real](../../fase05-motor-tiempo-real/01-diseno-motor-tiempo-real.md)
+- [Protocolo F6](../../fase07-validacion-final/01-protocolo-f6.md)
+- [Resultados F6](../../fase07-validacion-final/02-resultados-f6.md)
+- [Contrato canónico de 28 variables](../../../configs/features/multilayer-v2.json)

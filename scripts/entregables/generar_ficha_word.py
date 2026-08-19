@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Genera la Ficha de auditoría del producto de ingeniería en formato Word.
 
-Mismo contenido que `docs/entregables/04-ficha-auditoria.md`, con la
+Mismo contenido que `docs/entregables/04-ficha-auditoria/`, con la
 presentación formal del curso. Los subtotales y el puntaje final se **calculan
 aquí**, no se escriben a mano, de modo que la ficha no puede quedar
 descuadrada si cambia una puntuación.
@@ -25,7 +25,8 @@ from generar_informe_word import (  # reutiliza el formato ya definido
 )
 
 REPO = Path(__file__).resolve().parents[2]
-OUT = REPO / "docs" / "entregables" / "Ficha-auditoria-producto.docx"
+OUT = (REPO / "docs" / "entregables" / "04-ficha-auditoria"
+       / "Ficha-auditoria-producto.docx")
 LOGO = Path("/tmp/claude-1000/-home-m4rk-Documentos-pronteacomopepa-vf-sistema-final/"
             "dbe9d115-fcc7-401a-b5b5-92e1a041bbd5/scratchpad/logo-upeu.png")
 

@@ -3,7 +3,7 @@
 
 Produce un .docx con carátula institucional, semáforo de color por criterio,
 porcentajes destacados y las figuras del análisis incrustadas. El contenido es
-el mismo de `docs/entregables/02-informe-validacion-confiabilidad.md`; aquí se
+el mismo de `docs/entregables/02-validacion-y-confiabilidad/`; aquí se
 le da la presentación formal que pide el curso.
 
 Uso:
@@ -24,7 +24,8 @@ from docx.shared import Cm, Pt, RGBColor
 
 REPO = Path(__file__).resolve().parents[2]
 GRAF = REPO / "docs" / "entregables" / "graficas"
-OUT = REPO / "docs" / "entregables" / "Informe-validacion-confiabilidad.docx"
+OUT = (REPO / "docs" / "entregables" / "02-validacion-y-confiabilidad"
+       / "Informe-validacion-confiabilidad.docx")
 LOGO = Path("/tmp/claude-1000/-home-m4rk-Documentos-pronteacomopepa-vf-sistema-final/"
             "dbe9d115-fcc7-401a-b5b5-92e1a041bbd5/scratchpad/logo-upeu.png")
 
@@ -431,7 +432,7 @@ def main() -> int:
     caja(doc, "Anexo técnico",
          "El análisis completo, con las 11 figuras, la comparación de los 7 modelos evaluados y el detalle de cada "
          "hallazgo, está disponible en el repositorio del proyecto: "
-         "docs/entregables/01-informe-evaluacion-critica.md",
+         "docs/entregables/01-evaluacion-critica/",
          fill="EEF1F8")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
