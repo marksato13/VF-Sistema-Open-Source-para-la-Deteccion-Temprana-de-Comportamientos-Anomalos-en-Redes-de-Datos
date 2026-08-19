@@ -8,10 +8,11 @@ Documentos de cara al evaluador, construidos sobre la evidencia registrada fase 
 |---|---|---|---|
 | 01 | [Informe de resultados y evaluación crítica](01-informe-evaluacion-critica.md) | **Listo** | Documento extenso, con las 11 gráficas y el detalle completo de cada hallazgo |
 | 02 | [Informe de validación y confiabilidad](02-informe-validacion-confiabilidad.md) | **Listo** | Versión breve (4 páginas) con la estructura exacta pedida en clase: validación interna, externa y confiabilidad |
-| 03 | Manual de implementación técnica | Pendiente | |
-| 04 | Actualización del PPI | Pendiente | |
+| 03 | [Auditoría comparativa: MVP vs versión final](03-auditoria-comparativa-mvp-vs-version-final.md) | **Listo** | Contrasta repositorios, arquitectura, modelo, dataset y cumplimiento de las observaciones del jurado |
+| 04 | Manual de implementación técnica | Pendiente | |
+| 05 | Actualización del PPI | Pendiente | |
 
-El documento 02 es el **entregable del curso**; el 01 funciona como su anexo técnico.
+El documento 02 es el **entregable del curso**; el 01 funciona como su anexo técnico. El documento 03 conserva la auditoría longitudinal y la justificación de los cambios respecto al MVP del ciclo anterior.
 
 ## Estructura del documento 01
 
