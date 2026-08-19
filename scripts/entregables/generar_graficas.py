@@ -137,29 +137,64 @@ def fig_roc(d):
 
 
 def fig_distribucion(d):
-    fig, ax = plt.subplots(figsize=(8.4, 5.0))
+    """Dos paneles: rango completo y zoom sobre la frontera de decisión.
+
+    Casi toda la masa anómala está en score≈0 y el resto se apiña junto al
+    umbral; un solo panel comprimiría justo la zona que importa.
+    """
     lo = min(d["s_test"].min(), d["s_anom"].min())
     hi = max(d["s_test"].max(), d["s_anom"].max())
-    bins = np.linspace(lo, hi, 55)
-    # zonas de decisión sombreadas: más legible que flechas
-    ax.axvspan(lo, d["thr"], color=DANGER, alpha=0.055)
-    ax.axvspan(d["thr"], hi, color=OK, alpha=0.055)
-    ax.hist(d["s_test"], bins=bins, color=OK, alpha=0.72, label=f"Benigno · prueba (n={len(d['s_test'])})")
-    ax.hist(d["s_anom"], bins=bins, color=DANGER, alpha=0.66, label=f"Anómalo (n={len(d['s_anom'])})")
-    ax.axvline(d["thr"], color=INK, ls="--", lw=2)
-    ymax = ax.get_ylim()[1]
-    ax.set_ylim(0, ymax * 1.16)
-    ax.text(d["thr"] - 0.02, ymax * 1.10, "◄ ALERT (bloquea)", color=DANGER,
-            fontsize=9, ha="right", fontweight="bold")
-    ax.text(d["thr"] + 0.02, ymax * 1.10, "PERMIT ►", color=OK,
-            fontsize=9, ha="left", fontweight="bold")
-    ax.text(d["thr"], ymax * 1.02, f"umbral {d['thr']:.4f}", color=INK,
-            fontsize=8.6, ha="center")
-    ax.set_xlabel("score del modelo (menor = más anómalo)")
+    thr = d["thr"]
+    ZLO, ZHI = 1.45, hi + 0.02          # ventana de zoom sobre la frontera
+
+    fig, (ax, az) = plt.subplots(1, 2, figsize=(13.2, 4.9),
+                                 gridspec_kw={"wspace": 0.20, "width_ratios": [1.15, 1]})
+
+    def draw(a, bins, xlo, xhi, leg):
+        a.axvspan(xlo, thr, color=DANGER, alpha=0.055)
+        a.axvspan(thr, xhi, color=OK, alpha=0.055)
+        a.hist(d["s_test"], bins=bins, color=OK, alpha=0.75,
+               label=f"Benigno · prueba (n={len(d['s_test'])})")
+        a.hist(d["s_anom"], bins=bins, color=DANGER, alpha=0.68,
+               label=f"Anómalo (n={len(d['s_anom'])})")
+        a.axvline(thr, color=INK, ls="--", lw=2)
+        a.set_xlim(xlo, xhi)
+        ym = a.get_ylim()[1]
+        a.set_ylim(0, ym * 1.20)
+        a.set_xlabel("score del modelo (menor = más anómalo)")
+        if leg:
+            a.legend(loc="upper left", bbox_to_anchor=(0.02, 0.88))
+        return ym
+
+    # --- panel izquierdo: rango completo -----------------------------------
+    ym = draw(ax, np.linspace(lo, hi, 55), lo - 0.05, hi + 0.05, True)
     ax.set_ylabel("nº de ventanas")
-    ax.legend(loc="upper left", bbox_to_anchor=(0.02, 0.90))
-    finish(ax, "Separación de las distribuciones de score",
-           "El solapamiento en torno al umbral es el origen de los falsos positivos y negativos",
+    ax.text(thr - 0.05, ym * 1.13, "◄ ALERT", color=DANGER, fontsize=9,
+            ha="right", fontweight="bold")
+    ax.text(thr + 0.05, ym * 1.13, "PERMIT ►", color=OK, fontsize=9,
+            ha="left", fontweight="bold")
+    # marca de la región ampliada
+    ax.axvspan(ZLO, ZHI, facecolor="none", edgecolor=INK, lw=1.2, ls=":")
+    ax.text((ZLO + ZHI) / 2, ym * 1.02, "zona ampliada →", fontsize=8, color=INK, ha="center")
+    finish(ax, "Rango completo",
+           "La masa anómala se concentra en score ≈ 0; el resto se apiña junto al umbral")
+
+    # --- panel derecho: zoom sobre la frontera -----------------------------
+    ymz = draw(az, np.linspace(ZLO, ZHI, 46), ZLO, ZHI, False)
+    az.set_ylabel("nº de ventanas")
+    az.annotate(f"umbral {thr:.4f}", xy=(thr, ymz * 0.99),
+                xytext=(thr - 0.11, ymz * 1.13), fontsize=9, color=INK,
+                fontweight="bold", ha="center",
+                arrowprops=dict(arrowstyle="->", color=INK, lw=1.2))
+    fp = int((d["s_test"] < thr).sum()); fn = int((d["s_anom"] >= thr).sum())
+    az.text(0.985, 0.60,
+            f"En esta franja se producen\ntodos los errores del sistema:\n"
+            f"{fp} falsos positivos · {fn} falsos negativos",
+            transform=az.transAxes, ha="right", va="top", fontsize=8.8, color=INK,
+            bbox=dict(boxstyle="round,pad=0.5", facecolor="white",
+                      edgecolor="#b9c2d6", linewidth=0.9))
+    finish(az, "Zona de decisión (ampliada)",
+           "Las dos poblaciones se solapan justo donde cae el umbral",
            "Fuente: re-puntuación del modelo congelado sobre los conjuntos auditados")
     save(fig, "A2-distribucion-scores.png")
 
@@ -169,7 +204,18 @@ def fig_confusion(d):
     fp = int((d["s_test"] < d["thr"]).sum()); tn = len(d["s_test"]) - fp
     M = np.array([[tn, fp], [fn, tp]])
     fig, ax = plt.subplots(figsize=(6.0, 5.2))
-    ax.imshow(M / M.sum(axis=1, keepdims=True), cmap="BuGn", vmin=0, vmax=1)
+    # Color con semántica: verde = acierto, rojo = error. La intensidad sigue
+    # la proporción de la fila, así el ojo distingue primero acierto/error y
+    # después su magnitud.
+    from matplotlib.colors import to_rgb
+    correct = np.array([[True, False], [False, True]])
+    rgb = np.zeros((2, 2, 3))
+    for i in range(2):
+        for j in range(2):
+            frac = M[i, j] / M[i].sum()
+            base = np.array(to_rgb(OK if correct[i, j] else DANGER))
+            rgb[i, j] = 1 - (1 - base) * (0.18 + 0.82 * frac)  # mezcla con blanco
+    ax.imshow(rgb)
     labels = [["Correcto\n(permitido)", "Falso positivo\n(bloquea legítimo)"],
               ["Falso negativo\n(ataque no visto)", "Correcto\n(bloqueado)"]]
     for i in range(2):
@@ -199,14 +245,17 @@ def fig_barrido(d):
     ax.plot(grid, np.array(det) * 100, color=ACCENT, lw=2.4, label="Detección de ataques")
     ax.plot(grid, np.array(fpr) * 100, color=DANGER, lw=2.4, label="Falsos positivos (benigno)")
     ax.axvline(d["thr"], color=INK, ls="--", lw=2)
-    ax.text(d["thr"], 103, f" umbral congelado {d['thr']:.4f}", fontsize=8.8, color=INK, fontweight="bold")
+    ax.text(d["thr"] - 0.05, 103, f"umbral congelado {d['thr']:.4f}", fontsize=8.8,
+            color=INK, fontweight="bold", ha="right")
     op_f, op_d = (d["s_test"] < d["thr"]).mean() * 100, (d["s_anom"] < d["thr"]).mean() * 100
     ax.plot([d["thr"]], [op_d], "o", color=ACCENT, ms=9, markeredgecolor="white", markeredgewidth=1.6)
     ax.plot([d["thr"]], [op_f], "o", color=DANGER, ms=9, markeredgecolor="white", markeredgewidth=1.6)
     ax.text(d["thr"] + 0.06, op_d, f"{op_d:.1f}%", color=ACCENT, fontsize=9, fontweight="bold", va="center")
     ax.text(d["thr"] + 0.06, op_f, f"{op_f:.1f}%", color=DANGER, fontsize=9, fontweight="bold", va="center")
     ax.set_xlabel("umbral de decisión"); ax.set_ylabel("porcentaje")
-    ax.set_ylim(-3, 108); ax.legend(loc="center right")
+    ax.set_ylim(-3, 108)
+    # leyenda en la franja libre entre ambas curvas, lejos de la línea de umbral
+    ax.legend(loc="center left", bbox_to_anchor=(0.03, 0.28))
     finish(ax, "Compromiso entre detección y falsos positivos según el umbral",
            "El umbral se fijó por cuantil α=0.05 sobre validación, no optimizando esta curva",
            "Fuente: re-puntuación del modelo congelado · barrido calculado en este informe")
@@ -215,27 +264,50 @@ def fig_barrido(d):
 
 # ================================================ B · comparación modelos ====
 def fig_modelos(d):
+    """Detección frente a FPR de los 7 modelos.
+
+    Varios modelos comparten coordenadas exactas (`if_uniform` e
+    `if_exact_collapsed` son incluso el mismo objeto ajustado: idéntico
+    SHA-256). Se agrupan los puntos coincidentes y se etiquetan una sola vez,
+    en lugar de superponer textos ilegibles.
+    """
     ev = d["man"]["evaluation"]
     order = ["ocsvm_scaled", "if_uniform", "if_exact_collapsed", "if_primary_weighted",
              "if_scaled_weighted", "lof_scaled", "elliptic_envelope_scaled"]
-    fig, ax = plt.subplots(figsize=(7.8, 5.6))
+    groups: dict[tuple[float, float], list[str]] = OrderedDict()
     for m in order:
-        f = ev[m]["test"]["fpr"] * 100
-        dr = ev[m]["anomalies"]["detection_rate"] * 100
-        chosen = m == "ocsvm_scaled"
-        ax.scatter(f, dr, s=300 if chosen else 130,
+        key = (round(ev[m]["test"]["fpr"] * 100, 3),
+               round(ev[m]["anomalies"]["detection_rate"] * 100, 3))
+        groups.setdefault(key, []).append(m)
+
+    # Colocación explícita de cada etiqueta: los grupos están próximos entre sí
+    # y una regla automática los solaparía. (dx, dy, alineación)
+    PLACE = {
+        "ocsvm_scaled": (14, 8, "left"),
+        "if_uniform": (14, 4, "left"),
+        "if_primary_weighted": (-14, 4, "right"),
+        "lof_scaled": (14, -6, "left"),
+        "elliptic_envelope_scaled": (14, -4, "left"),
+    }
+    fig, ax = plt.subplots(figsize=(8.6, 5.8))
+    for (f, dr), members in groups.items():
+        chosen = "ocsvm_scaled" in members
+        ax.scatter(f, dr, s=340 if chosen else 150,
                    color=ACCENT if chosen else DIM,
                    edgecolor="white", linewidth=2, zorder=5 if chosen else 3,
                    marker="*" if chosen else "o")
-        label = m.replace("_", " ")
-        ax.annotate(f"{label}\n{dr:.1f}%", (f, dr),
-                    xytext=(9, -4 if not chosen else 8), textcoords="offset points",
-                    fontsize=8.2, color=INK if chosen else DIM,
-                    fontweight="bold" if chosen else "normal")
+        names = "\n".join(m.replace("_", " ") for m in members)
+        nota = "\n(mismo objeto ajustado)" if len(members) > 1 and "if_uniform" in members else ""
+        dx, dy, ha = PLACE[members[0]]
+        ax.annotate(f"{names}{nota}\n{dr:.1f}% detección",
+                    (f, dr), xytext=(dx, dy), textcoords="offset points",
+                    fontsize=8.4, color=INK if chosen else DIM,
+                    fontweight="bold" if chosen else "normal",
+                    ha=ha, va="center", linespacing=1.35)
     ax.set_xlabel("Falsos positivos sobre tráfico benigno (%)")
     ax.set_ylabel("Detección de ataques (%)")
-    ax.set_xlim(2.8, 7.2); ax.set_ylim(18, 100)
-    ax.text(0.98, 0.04, "mejor → arriba y a la izquierda", transform=ax.transAxes,
+    ax.set_xlim(3.0, 7.6); ax.set_ylim(15, 102)
+    ax.text(0.985, 0.035, "mejor → arriba y a la izquierda", transform=ax.transAxes,
             ha="right", fontsize=8.4, color=DIM, style="italic")
     finish(ax, "Los 7 modelos evaluados: detección frente a falsos positivos",
            "Todos con FPR comparable (3.6–5.1 %); la diferencia real está en la detección",
@@ -290,17 +362,21 @@ def fig_fpr_operativo(d):
     series = [("Offline\n(test del dataset)", o["alerts_strict"], o["n_windows"], OK),
               ("Operativo F6\npase 1", 16, 62, DANGER),
               ("Operativo F6\npase 2", 17, 74, DANGER)]
-    fig, ax = plt.subplots(figsize=(7.6, 4.8))
+    fig, ax = plt.subplots(figsize=(8.6, 4.8))
     for i, (lab, k, n, col) in enumerate(series):
         p, lo, hi = wilson(k, n)
         ax.barh(i, p * 100, height=0.5, color=col, alpha=0.85)
         ax.errorbar(p * 100, i, xerr=[[(p - lo) * 100], [(hi - p) * 100]],
                     fmt="none", ecolor=INK, elinewidth=1.7, capsize=6)
-        ax.text(hi * 100 + 1.2, i, f"{p:.1%}   IC95 {lo:.1%}–{hi:.1%}   ({k}/{n})",
-                va="center", fontsize=9, color=INK)
+        # valor destacado arriba, intervalo y conteo debajo: evita una línea
+        # larga que se salga del área de dibujo
+        ax.text(hi * 100 + 1.6, i - 0.10, f"{p:.1%}", va="center", fontsize=11.5,
+                fontweight="bold", color=col)
+        ax.text(hi * 100 + 1.6, i + 0.14, f"IC95 {lo:.1%}–{hi:.1%}   ({k}/{n})",
+                va="center", fontsize=8.6, color=DIM)
     ax.set_yticks(range(len(series)), [s[0] for s in series], fontsize=9)
     ax.invert_yaxis(); ax.set_xlabel("Falsos positivos sobre tráfico legítimo (%)")
-    ax.set_xlim(0, 52)
+    ax.set_xlim(0, 58)
     finish(ax, "El falso positivo medido offline no se sostiene en operación",
            "Intervalos de Wilson 95 %: no se solapan, luego la diferencia no se explica por azar muestral",
            "Fuente: artifacts/model/manifest.json · docs/fase07-validacion-final/02-resultados-f6.md")
@@ -359,10 +435,16 @@ def fig_scores_pesado(d):
         col = DANGER if s < d["thr"] else OK
         ax.scatter([s], [0], s=290, color=col, zorder=5, edgecolor="white", linewidth=2)
         ax.text(s, 0.16, f"{s:.3f}", ha="center", fontsize=9.4, color=col, fontweight="bold")
-    ax.text(d["thr"], -0.30, f"umbral {d['thr']:.4f}", ha="center", fontsize=9, color=INK, fontweight="bold")
+    ax.text(d["thr"] - 0.006, -0.30, f"umbral {d['thr']:.4f}", ha="right",
+            fontsize=9, color=INK, fontweight="bold")
     ax.annotate("cruzó el umbral →\nbloqueó a un cliente legítimo 120 s",
                 xy=(1.689, 0), xytext=(1.645, -0.72), fontsize=8.6, color=DANGER,
                 arrowprops=dict(arrowstyle="->", color=DANGER, lw=1.4))
+    # el margen de 1.814 es de 0.0014: se permite por un pelo
+    margen = 1.814 - d["thr"]
+    ax.annotate(f"permitida por {margen:.4f}",
+                xy=(1.814, 0), xytext=(1.845, -0.55), fontsize=8.4, color=OK,
+                arrowprops=dict(arrowstyle="->", color=OK, lw=1.2))
     ax.set_xlim(1.60, 2.05); ax.set_ylim(-0.95, 0.55)
     ax.set_yticks([]); ax.set_xlabel("score del modelo")
     ax.spines["left"].set_visible(False)

@@ -123,6 +123,8 @@ Sistema desplegado, motor y enforcement activos: 2 pases de 29 corridas + 2 prue
 
 **Resultado negativo, reportado como tal:** el FPR benigno **no se sostiene** en operación. En aislamiento, una transferencia legítima `iperf-tcp 200M` produjo una ventana de score 1,689 que cruzó el umbral y **bloqueó a un cliente legítimo durante 120 s**.
 
+El margen es además extremadamente estrecho: otra ventana de la misma transferencia legítima obtuvo 1,814 y **se permitió por 0,0014 puntos de score**. No es que el sistema distinga bien el tráfico pesado y falle en un caso aislado: es que las cuatro ventanas caen dentro del margen de decisión, y cuál se bloquea depende de fluctuaciones mínimas.
+
 > **[ESPACIO PARA CAPTURA 1 — Panel operativo]**
 > Insertar aquí una captura de `http://127.0.0.1:8788/` mostrando salud de servicios, distribución de scores y decisiones recientes.
 
