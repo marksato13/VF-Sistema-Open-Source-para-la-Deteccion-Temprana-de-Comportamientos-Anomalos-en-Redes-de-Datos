@@ -228,6 +228,23 @@ def list_closed_pcap_files(
     return fresh
 
 
+def parse_pcap_to_packets(path: Path) -> list:
+    """Decodifica un PCAP a ParsedPacket (parseo, sin atribucion de flujo).
+
+    Reusa las funciones publicas del extractor congelado -- NO reimplementa la
+    decodificacion. Separar el parseo (caro: I/O + decode por frame) de la
+    atribucion permite decodificar cada archivo del anillo UNA sola vez y
+    bufferear el resultado, en vez de re-decodificar todo el anillo cada ciclo
+    (causa del atraso bajo carga medido en F6, docs/fase07-validacion-final/).
+    """
+    out = []
+    for timestamp, frame in extractor.iter_pcap_frames(path):
+        parsed = extractor.parse_ethernet_ipv4(timestamp, frame)
+        if parsed is not None:
+            out.append(parsed)
+    return out
+
+
 def main() -> int:
     args = parse_args()
 
@@ -255,6 +272,13 @@ def main() -> int:
     tail = EveTail(args.eve_path)
     eve_buffer: collections.deque[tuple[float, str]] = collections.deque()
     scored_windows: dict[tuple[str, str], float] = {}
+    # Buffer incremental de paquetes ya decodificados (ParsedPacket) + set de
+    # PCAP ya parseados. Evita re-decodificar todo el anillo cada ciclo: cada
+    # archivo se lee de disco UNA vez; la atribucion de flujo se recalcula
+    # sobre el buffer en memoria. Corrige el atraso bajo carga (F6 #12).
+    packet_buffer: collections.deque = collections.deque()
+    parsed_pcaps: collections.OrderedDict[str, None] = collections.OrderedDict()
+    MAX_PARSED_PCAP_NAMES = 4000
 
     startup_record = {
         "event": "motor_startup",
@@ -329,9 +353,40 @@ def main() -> int:
             max_age_seconds=args.history_seconds,
             now=cycle_start,
         )
+        # Parseo INCREMENTAL: decodifica de disco solo los PCAP no vistos antes.
+        # Equivalente exacto a re-parsear todo el anillo porque
+        # attribute_packets() ordena por timestamp internamente.
+        for pcap in pcap_files:
+            if pcap.name in parsed_pcaps:
+                continue
+            try:
+                packet_buffer.extend(parse_pcap_to_packets(pcap))
+            except Exception:
+                pass  # archivo truncado/ilegible en este instante: se salta
+            parsed_pcaps[pcap.name] = None
+        while len(parsed_pcaps) > MAX_PARSED_PCAP_NAMES:
+            parsed_pcaps.popitem(last=False)
+        # Poda por TIEMPO DEL DATO (no del reloj de pared): se conserva
+        # history_seconds hacia atras desde el paquete mas nuevo del buffer.
+        # Critico: podar por reloj de pared descartaria paquetes AUN NO
+        # procesados cuando el motor va atrasado (buffer con datos viejos vs.
+        # wall adelantado), congelando el avance -- bug real observado. Podar
+        # relativo al dato mas nuevo mantiene la ventana deslizante sobre lo que
+        # el motor todavia debe digerir, y drena cuando la carga cesa.
+        if packet_buffer:
+            newest_data = max(pk.timestamp for pk in packet_buffer)
+            data_cutoff = newest_data - args.history_seconds
+            if packet_buffer[0].timestamp < data_cutoff:
+                packet_buffer = collections.deque(
+                    pk for pk in packet_buffer if pk.timestamp >= data_cutoff
+                )
 
-        if pcap_files or eve_buffer:
-            packets = extractor.load_packet_observations(pcap_files, entity_network) if pcap_files else []
+        if packet_buffer or eve_buffer:
+            packets = (
+                extractor.attribute_packets(packet_buffer, entity_network)
+                if packet_buffer
+                else []
+            )
             apps = (
                 extractor.load_app_observations(eve_slice_path, entity_network)
                 if eve_buffer

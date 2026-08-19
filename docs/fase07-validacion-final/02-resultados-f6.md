@@ -66,7 +66,8 @@ Lead-time = segundos desde el inicio del ataque al primer `ALERT`/bloqueo (motor
 `logged_at − window_end` (cuánto tras cerrar la ventana se decide):
 
 - Con el motor al día: ~10–15 s (dentro del ciclo).
-- **Bajo tráfico pesado sostenido, el motor se atrasa progresivamente: hasta 161 s observados.** Causa: el motor reparsea el anillo de PCAP **completo** en cada ciclo, y con el anillo lleno de tráfico ese parseo excede el presupuesto de 10 s, así que el motor acumula atraso hasta que el tráfico cesa. El anillo de ~240 s (`-W 16`, ampliado esta sesión) **duplica** ese costo respecto a los ~120 s originales.
+- **Bajo tráfico pesado sostenido, el motor se atrasaba progresivamente: hasta 161 s observados.** Causa: el motor reparseaba el anillo de PCAP **completo** en cada ciclo, y con el anillo lleno de tráfico ese parseo excedía el presupuesto de 10 s, acumulando atraso hasta que el tráfico cesaba.
+- **Corregido después de F6 (2026-08-19, debilidad #12):** parseo **incremental** — cada PCAP se decodifica una sola vez a un buffer; la atribución de flujo se recalcula sobre el buffer en memoria. Verificado en VM02: bajo una descarga de 500 MB el atraso se mantuvo en **7–15 s** (antes crecía sin límite), con CPU ~1 % y equivalencia byte a byte confirmada. Límite que queda: el caso extremo (iperf 200 Mbit/s concurrente sostenido) aún puede exceder el ciclo por el costo de `attribute_packets` sobre millones de paquetes/ventana; el sistema se recupera al cesar la carga.
 - **Impacto:** bajo carga, la detección y el bloqueo se retrasan tanto como el atraso; el atacante corre libre ese tiempo. El lead-time de ~8 s aplica cuando el motor **no** está saturado.
 - El pase 2 (lag-aware) espera a que el motor digiera cada corrida antes de la siguiente, por eso sus lead-times son limpios; el pase 1 (settle fijo) mezcló atraso y detección y por eso se archiva como contaminado.
 
