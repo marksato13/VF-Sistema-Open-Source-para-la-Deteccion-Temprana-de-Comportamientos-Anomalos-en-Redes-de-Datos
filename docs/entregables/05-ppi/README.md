@@ -25,6 +25,20 @@ El PPI se escribió antes de que existieran los resultados. La versión 2 debe i
 | Limitación principal | FPR operativo 23–26 % sobre tráfico legítimo pesado | [`../02-validacion-y-confiabilidad/`](../02-validacion-y-confiabilidad/informe-validacion-confiabilidad.md) |
 | Auditoría del producto | **42/51 = 82,4 %** [69,7 – 90,4] (confiabilidad, replicabilidad, pertinencia) | [`../04-ficha-auditoria/`](../04-ficha-auditoria/ficha-auditoria.md) |
 
+## Análisis pendiente de aprobación
+
+[`ANALISIS-PPI-v3-citas-metodologia-cronograma.md`](ANALISIS-PPI-v3-citas-metodologia-cronograma.md)
+— nueve propuestas sobre citas, metodología, cronograma y extensión, **sin
+aplicar**, para aprobar punto por punto.
+
+Las tres críticas son las que un dictaminador detecta sin leer el contenido:
+
+| | |
+|---|---|
+| 🔴 **El PPI no tiene lista de referencias** | Donde debería estar solo hay una nota de trabajo sobre Mendeley |
+| 🔴 **Explica la matemática del modelo descartado** | 21 párrafos de ecuaciones de Isolation Forest; **cero** del OCSVM desplegado |
+| 🔴 **El cronograma dice que el desarrollo no se hizo** | Doce actividades sin una sola marca, y termina en junio de 2026 |
+
 ## Estado de la revisión
 
 | | |
