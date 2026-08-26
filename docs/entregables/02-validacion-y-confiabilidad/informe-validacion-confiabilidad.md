@@ -121,11 +121,11 @@ Ordenado por relación entre costo y beneficio. **Ninguna acción del bloque A n
 
 | Prioridad | Acción | Corrige | Tiempo |
 |---|---|---|---|
-| **A1** | Declarar explícitamente en la tesis la selección posterior del modelo y que el 88,3 % es una estimación optimista | Validez interna | Horas |
-| **A2** | Incorporar los intervalos de confianza a todas las proporciones reportadas | Confiabilidad | Horas |
-| **A3** | Sustituir las conclusiones sobre familias con n ≤ 6 por una declaración de muestra insuficiente | Confiabilidad | Horas |
-| **A4** | Reportar el error operativo (23–26 %) junto al de laboratorio (4,71 %) | Validez externa | Horas |
-| **A5** | Publicar el diccionario de fórmulas de las 14 variables nuevas | Validez de constructo | Horas |
+| ~~**A1**~~ | ✅ **Hecha.** Declarada en la model card, antes de cualquier métrica, y en el PPI v2. Declarar explícitamente en la tesis la selección posterior del modelo y que el 88,3 % es una estimación optimista | Validez interna | Horas |
+| ~~**A2**~~ | ✅ **Hecha.** Intervalos de Wilson en toda proporción del proyecto. Incorporar los intervalos de confianza a todas las proporciones reportadas | Confiabilidad | Horas |
+| ~~**A3**~~ | ✅ **Hecha.** Las familias con n ≤ 6 se reportan con su intervalo y declaración de muestra insuficiente. Sustituir las conclusiones sobre familias con n ≤ 6 por una declaración de muestra insuficiente | Confiabilidad | Horas |
+| ~~**A4**~~ | ✅ **Hecha.** Ambas cifras aparecen juntas en la system card y en este informe. Reportar el error operativo (23–26 %) junto al de laboratorio (4,71 %) | Validez externa | Horas |
+| ~~**A5**~~ | ✅ **Hecha.** Diccionario de las 28 variables publicado, generado desde el extractor congelado. Publicar el diccionario de fórmulas de las 14 variables nuevas | Validez de constructo | Horas |
 | ~~**B1**~~ | ✅ **Ejecutada.** La expansión multicapa queda justificada (66,5 % → 88,8 %, p < 0,001), pero las 8 variables L7 nuevas **no aportan detección medible** y cuestan 5 falsos positivos | Validez de constructo | *hecho* |
 | **B2** | Prueba de estabilidad por remuestreo del modelo elegido | Validez interna | Horas |
 | ~~**B3**~~ | ✅ **Ejecutada.** McNemar exacto con corrección de Holm sobre 21 comparaciones | Validez interna | *hecho* |

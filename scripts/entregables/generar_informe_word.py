@@ -248,7 +248,6 @@ def main() -> int:
     p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_before = Pt(20)
     r = p.add_run("Lima, agosto de 2026"); r.font.size = Pt(10.5); r.font.color.rgb = DIM
-    doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
 
     # -------------------------------------------------- 1. ESTADO GENERAL ---
     h1(doc, "Estado general de los resultados", "1.")
@@ -312,7 +311,6 @@ def main() -> int:
                 "así que afirmar que un modelo comete menos falsos positivos que otro no está respaldado.")
 
     # --------------------------------------------- 3. VALIDACIÓN EXTERNA ---
-    doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
     h1(doc, "Validación externa", "3.")
     parrafo(doc, "¿Los resultados se generalizan a otros contextos, poblaciones o condiciones de uso?",
             italic=True, color=DIM)
@@ -355,7 +353,6 @@ def main() -> int:
                 "respaldo, streaming y actualizaciones) y no hay captura multi-sistema-operativo.")
 
     # ------------------------------------------------- 4. CONFIABILIDAD ----
-    doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
     h1(doc, "Confiabilidad", "4.")
     parrafo(doc, "¿Repetir el procedimiento produce los mismos resultados?", italic=True, color=DIM)
 
@@ -400,25 +397,18 @@ def main() -> int:
     parrafo(doc, "Ordenado por relación entre costo y beneficio. **Ninguna acción de los bloques A y B "
                  "requiere capturar datos nuevos.**")
     tabla(doc,
-          ["#", "Acción", "Corrige", "Tiempo"],
-          [(("A1", F_OK), "Declarar la selección posterior del modelo y que la detección reportada es una estimación optimista", "Validez interna", ("Horas", F_OK)),
-           (("A2", F_OK), "Incorporar los intervalos de confianza a todas las proporciones reportadas", "Confiabilidad", ("Horas", F_OK)),
-           (("A3", F_OK), "Sustituir las conclusiones sobre familias con n ≤ 6 por declaración de muestra insuficiente", "Confiabilidad", ("Horas", F_OK)),
-           (("A4", F_OK), "Reportar el error operativo (23–26 %) junto al de laboratorio (4,71 %)", "Validez externa", ("Horas", F_OK)),
-           (("A5", F_OK), "Publicar el diccionario de fórmulas de las 14 variables nuevas", "Constructo", ("Horas", F_OK)),
-           (("B1", F_OK), "Ablación por capas y comparación 14 vs. 28: la expansión queda justificada (66,5 % a 88,8 %, p < 0,001), pero las 8 variables L7 nuevas no aportan detección medible", "Constructo", ("hecho", F_OK)),
-           (("B2", F_AMBER), "Prueba de estabilidad por remuestreo del modelo elegido", "Validez interna", ("Horas", F_AMBER)),
-           (("B3", F_OK), "Prueba de significancia entre modelos: McNemar exacto con corrección de Holm", "Validez interna", ("hecho", F_OK)),
-           (("C1", F_DANGER), "Capturar una jornada nueva y reservarla como validación temporal externa", "Validez externa", ("Días", F_DANGER)),
-           (("C2", F_DANGER), "Recalibrar el umbral incluyendo tráfico legítimo intenso y repetir la validación", "Validez externa", ("1–2 semanas", F_DANGER))],
-          widths=[1.2, 9.0, 3.2, 2.6])
+          ["Estado", "Acción", "Corrige", "Tiempo"],
+          [(("hecho", F_OK), "Declarada la selección posterior del modelo; intervalos de confianza en toda proporción; error operativo reportado junto al de laboratorio; diccionario de las 28 variables publicado", "Interna · Confiabilidad · Externa", ("—", F_OK)),
+           (("hecho", F_OK), "Ablación por capas y comparación 14 vs. 28, y prueba de significancia entre modelos (McNemar con corrección de Holm)", "Constructo · Interna", ("—", F_OK)),
+           (("pendiente", F_AMBER), "Validación cruzada por episodio y banda del umbral por remuestreo", "Validez interna", ("Horas", F_AMBER)),
+           (("pendiente", F_AMBER), "Validación con usuarios: prueba de usabilidad con 5–8 evaluadores", "Pertinencia", ("Días", F_AMBER)),
+           (("futuro", F_DANGER), "Jornada nueva como holdout temporal y recalibración con tráfico legítimo intenso", "Validez externa", ("Semanas", F_DANGER))],
+          widths=[2.0, 8.4, 3.2, 2.4])
 
     doc.add_paragraph()
     caja(doc, "Compromiso realista",
-         "Con el tiempo disponible se ejecutarán los **bloques A y B** antes de cerrar la tesis: cubren los dos "
-         "requisitos formales pendientes y corrigen la principal deficiencia estadística **sin requerir "
-         "experimentación nueva**. El **bloque C** se declarará como trabajo futuro, indicando con precisión "
-         "qué quedaría por demostrar.")
+         "Lo pendiente de **horas y días** se ejecuta antes de cerrar la tesis. Lo de **semanas** se declara "
+         "como trabajo futuro, indicando con precisión qué quedaría por demostrar.")
 
     # ------------------------------------------------------ 6. CONCLUSIÓN --
     doc.add_paragraph()
@@ -430,16 +420,13 @@ def main() -> int:
     parrafo(doc, "No sostienen todavía que el sistema sea apto para operación desatendida: sobre tráfico legítimo "
                  "de alto volumen el error alcanza **23–26 %**. Esa limitación **está medida, cuantificada y "
                  "declarada**, que es la condición que la hace defendible ante una revisión por pares.")
-    parrafo(doc, "La prioridad ya no es corregir la inferencia: **quedó corregida**. Se declaró la selección "
-                 "posterior del modelo, toda proporción lleva su intervalo de confianza, se ejecutó la ablación "
-                 "por capas y se añadieron las pruebas de significancia que faltaban.")
-    parrafo(doc, "**La única dimensión sin ninguna evidencia es la pertinencia**: el sistema nunca se sometió a "
-                 "evaluación con usuarios reales. Una prueba de usabilidad con 5–8 evaluadores es la acción de "
-                 "menor costo con mayor efecto, porque cierra a la vez el eje de pertinencia, el criterio "
-                 "correspondiente de la ficha de auditoría y la debilidad registrada en el plan de mejora.")
-    parrafo(doc, "Y **la limitación principal del sistema sigue abierta**: el falso positivo sobre tráfico "
-                 "legítimo pesado no se corrige documentándolo, sino recalibrando el umbral con ese tráfico "
-                 "como normalidad y repitiendo la validación operativa.")
+    parrafo(doc, "La inferencia **quedó corregida**: selección posterior declarada, intervalos de confianza en "
+                 "toda proporción, ablación ejecutada y pruebas de significancia añadidas. Queda una ausencia y "
+                 "una limitación, de naturaleza distinta.")
+    parrafo(doc, "**La ausencia es la pertinencia**: nadie externo ha usado el sistema. Una prueba de usabilidad "
+                 "con 5–8 evaluadores la convierte en evidencia. **La limitación es el falso positivo sobre "
+                 "tráfico legítimo pesado**, y esa no se corrige documentándola: exige recalibrar el umbral con "
+                 "ese tráfico como normalidad y repetir la validación operativa.")
 
     # ----------------------------------------------------- REFERENCIAS ----
     doc.add_paragraph()
@@ -449,23 +436,19 @@ def main() -> int:
         "Rand McNally. — Marco de validez interna y externa aplicado en las secciones 2 y 3.",
         "**Wilson, E. B. (1927).** Probable inference, the law of succession, and statistical inference. Journal of "
         "the American Statistical Association, 22(158), 209–212. — Método de los intervalos de confianza.",
-        "**Cronbach, L. J. (1951).** Coefficient alpha and the internal structure of tests. Psychometrika, 16(3), "
-        "297–334. — Criterio de consistencia interna, no aplicable por no emplear instrumentos psicométricos.",
-        "**Peng, R. D. (2011).** Reproducible research in computational science. Science, 334(6060), 1226–1227. — "
-        "Distinción entre reproducibilidad y replicabilidad, sección 4.",
-        "**Kapoor, S., & Narayanan, A. (2023).** Leakage and the reproducibility crisis in machine-learning-based "
-        "science. Patterns, 4(9), 100804. — Tipología de fugas y del sesgo por selección sobre el conjunto de prueba.",
-        "**ISO/IEC 25010:2011.** Systems and software engineering — SQuaRE — System and software quality models. — "
-        "Su correspondencia detallada se desarrolla en la ficha de auditoría del producto.",
+        "**Cronbach, L. J. (1951).** Coefficient alpha. Psychometrika, 16(3), 297–334. — No aplicable: el "
+        "producto no emplea instrumentos psicométricos.",
+        "**Peng, R. D. (2011).** Reproducible research in computational science. Science, 334(6060), 1226–1227.",
+        "**Kapoor, S., & Narayanan, A. (2023).** Leakage and the reproducibility crisis in ML-based science. "
+        "Patterns, 4(9), 100804. — Sesgo por selección sobre el conjunto de prueba.",
+        "**ISO/IEC 25010:2011.** SQuaRE — System and software quality models. — Correspondencia detallada en "
+        "la ficha de auditoría del producto.",
     ]:
         vineta(doc, ref)
 
-    doc.add_paragraph()
-    caja(doc, "Anexo técnico",
-         "El análisis completo, con las 11 figuras, la comparación de los 7 modelos evaluados y el detalle de cada "
-         "hallazgo, está disponible en el repositorio del proyecto: "
-         "docs/entregables/01-evaluacion-critica/",
-         fill="EEF1F8")
+    parrafo(doc, "Análisis completo, con las 11 figuras y la comparación de los 7 modelos, en "
+                 "docs/entregables/01-evaluacion-critica/ del repositorio del proyecto.",
+            size=7.8, italic=True)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     rematar(doc,
