@@ -284,7 +284,50 @@ CANDIDATAS = [
             "formato": (7, "Formato estándar de Springer; requisitos concretos sin verificar"),
         },
     },
+    {
+        "nombre": "Ingénierie des Systèmes d'Information (ISI)",
+        "corto": "ISI", "editor": "IIETA · Francia", "issn": "1633-1311",
+        "scopus": "https://www.scopus.com/sourceid/21100202935",
+        "control": ("Fuera", "No figura entre las 17 revistas de la lista de control institucional"),
+        "filtro": ("Supera", "ISSN confirmado, ficha activa en Scopus, revisión double-blind "
+                   "declarada, doce números al año con archivo y DOI, y página oficial de APC. "
+                   "Mismo editor que IJSSE, cuyo proceso ya se había verificado. Fuera de la lista "
+                   "de depredadoras"),
+        "datos": {
+            "CiteScore 2025": ("2,6 · SNIP 0,497", "✔"),
+            "Cuartil SJR": ("**Q3** · SJR 0,236 — el único **Q3** de las candidatas disponibles, que "
+                            "es el cuartil que el autor pidió de preferencia", "✔"),
+            "Revisión": ("Double-blind, ≥2 expertos independientes · ~2 meses", "✔"),
+            "Periodicidad": ("**12 números al año** · **235 y 305 artículos** en 2024 y 2025", "✔"),
+            "APC": ("USD 850 por artículo aceptado", "✔"),
+            "Plantilla": ("DOCX oficial disponible", "✔"),
+        },
+        "puntajes": {
+            "pertinencia": (7, "Su alcance declarado nombra minería de datos, aprendizaje automático "
+                               "y detección de fallos, pero **no** seguridad de redes. Lo que sí "
+                               "hace es publicarla: **11 artículos desde 2024** con detección de "
+                               "intrusiones en el título. Se puntúa por lo que publica, no por cómo "
+                               "se describe — el mismo criterio aplicado a las demás"),
+            "visibilidad": (7, "CiteScore 2,6 y SJR 0,236. Por debajo de IJIES (3,3) y CIT (4,2), "
+                               "pero con **el cuartil verificado en la propia revista**"),
+            "viabilidad": (9, "Doce números al año, 305 artículos en 2025 y revisión double-blind "
+                              "declarada en unos dos meses: proceso rápido y capacidad amplia"),
+            "costo": (5, "USD 850, casi el triple que IJIES"),
+            "formato": (8, "Plantilla disponible y sin límite estrecho de páginas declarado"),
+        },
+    },
 ]
+
+
+VOLUMEN = {  # artículos por año, medidos con OpenAlex el 26/08/2026
+    "IJIES": (481, 556), "IJIT": (661, 640), "IJACSA": (1539, 1347), "BEEI": (453, 377),
+    "ISI": (235, 305), "IJSSE": (187, 253), "ISJ": (39, 62), "ICS": (42, 52), "CIT": (43, 35),
+}
+UMBRAL_VOLUMEN = 200  # "que publique muchos artículos al año"
+
+
+def volumen_ok(c) -> bool:
+    return VOLUMEN[c["corto"]][1] >= UMBRAL_VOLUMEN
 
 
 def disponible(c) -> bool:
@@ -430,6 +473,9 @@ def main() -> None:
         "IJIES": "**El mayor volumen de las disponibles** —481, 556 y 467 artículos en 2024, "
                  "2025 y 2026— con el APC más bajo del conjunto y publicación 2 meses después de "
                  "aceptar. Con reserva: hay que confirmar que sigue activa en Scopus.",
+        "ISI": "El único **Q3** verificado de las disponibles, con 305 artículos al año y "
+               "revisión de unos 2 meses. Su APC de USD 850 y su menor producción temática la "
+               "dejan por debajo, pero cumple todos los criterios.",
         "IJIT": "Volumen comparable con respaldo de Springer, que elimina el riesgo de "
                 "descontinuación, y **sin APC** por la vía de suscripción. Su tiempo de revisión "
                 "está sin verificar.",
@@ -563,6 +609,79 @@ def main() -> None:
               "control: si inhabilita la revista o solo la registra. Toda la sección 2 bis "
               "depende de esa respuesta."]:
         a(f"- {x}\n")
+
+    a("\n---\n\n## 9 · Cumplimiento de los criterios pedidos\n\n")
+    a("Los criterios no son los de la rúbrica de la sesión, sino los que fijó el autor a lo "
+      "largo de la búsqueda. Se auditan uno por uno, sin agregarlos en un puntaje, porque "
+      "**un criterio incumplido no se compensa con otro**.\n\n")
+    CRIT = [
+        ("Cuartil Q3 preferido, Q2 aceptable",
+         {"IJIES": ("~", "Q2 por CiteScore, verificado. **SJR sin verificar**"),
+          "IJIT": ("~", "Q2 por SJR, fuente secundaria"),
+          "ISI": ("✔", "**Q3 por SJR 0,236**, verificado — el único que da el cuartil preferido")}),
+        ("Tema afín a ciberseguridad o redes",
+         {"IJIES": ("✔", "86 artículos desde 2024 con detección de intrusiones, de anomalías o "
+                         "seguridad de redes en el título"),
+          "IJIT": ("✔", "50 artículos desde 2024"),
+          "ISI": ("✔", "11 artículos desde 2024, pese a que su alcance no nombra seguridad de redes")}),
+        ("Fácil de publicar",
+         {"IJIES": ("✘", "**Tasa de aceptación declarada: 17,9 %.** Es el único dato real del "
+                         "conjunto, y dice que no es fácil"),
+          "IJIT": ("?", "**Sin dato.** No publica su tasa de aceptación"),
+          "ISI": ("?", "**Sin dato.** Solo consta la revisión double-blind de unos 2 meses")}),
+        ("Fuera de la lista de revistas depredadoras",
+         {k: ("✔", "Comprobado contra las 2 779 entradas de la lista consultada")
+          for k in ("IJIES", "IJIT", "ISI")}),
+        ("Fuera de la lista de control de la coordinación",
+         {k: ("✔", "Comprobado contra las 17 revistas registradas")
+          for k in ("IJIES", "IJIT", "ISI")}),
+        ("Publica muchos artículos al año",
+         {"IJIES": ("✔", "**556 en 2025**"), "IJIT": ("✔", "**640 en 2025**"),
+          "ISI": ("✔", "**305 en 2025**")}),
+        ("Indexación vigente comprobada",
+         {"IJIES": ("✘", "**Sin confirmar.** Es el riesgo abierto: TELKOMNIKA, IJECE e IJEECS, del "
+                         "mismo perfil, cayeron de Scopus en 2025"),
+          "IJIT": ("✔", "Springer Nature: sin riesgo de descontinuación"),
+          "ISI": ("✔", "Ficha activa en Scopus, mismo editor que IJSSE")}),
+        ("Enlace y fuente por cada dato",
+         {"IJIES": ("✔", "5 de 6 datos en fuente primaria"),
+          "IJIT": ("✘", "**0 de 6 en fuente primaria**: todo viene de agregadores"),
+          "ISI": ("✔", "6 de 6 datos en fuente primaria")}),
+    ]
+    a("| Criterio | IJIES | IJIT | ISI |\n|---|:--:|:--:|:--:|\n")
+    for nom, d in CRIT:
+        a(f"| {nom} | {d['IJIES'][0]} | {d['IJIT'][0]} | {d['ISI'][0]} |\n")
+    a("\n`✔` cumple · `~` cumple parcialmente · `?` sin dato · `✘` no cumple o sin confirmar\n\n")
+    a("### Detalle\n\n")
+    for nom, d in CRIT:
+        a(f"**{nom}**\n\n")
+        for k in ("IJIES", "IJIT", "ISI"):
+            m, txt = d[k]
+            a(f"- `{m}` **{k}** — {txt}\n")
+        a("\n")
+    a("### Lectura honesta del cuadro\n\n")
+    a("**Ninguna de las tres cumple los ocho criterios.** Cada una falla en algo distinto, y "
+      "eso es lo que las hace complementarias en vez de redundantes:\n\n")
+    a("| Revista | Lo que le falta |\n|---|---|\n")
+    a("| **IJIES** | Confirmar que sigue en Scopus. Es lo único que la separa de cumplirlo todo |\n")
+    a("| **IJIT** | Todo su expediente es de segunda mano: 0 de 6 datos en fuente primaria |\n")
+    a("| **ISI** | El APC más alto de las tres, USD 850, y la menor producción temática |\n\n")
+    a("**Dos criterios no se pueden cerrar con ninguna candidata.** El primero es «fácil de "
+      "publicar»: solo IJIES publica su tasa de aceptación, y es del 17,9 %. Las otras dos no "
+      "publican el dato, así que su casilla queda en `?` y no en `✔` — **no saber no es "
+      "aprobar**. El segundo es el cuartil Q3 preferido: solo ISI lo tiene verificado; IJIES e "
+      "IJIT son Q2, que el autor aceptó como alternativa pero no era su primera opción.\n\n")
+    a("> Si «fácil de publicar» pesa más que el volumen, la matriz **no tiene hoy evidencia "
+      "para responder**, y pedir la tasa de aceptación por correo a IJIT e ISI es más útil que "
+      "cualquier reordenamiento de puntajes.\n\n")
+    a("### Las que quedaron fuera por volumen\n\n")
+    a("| Revista | Puntaje | Artículos en 2025 |\n|---|---:|---:|\n")
+    for c in orden:
+        if disponible(c) and not volumen_ok(c):
+            a(f"| {c['corto']} | {total(c):.1f} | **{VOLUMEN[c['corto']][1]}** |\n")
+    a(f"\nCon el listón en {UMBRAL_VOLUMEN} artículos al año, estas tres salen pese a puntuar "
+      "alto. **ISJ puntúa 81,0 y publica 62 al año**: si el volumen dejara de ser un requisito, "
+      "volvería al segundo puesto.\n")
 
     OUT_MD.parent.mkdir(parents=True, exist_ok=True)
     OUT_MD.write_text("".join(L), encoding="utf-8")
@@ -704,6 +823,9 @@ def generar_word() -> None:
         "IJIES": "**El mayor volumen de las disponibles** —481, 556 y 467 artículos en 2024, "
                  "2025 y 2026— con el APC más bajo del conjunto y publicación 2 meses después de "
                  "aceptar. Con reserva: hay que confirmar que sigue activa en Scopus.",
+        "ISI": "El único **Q3** verificado de las disponibles, con 305 artículos al año y "
+               "revisión de unos 2 meses. Su APC de USD 850 y su menor producción temática la "
+               "dejan por debajo, pero cumple todos los criterios.",
         "IJIT": "Volumen comparable con respaldo de Springer, que elimina el riesgo de "
                 "descontinuación, y **sin APC** por la vía de suscripción. Su tiempo de revisión "
                 "está sin verificar.",
@@ -776,7 +898,7 @@ def generar_word() -> None:
         "opuesto: su tiempo de revisión está sin verificar, y por eso puntúa 8 y no 10 en "
         "viabilidad. No se premia un dato que no se conoce.", italic=True)
 
-    h1("7 · Pendientes antes del envío")
+    h1("9 · Pendientes antes del envío")
     par("**Confirmar que IJIES sigue con cobertura activa en Scopus** (ficha de fuente 21100199790): "
         "es la verificación más importante de la matriz, porque TELKOMNIKA, IJECE e IJEECS, del "
         "mismo perfil, cayeron en 2025. · **Verificar el tiempo de revisión de IJIT**, lo único que "
@@ -793,6 +915,32 @@ def generar_word() -> None:
         "**cuartil SJR** en Scimago: **el percentil de Scopus no es el cuartil SJR**. · "
         "Reverificar todos los APC: el de IJSSE pasó de USD 700 a USD 850 entre dos consultas.",
         size=8.2)
+
+    h1("8 · Cumplimiento de los criterios pedidos")
+    par("Se auditan uno por uno, sin agregarlos en un puntaje, porque **un criterio incumplido no "
+        "se compensa con otro**.", size=8.4)
+    tabla(["Criterio", "IJIES", "IJIT", "ISI"],
+          [["Cuartil Q3 preferido, Q2 aceptable", "~", "~", "SI"],
+           ["Tema afin a ciberseguridad o redes", "SI", "SI", "SI"],
+           ["Facil de publicar", "NO", "?", "?"],
+           ["Fuera de la lista de depredadoras", "SI", "SI", "SI"],
+           ["Fuera de la lista de control", "SI", "SI", "SI"],
+           ["Publica muchos articulos al ano", "SI", "SI", "SI"],
+           ["Indexacion vigente comprobada", "NO", "SI", "SI"],
+           ["Enlace y fuente por cada dato", "SI", "NO", "SI"]],
+          [7.4, 3.4, 3.4, 3.4],
+          fondos=[None, F_OK, F_AMBER, F_OK, F_OK, F_OK, F_AMBER, None])
+    par("**Ninguna de las tres cumple los ocho criterios**, y cada una falla en algo distinto: a "
+        "IJIES le falta confirmar que sigue en Scopus —lo único que la separa de cumplirlo todo—; "
+        "el expediente de IJIT es entero de segunda mano, 0 de 6 datos en fuente primaria; e ISI "
+        "tiene el APC más alto de las tres, USD 850, y la menor producción temática.")
+    par("**Dos criterios no se pueden cerrar con ninguna.** «Fácil de publicar»: solo IJIES publica "
+        "su tasa de aceptación, y es del 17,9 %; las otras dos no publican el dato, así que su "
+        "casilla queda en interrogante y no en aprobado, porque **no saber no es aprobar**. Y el "
+        "cuartil Q3 preferido: solo ISI lo tiene verificado; IJIES e IJIT son Q2, aceptable como "
+        "alternativa pero no la primera opción. Si «fácil de publicar» pesa más que el volumen, "
+        "esta matriz no tiene hoy evidencia para responder, y pedir la tasa de aceptación por "
+        "correo a IJIT e ISI es más útil que reordenar puntajes.", size=8.4, italic=True)
 
     bloque_enlaces(doc, "Evidencia en el repositorio", [
         ("Matriz detallada, con la ficha completa de cada candidata",

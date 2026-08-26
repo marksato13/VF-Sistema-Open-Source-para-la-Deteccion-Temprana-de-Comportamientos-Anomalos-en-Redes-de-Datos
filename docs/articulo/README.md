@@ -29,11 +29,48 @@ Tras exigir **volumen alto** además de todo lo anterior:
 |---|---|---|---:|---|---|---:|
 | **A** | [Int. J. of Intelligent Engineering and Systems](https://inass.org/publications/) | INASS · Japón | **87,5** | **Q2** (CiteScore 3,3) | **USD 300** → 400 en octubre | **556** |
 | **B** | [Int. J. of Information Technology](https://link.springer.com/journal/41870) | **Springer Nature** · BVICAM | **82,0** | **Q2** (SJR) | **Ninguno** por suscripción | **640** |
-| **C** | [Information Security Journal](https://www.tandfonline.com/journals/uiss20) | Taylor & Francis | 81,0 | Q2 | **Ninguno** por suscripción | 39–62 |
-| 4.º | [Cybernetics and Information Technologies](https://cit.iict.bas.bg/) | Academia Búlgara | 77,5 | **Q2** Scopus · Q3 WoS | 600 EUR desde el 1/sep | 35–46 |
-| 5.º | [Information and Computer Security](https://www.emeraldgrouppublishing.com/journal/ics) | Emerald | 73,5 | Q2 · h-index 60 | **Ninguno** por suscripción | 42–52 |
+| **C** | [Ingénierie des Systèmes d'Information](https://www.iieta.org/Journals/ISI) | IIETA | 72,0 | **Q3** (SJR 0,236) | USD 850 | **305** |
 
 Ninguna está en tu Excel ni en la lista de depredadoras.
+
+**ISJ, ICS y CIT quedaron fuera al exigir volumen** — publican 62, 52 y 35 al año.
+Conservan su puntaje y siguen documentadas en la matriz por si el volumen deja
+de ser un requisito: **ISJ puntúa 81,0**, más que ISI.
+
+## ¿Cumplen las tres todos los criterios? No del todo
+
+| Criterio | IJIES | IJIT | ISI |
+|---|:--:|:--:|:--:|
+| Cuartil Q3 preferido, Q2 aceptable | ~ | ~ | ✔ |
+| Tema afín a ciberseguridad o redes | ✔ | ✔ | ✔ |
+| **Fácil de publicar** | ✘ | ? | ? |
+| Fuera de la lista de depredadoras | ✔ | ✔ | ✔ |
+| Fuera de tu lista de control | ✔ | ✔ | ✔ |
+| Publica muchos artículos al año | ✔ | ✔ | ✔ |
+| **Indexación vigente comprobada** | ✘ | ✔ | ✔ |
+| Enlace y fuente por cada dato | ✔ | ✘ | ✔ |
+
+`✔` cumple · `~` parcial · `?` sin dato · `✘` no cumple o sin confirmar
+
+**Ninguna cumple los ocho**, y cada una falla en algo distinto:
+
+| Revista | Lo que le falta |
+|---|---|
+| **IJIES** | Confirmar que sigue en Scopus — es lo único que la separa de cumplirlo todo |
+| **IJIT** | Todo su expediente es de segunda mano: 0 de 6 datos en fuente primaria |
+| **ISI** | El APC más alto de las tres (USD 850) y la menor producción temática |
+
+**Dos criterios no se pueden cerrar con ninguna.**
+
+- **«Fácil de publicar»:** solo IJIES publica su tasa de aceptación, y es del
+  17,9 %. Las otras dos no publican el dato, así que su casilla queda en `?` y
+  no en `✔` — **no saber no es aprobar**.
+- **Cuartil Q3:** solo ISI lo tiene verificado. IJIES e IJIT son Q2, que
+  aceptaste como alternativa pero no era tu primera opción.
+
+> Si «fácil de publicar» pesa más que el volumen, hoy **no tengo evidencia para
+> responderte**. Pedir la tasa de aceptación por correo a IJIT e ISI serviría
+> más que cualquier reordenamiento de puntajes.
 
 ## Volumen anual, contado igual para todas
 

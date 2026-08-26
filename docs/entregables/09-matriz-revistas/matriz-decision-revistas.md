@@ -38,6 +38,7 @@ Antes de puntuar hay que saber qué se compara contra cada alcance editorial.
 | **CIT** | Supera | ISSN confirmado, ficha activa en Scopus, indexación adicional en Web of Science ESCI, DOAJ, INSPEC, ACM Digital Library y Engineering Village; adhesión declarada a las Core Practices de COPE, revisión por pares en tres fases con cribado antiplagio iThenticate y archivo de números desde 2001. Fuera de la lista de revistas depredadoras consultada |
 | **IJIES** | Supera con reserva | ISSN confirmado, ficha en Scopus, política de revisión y tarifas publicadas, y **publica su tasa de aceptación**, transparencia poco habitual. Fuera de la lista de depredadoras. **La reserva es concreta**: hay que confirmar que su cobertura en Scopus sigue activa, porque TELKOMNIKA, IJECE e IJEECS —revistas del mismo perfil de alto volumen— fueron descontinuadas en 2025 |
 | **IJIT** | Supera | Editada por Springer Nature, con ficha activa en Scopus, política editorial pública y archivo mensual. Fuera de la lista de depredadoras. Su respaldo editorial elimina el riesgo de descontinuación que sí tienen las revistas independientes de alto volumen |
+| **ISI** | Supera | ISSN confirmado, ficha activa en Scopus, revisión double-blind declarada, doce números al año con archivo y DOI, y página oficial de APC. Mismo editor que IJSSE, cuyo proceso ya se había verificado. Fuera de la lista de depredadoras |
 
 ### Descartadas por el filtro
 
@@ -70,6 +71,7 @@ La coordinación mantiene una **lista de control de artículos** con 17 revistas
 | **CIT** | Disponible | No figura entre las 17 revistas de la lista de control institucional |
 | **IJIES** | Disponible | No figura entre las 17 revistas de la lista de control institucional |
 | **IJIT** | Disponible | No figura entre las 17 revistas de la lista de control institucional |
+| **ISI** | Disponible | No figura entre las 17 revistas de la lista de control institucional |
 
 **Se separa del puntaje a propósito.** Bajar la nota de una revista por estar en la lista mezclaría una restricción administrativa con una evaluación técnica, y haría irreproducible la matriz: los puntajes valen lo mismo hoy y cuando la lista cambie.
 
@@ -96,15 +98,15 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 ## 4 · Matriz
 
-| Criterio (peso) | IJIES | BEEI | IJIT | ISJ | CIT | IJSSE | ICS | IJACSA |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Pertinencia temática (30 %) | 9 | 9 | 8 | 9 | 9 | 9 | 6 | 6 |
-| Visibilidad bibliométrica (25 %) | 8 | 8 | 8 | 8 | 9 | 6 | 9 | 8 |
-| Viabilidad editorial (20 %) | 10 | 9 | 8 | 6 | 5 | 9 | 6 | 10 |
-| Costo y accesibilidad (15 %) | 9 | 8 | 10 | 10 | 6 | 5 | 10 | 3 |
-| Compatibilidad formal (10 %) | 7 | 7 | 7 | 7 | 9 | 8 | 6 | 7 |
-| **PUNTAJE PONDERADO** | **87.5** | **84.0** | **82.0** | **81.0** | **77.5** | **75.5** | **73.5** | **69.5** |
-| Datos con fuente primaria | 5/6 | 5/6 | 0/6 | 0/6 | 6/6 | 5/6 | 0/6 | 0/6 |
+| Criterio (peso) | IJIES | BEEI | IJIT | ISJ | CIT | IJSSE | ICS | ISI | IJACSA |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Pertinencia temática (30 %) | 9 | 9 | 8 | 9 | 9 | 9 | 6 | 7 | 6 |
+| Visibilidad bibliométrica (25 %) | 8 | 8 | 8 | 8 | 9 | 6 | 9 | 7 | 8 |
+| Viabilidad editorial (20 %) | 10 | 9 | 8 | 6 | 5 | 9 | 6 | 9 | 10 |
+| Costo y accesibilidad (15 %) | 9 | 8 | 10 | 10 | 6 | 5 | 10 | 5 | 3 |
+| Compatibilidad formal (10 %) | 7 | 7 | 7 | 7 | 9 | 8 | 6 | 8 | 7 |
+| **PUNTAJE PONDERADO** | **87.5** | **84.0** | **82.0** | **81.0** | **77.5** | **75.5** | **73.5** | **72.0** | **69.5** |
+| Datos con fuente primaria | 5/6 | 5/6 | 0/6 | 0/6 | 6/6 | 5/6 | 0/6 | 6/6 | 0/6 |
 
 ---
 
@@ -257,7 +259,28 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción |
 | Compatibilidad formal | **6** | Requisitos sin verificar |
 
-### 8. International Journal of Advanced Computer Science and Applications (IJACSA) — 69.5 puntos
+### 8. Ingénierie des Systèmes d'Information (ISI) — 72.0 puntos
+
+`IIETA · Francia` · ISSN 1633-1311 · [ficha en Scopus](https://www.scopus.com/sourceid/21100202935)
+
+| Dato | Valor | |
+|---|---|:--:|
+| CiteScore 2025 | 2,6 · SNIP 0,497 | ✔ |
+| Cuartil SJR | **Q3** · SJR 0,236 — el único **Q3** de las candidatas disponibles, que es el cuartil que el autor pidió de preferencia | ✔ |
+| Revisión | Double-blind, ≥2 expertos independientes · ~2 meses | ✔ |
+| Periodicidad | **12 números al año** · **235 y 305 artículos** en 2024 y 2025 | ✔ |
+| APC | USD 850 por artículo aceptado | ✔ |
+| Plantilla | DOCX oficial disponible | ✔ |
+
+| Criterio | Puntaje | Justificación |
+|---|:--:|---|
+| Pertinencia temática | **7** | Su alcance declarado nombra minería de datos, aprendizaje automático y detección de fallos, pero **no** seguridad de redes. Lo que sí hace es publicarla: **11 artículos desde 2024** con detección de intrusiones en el título. Se puntúa por lo que publica, no por cómo se describe — el mismo criterio aplicado a las demás |
+| Visibilidad bibliométrica | **7** | CiteScore 2,6 y SJR 0,236. Por debajo de IJIES (3,3) y CIT (4,2), pero con **el cuartil verificado en la propia revista** |
+| Viabilidad editorial | **9** | Doce números al año, 305 artículos en 2025 y revisión double-blind declarada en unos dos meses: proceso rápido y capacidad amplia |
+| Costo y accesibilidad | **5** | USD 850, casi el triple que IJIES |
+| Compatibilidad formal | **8** | Plantilla disponible y sin límite estrecho de páginas declarado |
+
+### 9. International Journal of Advanced Computer Science and Applications (IJACSA) — 69.5 puntos
 
 `TheSAI · Reino Unido` · ISSN 2158-107X · [ficha en Scopus](https://www.scopus.com/sourceid/21100867241)
 
@@ -301,6 +324,7 @@ Los planes se asignan **solo entre las candidatas disponibles**, es decir, las q
 | — | CIT | 77.5 | Disponible | Puntúa menos, pero es la **única con los seis datos verificados en la propia revista**, la única con Q2 y factor de impacto de Web of Science confirmados, y la única que publica detección **y mitigación**. Su desventaja está declarada: 3–6 meses hasta la primera decisión. |
 | — | IJSSE | 75.5 | Ya en la lista de control | Encaje temático idéntico al de BEEI y ciclo editorial rápido, pero pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC duplica al de BEEI. Ya figura en la lista de control. |
 | — | ICS | 73.5 | Disponible | El mayor prestigio de la lista (h-index 60), pero su centro editorial se inclina a factores humanos y buena parte de sus datos sigue sin verificar. |
+| — | ISI | 72.0 | Disponible | El único **Q3** verificado de las disponibles, con 305 artículos al año y revisión de unos 2 meses. Su APC de USD 850 y su menor producción temática la dejan por debajo, pero cumple todos los criterios. |
 | — | IJACSA | 69.5 | Ya en la lista de control | La más rápida de todas, pero de alcance genérico, con el APC más alto y ya registrada en la lista de control. |
 
 ---
@@ -376,3 +400,96 @@ Esta matriz **no debe usarse tal cual el día del envío**. Falta:
 - **Aclarar con CIT cuál es su APC vigente y desde cuándo.** Hay dos cifras en circulación: su registro en DOAJ declara 360 EUR y sus instrucciones para autores declaran 600 EUR a partir del 1 de septiembre de 2026. Y preguntar si aplica por fecha de envío o por fecha de aceptación: La política dice «600 EUR a partir del 1 de septiembre de 2026» sin precisar el disparador; con una revisión de 3 a 6 meses, un envío de hoy se acepta después de esa fecha en cualquier escenario.
 - Pasar el manuscrito por un detector de texto generado por IA antes de enviarlo a CIT: por encima del 20 % la revista rechaza **sin derecho a revisión**.
 - Confirmar con la coordinación qué significa exactamente estar en la lista de control: si inhabilita la revista o solo la registra. Toda la sección 2 bis depende de esa respuesta.
+
+---
+
+## 9 · Cumplimiento de los criterios pedidos
+
+Los criterios no son los de la rúbrica de la sesión, sino los que fijó el autor a lo largo de la búsqueda. Se auditan uno por uno, sin agregarlos en un puntaje, porque **un criterio incumplido no se compensa con otro**.
+
+| Criterio | IJIES | IJIT | ISI |
+|---|:--:|:--:|:--:|
+| Cuartil Q3 preferido, Q2 aceptable | ~ | ~ | ✔ |
+| Tema afín a ciberseguridad o redes | ✔ | ✔ | ✔ |
+| Fácil de publicar | ✘ | ? | ? |
+| Fuera de la lista de revistas depredadoras | ✔ | ✔ | ✔ |
+| Fuera de la lista de control de la coordinación | ✔ | ✔ | ✔ |
+| Publica muchos artículos al año | ✔ | ✔ | ✔ |
+| Indexación vigente comprobada | ✘ | ✔ | ✔ |
+| Enlace y fuente por cada dato | ✔ | ✘ | ✔ |
+
+`✔` cumple · `~` cumple parcialmente · `?` sin dato · `✘` no cumple o sin confirmar
+
+### Detalle
+
+**Cuartil Q3 preferido, Q2 aceptable**
+
+- `~` **IJIES** — Q2 por CiteScore, verificado. **SJR sin verificar**
+- `~` **IJIT** — Q2 por SJR, fuente secundaria
+- `✔` **ISI** — **Q3 por SJR 0,236**, verificado — el único que da el cuartil preferido
+
+**Tema afín a ciberseguridad o redes**
+
+- `✔` **IJIES** — 86 artículos desde 2024 con detección de intrusiones, de anomalías o seguridad de redes en el título
+- `✔` **IJIT** — 50 artículos desde 2024
+- `✔` **ISI** — 11 artículos desde 2024, pese a que su alcance no nombra seguridad de redes
+
+**Fácil de publicar**
+
+- `✘` **IJIES** — **Tasa de aceptación declarada: 17,9 %.** Es el único dato real del conjunto, y dice que no es fácil
+- `?` **IJIT** — **Sin dato.** No publica su tasa de aceptación
+- `?` **ISI** — **Sin dato.** Solo consta la revisión double-blind de unos 2 meses
+
+**Fuera de la lista de revistas depredadoras**
+
+- `✔` **IJIES** — Comprobado contra las 2 779 entradas de la lista consultada
+- `✔` **IJIT** — Comprobado contra las 2 779 entradas de la lista consultada
+- `✔` **ISI** — Comprobado contra las 2 779 entradas de la lista consultada
+
+**Fuera de la lista de control de la coordinación**
+
+- `✔` **IJIES** — Comprobado contra las 17 revistas registradas
+- `✔` **IJIT** — Comprobado contra las 17 revistas registradas
+- `✔` **ISI** — Comprobado contra las 17 revistas registradas
+
+**Publica muchos artículos al año**
+
+- `✔` **IJIES** — **556 en 2025**
+- `✔` **IJIT** — **640 en 2025**
+- `✔` **ISI** — **305 en 2025**
+
+**Indexación vigente comprobada**
+
+- `✘` **IJIES** — **Sin confirmar.** Es el riesgo abierto: TELKOMNIKA, IJECE e IJEECS, del mismo perfil, cayeron de Scopus en 2025
+- `✔` **IJIT** — Springer Nature: sin riesgo de descontinuación
+- `✔` **ISI** — Ficha activa en Scopus, mismo editor que IJSSE
+
+**Enlace y fuente por cada dato**
+
+- `✔` **IJIES** — 5 de 6 datos en fuente primaria
+- `✘` **IJIT** — **0 de 6 en fuente primaria**: todo viene de agregadores
+- `✔` **ISI** — 6 de 6 datos en fuente primaria
+
+### Lectura honesta del cuadro
+
+**Ninguna de las tres cumple los ocho criterios.** Cada una falla en algo distinto, y eso es lo que las hace complementarias en vez de redundantes:
+
+| Revista | Lo que le falta |
+|---|---|
+| **IJIES** | Confirmar que sigue en Scopus. Es lo único que la separa de cumplirlo todo |
+| **IJIT** | Todo su expediente es de segunda mano: 0 de 6 datos en fuente primaria |
+| **ISI** | El APC más alto de las tres, USD 850, y la menor producción temática |
+
+**Dos criterios no se pueden cerrar con ninguna candidata.** El primero es «fácil de publicar»: solo IJIES publica su tasa de aceptación, y es del 17,9 %. Las otras dos no publican el dato, así que su casilla queda en `?` y no en `✔` — **no saber no es aprobar**. El segundo es el cuartil Q3 preferido: solo ISI lo tiene verificado; IJIES e IJIT son Q2, que el autor aceptó como alternativa pero no era su primera opción.
+
+> Si «fácil de publicar» pesa más que el volumen, la matriz **no tiene hoy evidencia para responder**, y pedir la tasa de aceptación por correo a IJIT e ISI es más útil que cualquier reordenamiento de puntajes.
+
+### Las que quedaron fuera por volumen
+
+| Revista | Puntaje | Artículos en 2025 |
+|---|---:|---:|
+| ISJ | 81.0 | **62** |
+| CIT | 77.5 | **35** |
+| ICS | 73.5 | **52** |
+
+Con el listón en 200 artículos al año, estas tres salen pese a puntuar alto. **ISJ puntúa 81,0 y publica 62 al año**: si el volumen dejara de ser un requisito, volvería al segundo puesto.
