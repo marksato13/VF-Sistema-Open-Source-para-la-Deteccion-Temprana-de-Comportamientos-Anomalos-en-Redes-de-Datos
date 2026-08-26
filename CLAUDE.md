@@ -11,7 +11,10 @@ heredadas de una generación anterior). **28 features definidas, 27 con
 variación observable**: diccionario científico completo —fórmula, denominador,
 comportamiento con denominador cero, fuente, rangos teórico y observado,
 observabilidad, coste y estado— generado desde el extractor congelado en
-`docs/fase02-features-multicapa/03-diccionario-multicapa-v2.md`.
+`docs/fase02-features-multicapa/03-diccionario-multicapa-v2.md`, y
+**datasheet canónico** con las once secciones de la rúbrica en
+`docs/dataset/DATASHEET_MULTILAYER_V2.md` — ambos generados desde los
+artefactos, no redactados a mano.
 `gates.pass=true` con gates de duplicados y constantes (`constants_declared`,
 `no_duplicate_crossing_label`, `no_duplicate_crossing_partition`,
 `duplicates_within_tolerance`), sin episodios repartidos entre particiones.

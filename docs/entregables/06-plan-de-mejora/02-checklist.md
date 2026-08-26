@@ -18,6 +18,7 @@ Evidencia: [`181-correccion-catalogo-auditoria-y-gates.md`](../../fase03-dataset
 - [x] **D-35 · Generadores de Word reproducibles** — el logo vivía en un directorio efímero y la carátula se omitía en silencio.
 - [x] **D-14 · Diccionario científico de las 28 variables**, generado desde el extractor congelado. Cierra un requisito explícito del jurado.
 - [x] **D-12 · `tls_handshake_failure_ratio_60s` declarada no observable** — se reportan **27 efectivas de 28 definidas**.
+- [x] **D-29 · Datasheet canónico** con las once secciones de la rúbrica, generado desde los artefactos y con guardián contra reportes desactualizados.
 
 SHA-256 de los CSV congelados idénticos antes y después.
 
@@ -61,8 +62,6 @@ Ninguna requiere capturar datos, reentrenar ni repetir campañas. **Cierran dos 
 - [ ] **D-17 · Redactar el manual de implementación técnica**
   Instalación reproducible desde cero; los comandos ya están probados en los despliegues documentados. → *Ficha ítem 2.6: de 2 a 3*
 - [ ] **D-04 · Prueba de significancia entre modelos** *(McNemar o bootstrap pareado)*
-- [ ] **D-29 · Redactar el datasheet canónico** `docs/dataset/DATASHEET_MULTILAYER_V2.md`
-  Once secciones de la rúbrica. Depende del diccionario completo (D-14).
 - [ ] **D-34 · Separar model card y system card** del datasheet
   Ensamblaje de material existente, no investigación nueva.
 

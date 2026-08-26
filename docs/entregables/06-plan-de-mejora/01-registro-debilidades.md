@@ -113,10 +113,15 @@ identidad formal del dataset es la peor puntuada: **2/6**.
 
 | ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
 |---|---|---|---|---|---|
-| **D-29** | **No existe un datasheet canónico del dataset** | La evidencia está repartida entre configuraciones, informes, código y artefactos locales; no hay documento único de procedencia, estructura, calidad y límites | 🔴 | 1 día | Redactar `docs/dataset/DATASHEET_MULTILAYER_V2.md` con las once secciones de la rúbrica |
 | **D-33** | Sin licencia, responsables, contacto ni política de uso | No hay licencia del dataset, retención, anonimización ni usos prohibidos declarados | 🟠 | Horas | Redactarlas; el tráfico es de laboratorio y sin datos personales, así que la política es corta pero debe existir |
 | **D-34** | Sin *model card* ni *system card* separadas del datasheet | Datos, modelo y sistema desplegado se describen mezclados en los mismos informes | 🟡 | Horas | Tres documentos: datasheet (datos), model card (OCSVM), system card (motor inline, bloqueo, FPR operativo) |
 
+> **Ya resuelto en esta fase:** `D-29` el datasheet canónico existe —
+> [`docs/dataset/DATASHEET_MULTILAYER_V2.md`](../../dataset/DATASHEET_MULTILAYER_V2.md),
+> generado desde los artefactos y con las once secciones de la rúbrica. Sus
+> secciones de licencia (`D-33`) y de publicación descargable (`D-08`) quedan
+> **declaradas como pendientes dentro del propio documento**, no ocultas.
+>
 > **Ya resuelto en esta fase**, con evidencia en
 > [`181-correccion-catalogo-auditoria-y-gates.md`](../../fase03-dataset/181-correccion-catalogo-auditoria-y-gates.md):
 >
