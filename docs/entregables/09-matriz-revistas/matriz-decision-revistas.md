@@ -98,15 +98,15 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 ## 4 · Matriz
 
-| Criterio (peso) | IJIES | BEEI | IJIT | ISJ | CIT | IJSSE | ICS | ISI | IJACSA |
+| Criterio (peso) | IJIES | BEEI | IJIT | ISJ | CIT | IJSSE | ICS | IJACSA | ISI |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Pertinencia temática (30 %) | 9 | 9 | 8 | 9 | 9 | 9 | 6 | 7 | 6 |
-| Visibilidad bibliométrica (25 %) | 8 | 8 | 8 | 8 | 9 | 6 | 9 | 7 | 8 |
-| Viabilidad editorial (20 %) | 10 | 9 | 8 | 6 | 5 | 9 | 6 | 9 | 10 |
-| Costo y accesibilidad (15 %) | 9 | 8 | 10 | 10 | 6 | 5 | 10 | 5 | 3 |
-| Compatibilidad formal (10 %) | 7 | 7 | 7 | 7 | 9 | 8 | 6 | 8 | 7 |
-| **PUNTAJE PONDERADO** | **87.5** | **84.0** | **82.0** | **81.0** | **77.5** | **75.5** | **73.5** | **72.0** | **69.5** |
-| Datos con fuente primaria | 5/6 | 5/6 | 0/6 | 0/6 | 6/6 | 5/6 | 0/6 | 6/6 | 0/6 |
+| Pertinencia temática (30 %) | 9 | 9 | 8 | 9 | 9 | 9 | 6 | 6 | 7 |
+| Visibilidad bibliométrica (25 %) | 8 | 8 | 8 | 8 | 9 | 6 | 9 | 8 | 7 |
+| Viabilidad editorial (20 %) | 10 | 9 | 8 | 6 | 5 | 9 | 6 | 10 | 8 |
+| Costo y accesibilidad (15 %) | 9 | 8 | 10 | 10 | 6 | 5 | 10 | 3 | 5 |
+| Compatibilidad formal (10 %) | 7 | 7 | 7 | 7 | 9 | 8 | 6 | 7 | 7 |
+| **PUNTAJE PONDERADO** | **87.5** | **84.0** | **82.0** | **81.0** | **77.5** | **75.5** | **73.5** | **69.5** | **69.0** |
+| Datos con fuente primaria | 5/6 | 5/6 | 0/6 | 0/6 | 6/6 | 5/6 | 0/6 | 0/6 | 5/6 |
 
 ---
 
@@ -259,28 +259,7 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción |
 | Compatibilidad formal | **6** | Requisitos sin verificar |
 
-### 8. Ingénierie des Systèmes d'Information (ISI) — 72.0 puntos
-
-`IIETA · Francia` · ISSN 1633-1311 · [ficha en Scopus](https://www.scopus.com/sourceid/21100202935)
-
-| Dato | Valor | |
-|---|---|:--:|
-| CiteScore 2025 | 2,6 · SNIP 0,497 | ✔ |
-| Cuartil SJR | **Q3** · SJR 0,236 — el único **Q3** de las candidatas disponibles, que es el cuartil que el autor pidió de preferencia | ✔ |
-| Revisión | Double-blind, ≥2 expertos independientes · ~2 meses | ✔ |
-| Periodicidad | **12 números al año** · **235 y 305 artículos** en 2024 y 2025 | ✔ |
-| APC | USD 850 por artículo aceptado | ✔ |
-| Plantilla | DOCX oficial disponible | ✔ |
-
-| Criterio | Puntaje | Justificación |
-|---|:--:|---|
-| Pertinencia temática | **7** | Su alcance declarado nombra minería de datos, aprendizaje automático y detección de fallos, pero **no** seguridad de redes. Lo que sí hace es publicarla: **11 artículos desde 2024** con detección de intrusiones en el título. Se puntúa por lo que publica, no por cómo se describe — el mismo criterio aplicado a las demás |
-| Visibilidad bibliométrica | **7** | CiteScore 2,6 y SJR 0,236. Por debajo de IJIES (3,3) y CIT (4,2), pero con **el cuartil verificado en la propia revista** |
-| Viabilidad editorial | **9** | Doce números al año, 305 artículos en 2025 y revisión double-blind declarada en unos dos meses: proceso rápido y capacidad amplia |
-| Costo y accesibilidad | **5** | USD 850, casi el triple que IJIES |
-| Compatibilidad formal | **8** | Plantilla disponible y sin límite estrecho de páginas declarado |
-
-### 9. International Journal of Advanced Computer Science and Applications (IJACSA) — 69.5 puntos
+### 8. International Journal of Advanced Computer Science and Applications (IJACSA) — 69.5 puntos
 
 `TheSAI · Reino Unido` · ISSN 2158-107X · [ficha en Scopus](https://www.scopus.com/sourceid/21100867241)
 
@@ -300,6 +279,27 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | Viabilidad editorial | **10** | Mensual y con decisión declarada en unas tres semanas: la más rápida |
 | Costo y accesibilidad | **3** | GBP 800, el más alto de todas las candidatas |
 | Compatibilidad formal | **7** | Plantilla propia obligatoria, que exige reformatear |
+
+### 9. Ingénierie des Systèmes d'Information (ISI) — 69.0 puntos
+
+`IIETA · Francia` · ISSN 1633-1311 · [ficha en Scopus](https://www.scopus.com/sourceid/21100202935)
+
+| Dato | Valor | |
+|---|---|:--:|
+| CiteScore 2025 | 2,6 · SNIP 0,497 | ✔ |
+| Cuartil SJR | **Q3** · SJR 0,236 — el único **Q3** de las candidatas disponibles, que es el cuartil que el autor pidió de preferencia | ✔ |
+| Revisión | Double-blind, ≥2 expertos independientes. **No declara plazo**: su página de revisión describe el proceso y las cuatro decisiones posibles, pero ningún tiempo | ? |
+| Periodicidad | **12 números al año** · **235 y 305 artículos** en 2024 y 2025 | ✔ |
+| APC | USD 850 por artículo aceptado | ✔ |
+| Plantilla | DOCX oficial · **extensión preferida de 6 a 12 páginas** · **mínimo 20 referencias** | ✔ |
+
+| Criterio | Puntaje | Justificación |
+|---|:--:|---|
+| Pertinencia temática | **7** | Su alcance declarado nombra minería de datos, aprendizaje automático y detección de fallos, pero **no** seguridad de redes. Lo que sí hace es publicarla: **11 artículos desde 2024** con detección de intrusiones en el título. Se puntúa por lo que publica, no por cómo se describe — el mismo criterio aplicado a las demás |
+| Visibilidad bibliométrica | **7** | CiteScore 2,6 y SJR 0,236. Por debajo de IJIES (3,3) y CIT (4,2), pero con **el cuartil verificado en la propia revista** |
+| Viabilidad editorial | **8** | Doce números al año y 305 artículos en 2025: capacidad amplia. No llega a 9 porque **no declara plazo de revisión**, y a un dato desconocido no se le da la nota máxima |
+| Costo y accesibilidad | **5** | USD 850, casi el triple que IJIES |
+| Compatibilidad formal | **7** | **Extensión preferida de 6 a 12 páginas**, más estrecha de lo que se había registrado y menos de la mitad que CIT. El mínimo de 20 referencias no es obstáculo para este artículo |
 
 > `✔` verificado en fuente primaria · `~` fuente secundaria · `?` pendiente
 
@@ -324,8 +324,8 @@ Los planes se asignan **solo entre las candidatas disponibles**, es decir, las q
 | — | CIT | 77.5 | Disponible | Puntúa menos, pero es la **única con los seis datos verificados en la propia revista**, la única con Q2 y factor de impacto de Web of Science confirmados, y la única que publica detección **y mitigación**. Su desventaja está declarada: 3–6 meses hasta la primera decisión. |
 | — | IJSSE | 75.5 | Ya en la lista de control | Encaje temático idéntico al de BEEI y ciclo editorial rápido, pero pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC duplica al de BEEI. Ya figura en la lista de control. |
 | — | ICS | 73.5 | Disponible | El mayor prestigio de la lista (h-index 60), pero su centro editorial se inclina a factores humanos y buena parte de sus datos sigue sin verificar. |
-| — | ISI | 72.0 | Disponible | El único **Q3** verificado de las disponibles, con 305 artículos al año y revisión de unos 2 meses. Su APC de USD 850 y su menor producción temática la dejan por debajo, pero cumple todos los criterios. |
 | — | IJACSA | 69.5 | Ya en la lista de control | La más rápida de todas, pero de alcance genérico, con el APC más alto y ya registrada en la lista de control. |
+| — | ISI | 69.0 | Disponible | El único **Q3** verificado de las disponibles, con 305 artículos al año y revisión de unos 2 meses. Su APC de USD 850 y su menor producción temática la dejan por debajo, pero cumple todos los criterios. |
 
 ---
 
@@ -416,7 +416,7 @@ Los criterios no son los de la rúbrica de la sesión, sino los que fijó el aut
 | Fuera de la lista de control de la coordinación | ✔ | ✔ | ✔ |
 | Publica muchos artículos al año | ✔ | ✔ | ✔ |
 | Indexación vigente comprobada | ✘ | ✔ | ✔ |
-| Enlace y fuente por cada dato | ✔ | ✘ | ✔ |
+| Enlace y fuente por cada dato | ✔ | ✘ | ~ |
 
 `✔` cumple · `~` cumple parcialmente · `?` sin dato · `✘` no cumple o sin confirmar
 
@@ -468,7 +468,7 @@ Los criterios no son los de la rúbrica de la sesión, sino los que fijó el aut
 
 - `✔` **IJIES** — 5 de 6 datos en fuente primaria
 - `✘` **IJIT** — **0 de 6 en fuente primaria**: todo viene de agregadores
-- `✔` **ISI** — 6 de 6 datos en fuente primaria
+- `~` **ISI** — 5 de 6 en fuente primaria: **no declara plazo de revisión**
 
 ### Lectura honesta del cuadro
 

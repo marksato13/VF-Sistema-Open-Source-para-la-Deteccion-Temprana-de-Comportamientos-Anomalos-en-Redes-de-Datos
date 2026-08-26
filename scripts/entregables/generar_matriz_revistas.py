@@ -297,10 +297,13 @@ CANDIDATAS = [
             "CiteScore 2025": ("2,6 · SNIP 0,497", "✔"),
             "Cuartil SJR": ("**Q3** · SJR 0,236 — el único **Q3** de las candidatas disponibles, que "
                             "es el cuartil que el autor pidió de preferencia", "✔"),
-            "Revisión": ("Double-blind, ≥2 expertos independientes · ~2 meses", "✔"),
+            "Revisión": ("Double-blind, ≥2 expertos independientes. **No declara plazo**: su "
+                         "página de revisión describe el proceso y las cuatro decisiones posibles, "
+                         "pero ningún tiempo", "?"),
             "Periodicidad": ("**12 números al año** · **235 y 305 artículos** en 2024 y 2025", "✔"),
             "APC": ("USD 850 por artículo aceptado", "✔"),
-            "Plantilla": ("DOCX oficial disponible", "✔"),
+            "Plantilla": ("DOCX oficial · **extensión preferida de 6 a 12 páginas** · **mínimo "
+                          "20 referencias**", "✔"),
         },
         "puntajes": {
             "pertinencia": (7, "Su alcance declarado nombra minería de datos, aprendizaje automático "
@@ -310,10 +313,13 @@ CANDIDATAS = [
                                "se describe — el mismo criterio aplicado a las demás"),
             "visibilidad": (7, "CiteScore 2,6 y SJR 0,236. Por debajo de IJIES (3,3) y CIT (4,2), "
                                "pero con **el cuartil verificado en la propia revista**"),
-            "viabilidad": (9, "Doce números al año, 305 artículos en 2025 y revisión double-blind "
-                              "declarada en unos dos meses: proceso rápido y capacidad amplia"),
+            "viabilidad": (8, "Doce números al año y 305 artículos en 2025: capacidad amplia. No "
+                              "llega a 9 porque **no declara plazo de revisión**, y a un dato "
+                              "desconocido no se le da la nota máxima"),
             "costo": (5, "USD 850, casi el triple que IJIES"),
-            "formato": (8, "Plantilla disponible y sin límite estrecho de páginas declarado"),
+            "formato": (7, "**Extensión preferida de 6 a 12 páginas**, más estrecha de lo que se "
+                           "había registrado y menos de la mitad que CIT. El mínimo de 20 "
+                           "referencias no es obstáculo para este artículo"),
         },
     },
 ]
@@ -646,7 +652,7 @@ def main() -> None:
         ("Enlace y fuente por cada dato",
          {"IJIES": ("✔", "5 de 6 datos en fuente primaria"),
           "IJIT": ("✘", "**0 de 6 en fuente primaria**: todo viene de agregadores"),
-          "ISI": ("✔", "6 de 6 datos en fuente primaria")}),
+          "ISI": ("~", "5 de 6 en fuente primaria: **no declara plazo de revisión**")}),
     ]
     a("| Criterio | IJIES | IJIT | ISI |\n|---|:--:|:--:|:--:|\n")
     for nom, d in CRIT:

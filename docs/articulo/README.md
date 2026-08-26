@@ -29,7 +29,7 @@ Tras exigir **volumen alto** además de todo lo anterior:
 |---|---|---|---:|---|---|---:|
 | **A** | [Int. J. of Intelligent Engineering and Systems](https://inass.org/publications/) | INASS · Japón | **87,5** | **Q2** (CiteScore 3,3) | **USD 300** → 400 en octubre | **556** |
 | **B** | [Int. J. of Information Technology](https://link.springer.com/journal/41870) | **Springer Nature** · BVICAM | **82,0** | **Q2** (SJR) | **Ninguno** por suscripción | **640** |
-| **C** | [Ingénierie des Systèmes d'Information](https://www.iieta.org/Journals/ISI) | IIETA | 72,0 | **Q3** (SJR 0,236) | USD 850 | **305** |
+| **C** | [Ingénierie des Systèmes d'Information](https://www.iieta.org/Journals/ISI) | IIETA | 69,0 | **Q3** (SJR 0,236) | USD 850 | **305** |
 
 Ninguna está en tu Excel ni en la lista de depredadoras.
 
@@ -48,7 +48,7 @@ de ser un requisito: **ISJ puntúa 81,0**, más que ISI.
 | Fuera de tu lista de control | ✔ | ✔ | ✔ |
 | Publica muchos artículos al año | ✔ | ✔ | ✔ |
 | **Indexación vigente comprobada** | ✘ | ✔ | ✔ |
-| Enlace y fuente por cada dato | ✔ | ✘ | ✔ |
+| Enlace y fuente por cada dato | ✔ | ✘ | ~ |
 
 `✔` cumple · `~` parcial · `?` sin dato · `✘` no cumple o sin confirmar
 
@@ -58,7 +58,7 @@ de ser un requisito: **ISJ puntúa 81,0**, más que ISI.
 |---|---|
 | **IJIES** | Confirmar que sigue en Scopus — es lo único que la separa de cumplirlo todo |
 | **IJIT** | Todo su expediente es de segunda mano: 0 de 6 datos en fuente primaria |
-| **ISI** | El APC más alto de las tres (USD 850) y la menor producción temática |
+| **ISI** | El APC más alto (USD 850), la menor producción temática, **6–12 páginas** de extensión y **sin plazo de revisión declarado**. Es Plan C **por eliminación**: la única otra candidata que supera el listón de volumen |
 
 **Dos criterios no se pueden cerrar con ninguna.**
 
@@ -354,6 +354,25 @@ falso positivo operativo, que es justamente la contribución.
 | Sistema desplegado | [`../dataset/SYSTEM_CARD_MOTOR.md`](../dataset/SYSTEM_CARD_MOTOR.md) |
 | Ablación y significancia | [`../fase04-modelado/07-ablacion-multicapa.md`](../fase04-modelado/07-ablacion-multicapa.md) · [`08-significancia-entre-modelos.md`](../fase04-modelado/08-significancia-entre-modelos.md) |
 
+## Verificación cruzada con Codex — 26 de agosto de 2026
+
+Codex ejecutó el encargo de verificación en fuente primaria. **Respetó la regla
+que lo definía**: ante tres bloqueos de acceso no inventó ningún dato. Su
+informe quedó en un clon temporal de Windows y no llegó al repositorio, pero
+uno de sus hallazgos **corrigió dos errores míos** sobre ISI:
+
+| Campo | Antes | Después |
+|---|---|---|
+| Extensión | «sin límite estrecho declarado» | **6–12 páginas** · mínimo 20 referencias |
+| Revisión | «double-blind · ~2 meses» ✔ | «double-blind · **no declara plazo**» ? |
+| Puntaje | 72,0 | **69,0** |
+
+El «~2 meses» era un arrastre de la ficha de IJSSE, revista del mismo editor:
+ISI nunca declaró ese plazo.
+
+Revisión completa, con las dos afirmaciones suyas que refuté:
+[`../revisiones-claude/2026-08-26-revision-verificacion-revistas-codex.md`](../revisiones-claude/2026-08-26-revision-verificacion-revistas-codex.md)
+
 ## Correcciones de datos registradas
 
 | Fecha | Dato | Valor anterior | Valor verificado |
@@ -363,6 +382,8 @@ falso positivo operativo, que es justamente la contribución.
 | 26/08/2026 | APC de CIT | «Diamond OA, sin APC» | **600 EUR desde el 1 de septiembre de 2026** — [instrucciones oficiales](https://cit.iict.bas.bg/cit-inst-authors.html). DOAJ registra 360 EUR: sin resolver |
 | 26/08/2026 | Capacidad de ISJ | ≈21 artículos al año | **35–38** — [índice de dblp](https://dblp.org/db/journals/isjgp/index.html). Este error mantenía a ISJ fuera del primer puesto |
 | 26/08/2026 | Capacidad de CIT | ≈55 artículos al año | **42–46** — conteo de los PDF de cada número |
+| 26/08/2026 | Extensión de ISI | «sin límite estrecho declarado» | **6–12 páginas** — [instrucciones oficiales](https://www.iieta.org/journals/isi/Instructions%20for%20Authors). Hallazgo de Codex |
+| 26/08/2026 | Plazo de revisión de ISI | «~2 meses» | **No lo declara.** Era un arrastre de la ficha de IJSSE |
 
 Los tres errores vinieron de **extractos de búsqueda o agregadores**, no de las
 páginas oficiales. El de CIT es el más instructivo: un agregador la describía
