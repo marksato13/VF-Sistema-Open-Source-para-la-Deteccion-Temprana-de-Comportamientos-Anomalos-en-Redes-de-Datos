@@ -11,7 +11,8 @@ APLICA) y un **entregable autónomo** (momento CREA). Solo el segundo se sube.
 |---|---|---|---|---|
 | **01** · Criterios y técnicas para la evaluación de resultados | Informe de evaluación crítica | PDF **2–4 pp** | [`01-evaluacion-critica/`](01-evaluacion-critica/) | ✅ **Listo** (~3 pp) |
 | **02** · Métodos de validación: confiabilidad, replicabilidad y pertinencia | **Plan de validación de resultados** | PDF **1–2 pp** | [`07-plan-de-validacion/`](07-plan-de-validacion/) | ✅ **Listo** (~2 pp) |
-| **03** · Estrategias para identificar y mapear revistas científicas | *(por confirmar)* | — | — | — |
+| **03** · Estrategias para identificar y mapear revistas científicas | Mapa de revistas | — | [`09-matriz-revistas/`](09-matriz-revistas/) | ⚠️ Absorbido en la matriz de la Sesión 04 |
+| **04** · Selección de la revista objetivo | **Matriz de decisión + justificación** | PDF, justificación de ½–1 p | [`09-matriz-revistas/`](09-matriz-revistas/) | ✅ **Listo** (~2,6 pp) |
 
 Además, el taller en clase de la Sesión 02 usa una **ficha de auditoría de 6
 criterios sobre 20 puntos**. La ficha de [`04-ficha-auditoria/`](04-ficha-auditoria/)
@@ -36,6 +37,7 @@ inicio sin retirar el análisis extenso.
 | [`05-ppi/`](05-ppi/) | PPI — Proyecto de Investigación | **Pendiente** | Documento del proyecto. Debe subirse actualizado (versión 2) al sistema LAM Research |
 | [`diagramas/`](diagramas/) | Diagramas editables (draw.io) | — | Fuentes editables con iconos, para el PPI y los demás entregables |
 | [`06-plan-de-mejora/`](06-plan-de-mejora/) | Plan de mejora del producto | **Listo** | Registro único de las debilidades abiertas con evidencia, impacto, esfuerzo y mitigación, más el checklist de ejecución |
+| [`09-matriz-revistas/`](09-matriz-revistas/) | Matriz de decisión de revistas | **Listo** · *entregable del curso* | **Sesión 04.** Cinco candidatas con filtro de legitimidad aplicado antes de puntuar, criterios ponderados y Plan A/B/C. Cada celda con su fuente y estado de verificación |
 | [`08-validacion-usuarios/`](08-validacion-usuarios/) | Validación con usuarios (SUS) | **Instrumento listo, sin aplicar** | Cuestionario, guion de observación, plantilla de captura y script de cálculo. Cierra a la vez el criterio 6 de la ficha, el eje de pertinencia del plan y `D-18` |
 | [`07-plan-de-validacion/`](07-plan-de-validacion/) | Plan de validación de resultados | **Listo** · *entregable del curso* | **Sesión 02.** Plan prospectivo de 1–2 páginas con método y umbral por cada eje —confiabilidad, replicabilidad, pertinencia— y cronograma |
 | — | Manual de implementación técnica | Pendiente | |
@@ -64,7 +66,10 @@ docs/entregables/
 ├── 07-plan-de-validacion/
 │   ├── plan-de-validacion.md
 │   └── Plan-de-validacion-de-resultados.docx
-└── 08-validacion-usuarios/          instrumento SUS, guion y plantilla
+├── 08-validacion-usuarios/          instrumento SUS, guion y plantilla
+└── 09-matriz-revistas/
+    ├── matriz-decision-revistas.md   ← detallada, con ficha por candidata
+    └── Matriz-decision-revistas.docx ← precisa, ~2,6 pp
 ```
 
 **Figuras y diagramas son cosas distintas.** `graficas/` contiene lo que se *genera* con matplotlib desde los datos reales; se regenera con un script y no se edita a mano. `diagramas/` contiene lo que se *dibuja*: topologías, arquitecturas y flujos, en draw.io con iconos. Las figuras viven en una sola carpeta y no dentro de cada entregable porque los informes 01 y 02 comparten varias; los documentos las referencian como `../graficas/`.
@@ -77,6 +82,7 @@ docs/entregables/
 .venv/bin/python3 scripts/entregables/generar_informe_word.py   # Word del entregable 02
 .venv/bin/python3 scripts/entregables/generar_ficha_word.py     # Word del entregable 04
 .venv/bin/python3 scripts/entregables/generar_plan_validacion_word.py  # Word del entregable 07
+.venv/bin/python3 scripts/entregables/generar_matriz_revistas.py       # matriz de revistas (.md y Word)
 ```
 
 ## Estructura del entregable 01

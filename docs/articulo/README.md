@@ -10,8 +10,8 @@ depredadoras**.
 
 | | Revista | Cuartil | Artículos/año | APC |
 |---|---|---|---:|---|
-| **1** | [Bulletin of Electrical Engineering and Informatics](https://beei.org/index.php/EEI) · IAES | Q3 | ≈360 | USD 415 |
-| **2** | [International Journal of Safety and Security Engineering](https://www.iieta.org/Journals/IJSSE) · IIETA | Q3 | 174 | USD 700 |
+| **1** | [Bulletin of Electrical Engineering and Informatics](https://beei.org/index.php/EEI) · IAES | Q3 (SJR, por confirmar) · Q1 por CiteScore | ≈360 | USD 415 |
+| **2** | [International Journal of Safety and Security Engineering](https://www.iieta.org/Journals/IJSSE) · IIETA | Q3 (SJR, por confirmar) | 174 | **USD 850** |
 
 > En BEEI el artículo de **autor único cuesta el doble** (USD 830). Firmar en
 > coautoría no es solo correcto: es más barato.
@@ -81,3 +81,14 @@ falso positivo operativo, que es justamente la contribución.
 | Modelo | [`../dataset/MODEL_CARD_OCSVM.md`](../dataset/MODEL_CARD_OCSVM.md) |
 | Sistema desplegado | [`../dataset/SYSTEM_CARD_MOTOR.md`](../dataset/SYSTEM_CARD_MOTOR.md) |
 | Ablación y significancia | [`../fase04-modelado/07-ablacion-multicapa.md`](../fase04-modelado/07-ablacion-multicapa.md) · [`08-significancia-entre-modelos.md`](../fase04-modelado/08-significancia-entre-modelos.md) |
+
+## Corrección de datos — 26 de agosto de 2026
+
+| Dato | Valor anterior | Valor verificado | Fuente |
+|---|---|---|---|
+| APC de IJSSE | USD 700 | **USD 850** | [Página oficial de APC](https://www.iieta.org/journals/ijsse/Article%20Processing%20Charge), consultada el 26/08/2026 |
+| Cuartil de BEEI | «Q3» a secas | **Q1 por CiteScore · Q3 por SJR** | Son rankings distintos y no deben combinarse |
+
+El valor de USD 700 provenía de un extracto de búsqueda, no de la página
+oficial. **CiteScore, percentil Scopus y cuartil SJR son tres indicadores
+distintos** y presentarlos como equivalentes es un error de método.
