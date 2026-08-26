@@ -18,6 +18,7 @@ Evidencia: [`181-correccion-catalogo-auditoria-y-gates.md`](../../fase03-dataset
 - [x] **D-35 · Generadores de Word reproducibles** — el logo vivía en un directorio efímero y la carátula se omitía en silencio.
 - [x] **D-14 · Diccionario científico de las 28 variables**, generado desde el extractor congelado. Cierra un requisito explícito del jurado.
 - [x] **D-12 · `tls_handshake_failure_ratio_60s` declarada no observable** — se reportan **27 efectivas de 28 definidas**.
+- [x] **D-02 · Ablación por capas y comparación 14 vs 28**, con McNemar exacto y verificación de que la configuración completa reproduce el modelo congelado bit a bit.
 - [x] **D-34 · Model card y system card** separadas del datasheet, generadas desde el manifiesto y las corridas de F6.
 - [x] **D-08 · Dataset, manifiesto y los 7 modelos candidatos publicados** (5,7 MB), verificables con `sha256sum -c`.
 - [x] **D-33 · Licencias, responsables, contacto, retención y usos prohibidos** declarados.
@@ -56,8 +57,6 @@ Ninguna requiere capturar datos, reentrenar ni repetir campañas. **Cierran dos 
 
 ## 📐 Bloque 2 — Uno o dos días
 
-- [ ] **D-02 · Ejecutar la ablación por capas L3/L4/L7 y la comparación 14 vs 28 variables**
-  Requisito explícito del jurado, aún sin ejecutar. Dataset, modelo y protocolo ya existen: es un script de comparación, no una campaña.
 - [ ] **D-17 · Redactar el manual de implementación técnica**
   Instalación reproducible desde cero; los comandos ya están probados en los despliegues documentados. → *Ficha ítem 2.6: de 2 a 3*
 - [ ] **D-04 · Prueba de significancia entre modelos** *(McNemar o bootstrap pareado)*

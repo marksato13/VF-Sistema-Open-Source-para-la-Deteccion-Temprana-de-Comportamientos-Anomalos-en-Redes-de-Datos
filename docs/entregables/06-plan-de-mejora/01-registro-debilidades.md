@@ -26,7 +26,6 @@ Es la dimensión más débil del proyecto. No afecta al funcionamiento del siste
 
 | ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
 |---|---|---|---|---|---|
-| **D-02** | **La ablación por capas L3/L4/L7 nunca se ejecutó** | Requisito explícito del jurado, aún marcado "Planificado". No existe script ni artefacto. Ninguna de las 28 variables ha demostrado que se gana su lugar | 🔴 | 1–2 días | Ejecutar las cuatro configuraciones (Base 14 · +L3 · +L3+L4 · Multicapa) y la retirada por grupo. **No requiere campañas nuevas** |
 | **D-09** | División por índice de repetición, sin jornada de holdout externa | R01–R03 entrenamiento, R04 validación, R05 prueba: los 44 perfiles aparecen en las tres particiones. Se mide repetibilidad, no generalización | 🟠 | Días | Capturar una jornada nueva y reservarla sin participar en entrenamiento ni calibración |
 | **D-10** | Seis escenarios legítimos exigidos no existen | Faltan SSH, SCP/SFTP, SMB, respaldo, streaming y actualizaciones; tampoco hay captura multi-sistema-operativo | 🟡 | Días | Capturarlos, o declararlos como límite de alcance si el jurado no los exige |
 | **D-25** | Tamaño muestral por debajo de la meta declarada | 1 373 ventanas frente a la meta de 2 000–3 000; ~6 ventanas por episodio, luego no son independientes | 🟡 | Semanas | Reportar el tamaño efectivo por episodio junto al de ventanas, y declarar la brecha |
@@ -35,6 +34,15 @@ Es la dimensión más débil del proyecto. No afecta al funcionamiento del siste
 > declarada **no observable**; el corpus se reporta como **27 variables efectivas
 > de 28 definidas**. Evidencia:
 > [`03-diccionario-multicapa-v2.md`](../../fase02-features-multicapa/03-diccionario-multicapa-v2.md).
+>
+> **Ya resuelto en esta fase:** `D-02` la ablación por capas y la comparación
+> 14 vs 28 están ejecutadas —
+> [`07-ablacion-multicapa.md`](../../fase04-modelado/07-ablacion-multicapa.md).
+> La expansión multicapa queda justificada con significancia (p < 0,001), pero
+> **el estudio también muestra que las 8 variables L7 nuevas no aportan
+> detección medible y cuestan 5 falsos positivos**. No se promueve la
+> configuración de 20 variables: hacerlo repetiría la selección posterior que
+> `D-01` declara.
 >
 > **Ya resuelto en esta fase:** `D-26` los gates no cubrían duplicados ni
 > constantes — se añadieron cuatro (`constants_declared`,

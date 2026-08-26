@@ -177,7 +177,7 @@ def model_card(d: dict) -> str:
         "**Sin análisis de estabilidad** del OCSVM: las diez semillas registradas cubren Isolation Forest, no el modelo elegido. El umbral 1,8126 se reporta sin banda de variabilidad.",
         "**Ajustado sin ponderación** pese a que 5 de 132 episodios concentran el 31,7 % de las filas de entrenamiento, y los cinco son transferencias lentas de 1 GB.",
         "**Sin prueba de significancia** entre modelos: 88,3 % y 57,5 % se comparan como puntos.",
-        "**La ablación por capas no se ha ejecutado**: ninguna de las 28 variables ha demostrado individualmente su aporte, y hay seis pares con correlación por encima de 0,8.",
+        "**La ablación por capas ya está ejecutada** y matiza este contrato: la expansión multicapa es significativa (p < 0,001), pero las 8 variables L7 nuevas **no aportan detección medible y cuestan 5 falsos positivos**. Ver [`07-ablacion-multicapa.md`](../fase04-modelado/07-ablacion-multicapa.md).",
         "**Un solo punto de operación.** No hay segundo umbral, así que la respuesta es binaria: permitir o bloquear.",
     ], 1):
         a(f"| {i} | {s} |\n")
