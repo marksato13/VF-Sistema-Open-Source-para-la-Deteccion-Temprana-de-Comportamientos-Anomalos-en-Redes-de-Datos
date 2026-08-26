@@ -24,7 +24,7 @@ from docx.shared import Cm, Pt, RGBColor
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _docx_estilo import rematar
+from _docx_estilo import rematar, bloque_enlaces
 
 REPO = Path(__file__).resolve().parents[2]
 GRAF = REPO / "docs" / "entregables" / "graficas"
@@ -35,7 +35,7 @@ LOGO = REPO / "docs" / "entregables" / "assets" / "logo-upeu.png"
 # Paleta coherente con las gráficas del informe
 INK = RGBColor(0x13, 0x1B, 0x2E)
 DIM = RGBColor(0x5B, 0x6B, 0x8C)
-ACCENT = RGBColor(0x0F, 0x8A, 0x7D)
+ACCENT = RGBColor(0x1F, 0x4E, 0x79)
 OK = RGBColor(0x15, 0x80, 0x3D)
 AMBER = RGBColor(0xB4, 0x53, 0x09)
 DANGER = RGBColor(0xB9, 0x1C, 0x1C)
@@ -43,7 +43,7 @@ WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 
 # Rellenos de celda (hex sin #)
 F_OK, F_AMBER, F_DANGER = "E0F3E6", "FDECD2", "FBE3E1"
-F_HEAD, F_ZEBRA = "0F8A7D", "F4F6FB"
+F_HEAD, F_ZEBRA = "1F4E79", "EEF3FA"
 
 
 # --------------------------------------------------------------- utilidades --
@@ -112,7 +112,7 @@ def h1(doc, texto, numero=None):
     bottom = OxmlElement("w:bottom")
     bottom.set(qn("w:val"), "single")
     bottom.set(qn("w:sz"), "8")
-    bottom.set(qn("w:color"), "0F8A7D")
+    bottom.set(qn("w:color"), "1F4E79")
     b.append(bottom)
     pPr.append(b)
     return p
@@ -171,7 +171,7 @@ def figura(doc, nombre, pie, ancho=15.5):
     r.font.color.rgb = DIM
 
 
-def caja(doc, titulo, texto, color_borde="0F8A7D", fill="EEF1F8"):
+def caja(doc, titulo, texto, color_borde="1F4E79", fill="F2F6FC"):
     """Recuadro destacado, implementado como tabla de una celda."""
     t = doc.add_table(rows=1, cols=1)
     t.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -446,9 +446,16 @@ def main() -> int:
     ]:
         vineta(doc, ref)
 
-    parrafo(doc, "Análisis completo, con las 11 figuras y la comparación de los 7 modelos, en "
-                 "docs/entregables/01-evaluacion-critica/ del repositorio del proyecto.",
-            size=7.8, italic=True)
+    bloque_enlaces(doc, "Evidencia en el repositorio", [
+        ("Informe detallado de validación y confiabilidad",
+         "docs/entregables/02-validacion-y-confiabilidad/informe-validacion-confiabilidad.md"),
+        ("Análisis completo con las 11 figuras y los 7 modelos",
+         "docs/entregables/01-evaluacion-critica/informe-evaluacion-critica.md"),
+        ("Datasheet del corpus: procedencia, calidad y límites",
+         "docs/dataset/DATASHEET_MULTILAYER_V2.md"),
+        ("Validación cruzada por episodio y banda del umbral",
+         "docs/fase04-modelado/09-validacion-cruzada-y-estabilidad.md"),
+    ])
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     rematar(doc,

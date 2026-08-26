@@ -212,6 +212,13 @@ El requisito pedía comparar cuatro configuraciones (Base 14 · +L3 · +L3+L4 ·
 Las 10 semillas, la ponderación por episodio y el colapso de duplicados se aplicaron **solo a Isolation Forest** (`manifest.stability` no contiene `ocsvm_scaled`). OCSVM además se ajustó **sin ponderación**, pese al desbalance documentado: *"5/132 episodios (3,8 %) concentran 261/824 filas train (31,7 %)"*.
 → *Solución:* estabilidad por submuestreo — horas.
 
+> **✅ Resuelta.** Se atacó por dos vías, en [`09-validacion-cruzada-y-estabilidad.md`](../../fase04-modelado/09-validacion-cruzada-y-estabilidad.md):
+>
+> - **Validación cruzada agrupada por episodio**, 5 pliegues. La detección media (85,5 %) **cae dentro** del intervalo de Wilson de la evaluación de un solo paso [82,7 – 92,2]: el resultado no depende de la partición concreta que se eligió.
+> - **Remuestreo del umbral por episodio**, B = 1 000. Coeficiente de variación **4,10 %**, por debajo del 5 % declarado de antemano, con banda **[1,6496 – 1,8132]** — información que el manifiesto no daba.
+>
+> Sobre las semillas: el OCSVM **no admite `random_state` porque su ajuste no tiene componente aleatoria**. Verificado con 10 ajustes repetidos que producen el mismo SHA-256 y el mismo umbral ([`10-protocolo-determinismo-y-semillas.md`](../../fase04-modelado/10-protocolo-determinismo-y-semillas.md)). Lo que sigue abierto es la **ponderación por episodio**, que no se aplicó.
+
 ### 8.2 De validez externa
 
 **D5 · El FPR offline no se sostiene en operación.** *(severidad alta — la más importante)*
@@ -300,15 +307,16 @@ Ejecutar D3 no solo cerró un requisito: **modificó lo que este informe puede a
 
 | Bloque | Acción | Resuelve |
 |---|---|---|
-| **Horas** | Cerrar la matriz de cumplimiento del jurado | requisito formal |
-| **Horas** | Validación cruzada agrupada por episodio sobre el modelo congelado | D4 |
-| **Horas** | Estabilidad del umbral por remuestreo, con banda declarada | D4 |
+| **Horas** | Declarar la selección posterior también en el documento de tesis | D1 |
 | **Días** | **Validación con usuarios: SUS con 5–8 evaluadores** | pertinencia |
+| **Días** | Sesión de juicio experto con 3 evaluadores | pertinencia |
 | **Días** | Escenarios legítimos faltantes | D7 |
 | **Semanas** | Jornada nueva como holdout temporal externo | D6 |
 | **Semanas** | **Recalibrar incluyendo tráfico pesado y repetir F6** | D5 |
 
-> **Mínimo defendible restante: el bloque de horas más el SUS.** El bloque de horas cierra la inferencia estadística; el SUS es el **único cero absoluto** que queda —cero en la ficha de auditoría, cero en el eje de pertinencia del plan de validación— y una sola sesión lo convierte en evidencia.
+> **El bloque de horas está agotado: la inferencia estadística quedó cerrada.** Lo que queda depende de personas o de tiempo de laboratorio.
+>
+> **El SUS es el único cero absoluto**: cero en la ficha de auditoría, cero en el eje de pertinencia del plan de validación y `D-18` en el registro. Una sola sesión de dos horas lo convierte en evidencia y eleva la ficha de **82,4 % a 88,2 %**.
 
 **D5 sigue siendo la debilidad principal del sistema** y no se resuelve escribiendo: exige recalibrar con tráfico legítimo pesado como normalidad y repetir la validación operativa.
 

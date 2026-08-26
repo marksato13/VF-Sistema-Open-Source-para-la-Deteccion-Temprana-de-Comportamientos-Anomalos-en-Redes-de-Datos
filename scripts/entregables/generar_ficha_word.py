@@ -19,7 +19,7 @@ from docx.shared import Cm, Pt, RGBColor
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _docx_estilo import rematar
+from _docx_estilo import rematar, bloque_enlaces
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -111,7 +111,7 @@ def bloque(doc, titulo, pregunta, items, lectura):
     filas = []
     for cid, crit, ev, p in items:
         if p == "N/A":
-            celda = ("N/A", "EEF1F8")
+            celda = ("N/A", "F2F6FC")
         else:
             celda = (f"{p}", NIVEL[p][1])
         filas.append((cid, crit, ev, celda))
@@ -221,7 +221,7 @@ def main() -> int:
            (("2", F_AMBER), "Parcial", "Existe pero con limitaciones declaradas"),
            (("1", F_DANGER), "Insuficiente", "Solo declarado, sin evidencia sólida"),
            (("0", F_DANGER), "Ausente", "No se abordó"),
-           (("N/A", "EEF1F8"), "No aplica", "No corresponde al tipo de producto (se excluye del cálculo)")],
+           (("N/A", "F2F6FC"), "No aplica", "No corresponde al tipo de producto (se excluye del cálculo)")],
           widths=[1.8, 3.0, 11.2])
 
     # ------------------------------ FICHA DEL DOCENTE (6 criterios / 20) ----
@@ -253,7 +253,7 @@ def main() -> int:
            ("Pertinencia validada con usuarios o stakeholders reales",
             "No se realizó ninguna. Es la única ausencia total del producto",
             ("0 / 3", F_DANGER)),
-           (("TOTAL", "EEF1F8"), "", ("16 / 20  ·  80 %", F_AMBER))],
+           (("TOTAL", "F2F6FC"), "", ("16 / 20  ·  80 %", F_AMBER))],
           widths=[5.0, 9.0, 2.0])
     parrafo(doc, "**El único cero es la validación con personas.** No se corrige documentando: exige "
                  "evaluadores usando el panel. Una prueba de usabilidad con 5–8 participantes lo convierte "
@@ -401,6 +401,17 @@ def main() -> int:
         vineta(doc, ref)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
+    bloque_enlaces(doc, "Evidencia en el repositorio", [
+        ("Ficha detallada, con los 18 ítems y su evidencia",
+         "docs/entregables/04-ficha-auditoria/ficha-auditoria.md"),
+        ("Plan de mejora: debilidades abiertas con prioridad e impacto",
+         "docs/entregables/06-plan-de-mejora/README.md"),
+        ("Instrumento SUS, listo para aplicar",
+         "docs/entregables/08-validacion-usuarios/README.md"),
+        ("Matriz de trazabilidad de los requisitos del jurado",
+         "docs/requisitos-jurado/README.md"),
+    ])
+
     rematar(doc,
             "Ficha de auditoría del producto",
             "Auditoría de confiabilidad, replicabilidad y pertinencia",

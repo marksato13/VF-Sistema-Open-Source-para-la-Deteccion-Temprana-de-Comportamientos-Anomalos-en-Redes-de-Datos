@@ -17,7 +17,7 @@ from docx.shared import Cm, Pt, RGBColor
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _docx_estilo import rematar
+from _docx_estilo import rematar, bloque_enlaces
 
 REPO = Path(__file__).resolve().parents[2]
 LOGO = REPO / "docs" / "entregables" / "assets" / "logo-upeu.png"
@@ -25,9 +25,9 @@ OUT = REPO / "docs/entregables/07-plan-de-validacion/Plan-de-validacion-de-resul
 
 INK = RGBColor(0x13, 0x1B, 0x2E)
 DIM = RGBColor(0x5B, 0x6B, 0x8C)
-ACCENT = RGBColor(0x0F, 0x8A, 0x7D)
+ACCENT = RGBColor(0x1F, 0x4E, 0x79)
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
-F_HEAD, F_ZEBRA, F_OK = "0F8A7D", "F4F6FB", "E0F3E6"
+F_HEAD, F_ZEBRA, F_OK = "1F4E79", "EEF3FA", "E0F3E6"
 
 
 def shade(cell, hexcolor: str) -> None:
@@ -213,6 +213,17 @@ def main() -> None:
                  "**selección posterior del modelo** exige un protocolo nuevo con evaluación "
                  "reservada. Ambas se declaran como límite, no se simulan.")
     parrafo(doc, "✔ = ya ejecutado y publicado.", size=8, italic=True, color=DIM)
+
+    bloque_enlaces(doc, "Evidencia en el repositorio", [
+        ("Plan detallado, con la justificación de cada umbral",
+         "docs/entregables/07-plan-de-validacion/plan-de-validacion.md"),
+        ("Instrumento SUS, guion de observación y script de cálculo",
+         "docs/entregables/08-validacion-usuarios/README.md"),
+        ("Checksums de los artefactos publicados",
+         "docs/dataset/SHA256SUMS"),
+        ("Significancia entre modelos, con corrección de Holm",
+         "docs/fase04-modelado/08-significancia-entre-modelos.md"),
+    ])
 
     rematar(doc,
 

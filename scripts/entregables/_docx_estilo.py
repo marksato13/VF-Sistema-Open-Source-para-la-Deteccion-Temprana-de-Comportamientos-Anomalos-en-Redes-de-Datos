@@ -12,8 +12,50 @@ from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
 
 GRIS_LINEA = "BFBFBF"
+
+# ---------------------------------------------------------------- PALETA ----
+# Tema AZUL, comun a los entregables del curso. El acento es la identidad del
+# documento; los rellenos de semaforo son SEMANTICOS y por eso no se tinen de
+# azul: verde/ambar/rojo comunican estado, no tema.
+AZUL = "1F4E79"          # acento: titulos, cabeceras de tabla, bordes de caja
+AZUL_CLARO = "2E74B5"    # enlaces y realces secundarios
+F_HEAD = AZUL            # relleno de cabecera de tabla
+F_ZEBRA = "EEF3FA"       # filas alternas, tinte azul muy claro
+F_CAJA = "F2F6FC"        # fondo de caja destacada
+F_OK, F_AMBER, F_DANGER = "E0F3E6", "FDECD2", "FBE3E1"   # semaforo, semantico
+
 DIM = RGBColor(0x5B, 0x6B, 0x8C)
-ACCENT = RGBColor(0x0F, 0x8A, 0x7D)
+INK = RGBColor(0x13, 0x1B, 0x2E)
+WHITE = RGBColor(0xFF, 0xFF, 0xFF)
+ACCENT = RGBColor(0x1F, 0x4E, 0x79)
+ACCENT_CLARO = RGBColor(0x2E, 0x74, 0xB5)
+
+REPO_URL = ("https://github.com/marksato13/"
+            "VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos")
+
+
+def url_repo(ruta: str = "") -> str:
+    """URL navegable a un archivo o carpeta del repositorio."""
+    return f"{REPO_URL}/blob/main/{ruta}" if ruta else REPO_URL
+
+
+def enlace(parrafo, texto: str, url: str, size: float = 8.6) -> None:
+    """Hipervinculo real: python-docx no lo soporta de fabrica."""
+    rid = parrafo.part.relate_to(
+        url, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True)
+    h = OxmlElement("w:hyperlink")
+    h.set(qn("r:id"), rid)
+    r = OxmlElement("w:r")
+    rPr = OxmlElement("w:rPr")
+    col = OxmlElement("w:color"); col.set(qn("w:val"), AZUL_CLARO)
+    und = OxmlElement("w:u"); und.set(qn("w:val"), "single")
+    sz = OxmlElement("w:sz"); sz.set(qn("w:val"), str(int(size * 2)))
+    for e in (col, und, sz):
+        rPr.append(e)
+    t = OxmlElement("w:t"); t.text = texto
+    r.append(rPr); r.append(t); h.append(r)
+    parrafo._p.append(h)
 
 
 def bordes_tabla(tabla, color: str = GRIS_LINEA, grosor: int = 4) -> None:
@@ -112,6 +154,31 @@ def propiedades(doc, titulo: str, asunto: str,
     cp.category = "Investigación V · UPeU"
     cp.comments = ("Documento generado por script desde los artefactos del proyecto; "
                    "ninguna cifra se transcribe a mano.")
+
+
+def bloque_enlaces(doc, titulo: str, entradas: list[tuple[str, str]]) -> None:
+    """Bloque final con hipervinculos navegables al repositorio.
+
+    Un documento que cita "ver el repositorio" sin dar la URL obliga al lector
+    a buscarla. Aqui cada referencia es un enlace que se abre con un clic.
+    """
+    from docx.enum.text import WD_ALIGN_PARAGRAPH as _A
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(10)
+    p.paragraph_format.space_after = Pt(3)
+    r = p.add_run(titulo)
+    r.font.size = Pt(10)
+    r.font.bold = True
+    r.font.color.rgb = ACCENT
+
+    for etiqueta, ruta in entradas:
+        q = doc.add_paragraph()
+        q.paragraph_format.space_after = Pt(1)
+        q.paragraph_format.left_indent = Pt(10)
+        a = q.add_run(f"{etiqueta} — ")
+        a.font.size = Pt(8.4)
+        a.font.color.rgb = INK
+        enlace(q, "abrir en GitHub", url_repo(ruta), size=8.4)
 
 
 def rematar(doc, titulo: str, asunto: str, pie_izquierda: str, encabezado_txt: str) -> None:

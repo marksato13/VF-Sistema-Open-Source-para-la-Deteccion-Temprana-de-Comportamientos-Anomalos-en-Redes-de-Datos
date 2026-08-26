@@ -18,7 +18,7 @@ from docx.shared import Cm, Pt, RGBColor
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _docx_estilo import rematar
+from _docx_estilo import rematar, bloque_enlaces
 
 REPO = Path(__file__).resolve().parents[2]
 LOGO = REPO / "docs/entregables/assets/logo-upeu.png"
@@ -26,8 +26,8 @@ GRAF = REPO / "docs/entregables/graficas"
 OUT = REPO / "docs/entregables/01-evaluacion-critica/Informe-evaluacion-critica.docx"
 
 INK, DIM = RGBColor(0x13, 0x1B, 0x2E), RGBColor(0x5B, 0x6B, 0x8C)
-ACCENT, WHITE = RGBColor(0x0F, 0x8A, 0x7D), RGBColor(0xFF, 0xFF, 0xFF)
-F_HEAD, F_ZEBRA, F_OK, F_AMBER, F_RED = "0F8A7D", "F4F6FB", "E0F3E6", "FDECD2", "FBE3E1"
+ACCENT, WHITE = RGBColor(0x1F, 0x4E, 0x79), RGBColor(0xFF, 0xFF, 0xFF)
+F_HEAD, F_ZEBRA, F_OK, F_AMBER, F_RED = "1F4E79", "EEF3FA", "E0F3E6", "FDECD2", "FBE3E1"
 
 
 def shade(cell, hx):
@@ -174,9 +174,18 @@ def main() -> None:
     par(doc, "Delimitar esa frontera con medición —y no ocultarla— es el resultado de esta "
              "evaluación. Un hallazgo negativo verificado vale más que una conclusión favorable "
              "sin respaldo.", italic=True, color=DIM)
-    par(doc, "Detalle completo, con las 11 figuras y la trazabilidad de cada cifra, en "
-             "informe-evaluacion-critica.md del repositorio del proyecto.",
-        size=7.8, italic=True, color=DIM)
+    bloque_enlaces(doc, "Evidencia en el repositorio", [
+        ("Informe detallado, con las 11 figuras y la trazabilidad de cada cifra",
+         "docs/entregables/01-evaluacion-critica/informe-evaluacion-critica.md"),
+        ("Ablación por capas y comparación 14 vs. 28 variables",
+         "docs/fase04-modelado/07-ablacion-multicapa.md"),
+        ("Significancia estadística entre los siete modelos",
+         "docs/fase04-modelado/08-significancia-entre-modelos.md"),
+        ("Validación del sistema desplegado (F6)",
+         "docs/fase07-validacion-final/02-resultados-f6.md"),
+        ("Las 11 gráficas, generadas por script desde los datos reales",
+         "docs/entregables/graficas"),
+    ])
 
     rematar(doc,
 
