@@ -9,17 +9,12 @@ métricas del modelo es lo que hace que ninguna de las dos cosas quede clara.
 |---|---|
 | [`DATASHEET_MULTILAYER_V2.md`](DATASHEET_MULTILAYER_V2.md) | **Los datos** — procedencia, estructura, particiones, calidad, sesgos y privacidad |
 | [`../fase02-features-multicapa/03-diccionario-multicapa-v2.md`](../fase02-features-multicapa/03-diccionario-multicapa-v2.md) | **Las variables** — fórmula, denominador, rangos, observabilidad y coste |
+| [`MODEL_CARD_OCSVM.md`](MODEL_CARD_OCSVM.md) | **El modelo** — hiperparámetros, umbral, métricas por familia, comparación de los siete candidatos y la selección posterior declarada |
+| [`SYSTEM_CARD_MOTOR.md`](SYSTEM_CARD_MOTOR.md) | **El sistema desplegado** — detectores, acción de control, desempeño en operación y modos de fallo |
 
-## Pendientes
-
-| Documento | Contenido previsto |
-|---|---|
-| *Model card* | OCSVM congelado: hiperparámetros, umbral, métricas por familia y la selección posterior declarada |
-| *System card* | Motor en tiempo real, bloqueo en línea, lead-time y falso positivo operativo |
-
-Ambos se ensamblan a partir de material ya existente en
-[`docs/entregables/01-evaluacion-critica/`](../entregables/01-evaluacion-critica/informe-evaluacion-critica.md)
-y [`docs/fase07-validacion-final/`](../fase07-validacion-final/).
+Las tres responden por cosas distintas a propósito: mezclar la procedencia de
+los datos con las métricas del modelo y con el comportamiento del sistema
+desplegado es lo que hace que ninguna de las tres quede clara.
 
 ## Reglas
 
@@ -36,4 +31,6 @@ python3 scripts/dataset/audit_multilayer_v2.py \
   --output artifacts/dataset/multilayer-v2-audit-report.json
 python3 scripts/entregables/generar_diccionario_features.py
 python3 scripts/entregables/generar_datasheet.py
+python3 scripts/entregables/generar_cards.py
+bash scripts/dataset/generar_checksums.sh
 ```

@@ -22,6 +22,8 @@ y Arquitectura · E.P. de Ingeniería de Sistemas.
 |---|---|
 | [`docs/dataset/DATASHEET_MULTILAYER_V2.md`](docs/dataset/DATASHEET_MULTILAYER_V2.md) | Procedencia, estructura, particiones, calidad, sesgos y privacidad del corpus |
 | [`docs/fase02-features-multicapa/03-diccionario-multicapa-v2.md`](docs/fase02-features-multicapa/03-diccionario-multicapa-v2.md) | Las 28 variables: fórmula, denominador, rangos y observabilidad |
+| [`docs/dataset/MODEL_CARD_OCSVM.md`](docs/dataset/MODEL_CARD_OCSVM.md) | El modelo: umbral, métricas por familia y comparación de los siete candidatos |
+| [`docs/dataset/SYSTEM_CARD_MOTOR.md`](docs/dataset/SYSTEM_CARD_MOTOR.md) | El sistema desplegado: detectores, bloqueo y modos de fallo |
 | [`docs/entregables/01-evaluacion-critica/`](docs/entregables/01-evaluacion-critica/informe-evaluacion-critica.md) | Resultados y su crítica, con figuras |
 | [`docs/entregables/06-plan-de-mejora/`](docs/entregables/06-plan-de-mejora/README.md) | Debilidades abiertas, priorizadas por impacto y esfuerzo |
 
@@ -46,7 +48,7 @@ candidatos** evaluados, byte a byte como los produjo la calibración.
 | Falso positivo en evaluación bloqueada | **4,71 %** |
 | **Falso positivo en operación real** | **23–26 %** |
 | Bloqueo tras el inicio del ataque | mediana **8 s** |
-| Disponibilidad | 100 % en 57 corridas |
+| Caídas de servicio | **0** registradas en 58 corridas |
 
 La última fila que importa es la cuarta. **El error de laboratorio no se
 sostiene sobre tráfico legítimo pesado**, y está medido, no estimado: una

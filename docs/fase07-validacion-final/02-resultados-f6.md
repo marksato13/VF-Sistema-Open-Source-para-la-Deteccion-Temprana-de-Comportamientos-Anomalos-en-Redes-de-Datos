@@ -11,7 +11,7 @@ F6 midió el sistema **desplegado** (no solo el modelo offline). El resultado m�
 
 > **El FPR benigno de 4.71 % medido offline NO se sostiene sobre tráfico legítimo pesado en operación.** El modelo puntúa el tráfico legítimo de alto throughput justo en el margen del umbral, y algunas ventanas caen por debajo → falso positivo → bloqueo de un cliente legítimo. Esto ocurre **incluso en aislamiento** (sin contaminación entre corridas), y responde directamente a la observación del jurado sobre tráfico legítimo pesado.
 
-Lo que **sí** funciona bien: los ataques que llegan al objetivo se detectan y bloquean en **~8 s** (lead-time mediano), el heurístico de fuerza bruta dispara en producción, y la disponibilidad fue **100 %** en 57 corridas.
+Lo que **sí** funciona bien: los ataques que llegan al objetivo se detectan y bloquean en **~8 s** (lead-time mediano), el heurístico de fuerza bruta dispara en producción, y **no se registró ninguna caída de servicio** en las 58 corridas.
 
 ## 1. FPR operativo — el hallazgo principal
 
@@ -73,7 +73,16 @@ Lead-time = segundos desde el inicio del ataque al primer `ALERT`/bloqueo (motor
 
 ## 4. Disponibilidad
 
-**100 %** — los tres servicios (`ppi-motor`, `ppi-motor-capture`, `ppi-dashboard`) estuvieron activos y estables antes y después de las **57 corridas** (28 del pase 2 + 29 del pase 1), sin caídas ni reinicios.
+**Cero caídas registradas.** Los tres servicios (`ppi-motor`, `ppi-motor-capture`,
+`ppi-dashboard`) estuvieron activos y estables antes y después de **55 de las 58
+corridas** (28 del pase 2 + 27 del pase 1), sin caídas ni reinicios.
+
+> **Corrección respecto a la redacción anterior**, que decía «100 % en 57 corridas».
+> Tres corridas —`A-password-spray-3` en ambos pases y `B10` en el pase 1— **no tienen
+> medición de servicios**: sus campos `services_before` y `services_after` están vacíos.
+> No es una caída, es una ausencia de registro. Lo defendible es «cero caídas
+> registradas sobre 58 corridas, 55 con verificación explícita»; afirmar 100 % de
+> disponibilidad verificada atribuye a la medición un alcance que no tuvo.
 
 ## 5. Frontera del heurístico de fuerza bruta (inconcluso, contaminado)
 
@@ -88,7 +97,7 @@ Se declara como límite conocido y no resuelto de F6: medir la frontera exacta d
 **Lo que F6 confirmó que funciona:**
 - Detección + bloqueo inline en tiempo real, lead-time ~8 s con el motor al día.
 - El heurístico de fuerza bruta dispara en producción (validación del camino L7 del fix `MOTOR-FP-01`).
-- Disponibilidad 100 % en 57 corridas.
+- Cero caídas de servicio registradas en 58 corridas (55 con verificación explícita).
 
 **Limitaciones reales medidas (para declarar ante el jurado, no ocultar):**
 1. **FPR operativo sobre tráfico legítimo pesado** — el offline 4.71 % no se sostiene; hay FP genuinos (iperf 200M en aislamiento) porque el modelo puntúa el tráfico pesado en el margen del umbral. Es la debilidad más importante encontrada.

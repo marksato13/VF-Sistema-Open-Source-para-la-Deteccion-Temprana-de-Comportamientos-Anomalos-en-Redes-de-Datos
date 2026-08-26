@@ -112,8 +112,13 @@ identidad formal del dataset es la peor puntuada: **2/6**.
 
 | ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
 |---|---|---|---|---|---|
-| **D-34** | Sin *model card* ni *system card* separadas del datasheet | Datos, modelo y sistema desplegado se describen mezclados en los mismos informes | 🟡 | Horas | Tres documentos: datasheet (datos), model card (OCSVM), system card (motor inline, bloqueo, FPR operativo) |
 
+> **Ya resuelto en esta fase:** `D-34` existen las tres tarjetas separadas —
+> [datasheet](../../dataset/DATASHEET_MULTILAYER_V2.md),
+> [model card](../../dataset/MODEL_CARD_OCSVM.md) y
+> [system card](../../dataset/SYSTEM_CARD_MOTOR.md)—, generadas desde el
+> manifiesto y las corridas de F6.
+>
 > **Ya resuelto en esta fase:** `D-08` el dataset, el manifiesto y **los siete
 > modelos candidatos** (5,7 MB) se publican con el repositorio, verificables con
 > `sha256sum -c docs/dataset/SHA256SUMS`. Se descubrió al hacerlo que los seis
