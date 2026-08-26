@@ -24,3 +24,7 @@ artifacts/model/*
 !artifacts/model/ocsvm_scaled.joblib
 !artifacts/model/candidates/
 !artifacts/model/candidates/*.joblib
+
+# Biblioteca personal exportada de Mendeley: material del autor, no del proyecto
+docs/entregables/05-ppi/biblioteca.bib
+docs/entregables/05-ppi/biblioteca.ris

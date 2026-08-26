@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mendeley": {
+      "command": ".venv/bin/python",
+      "args": ["mcp-servers/mendeley/servidor.py"],
+      "env": {
+        "MENDELEY_EXPORT": "docs/entregables/05-ppi/biblioteca.bib"
+      }
+    }
+  }
+}
