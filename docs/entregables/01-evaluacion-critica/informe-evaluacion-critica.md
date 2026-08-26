@@ -110,7 +110,7 @@ Sistema desplegado, motor y enforcement activos: 2 pases de 29 corridas + 2 prue
 | Métrica operativa | Resultado |
 |---|---|
 | Lead-time de detección y bloqueo | **mediana 8,0 s** (rango 6,1 – 13,7 s) |
-| Disponibilidad de servicios | **100 %** en 57 corridas |
+| Disponibilidad de servicios | **Cero caídas registradas** en 58 corridas · 55 con verificación explícita |
 | Pérdida de paquetes en captura | **0 drops** |
 
 ![FPR offline frente a operativo](../graficas/C1-fpr-offline-vs-operativo.png)
@@ -154,7 +154,7 @@ Criterios aplicados: **validez** (¿las conclusiones se siguen de la evidencia?)
 | Reproducibilidad de artefactos | SHA-256 de CSV, calibrador y modelos; git limpio verificado |
 | El modelo reproduce sus propias métricas | Re-puntuación en este informe: 13/276 y 158/179 exactos |
 | Detección de 5 familias de ataque reales | 88,8 % Kali-real [83,0 – 92,8] |
-| Detección y bloqueo en tiempo real | Mediana 8,0 s; disponibilidad 100 % |
+| Detección y bloqueo en tiempo real | Mediana 8,0 s; sin caídas de servicio registradas |
 | Corrección de 3 fallos reales de producción | Bucle de re-bloqueo, falso positivo por desincronización, replay de backlog |
 | Detección honesta de una fuga propia | Resultado contaminado marcado *"no debe citarse"* |
 | Trazabilidad | 330 commits · 181 documentos de campaña · 162 revisiones adversariales |
@@ -257,7 +257,7 @@ De los 14 escenarios normales exigidos faltan **SSH, SCP/SFTP, SMB, respaldo, st
 ## 9. ¿Los resultados cumplen el objetivo?
 
 **Componente 1 — Detectar y bloquear en tiempo real: CUMPLIDO.**
-Detección del 88,8 % [83,0–92,8] sobre ataques genuinos, ROC-AUC 0,974, bloqueo en mediana de 8 s, disponibilidad 100 %.
+Detección del 88,8 % [83,0–92,8] sobre ataques genuinos, ROC-AUC 0,974, bloqueo en mediana de 8 s y sin caídas de servicio registradas.
 
 **Componente 2 — Sin penalizar el tráfico legítimo: NO DEMOSTRADO.**
 23–26 % de FPR operativo y un falso positivo reproducido en aislamiento. El sistema **no es apto para operación desatendida** en redes con transferencias pesadas legítimas.

@@ -311,23 +311,33 @@ def main() -> int:
     # ------------------------------------------------------- ACCIONES -----
     doc.add_paragraph()
     h1(doc, "5.  Acciones para elevar el puntaje")
-    parrafo(doc, "Ordenadas por costo. Las de horas y días **no requieren capturar datos nuevos**.")
-    tabla(doc, ["Acción", "Sube", "De → a", "Tiempo"],
-          [("**Aplicar una prueba de usabilidad (SUS) con 5–8 evaluadores**", "3.1 y 3.2", "0 → 2", ("3–5 días", F_AMBER)),
-           ("Ejecutar validación cruzada sobre el modelo congelado", "1.3", "1 → 3", ("Horas", F_OK)),
-           ("Cerrar y actualizar la matriz de trazabilidad de requisitos", "3.3", "1 → 3", ("Horas", F_OK)),
-           ("Documentar semillas y determinismo como protocolo explícito", "2.4", "2 → 3", ("Horas", F_OK)),
-           ("Aplicar juicio experto con 3 evaluadores", "3.2", "0 → 2", ("Días", F_AMBER)),
-           ("Aplicar un instrumento validado (SUS) con 5–8 evaluadores", "3.1 · 3.2", "0 → 2", ("3–5 días", F_AMBER)),
-           ("Repetir la validación operativa para tener más de dos mediciones", "1.5", "2 → 3", ("Días", F_AMBER))],
-          widths=[8.6, 2.2, 2.4, 2.8])
+    parrafo(doc, "**Siete ítems subieron desde la primera auditoría**, todos con evidencia publicada y "
+                 "ninguno con experimentación nueva.")
+    tabla(doc, ["Acción ejecutada", "Ítem", "De → a"],
+          [("Publicar el dataset, el manifiesto y los 7 modelos con checksums y licencias", "2.2", ("1 → 3", F_OK)),
+           ("Intervalos de Wilson en toda proporción y McNemar con corrección de Holm", "1.6", ("2 → 3", F_OK)),
+           ("Validación cruzada agrupada por episodio sobre el modelo congelado", "1.3", ("1 → 3", F_OK)),
+           ("Remuestreo del umbral con B = 1 000; coeficiente de variación 4,10 %", "1.5", ("2 → 3", F_OK)),
+           ("Protocolo de determinismo, verificado con 10 ajustes de SHA-256 idéntico", "2.4", ("2 → 3", F_OK)),
+           ("Documentar el procedimiento de descarga, verificación y regeneración", "2.6", ("2 → 3", F_OK)),
+           ("Cerrar la matriz de trazabilidad de requisitos", "3.3", ("1 → 3", F_OK))],
+          widths=[10.2, 1.8, 2.0])
+    parrafo(doc, f"**Efecto acumulado: de 32/51 (62,7 %) a {T}/{M} ({pctT:.1f} %).**")
 
-    proy = T + (3 - 1) + (3 - 1) + (3 - 1) + (3 - 2)
     doc.add_paragraph()
-    caja(doc, "Proyección realista",
-         f"Ejecutando solo las acciones de **horas**, el puntaje pasaría de **{T}/{M} ({pctT:.1f} %)** a "
-         f"**{proy}/{M} ({100*proy/M:.1f} %)** sin experimentación nueva. Añadiendo el manual técnico y la "
-         f"evaluación con usuarios, superaría el **85 %**.")
+    parrafo(doc, "**Lo que queda**")
+    tabla(doc, ["Acción pendiente", "Sube", "De → a", "Tiempo"],
+          [("**Aplicar un instrumento validado (SUS) con 5–8 evaluadores sobre el panel**", "3.1", ("0 → 3", F_AMBER), ),
+           ("Sesión de juicio experto con 3 evaluadores", "3.2", ("0 → 2", F_AMBER)),
+           ("Acuerdo inter-evaluador, si se incorpora doble etiquetado independiente", "1.2", ("0 → 2", F_AMBER))],
+          widths=[9.4, 1.8, 2.0, 2.8])
+
+    doc.add_paragraph()
+    caja(doc, "El puntaje ya no lo frena la evidencia técnica",
+         f"La replicabilidad está en **100 %** y la confiabilidad en **80 %**. Los tres ítems que quedan miden "
+         f"**lo que otras personas opinan del producto**, y ninguno se corrige escribiendo. Con solo la prueba "
+         f"de usabilidad el puntaje llegaría a **45/{M} ({100*45/M:.1f} %)**; con los tres, a "
+         f"**49/{M} ({100*49/M:.1f} %)**.")
 
     # -------------------------------------------------- ISO/IEC 25010 -----
     doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
@@ -337,7 +347,7 @@ def main() -> int:
                  "suponerlo.")
     tabla(doc, ["Característica ISO/IEC 25010", "¿Se evaluó?", "Evidencia en este proyecto"],
           [("Fiabilidad — madurez, disponibilidad, tolerancia a fallos", ("Sí", F_OK),
-            "100 % de disponibilidad en 57 corridas, sin pérdida de paquetes. Tres fallos de producción detectados y corregidos con prueba positiva y negativa"),
+            "Cero caídas registradas en 58 corridas (55 verificadas), sin pérdida de paquetes. Tres fallos de producción detectados y corregidos con prueba positiva y negativa"),
            ("Eficiencia de desempeño — comportamiento temporal", ("Sí", F_OK),
             "Bloqueo en una mediana de 8 s. Límite declarado: bajo carga sostenida el motor acumula retraso"),
            ("Adecuación funcional — completitud y corrección", ("Parcial", F_AMBER),
@@ -399,7 +409,7 @@ def main() -> int:
     doc.save(OUT)
     print(f"Generado: {OUT.relative_to(REPO)}")
     print(f"  Confiabilidad {a[0]}/{a[1]} · Replicabilidad {b[0]}/{b[1]} · Pertinencia {c[0]}/{c[1]}")
-    print(f"  TOTAL {T}/{M} = {pctT:.1f} %   (proyección tras acciones de horas: {100*proy/M:.1f} %)")
+    print(f"  TOTAL {T}/{M} = {pctT:.1f} %   (con la prueba de usabilidad: {100*45/M:.1f} %)")
     return 0
 
 

@@ -132,7 +132,7 @@ Es la dimensión con menor puntaje en la ficha de auditoría (**55,6 %**) y la �
 
 | ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
 |---|---|---|---|---|---|
-| **D-23** | La ficha de auditoría no tiene ningún gráfico | El puntaje 70,6 % y su evolución se comunican solo con tablas | ⚪ | Horas | Añadir barras de las tres dimensiones y un gráfico antes/después |
+| **D-23** | La ficha de auditoría no tiene ningún gráfico | El puntaje 82,4 % y su evolución desde 62,7 % se comunican solo con tablas | ⚪ | Horas | Añadir barras de las tres dimensiones y un gráfico antes/después |
 | **D-24** | El informe de validación excede la extensión pedida | ~5,2 páginas frente a las 3–4 solicitadas | ⚪ | Horas | Mover las referencias a anexo o condensar las tablas |
 
 ---

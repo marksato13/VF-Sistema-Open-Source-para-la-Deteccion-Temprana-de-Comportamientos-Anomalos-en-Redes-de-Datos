@@ -65,7 +65,7 @@ de instalación/usuario: `docs/fase06-dashboard/01-diseno-dashboard-motor.md`.
 **Validación final F6: ejecutada** (`docs/fase07-validacion-final/`): 2 pases
 de 29 corridas con el motor activo + 2 pruebas de aislamiento. Confirmado:
 detección + bloqueo inline con lead-time ~8 s (motor al día), heurístico de
-fuerza bruta disparando en producción, disponibilidad 100 % en 57 corridas.
+fuerza bruta disparando en producción, cero caídas de servicio registradas en 58 corridas, 55 de ellas con verificación explícita.
 **Dos limitaciones nuevas medidas y declaradas** (no ocultas): (1) el FPR
 benigno offline de 4.71 % **no se sostiene** sobre tráfico legítimo pesado —
 `iperf-tcp 200M` en aislamiento produjo un FP genuino que bloqueó al cliente

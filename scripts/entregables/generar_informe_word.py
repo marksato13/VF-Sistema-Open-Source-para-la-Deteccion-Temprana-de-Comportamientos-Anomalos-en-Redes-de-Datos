@@ -367,7 +367,7 @@ def main() -> int:
            ("Trazabilidad",
             "330 registros de cambios · 181 documentos de campañas · 162 revisiones independientes"),
            ("Estabilidad operativa",
-            "100 % de disponibilidad en 57 corridas, sin pérdida de paquetes en captura"),
+            "Cero caídas registradas en 58 corridas (55 verificadas), sin pérdida de paquetes"),
            ("Consistencia entre repeticiones",
             "Los dos pases de validación operativa dieron resultados equivalentes (25,8 % y 23,0 %)")],
           widths=[5.2, 11.3])

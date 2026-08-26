@@ -2,7 +2,18 @@
 
 - **Fecha:** 2026-08-17
 - **Autor:** Claude
-- **Estado:** protocolo definido, **sin ejecutar todavía**. Pendiente confirmación antes de correr el calibrador.
+- **Estado:** ⚠️ **DOCUMENTO HISTÓRICO — SUPERADO.** Este protocolo se definió el 17 de agosto de 2026 y describe un diseño que **no es el que finalmente se ejecutó**.
+
+> **No usar como referencia del sistema vigente.** Conserva propuestas que
+> quedaron descartadas: umbrales por índice de Youden (τ1/τ2), un nivel `LIMIT`
+> intermedio y bloqueo con `enforce.sh`. El sistema desplegado usa **un único
+> umbral OCSVM de 1,8126**, decisiones `PERMIT`/`ALERT`/`BLOCK` **sin nivel
+> intermedio**, y bloqueo con **nftables** en el propio Sensor.
+>
+> Se conserva sin editar porque reescribir un protocolo pasado para que
+> coincida con lo que se hizo falsearía el registro. El estado vigente está en
+> [`06-modelo-final-congelado-ocsvm.md`](06-modelo-final-congelado-ocsvm.md) y
+> en la [model card](../dataset/MODEL_CARD_OCSVM.md).
 
 ## Por qué este documento
 

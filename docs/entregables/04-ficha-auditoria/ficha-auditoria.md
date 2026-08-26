@@ -106,7 +106,7 @@ sustentan con 18 ítems sobre 51 puntos.
 
 **Subtotal replicabilidad: 14 / 18 puntos = 77,8 %**
 
-**Lectura.** Es la dimensión **más fuerte** del producto. La cadena de integridad (hashes, repositorio limpio, versiones fijadas) es superior a lo habitual en un trabajo de este nivel. La brecha real es que **los datos no están publicados**, lo que impide la replicación independiente del entrenamiento.
+**Lectura.** Es la dimensión **más fuerte** del producto y la que más subió: **18 de 18**. La cadena de integridad (hashes, repositorio limpio, versiones fijadas) es superior a lo habitual, y la publicación del dataset y de los siete modelos con checksums y licencias cerró la única brecha que quedaba. Un tercero puede hoy clonar el repositorio y reproducir el umbral en sus dieciséis dígitos.
 
 ---
 
@@ -163,19 +163,37 @@ Un **82,4 %** describe el estado actual: **sólido como artefacto de ingeniería
 
 ## 5. Acciones para elevar el puntaje
 
-Ordenadas por costo. Las de horas y días no requieren capturar datos nuevos.
+### Ya ejecutadas
 
-| Acción | Sube | De → a | Tiempo |
+Siete ítems subieron desde la primera auditoría, todos con evidencia publicada
+y ninguno con experimentación nueva.
+
+| Acción ejecutada | Ítem | De → a |
+|---|---|---|
+| Publicar el dataset, el manifiesto y los 7 modelos con checksums y licencias | 2.2 | 1 → 3 |
+| Intervalos de Wilson en toda proporción y McNemar con corrección de Holm | 1.6 | 2 → 3 |
+| Validación cruzada agrupada por episodio sobre el modelo congelado | 1.3 | 1 → 3 |
+| Remuestreo del umbral con B = 1 000, coeficiente de variación 4,10 % | 1.5 | 2 → 3 |
+| Protocolo de determinismo, verificado con 10 ajustes de SHA-256 idéntico | 2.4 | 2 → 3 |
+| Documentar el procedimiento de descarga, verificación y regeneración | 2.6 | 2 → 3 |
+| Cerrar la matriz de trazabilidad de requisitos | 3.3 | 1 → 3 |
+
+**Efecto acumulado: de 32/51 (62,7 %) a 42/51 (82,4 %).**
+
+### Lo que queda
+
+| Acción pendiente | Sube | De → a | Tiempo |
 |---|---|---|---|
-| Publicar el dataset y el modelo en el repositorio (716 KB en total; basta excluirlos de la regla que ignora `artifacts/`) | 2.2 | 1 → 3 | **Minutos** |
-| Ejecutar validación cruzada sobre el modelo congelado | 1.3 | 1 → 3 | Horas |
-| Completar el manual de implementación técnica | 2.6 | 2 → 3 | 1 día |
-| Cerrar y actualizar la matriz de trazabilidad de requisitos | 3.3 | 1 → 3 | Horas |
-| Documentar semillas y determinismo como protocolo explícito | 2.4 | 2 → 3 | Horas |
-| Aplicar un instrumento validado (p. ej. SUS) con 5–8 evaluadores sobre el panel | 3.1 · 3.2 | 0 → 2 | 3–5 días |
-| Repetir la validación operativa para tener más de dos mediciones | 1.5 | 2 → 3 | Días |
+| **Aplicar un instrumento validado (SUS) con 5–8 evaluadores sobre el panel** | 3.1 | 0 → 3 | 3–5 días |
+| Sesión de juicio experto con 3 evaluadores | 3.2 | 0 → 2 | Días |
+| Acuerdo inter-evaluador, si se incorpora doble etiquetado independiente | 1.2 | 0 → 2 | Días |
 
-**Proyección realista.** Ejecutando solo las acciones de **horas** (publicar datos, validación cruzada, cerrar trazabilidad, documentar semillas), el puntaje pasaría de **32/51 (62,7 %)** a **39/51 (76,5 %)** sin experimentación nueva. Añadiendo el manual técnico y la evaluación con usuarios, superaría el **85 %**.
+> **El puntaje ya no lo frena la evidencia técnica.** La replicabilidad está en
+> 100 % y la confiabilidad en 80 %; los tres ítems que quedan miden **lo que
+> otras personas opinan del producto**, y ninguno se corrige escribiendo.
+>
+> Con solo la prueba de usabilidad, el puntaje pasaría a **45/51 = 88,2 %**. Con
+> los tres, a **49/51 = 96,1 %**.
 
 ---
 
@@ -185,7 +203,7 @@ La norma de calidad de producto de software permite situar los resultados en un 
 
 | Característica ISO/IEC 25010 | ¿Se evaluó? | Evidencia en este proyecto |
 |---|---|---|
-| **Fiabilidad** — madurez, disponibilidad, tolerancia a fallos | **Sí** | 100 % de disponibilidad en 57 corridas, sin pérdida de paquetes. Tres fallos de producción detectados y corregidos con prueba positiva y negativa |
+| **Fiabilidad** — madurez, disponibilidad, tolerancia a fallos | **Sí** | Cero caídas de servicio registradas en 58 corridas, 55 con verificación explícita, sin pérdida de paquetes. Tres fallos de producción detectados y corregidos con prueba positiva y negativa |
 | **Eficiencia de desempeño** — comportamiento temporal | **Sí** | Bloqueo en una mediana de 8 s. Límite declarado: bajo carga sostenida el motor acumula retraso |
 | **Adecuación funcional** — completitud y corrección | **Parcial** | Detecta y bloquea las 6 familias previstas (88,8 %), pero la corrección funcional se degrada con tráfico legítimo intenso (error 23–26 %) |
 | **Seguridad** — confidencialidad, integridad, no repudio | **Parcial** | Integridad verificable por SHA-256 y control de acceso por helper de alcance estrecho. **No se evaluó el sistema como objetivo de ataque**: no se probó evasión del detector ni abuso del bloqueo mediante suplantación de IP |

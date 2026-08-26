@@ -21,9 +21,9 @@ El PPI se escribió antes de que existieran los resultados. La versión 2 debe i
 | Variables | 28 features multicapa (L3 = 9, L4 = 8, L7 = 11) | [`configs/features/multilayer-v2.json`](../../../configs/features/multilayer-v2.json) |
 | Dataset | 1 373 ventanas normales / 220 episodios · 179 de ataque / 132 episodios | [`docs/fase03-dataset/`](../../fase03-dataset/) |
 | Resultados del modelo | ROC-AUC 0,974 · detección 88,8 % (Kali real) · FPR 4,71 % | [`../01-evaluacion-critica/`](../01-evaluacion-critica/informe-evaluacion-critica.md) |
-| Validación en operación | Sistema desplegado y medido: lead-time 8 s, disponibilidad 100 % | [`docs/fase07-validacion-final/`](../../fase07-validacion-final/) |
+| Validación en operación | Sistema desplegado y medido: lead-time 8 s, sin caídas de servicio registradas | [`docs/fase07-validacion-final/`](../../fase07-validacion-final/) |
 | Limitación principal | FPR operativo 23–26 % sobre tráfico legítimo pesado | [`../02-validacion-y-confiabilidad/`](../02-validacion-y-confiabilidad/informe-validacion-confiabilidad.md) |
-| Auditoría del producto | 32/51 = 62,7 % (confiabilidad, replicabilidad, pertinencia) | [`../04-ficha-auditoria/`](../04-ficha-auditoria/ficha-auditoria.md) |
+| Auditoría del producto | **42/51 = 82,4 %** [69,7 – 90,4] (confiabilidad, replicabilidad, pertinencia) | [`../04-ficha-auditoria/`](../04-ficha-auditoria/ficha-auditoria.md) |
 
 ## Estado de la revisión
 

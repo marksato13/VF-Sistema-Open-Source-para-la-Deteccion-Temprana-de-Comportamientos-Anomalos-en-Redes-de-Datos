@@ -566,7 +566,7 @@ El dataset **no tiene valores faltantes**, y no por relleno: la ausencia de un e
 
 ## Limitaciones declaradas
 - **`tls_handshake_failure_ratio_60s` no es observable** en esta configuración. Debe reportarse como **27 variables efectivas de 28 definidas**, no como una señal validada.
-- **`http_status_5xx_ratio_60s` es subconjunto de `http_error_ratio_60s`.** Redundancia conocida; su aporte marginal solo puede resolverlo la ablación pendiente (D-02).
+- **`http_status_5xx_ratio_60s` es subconjunto de `http_error_ratio_60s`.** Redundancia conocida. **La ablación ya la midió**: las 8 variables L7 nuevas no aportan detección medible (p = 1,000).
 - **`protocol_diversity_30s` se normaliza por paquetes, no por protocolos.** Tiende a cero al crecer el volumen: mide diversidad por paquete, no riqueza.
 - **`http_method_entropy_60s` colapsa dos casos en 0.0**: sin peticiones y monomé­todo. Solo el contador de soporte los separa.
 - **Las señales L7 solo ven tráfico en claro.** HTTPS y los fallos de autenticación SSH quedan fuera por diseño, no por omisión.

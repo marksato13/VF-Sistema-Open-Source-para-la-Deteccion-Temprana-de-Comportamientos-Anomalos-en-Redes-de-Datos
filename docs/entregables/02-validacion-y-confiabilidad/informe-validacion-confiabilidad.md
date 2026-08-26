@@ -95,7 +95,7 @@ Los intervalos **no se solapan**, de modo que la diferencia no se explica por az
 | **Reproducibilidad verificada** | Al reevaluar el modelo congelado se obtuvieron **exactamente** las mismas cifras del registro original (13/276 y 158/179) |
 | Integridad de artefactos | SHA-256 de datos, modelo y programa de calibración; repositorio verificado limpio antes y después |
 | Trazabilidad | 330 registros de cambios, 181 documentos de campañas, 162 revisiones independientes |
-| Estabilidad operativa | 100 % de disponibilidad en 57 corridas, sin pérdida de paquetes en captura |
+| Estabilidad operativa | Cero caídas de servicio registradas en 58 corridas (55 verificadas), sin pérdida de paquetes en captura |
 | Consistencia entre repeticiones | Los dos pases de validación operativa dieron resultados equivalentes (25,8 % y 23,0 %) |
 
 ### Abordado parcialmente

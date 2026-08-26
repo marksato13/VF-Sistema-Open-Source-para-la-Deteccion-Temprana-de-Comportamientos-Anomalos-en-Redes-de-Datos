@@ -55,11 +55,26 @@ Contiene los 18 puntos abiertos. Un punto sin celda es un punto sin plan.
 
 ## El hallazgo más rentable
 
-**La acción de horas que queda** (D-01, declarar la selección posterior en la tesis) cierran **dos requisitos explícitos del jurado** y la principal objeción metodológica, sin experimentación nueva. Elevan además el puntaje de la ficha de auditoría de **62,7 % a 76,5 %**.
+**El puntaje ya no lo frena la evidencia técnica.** Todo lo que podía cerrarse
+con cómputo sobre los artefactos existentes está cerrado: la ficha de auditoría
+pasó de **62,7 % a 82,4 %** sin capturar un solo dato nuevo.
 
-Ninguna de ellas exige capturar datos, reentrenar el modelo ni repetir campañas: el material ya existe y solo hay que publicarlo, ejecutarlo o declararlo.
+Lo que queda se divide en dos naturalezas distintas, y conviene no confundirlas:
 
----
+| | Qué falta | Por qué no avanza |
+|---|---|---|
+| **Depende de personas** | Prueba de usabilidad (`D-18`) y juicio experto (`D-28`) | El instrumento, el guion y el script de cálculo **ya están listos**; falta convocar evaluadores |
+| **Depende de tiempo de laboratorio** | Recalibrar con tráfico pesado (`D-11`), jornada de holdout (`D-09`), escenarios faltantes (`D-10`) | Exigen campañas nuevas, semanas |
+
+> **La acción de mayor apalancamiento es una sola: la prueba de usabilidad.**
+> Cierra a la vez el criterio 6 de la ficha del docente, el eje de pertinencia
+> del plan de validación y `D-18` de este registro. Con ella el puntaje llega a
+> **88,2 %**; sin ella, ninguna otra acción documental lo mueve.
+
+Queda además `D-01`, que no es trabajo sino redacción: declarar en la tesis y
+el PPI que la detección reportada es una estimación optimista por haberse
+elegido el modelo tras ver el conjunto de prueba. Ya está declarado en la model
+card y en el PPI; falta trasladarlo al documento de tesis.
 
 ## Qué NO se hará y por qué
 
