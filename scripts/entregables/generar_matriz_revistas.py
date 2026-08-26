@@ -214,6 +214,76 @@ CANDIDATAS = [
                            "pagar por página adicional. Plantilla oficial y envío por correo"),
         },
     },
+    {
+        "nombre": "International Journal of Intelligent Engineering and Systems (IJIES)",
+        "corto": "IJIES", "editor": "INASS · Japón", "issn": "2185-3118",
+        "scopus": "https://www.scopus.com/sourceid/21100199790",
+        "control": ("Fuera", "No figura entre las 17 revistas de la lista de control institucional"),
+        "filtro": ("Supera con reserva", "ISSN confirmado, ficha en Scopus, política de revisión y "
+                   "tarifas publicadas, y **publica su tasa de aceptación**, transparencia poco "
+                   "habitual. Fuera de la lista de depredadoras. **La reserva es concreta**: hay que "
+                   "confirmar que su cobertura en Scopus sigue activa, porque TELKOMNIKA, IJECE e "
+                   "IJEECS —revistas del mismo perfil de alto volumen— fueron descontinuadas en 2025"),
+        "datos": {
+            "CiteScore 2025": ("3,3 · percentil 62 en General Engineering y 52 en General Computer "
+                               "Science, **Q2 en ambas**", "✔"),
+            "Cuartil SJR": ("pendiente de verificar en Scimago, hoy bloqueado por Cloudflare", "?"),
+            "Revisión": ("Publicación unos 2 meses después de la aceptación · **tasa de aceptación "
+                         "declarada: 17,9 % en 2025, 17,8 % en 2024, 14,1 % en 2023**", "✔"),
+            "Periodicidad": ("**Mensual desde 2025** · **481 · 556 · 467 artículos** en 2024 · 2025 · "
+                             "2026, el mayor volumen de las candidatas disponibles", "✔"),
+            "APC": ("**USD 300** · **USD 400 desde el 1 de octubre de 2026** · USD 100 extra si no se "
+                    "usa su plantilla · USD 50 por página a partir de la 10.ª", "✔"),
+            "Plantilla": ("`IJIES_Format.docx` obligatoria · **límite de 10 páginas** antes del "
+                          "recargo", "✔"),
+        },
+        "puntajes": {
+            "pertinencia": (9, "Su alcance nombra ingeniería de redes y computación inteligente, pero "
+                               "lo que decide es su producción: **86 artículos desde 2024 con "
+                               "«intrusion detection», «anomaly detection» o «network security» en el "
+                               "título**. Ninguna otra candidata se acerca a ese volumen temático"),
+            "visibilidad": (8, "CiteScore 3,3 y Q2 en sus dos categorías. Por debajo del 4,2 de BEEI y "
+                               "CIT, pero con cuartil verificado en la propia revista"),
+            "viabilidad": (10, "Mensual, con el mayor volumen del conjunto y publicación unos 2 meses "
+                               "después de aceptar. **Y publica su tasa de aceptación**, que ninguna "
+                               "otra hace: 17,9 %"),
+            "costo": (9, "USD 300 hoy y USD 400 desde octubre: el más bajo de todas las candidatas que "
+                         "cobran, por debajo incluso de los USD 415 de BEEI"),
+            "formato": (7, "Plantilla propia obligatoria y **límite de 10 páginas**: la mitad que CIT. "
+                           "Este artículo pagaría páginas adicionales"),
+        },
+    },
+    {
+        "nombre": "International Journal of Information Technology (IJIT)",
+        "corto": "IJIT", "editor": "Springer Nature · BVICAM, Nueva Delhi", "issn": "2511-2104",
+        "scopus": "https://www.scopus.com/sourceid/21101022413",
+        "control": ("Fuera", "No figura entre las 17 revistas de la lista de control institucional"),
+        "filtro": ("Supera", "Editada por Springer Nature, con ficha activa en Scopus, política "
+                   "editorial pública y archivo mensual. Fuera de la lista de depredadoras. Su "
+                   "respaldo editorial elimina el riesgo de descontinuación que sí tienen las "
+                   "revistas independientes de alto volumen"),
+        "datos": {
+            "CiteScore 2025": ("2,6 · h-index 23", "~"),
+            "Cuartil SJR": ("**Q2**", "~"),
+            "Revisión": ("pendiente de verificar en las instrucciones para autores", "?"),
+            "Periodicidad": ("**Mensual** · **661 · 640 artículos** en 2024 y 2025", "~"),
+            "APC": ("**Híbrida: publicar por la vía de suscripción no exige APC.** No figura en "
+                    "DOAJ, coherente con que no haya migrado a acceso abierto de pago", "~"),
+            "Plantilla": ("pendiente de verificar", "?"),
+        },
+        "puntajes": {
+            "pertinencia": (8, "Alcance amplio de tecnologías de la información, menos específico que "
+                               "IJIES, pero con **50 artículos desde 2024** cuyo título nombra "
+                               "detección de intrusiones, de anomalías o seguridad de redes"),
+            "visibilidad": (8, "Q2 por SJR y respaldo de Springer Nature. CiteScore 2,6, por debajo "
+                               "de IJIES"),
+            "viabilidad": (8, "Mensual y con el mayor volumen absoluto del conjunto —unos 640 "
+                              "artículos al año—, pero **su tiempo de revisión está sin verificar**: "
+                              "no se le puntúa 10 por un dato que no se conoce"),
+            "costo": (10, "Sin APC obligatorio por la vía de suscripción"),
+            "formato": (7, "Formato estándar de Springer; requisitos concretos sin verificar"),
+        },
+    },
 ]
 
 
@@ -269,7 +339,18 @@ def main() -> None:
                  ("Indonesian Journal of Electrical Engineering and Computer Science (IJEECS)",
                   "**Descontinuada de Scopus en 2025**"),
                  ("Journal of Cyber Security and Mobility", "Q4 con APC de 1 300 EUR: no compite en ningún criterio"),
-                 ("International Journal of Information Security and Privacy", "Q4")]:
+                 ("International Journal of Information Security and Privacy", "Q4"),
+                 ("TELKOMNIKA (IAES)", "**Descontinuada de Scopus en 2025.** Publicaba 154 artículos "
+                  "al año: exactamente el perfil de alto volumen que se buscaba, y precisamente por "
+                  "eso su caída importa"),
+                 ("International Journal of Electrical and Computer Engineering (IAES)",
+                  "**Descontinuada de Scopus en 2025**"),
+                 ("Journal of Cybersecurity and Privacy, Electronics, Applied Sciences, Sensors, "
+                  "Future Internet, Information y Computers (MDPI)",
+                  "**Las siete figuran en la lista de revistas depredadoras consultada.** Es la "
+                  "editorial de mayor volumen del mercado, y queda descartada en bloque"),
+                 ("IJASEIT", "CiteScore 1,5 y volumen en descenso: 343, 257 y 239 artículos en 2023, "
+                  "2024 y 2025")]:
         a(f"| {n} | {m} |\n")
     a("\n> Sobre la condición de depredadora: no se afirma una certificación absoluta. Se "
       "declara que cada candidata **supera los filtros documentales aplicados** —ISSN, ficha "
@@ -346,6 +427,12 @@ def main() -> None:
         "BEEI": "Gana en tres de los cinco criterios y tiene 5 de 6 datos **verificados en "
                 "fuente primaria**. Mejor combinación de encaje temático, visibilidad y coste, "
                 "pero ya figura en la lista de control.",
+        "IJIES": "**El mayor volumen de las disponibles** —481, 556 y 467 artículos en 2024, "
+                 "2025 y 2026— con el APC más bajo del conjunto y publicación 2 meses después de "
+                 "aceptar. Con reserva: hay que confirmar que sigue activa en Scopus.",
+        "IJIT": "Volumen comparable con respaldo de Springer, que elimina el riesgo de "
+                "descontinuación, y **sin APC** por la vía de suscripción. Su tiempo de revisión "
+                "está sin verificar.",
         "ISJ": "**No exige APC** por la vía de suscripción y empata en pertinencia con las "
                "mejores. Sube al primer puesto al corregirse su capacidad, que no era de 21 "
                "artículos al año sino de 35–38. Su puntaje es el más frágil: 0 de 6 datos "
@@ -372,73 +459,81 @@ def main() -> None:
         a(f"| {etq} | {c['corto']} | {total(c):.1f} | {est} | {razones[c['corto']]} |\n")
 
     a("\n---\n\n## 7 · Justificación\n\n")
-    pa, pb = libres[0], libres[1]
-    a(f"**{pa['corto']} encabeza la aritmética** con {total(pa):.1f} puntos sobre 100 entre las "
-      f"candidatas disponibles, por delante de {pb['corto']} ({total(pb):.1f}). "
-      f"**{orden[0]['corto']} puntúa más alto que ambas ({total(orden[0]):.1f})**, pero queda "
-      "fuera por el filtro de disponibilidad, no por una debilidad técnica.\n\n")
+    pa, pb, pc = libres[0], libres[1], libres[2]
+    a(f"**{pa['corto']} encabeza con {total(pa):.1f} puntos sobre 100**, por delante de "
+      f"{pb['corto']} ({total(pb):.1f}) y {pc['corto']} ({total(pc):.1f}). Es la única candidata "
+      f"que supera a BEEI ({total(orden[0]):.1f}) en la puntuación absoluta.\n\n")
 
-    a("### El orden entre el Plan A y el Plan B no está resuelto\n\n")
-    a("Hay que decirlo antes que nada, porque es la debilidad más seria de esta matriz:\n\n")
-    a(f"| | {pa['corto']} | {pb['corto']} |\n|---|---|---|\n")
-    a(f"| Puntaje | **{total(pa):.1f}** | {total(pb):.1f} |\n")
-    a(f"| Datos verificados en la revista | **{completitud(pa)[0]} de {completitud(pa)[1]}** | "
-      f"**{completitud(pb)[0]} de {completitud(pb)[1]}** |\n")
-    a("| Tipo y tiempo de revisión | Sin verificar | Single-blind · 3–6 meses |\n\n")
-    a("**El Plan A gana en parte por lo que no se sabe de él.** El criterio de viabilidad "
-      "pondera cuatro componentes —tipo de revisión, tiempo, periodicidad y capacidad— y en "
-      "ISJ dos están sin verificar, mientras que CIT declara los cuatro y es penalizada "
-      "precisamente por declarar el plazo más lento del conjunto. Una matriz que premia el "
-      "desconocimiento está mal construida, y esta lo hace en este punto.\n\n")
-    a("No se corrige inventando una penalización a posteriori, que sería justo el sesgo "
-      "inverso. Se corrige **verificando**: si el tiempo de revisión de ISJ resulta mayor que "
-      "los 3–6 meses de CIT, el orden se invierte. Esa única comprobación decide entre Plan A "
-      "y Plan B y encabeza la lista de pendientes.\n\n")
+    a("### Volumen anual, contado en la misma fuente para todas\n\n")
+    a("El volumen se midió con OpenAlex, que indexa el registro completo de cada revista, para que "
+      "las cifras sean comparables entre sí y no dependan de cómo publique su índice cada editorial.\n\n")
+    a("| Revista | 2023 | 2024 | 2025 | 2026 | Estado |\n|---|---:|---:|---:|---:|---|\n")
+    for nom, c23, c24, c25, c26, est in [
+            ("**IJIES**", 389, 481, 556, 467, "Disponible"),
+            ("**IJIT**", "—", 661, 640, "—", "Disponible"),
+            ("IJACSA", 1447, 1539, 1347, 707, "Ya en la lista"),
+            ("BEEI", 415, 453, 377, 305, "Ya en la lista"),
+            ("IJSSE", 129, 187, 253, 133, "Ya en la lista"),
+            ("**ISJ**", 17, 39, 62, 39, "Disponible"),
+            ("**ICS**", 44, 42, 52, 47, "Disponible"),
+            ("**CIT**", 46, 43, 35, 23, "Disponible")]:
+        a(f"| {nom} | {c23} | {c24} | {c25} | {c26} | {est} |\n")
+    a("\n**La diferencia es de un orden de magnitud.** IJIES e IJIT publican entre diez y quince "
+      "veces más que CIT, ISJ o ICS. Donde CIT abre 4 números al año, IJIES abre 12.\n\n")
 
-    a("### Por qué ISJ está arriba\n\n")
-    a("1. **No cobra.** Es híbrida y publicar por la vía de suscripción no exige APC. Que **no "
-      "figure en DOAJ** es coherente con que no haya migrado a acceso abierto de pago. Frente "
-      "a los 600 EUR de CIT, la diferencia es todo el presupuesto del artículo.\n")
-    a("2. **Publica las mismas familias de ataque del corpus**: trabajos sobre ataques SSH y "
-      "denegación de servicio HTTP, que son exactamente dos de las familias etiquetadas.\n")
-    a("3. **La objeción que la frenaba era falsa.** Se le había atribuido una capacidad de 21 "
-      "artículos al año, cifra tomada de una fuente secundaria. El índice completo de dblp da "
-      "**36, 35 y 38 en 2024, 2025 y 2026**: capacidad equivalente a la de CIT y repartida en "
-      "seis números al año en vez de cuatro. Corregir ese dato es lo que movió a ISJ del "
-      "cuarto lugar al primero.\n\n")
+    a("### El matiz que no hay que perder de vista\n\n")
+    a("> **Más volumen no es lo mismo que más fácil.** IJIES publica su tasa de aceptación —cosa "
+      "que ninguna otra candidata hace— y es del **17,9 % en 2025**, 17,8 % en 2024 y 14,1 % en "
+      "2023. Publica mucho porque recibe mucho, no porque acepte con facilidad.\n\n")
+    a("Lo que un volumen alto sí garantiza es otra cosa, y es real: **más plazas abiertas y menos "
+      "espera**. IJIES publica unos 2 meses después de aceptar y saca número todos los meses; CIT "
+      "tarda de 3 a 6 meses solo en la primera decisión y saca cuatro números al año. Esa "
+      "diferencia se mide en trimestres.\n\n")
 
-    a("### Por qué CIT sigue siendo la apuesta más segura\n\n")
-    a("Aunque puntúe menos, es la **única candidata con los seis datos sensibles verificados "
-      "en la propia revista**, y eso tiene un valor que el puntaje no captura.\n\n")
-    a("- **Publica exactamente este problema**, comprobado en sus números y no deducido de su "
-      "alcance: detección de intrusiones con IA explicable (2024), con redes convolucionales "
-      "(2026), detección de DDoS entre conjuntos de datos (2026) y una arquitectura de "
-      "detección **y mitigación** de DDoS (2025). Esa última es el único antecedente, entre "
-      "las seis candidatas, de un trabajo que no solo detecta sino que responde: el mismo par "
-      "detección + control inline de este proyecto.\n")
-    a("- **Doble indexación verificada:** único caso cuyo Q2 aparece confirmado en la propia "
-      "revista junto a un factor de impacto de Web of Science (1,7 · Q3 · ESCI).\n")
-    a("- **Veinte páginas de límite**, frente a las 8 de BEEI: las 28 variables, la calibración "
-      "del umbral y la brecha entre error de laboratorio y de operación entran sin recortar ni "
-      "pagar por página adicional.\n")
-    a("- **Su plazo está declarado y es malo:** 3–6 meses hasta la primera decisión. Es una "
-      "desventaja conocida, que es distinto de una desventaja ausente.\n\n")
+    a("### Por qué IJIES encabeza\n\n")
+    a("1. **Produce este tema en cantidad.** No es una revista de seguridad, pero desde 2024 lleva "
+      "**86 artículos cuyo título nombra detección de intrusiones, detección de anomalías o "
+      "seguridad de redes**. Ninguna otra candidata se acerca.\n")
+    a("2. **Es la más barata de todas las que cobran:** USD 300 hoy, USD 400 desde el 1 de octubre "
+      "de 2026 — por debajo incluso de los USD 415 de BEEI.\n")
+    a("3. **Es la más rápida:** publicación unos 2 meses después de la aceptación, con número "
+      "mensual.\n")
+    a("4. **Publica su tasa de aceptación.** Que una revista exponga voluntariamente que rechaza al "
+      "82 % de lo que recibe es un indicador de higiene editorial, no un defecto.\n\n")
 
-    a("### Cómo decidir\n\n")
-    a("| Si la restricción dominante es… | La revista es… |\n|---|---|\n")
-    a("| El presupuesto | **ISJ** o **ICS**: ninguna cobra por la vía de suscripción |\n")
-    a("| La certeza sobre el proceso editorial | **CIT**: es la única con todo verificado |\n")
-    a("| El encaje con un antecedente de detección + respuesta | **CIT** |\n")
-    a("| La fecha de sustentación | **Ninguna de las tres.** CIT declara 3–6 meses y las dos "
-      "híbridas de editorial mayor no publican su plazo |\n\n")
-    a("La decisión **no se tomó por cuartil**. Si la visibilidad hubiera pesado el 70 %, como "
-      "es habitual, el orden habría sido otro y se habría perseguido prestigio a costa del "
-      "encaje y del plazo. Aquí la pertinencia temática pesa más que la visibilidad porque un "
-      "mal encaje produce rechazo de escritorio antes de llegar a revisión.\n")
+    a("### El riesgo de IJIES, que es concreto\n\n")
+    a("**Hay que confirmar que su cobertura en Scopus sigue activa antes de enviar nada.** "
+      "TELKOMNIKA, IJECE e IJEECS —revistas independientes del mismo perfil de alto volumen— "
+      "fueron **descontinuadas de Scopus en 2025**. Publicar en una revista descontinuada "
+      "invalidaría el artículo para cualquier requisito de indexación del programa.\n\n")
+    a("Ese riesgo es exactamente lo que hace valioso al Plan B: **IJIT tiene un volumen comparable "
+      "—unos 640 artículos al año— y está editada por Springer Nature**, de modo que la "
+      "descontinuación deja de ser una preocupación. Además no cobra APC por la vía de "
+      "suscripción. Su punto ciego es el opuesto: **no se ha verificado su tiempo de revisión**, y "
+      "por eso puntúa 8 y no 10 en viabilidad.\n\n")
+
+    a("### Qué elegir según la restricción\n\n")
+    a("| Si lo que manda es… | La revista es… |\n|---|---|\n")
+    a("| El volumen y la rapidez | **IJIES** — 556 artículos al año y 2 meses hasta publicar |\n")
+    a("| El presupuesto | **IJIT**, **ISJ** o **ICS** — ninguna cobra por la vía de suscripción |\n")
+    a("| La seguridad de que la revista no caiga del índice | **IJIT** — respaldo de Springer |\n")
+    a("| La certeza sobre el proceso editorial | **CIT** — la única con los seis datos verificados |\n")
+    a("| El encaje con un antecedente de detección **y respuesta** | **CIT** |\n")
+    a("| La fecha de sustentación | **IJIES**, y solo si su cobertura en Scopus se confirma |\n\n")
+    a("La decisión **no se tomó por cuartil**. Si la visibilidad hubiera pesado el 70 %, como es "
+      "habitual, el orden habría sido otro y se habría perseguido prestigio a costa del encaje, el "
+      "coste y el plazo.\n")
 
     a("\n---\n\n## 8 · Pendientes antes del envío\n\n")
     a("Esta matriz **no debe usarse tal cual el día del envío**. Falta:\n\n")
-    for x in ["**Verificar el tipo y el tiempo de revisión de ISJ.** Es la comprobación que "
+    for x in ["**Confirmar que IJIES sigue con cobertura activa en Scopus.** Es la verificación "
+              "más importante de toda la matriz: TELKOMNIKA, IJECE e IJEECS, del mismo perfil de "
+              "alto volumen, fueron descontinuadas en 2025. Se comprueba en su ficha de fuente, "
+              "https://www.scopus.com/sourceid/21100199790, mirando que la cobertura llegue "
+              "hasta el presente y no tenga aviso de discontinuación.",
+              "**Verificar el tiempo de revisión de IJIT**, hoy sin dato: es lo único que le "
+              "impide competir por el primer puesto.",
+              "**Verificar el tipo y el tiempo de revisión de ISJ.** Es la comprobación que "
               "decide entre el Plan A y el Plan B: si supera los 3–6 meses de CIT, el orden "
               "se invierte. Hoy el Plan A puntúa más alto en parte porque dos componentes de "
               "su criterio de viabilidad están sin verificar.",
@@ -606,6 +701,12 @@ def generar_word() -> None:
     h1("5 · Plan A, B y C")
     razones = {
         "BEEI": "Mejor puntaje absoluto, pero **ya registrada** en la lista de control.",
+        "IJIES": "**El mayor volumen de las disponibles** —481, 556 y 467 artículos en 2024, "
+                 "2025 y 2026— con el APC más bajo del conjunto y publicación 2 meses después de "
+                 "aceptar. Con reserva: hay que confirmar que sigue activa en Scopus.",
+        "IJIT": "Volumen comparable con respaldo de Springer, que elimina el riesgo de "
+                "descontinuación, y **sin APC** por la vía de suscripción. Su tiempo de revisión "
+                "está sin verificar.",
         "ISJ": "**No exige APC** por la vía de suscripción. Sube al primer puesto al corregirse "
                "su capacidad, que no era de 21 artículos al año sino de 35-38. Su puntaje es el "
                "más frágil del conjunto: 0 de 6 datos verificados en la revista.",
@@ -638,42 +739,49 @@ def generar_word() -> None:
 
     h1("6 · Justificación")
     pa, pb = libres[0], libres[1]
-    par(f"**{pa['corto']} encabeza la aritmética** con {total(pa):.1f} puntos entre las "
-        f"disponibles, por delante de {pb['corto']} ({total(pb):.1f}). BEEI puntúa más alto que "
-        f"ambas ({total(orden[0]):.1f}), pero queda fuera por el filtro de disponibilidad, no "
-        "por una debilidad técnica.")
-    par("**El orden entre el Plan A y el Plan B no está resuelto, y hay que decirlo primero.** "
-        f"{pa['corto']} tiene {completitud(pa)[0]} de {completitud(pa)[1]} datos verificados en "
-        f"la revista; {pb['corto']} tiene {completitud(pb)[0]} de {completitud(pb)[1]}. El "
-        "criterio de viabilidad pondera cuatro componentes —tipo de revisión, tiempo, "
-        "periodicidad y capacidad— y en ISJ dos están sin verificar, mientras que CIT declara "
-        "los cuatro y es penalizada precisamente por declarar el plazo más lento del conjunto. "
-        "**Una matriz que premia el desconocimiento está mal construida, y esta lo hace en este "
-        "punto.** No se arregla inventando una penalización a posteriori, que sería el sesgo "
-        "inverso: se arregla verificando. Si el tiempo de revisión de ISJ supera los 3-6 meses "
-        "de CIT, el orden se invierte.")
-    par("**Por qué ISJ está arriba:** no cobra —es híbrida y la vía de suscripción no exige "
-        "APC, y su ausencia de DOAJ es coherente con que no haya migrado a acceso abierto de "
-        "pago—; publica ataques SSH y denegación de servicio HTTP, dos de las familias "
-        "etiquetadas del corpus; y la objeción que la frenaba era falsa: no publica 21 "
-        "artículos al año sino 35-38 según el índice completo de dblp. Corregir ese dato es lo "
-        "que la movió del cuarto lugar al primero.")
-    par("**Por qué CIT sigue siendo la apuesta más segura** aunque puntúe menos: es la única con "
-        "los seis datos verificados en la propia revista; publica exactamente este problema, "
-        "comprobado en sus números —incluida en 2025 una arquitectura de detección Y mitigación "
-        "de DDoS, único antecedente entre las seis candidatas de un trabajo que no solo detecta "
-        "sino que responde—; es la única con Q2 y factor de impacto de Web of Science "
-        "confirmados; y su límite de 20 páginas permite exponer las 28 variables y la brecha "
-        "entre error de laboratorio y de operación sin recortar. Su plazo de 3-6 meses es una "
-        "desventaja conocida, que es distinto de una desventaja ausente.")
-    par("**Cómo decidir:** si la restricción es el presupuesto, ISJ o ICS, que no cobran por la "
-        "vía de suscripción. Si es la certeza sobre el proceso editorial o el encaje con un "
-        "antecedente de detección y respuesta, CIT. Si es la fecha de sustentación, ninguna de "
-        "las tres: CIT declara 3-6 meses y las dos híbridas no publican su plazo.", italic=True)
+    par(f"**{pa['corto']} encabeza con {total(pa):.1f} puntos sobre 100**, por delante de "
+        f"{pb['corto']} ({total(pb):.1f}), y es la única candidata que supera a BEEI "
+        f"({total(orden[0]):.1f}) en puntuación absoluta.")
+    par("**Volumen anual, medido con OpenAlex para que todas se cuenten igual:**", size=8.6)
+    tabla(["Revista", "2023", "2024", "2025", "2026", "Estado"],
+          [["IJIES", "389", "481", "556", "467", "Disponible"],
+           ["IJIT", "—", "661", "640", "—", "Disponible"],
+           ["IJACSA", "1447", "1539", "1347", "707", "Ya en la lista"],
+           ["BEEI", "415", "453", "377", "305", "Ya en la lista"],
+           ["ISJ", "17", "39", "62", "39", "Disponible"],
+           ["ICS", "44", "42", "52", "47", "Disponible"],
+           ["CIT", "46", "43", "35", "23", "Disponible"]],
+          [3.4, 1.9, 1.9, 1.9, 1.9, 3.0],
+          fondos=[F_OK, F_OK, F_AMBER, F_AMBER, None, None, None])
+    par("**La diferencia es de un orden de magnitud:** IJIES e IJIT publican entre diez y quince "
+        "veces más que CIT, ISJ o ICS. Donde CIT abre 4 números al año, IJIES abre 12.")
+    par("**Pero más volumen no es lo mismo que más fácil.** IJIES publica su tasa de aceptación "
+        "—cosa que ninguna otra candidata hace— y es del 17,9 % en 2025, 17,8 % en 2024 y 14,1 % "
+        "en 2023. Publica mucho porque recibe mucho, no porque acepte con facilidad. Lo que un "
+        "volumen alto sí garantiza es real y se mide en trimestres: más plazas abiertas y menos "
+        "espera. IJIES publica unos 2 meses después de aceptar y saca número cada mes; CIT tarda "
+        "de 3 a 6 meses solo en la primera decisión y saca cuatro números al año.")
+    par("**Por qué IJIES encabeza:** desde 2024 lleva 86 artículos cuyo título nombra detección de "
+        "intrusiones, detección de anomalías o seguridad de redes, y ninguna otra candidata se "
+        "acerca; es la más barata de las que cobran, con USD 300 hoy y USD 400 desde el 1 de "
+        "octubre de 2026, por debajo incluso de los USD 415 de BEEI; y es la más rápida del "
+        "conjunto.")
+    par("**Su riesgo es concreto y hay que resolverlo antes de enviar nada:** confirmar que su "
+        "cobertura en Scopus sigue activa. TELKOMNIKA, IJECE e IJEECS —revistas independientes del "
+        "mismo perfil de alto volumen— fueron descontinuadas de Scopus en 2025, y publicar en una "
+        "revista descontinuada invalidaría el artículo para cualquier requisito de indexación.")
+    par("**Ese riesgo es lo que da valor al Plan B.** IJIT tiene un volumen comparable, unos 640 "
+        "artículos al año, está editada por Springer Nature —de modo que la descontinuación deja "
+        "de ser una preocupación— y no cobra APC por la vía de suscripción. Su punto ciego es el "
+        "opuesto: su tiempo de revisión está sin verificar, y por eso puntúa 8 y no 10 en "
+        "viabilidad. No se premia un dato que no se conoce.", italic=True)
 
     h1("7 · Pendientes antes del envío")
-    par("**Verificar el tipo y el tiempo de revisión de ISJ:** decide entre el Plan A y el Plan "
-        "B. · **Confirmar que ISJ e ICS siguen aceptando la vía de suscripción sin APC:** su "
+    par("**Confirmar que IJIES sigue con cobertura activa en Scopus** (ficha de fuente 21100199790): "
+        "es la verificación más importante de la matriz, porque TELKOMNIKA, IJECE e IJEECS, del "
+        "mismo perfil, cayeron en 2025. · **Verificar el tiempo de revisión de IJIT**, lo único que "
+        "le impide competir por el primer puesto. · **Verificar el tipo y el tiempo de revisión de "
+        "ISJ.** · **Confirmar que ISJ e ICS siguen aceptando la vía de suscripción sin APC:** su "
         "puntaje de coste de 10 sostiene el primer puesto. · **Confirmar con la coordinación "
         "qué significa estar en la lista de control:** si "
         "inhabilita la revista o solo la registra. Toda la sección 2 depende de esa respuesta. "

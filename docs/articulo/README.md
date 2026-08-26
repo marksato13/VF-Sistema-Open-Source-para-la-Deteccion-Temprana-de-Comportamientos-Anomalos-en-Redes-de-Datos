@@ -21,17 +21,108 @@ Se buscó una revista fuera de esa lista, aplicando los mismos filtros de
 siempre: indexación vigente, volumen real de publicación, artículos afines
 comprobados uno por uno y **ausencia de la lista de revistas depredadoras**.
 
-## Las tres revistas disponibles
+## Las revistas disponibles, ordenadas
+
+Tras exigir **volumen alto** además de todo lo anterior:
 
 | | Revista | Editor | Puntaje | Cuartil | APC | Artículos/año |
 |---|---|---|---:|---|---|---:|
-| **A** | [Information Security Journal: A Global Perspective](https://www.tandfonline.com/journals/uiss20) | Taylor & Francis | **81,0** | Q2 (SJR 0,489) | **Ninguno** por suscripción | 35–38 |
-| **B** | [Cybernetics and Information Technologies](https://cit.iict.bas.bg/) | Academia Búlgara de Ciencias | **77,5** | **Q2** Scopus · Q3 WoS | 600 EUR desde el 1/sep | 42–46 |
-| **C** | [Information and Computer Security](https://www.emeraldgrouppublishing.com/journal/ics) | Emerald | **73,5** | Q2 · h-index 60 | **Ninguno** por suscripción | 34–42 |
+| **A** | [Int. J. of Intelligent Engineering and Systems](https://inass.org/publications/) | INASS · Japón | **87,5** | **Q2** (CiteScore 3,3) | **USD 300** → 400 en octubre | **556** |
+| **B** | [Int. J. of Information Technology](https://link.springer.com/journal/41870) | **Springer Nature** · BVICAM | **82,0** | **Q2** (SJR) | **Ninguno** por suscripción | **640** |
+| **C** | [Information Security Journal](https://www.tandfonline.com/journals/uiss20) | Taylor & Francis | 81,0 | Q2 | **Ninguno** por suscripción | 39–62 |
+| 4.º | [Cybernetics and Information Technologies](https://cit.iict.bas.bg/) | Academia Búlgara | 77,5 | **Q2** Scopus · Q3 WoS | 600 EUR desde el 1/sep | 35–46 |
+| 5.º | [Information and Computer Security](https://www.emeraldgrouppublishing.com/journal/ics) | Emerald | 73,5 | Q2 · h-index 60 | **Ninguno** por suscripción | 42–52 |
 
-**El orden entre A y B no está resuelto.** ISJ encabeza la aritmética, pero con
-**0 de 6** datos verificados en la propia revista; CIT tiene **6 de 6**. Una sola
-comprobación —el tiempo de revisión de ISJ— decide cuál va primero.
+Ninguna está en tu Excel ni en la lista de depredadoras.
+
+## Volumen anual, contado igual para todas
+
+Medido con **OpenAlex**, que indexa el registro completo de cada revista, para
+que las cifras sean comparables y no dependan de cómo publique su índice cada
+editorial.
+
+| Revista | 2023 | 2024 | 2025 | 2026 | |
+|---|---:|---:|---:|---:|---|
+| **IJIES** | 389 | 481 | **556** | 467 | Disponible |
+| **IJIT** · Springer | — | 661 | **640** | — | Disponible |
+| IJACSA | 1 447 | 1 539 | 1 347 | 707 | *ya en tu lista* |
+| BEEI | 415 | 453 | 377 | 305 | *ya en tu lista* |
+| IJSSE | 129 | 187 | 253 | 133 | *ya en tu lista* |
+| ISJ | 17 | 39 | 62 | 39 | Disponible |
+| ICS | 44 | 42 | 52 | 47 | Disponible |
+| CIT | 46 | 43 | 35 | 23 | Disponible |
+
+**La diferencia es de un orden de magnitud.** IJIES e IJIT publican entre diez y
+quince veces más que CIT, ISJ o ICS. Donde CIT abre 4 números al año, IJIES abre
+12.
+
+### El matiz que no conviene perder
+
+> **Más volumen no es lo mismo que más fácil.** IJIES **publica su tasa de
+> aceptación** —cosa que ninguna otra candidata hace— y es del **17,9 % en
+> 2025**, 17,8 % en 2024 y 14,1 % en 2023. Publica mucho porque recibe mucho, no
+> porque acepte con facilidad.
+
+Lo que un volumen alto sí garantiza es real y se mide en trimestres: **más
+plazas abiertas y menos espera**. IJIES publica unos 2 meses después de aceptar
+y saca número cada mes. CIT tarda de 3 a 6 meses solo en la primera decisión.
+
+## Plan A — IJIES
+
+| Dato | Valor | Fuente |
+|---|---|---|
+| Scopus | CiteScore 3,3 · **Q2** en General Engineering (pct. 62) y General Computer Science (pct. 52) | [página de la revista](https://inass.org/publications/) |
+| Periodicidad | **Mensual desde 2025** · 481 · 556 · 467 artículos en 2024 · 2025 · 2026 | ídem + OpenAlex |
+| Aceptación | **17,9 % (2025)** · 17,8 % (2024) · 14,1 % (2023) | ídem |
+| APC | **USD 300** · **USD 400 desde el 1 de octubre de 2026** · +USD 100 si no usas su plantilla · +USD 50 por página desde la 10.ª | [cargos](https://inass.org/publications/pub-charges/) |
+| Publicación | Unos **2 meses** tras la aceptación | ídem |
+| Formato | `IJIES_Format.docx` obligatoria · **límite de 10 páginas** | ídem |
+
+**Publica este tema en cantidad:** desde 2024 lleva **86 artículos** cuyo título
+nombra detección de intrusiones, detección de anomalías o seguridad de redes.
+Ninguna otra candidata se acerca.
+
+### ⚠ El riesgo de IJIES, que es concreto
+
+**Antes de enviar nada hay que confirmar que sigue con cobertura activa en
+Scopus:** [ficha de fuente 21100199790](https://www.scopus.com/sourceid/21100199790).
+
+**TELKOMNIKA, IJECE e IJEECS** —revistas independientes del mismo perfil de alto
+volumen— fueron **descontinuadas de Scopus en 2025**. Publicar en una revista
+descontinuada invalidaría el artículo para cualquier requisito de indexación del
+programa. No pude verificarlo yo: Scimago y Scopus bloquean el acceso
+automatizado desde aquí. **Es una comprobación de dos minutos en tu navegador.**
+
+## Plan B — IJIT (Springer)
+
+Existe precisamente para cubrir ese riesgo:
+
+- **Volumen comparable:** ~640 artículos al año, mensual.
+- **Editada por Springer Nature**, así que la descontinuación deja de ser una
+  preocupación.
+- **No cobra APC** por la vía de suscripción.
+- **Q2** por SJR · CiteScore 2,6.
+- 50 artículos desde 2024 sobre detección de intrusiones, anomalías o seguridad
+  de redes.
+
+Su punto ciego es el opuesto al de IJIES: **su tiempo de revisión no está
+verificado**, y por eso puntúa 8 y no 10 en viabilidad. No se premia un dato que
+no se conoce — es la lección de la corrección anterior.
+
+## Descartadas al exigir volumen
+
+| Revista | Motivo |
+|---|---|
+| **TELKOMNIKA** · IAES | **Descontinuada de Scopus en 2025.** Publicaba 154 al año: justo el perfil buscado, y por eso su caída importa |
+| **IJECE** e **IJEECS** · IAES | **Descontinuadas de Scopus en 2025** |
+| **MDPI en bloque** — *J. of Cybersecurity and Privacy, Electronics, Applied Sciences, Sensors, Future Internet, Information, Computers* | **Las siete figuran en tu lista de depredadoras.** Es la editorial de mayor volumen del mercado y queda fuera entera |
+| **IJASEIT** | CiteScore 1,5 y volumen en descenso: 343 → 257 → 239 |
+
+## La que sigue siendo la mejor evidenciada — CIT
+
+Cae al cuarto puesto **solo por volumen**: publica 35–46 al año. Todo lo demás
+sigue en pie, y es la única candidata con los **seis datos verificados en la
+propia revista**.
 
 ### Cybernetics and Information Technologies (CIT)
 
@@ -101,63 +192,66 @@ Con 3–6 meses de revisión, un envío hoy no se publica antes de 2027.
 | **International Journal of Information Security** · Springer | APC de USD 3 690 si se elige acceso abierto |
 | **Ingénierie des Systèmes d'Information** · IIETA | CiteScore 2,6 y Q3, pero su alcance declarado **no menciona seguridad de redes**: es de sistemas de información y gestión de datos |
 
-## Cómo quedó el orden, y por qué se movió
+## Registro: cómo se movió el orden y por qué
 
 La pregunta «¿cuántos artículos publican al año?» destapó un error mío. A ISJ se
 le habían atribuido **21 artículos al año**, cifra tomada de una fuente
-secundaria. El índice completo de dblp da **36, 35 y 38** en 2024, 2025 y 2026.
-Con la capacidad corregida, ISJ pasó del cuarto lugar al primero.
+secundaria. El recuento real da 39–62. Con la capacidad corregida, ISJ subió
+varios puestos — y la pregunta siguiente, exigir volumen alto, cambió el conjunto
+entero de candidatas.
 
-| Revista | Artículos/año | Fuente del conteo |
-|---|---|---|
-| CIT | 46 · 43 · 42 (2023–2025) | PDF de cada número, contados uno a uno |
-| ISJ | 36 · 35 · 38 (2024–2026) | índice completo de dblp |
-| ICS | 34 · 38 · 42 (2023–2025) | índice completo de dblp |
-
-**Las tres tienen capacidad equivalente.** Ninguna se parece a BEEI, que publica
-≈360 al año: son revistas selectivas, y eso significa más rechazo.
+Las cifras finales están en la tabla de volumen de arriba, todas medidas con la
+misma fuente. Los conteos intermedios por dblp y por PDF quedaron descartados en
+favor de OpenAlex, que cubre a las ocho candidatas con el mismo criterio.
 
 ### La debilidad de método que esto deja a la vista
 
 El criterio de viabilidad pondera cuatro cosas: tipo de revisión, tiempo,
-periodicidad y capacidad. En ISJ **dos están sin verificar**. En CIT las cuatro
-están declaradas, y CIT es penalizada precisamente por declarar el plazo más
-lento del conjunto.
+periodicidad y capacidad. **En IJIT y en ISJ dos están sin verificar.** En CIT e
+IJIES están declaradas, y CIT es penalizada precisamente por declarar el plazo
+más lento del conjunto.
 
-> **Una matriz que premia el desconocimiento está mal construida**, y esta lo
-> hace en este punto. No se arregla inventando una penalización a posteriori
-> —eso sería el sesgo inverso— sino verificando.
+> **Una matriz que premia el desconocimiento está mal construida.** No se
+> arregla inventando una penalización a posteriori —eso sería el sesgo inverso—
+> sino verificando.
 
-Si el tiempo de revisión de ISJ resulta mayor que los 3–6 meses de CIT, el orden
-se invierte. Es la primera verificación pendiente.
+La regla que quedó de aquí: **a un dato desconocido no se le da la nota máxima.**
+Por eso IJIT puntúa 8 y no 10 en viabilidad pese a publicar 640 artículos al año:
+su tiempo de revisión no se conoce. Si resulta corto, IJIT compite por el primer
+puesto; si es largo, se queda donde está.
 
 ### Qué elegir según la restricción
 
 | Si lo que manda es… | La revista es… |
 |---|---|
-| El presupuesto | **ISJ** o **ICS** — ninguna cobra por la vía de suscripción |
-| La certeza sobre el proceso editorial | **CIT** — la única con todo verificado |
-| El encaje con un antecedente de detección + respuesta | **CIT** |
-| La fecha de sustentación | **Ninguna de las tres.** CIT declara 3–6 meses y las dos híbridas no publican su plazo |
+| **El volumen y la rapidez** | **IJIES** — 556 al año, publica 2 meses tras aceptar |
+| **El presupuesto** | **IJIT**, **ISJ** o **ICS** — ninguna cobra por la vía de suscripción |
+| **Que la revista no caiga del índice** | **IJIT** — respaldo de Springer |
+| **La certeza sobre el proceso editorial** | **CIT** — la única con los seis datos verificados |
+| **El encaje con un antecedente de detección *y respuesta*** | **CIT** |
+| **La fecha de sustentación** | **IJIES**, y solo si su cobertura en Scopus se confirma |
 
-## Tres preguntas antes de enviar
+## Qué verificar antes de enviar
 
-1. **A la coordinación:** estar en la lista de control ¿inhabilita la revista o
-   solo la registra? Si solo la registra, BEEI vuelve a ser la primera opción
-   con 84,0 puntos.
-2. **A Taylor & Francis:** ¿sigue abierta la vía de suscripción sin APC en ISJ?
-   Su puntaje de coste de 10 es lo que sostiene el primer puesto; si la revista
-   migró a acceso abierto de pago, cae al último lugar. La misma pregunta vale
-   para Emerald y el Plan C.
-3. **Al editor de CIT:** ¿cuál es el APC vigente y desde cuándo? Hay **dos
-   cifras en circulación** — su registro en DOAJ declara 360 EUR y sus
-   instrucciones para autores declaran 600 EUR desde el 1 de septiembre de 2026.
-   Y ¿aplica por fecha de envío o de aceptación? La política no lo precisa, y
-   con 3–6 meses de revisión un envío de hoy se acepta después de esa fecha en
-   cualquier escenario.
+En orden de importancia:
 
-Matriz completa, con criterios, pesos y la ficha de las seis candidatas:
-[`../entregables/09-matriz-revistas/`](../entregables/09-matriz-revistas/matriz-decision-revistas.md)
+1. **¿IJIES sigue con cobertura activa en Scopus?**
+   [Ficha de fuente 21100199790](https://www.scopus.com/sourceid/21100199790).
+   Es la comprobación que decide todo el Plan A, y no pude hacerla desde aquí:
+   Scopus y Scimago bloquean el acceso automatizado. Mira que la cobertura
+   llegue hasta el presente y que no haya aviso de discontinuación.
+2. **¿Cuánto tarda la revisión en IJIT?** Es lo único que le impide competir por
+   el primer puesto. Hoy puntúa 8 en viabilidad en vez de 10 porque el dato no
+   existe, no porque sea malo.
+3. **A la coordinación:** estar en la lista de control ¿inhabilita la revista o
+   solo la registra? Si solo la registra, BEEI (84,0) y IJACSA —que publica
+   **1 347 al año**— vuelven al juego.
+4. **A Taylor & Francis, Emerald y Springer:** ¿sigue abierta la vía de
+   suscripción sin APC? El puntaje de coste de 10 sostiene buena parte de la
+   posición de IJIT, ISJ e ICS.
+5. **Al editor de CIT:** ¿cuál es el APC vigente? Hay **dos cifras en
+   circulación** — DOAJ declara 360 EUR y sus instrucciones para autores 600 EUR
+   desde el 1 de septiembre de 2026.
 
 ## Mapeo por secciones
 
