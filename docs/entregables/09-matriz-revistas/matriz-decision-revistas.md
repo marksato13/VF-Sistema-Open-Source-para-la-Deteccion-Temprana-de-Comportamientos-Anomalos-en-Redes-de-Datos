@@ -35,6 +35,7 @@ Antes de puntuar hay que saber qué se compara contra cada alcance editorial.
 | **ISJ** | Supera | Editorial de trayectoria reconocida, ficha activa en Scopus e indexación adicional en ESCI. Fuera de la lista de revistas depredadoras consultada |
 | **ICS** | Supera | Editorial de trayectoria reconocida y ficha activa en Scopus. Fuera de la lista de revistas depredadoras consultada |
 | **IJACSA** | Supera con reserva | Ficha activa en Scopus e indexación en WoS ESCI, y fuera de la lista de depredadoras consultada. Se registra que su reputación editorial es más discutida que la de las demás candidatas |
+| **CIT** | Supera | ISSN confirmado, ficha activa en Scopus, indexación adicional en Web of Science ESCI, DOAJ, INSPEC, ACM Digital Library y Engineering Village; adhesión declarada a las Core Practices de COPE, revisión por pares en tres fases con cribado antiplagio iThenticate y archivo de números desde 2001. Fuera de la lista de revistas depredadoras consultada |
 
 ### Descartadas por el filtro
 
@@ -46,6 +47,25 @@ Antes de puntuar hay que saber qué se compara contra cada alcance editorial.
 | International Journal of Information Security and Privacy | Q4 |
 
 > Sobre la condición de depredadora: no se afirma una certificación absoluta. Se declara que cada candidata **supera los filtros documentales aplicados** —ISSN, ficha de Scopus, política de revisión, archivo con DOI, APC transparente y editor identificable— y que debe reverificarse antes del envío.
+
+---
+
+## 2 bis · Filtro de disponibilidad
+
+La coordinación mantiene una **lista de control de artículos** con 17 revistas ya registradas. Tres de las candidatas figuran en ella, de modo que la lista funciona como un **segundo filtro de entrada**: no cambia el puntaje de ninguna revista, decide cuáles siguen disponibles.
+
+| Revista | Lista de control | Detalle |
+|---|---|---|
+| **BEEI** | **Ya registrada** | N.º 8 de la lista de control institucional, registrada como Q1 · Indonesia · USD 385 |
+| **IJSSE** | **Ya registrada** | N.º 7 de la lista de control institucional, registrada como Q3 · Reino Unido · USD 700 |
+| **ISJ** | Disponible | No figura entre las 17 revistas de la lista de control institucional |
+| **ICS** | Disponible | No figura entre las 17 revistas de la lista de control institucional |
+| **IJACSA** | **Ya registrada** | N.º 5 de la lista de control institucional, registrada como Q3 · Reino Unido · USD 1 100 |
+| **CIT** | Disponible | No figura entre las 17 revistas de la lista de control institucional |
+
+**Se separa del puntaje a propósito.** Bajar la nota de una revista por estar en la lista mezclaría una restricción administrativa con una evaluación técnica, y haría irreproducible la matriz: los puntajes valen lo mismo hoy y cuando la lista cambie.
+
+> La lista registra a BEEI como Q1 y el APC de IJSSE como USD 700. La consulta directa a las fuentes oficiales el 26/08/2026 da **Q1 por CiteScore y Q3 por SJR** para BEEI y **USD 850** para IJSSE. Las discrepancias se dejan a la vista en vez de promediarse.
 
 ---
 
@@ -68,15 +88,15 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 ## 4 · Matriz
 
-| Criterio (peso) | BEEI | ISJ | IJSSE | ICS | IJACSA |
-|---|---:|---:|---:|---:|---:|
-| Pertinencia temática (30 %) | 9 | 9 | 9 | 6 | 6 |
-| Visibilidad bibliométrica (25 %) | 8 | 8 | 6 | 9 | 8 |
-| Viabilidad editorial (20 %) | 9 | 4 | 9 | 5 | 10 |
-| Costo y accesibilidad (15 %) | 8 | 10 | 5 | 10 | 3 |
-| Compatibilidad formal (10 %) | 7 | 7 | 8 | 6 | 7 |
-| **PUNTAJE PONDERADO** | **84.0** | **77.0** | **75.5** | **71.5** | **69.5** |
-| Datos con fuente primaria | 5/6 | 0/6 | 5/6 | 0/6 | 0/6 |
+| Criterio (peso) | BEEI | CIT | ISJ | IJSSE | ICS | IJACSA |
+|---|---:|---:|---:|---:|---:|---:|
+| Pertinencia temática (30 %) | 9 | 9 | 9 | 9 | 6 | 6 |
+| Visibilidad bibliométrica (25 %) | 8 | 9 | 8 | 6 | 9 | 8 |
+| Viabilidad editorial (20 %) | 9 | 5 | 4 | 9 | 5 | 10 |
+| Costo y accesibilidad (15 %) | 8 | 6 | 10 | 5 | 10 | 3 |
+| Compatibilidad formal (10 %) | 7 | 9 | 7 | 8 | 6 | 7 |
+| **PUNTAJE PONDERADO** | **84.0** | **77.5** | **77.0** | **75.5** | **71.5** | **69.5** |
+| Datos con fuente primaria | 5/6 | 6/6 | 0/6 | 5/6 | 0/6 | 0/6 |
 
 ---
 
@@ -103,7 +123,28 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | Costo y accesibilidad | **8** | USD 415 con coautoría, el más bajo de las candidatas con APC |
 | Compatibilidad formal | **7** | Plantilla disponible, pero el límite base de 8 páginas obliga a comprimir o a pagar por página adicional |
 
-### 2. Information Security Journal: A Global Perspective — 77.0 puntos
+### 2. Cybernetics and Information Technologies (CIT) — 77.5 puntos
+
+`Instituto de TIC · Academia Búlgara de Ciencias · Bulgaria` · ISSN 1314-4081 · [ficha en Scopus](https://www.scopus.com/sourceid/21100199814)
+
+| Dato | Valor | |
+|---|---|:--:|
+| CiteScore 2025 | 4,2 · SNIP 0,854 · la revista publica ambos en su página de indexación | ✔ |
+| Cuartil SJR | **Q2** · SJR 0,456 · h-index 27 · además Web of Science ESCI con factor de impacto 1,7 (Q3) | ✔ |
+| Revisión | Single-blind, ≥2 revisores, en tres fases · **3–6 meses** en modo regular · 1–3 meses en vía rápida · cribado de texto generado por IA con rechazo sin derecho a revisión por encima del 20 % | ✔ |
+| Periodicidad | 4 números al año · 16 artículos en el n.º 2 de 2026 | ✔ |
+| APC | **600 EUR a partir del 1 de septiembre de 2026** · vía rápida 1 200 EUR · solo se paga si el artículo se acepta | ✔ |
+| Plantilla | Plantilla DOCX oficial · hasta **20 páginas** · envío por correo electrónico | ✔ |
+
+| Criterio | Puntaje | Justificación |
+|---|:--:|---|
+| Pertinencia temática | **9** | Su alcance declara tecnologías de comunicación entre computadoras, aprendizaje profundo y automático, y reconocimiento de patrones. Lo decisivo no es el alcance sino lo que publica: entre 2024 y 2026 sacó detección de intrusiones con IA explicable, detección de intrusiones con redes convolucionales, detección de DDoS entre conjuntos de datos y una arquitectura de **detección y mitigación** de DDoS, que es el análogo más cercano al control inline de este proyecto entre todas las candidatas |
+| Visibilidad bibliométrica | **9** | Única candidata con cuartil **Q2 verificado en fuente primaria** y, a la vez, factor de impacto en Web of Science. CiteScore 4,2, igual al de BEEI, pero con SJR 0,456 frente al Q3 de BEEI |
+| Viabilidad editorial | **5** | El punto débil: 3–6 meses hasta la primera decisión —el plazo más largo del conjunto— y solo 4 números al año, unos 55 artículos frente a los ≈360 de BEEI. Menor capacidad significa menor probabilidad de aceptación |
+| Costo y accesibilidad | **6** | 600 EUR desde septiembre de 2026, por debajo de los USD 850 de IJSSE pero por encima de los USD 415 de BEEI |
+| Compatibilidad formal | **9** | Límite de 20 páginas, frente a las 8 de BEEI: el artículo cabe entero sin pagar por página adicional. Plantilla oficial y envío por correo |
+
+### 3. Information Security Journal: A Global Perspective — 77.0 puntos
 
 `Taylor & Francis · Reino Unido` · ISSN 1939-3555 · [ficha en Scopus](https://www.scopus.com/sourceid/19700187807)
 
@@ -124,7 +165,7 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción |
 | Compatibilidad formal | **7** | Editorial mayor con formato estándar; requisitos concretos sin verificar |
 
-### 3. International Journal of Safety and Security Engineering (IJSSE) — 75.5 puntos
+### 4. International Journal of Safety and Security Engineering (IJSSE) — 75.5 puntos
 
 `IIETA · Canadá` · ISSN 2041-904X · [ficha en Scopus](https://www.scopus.com/sourceid/21100785501)
 
@@ -145,7 +186,7 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | Costo y accesibilidad | **5** | USD 850, el doble que BEEI |
 | Compatibilidad formal | **8** | Plantilla disponible y sin límite estrecho de páginas declarado |
 
-### 4. Information and Computer Security — 71.5 puntos
+### 5. Information and Computer Security — 71.5 puntos
 
 `Emerald · Reino Unido` · ISSN 2056-4961 · [ficha en Scopus](https://www.scopus.com/sourceid/21100421900)
 
@@ -166,7 +207,7 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción |
 | Compatibilidad formal | **6** | Requisitos sin verificar |
 
-### 5. International Journal of Advanced Computer Science and Applications (IJACSA) — 69.5 puntos
+### 6. International Journal of Advanced Computer Science and Applications (IJACSA) — 69.5 puntos
 
 `TheSAI · Reino Unido` · ISSN 2158-107X · [ficha en Scopus](https://www.scopus.com/sourceid/21100867241)
 
@@ -193,33 +234,40 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 ## 6 · Plan A, B y C
 
-> **El orden por debajo del Plan A es provisional.** Solo BEEI e IJSSE tienen sus datos sensibles verificados en fuente primaria; las otras tres se puntuaron con fuentes secundarias. Una verificación completa **puede reordenar las posiciones 2 a 5**, y por eso la sección 8 enumera lo que falta comprobar antes del envío.
+Los planes se asignan **solo entre las candidatas disponibles**, es decir, las que superan el filtro de legitimidad y además no figuran en la lista de control. Los puntajes de las tres ya registradas se conservan a la vista para que la comparación siga siendo completa.
+
+> **El orden por debajo del Plan A es provisional.** Solo BEEI, IJSSE y CIT tienen sus datos sensibles verificados en fuente primaria; ISJ, ICS e IJACSA se puntuaron con fuentes secundarias. Completar esa verificación **puede reordenar las posiciones siguientes**, y por eso la sección 8 enumera lo que falta comprobar antes del envío.
 >
-> Se presenta igual, con el orden y sus lagunas a la vista, porque ocultar la diferencia de verificación entre candidatas sería el error más grave de esta matriz.
+> Se presenta así, con las lagunas a la vista, porque ocultar la diferencia de verificación entre candidatas sería el error más grave de esta matriz.
+>
+> **La distancia entre el Plan A y el Plan B es de medio punto** (77,5 frente a 77,0), menor que lo que puede mover una sola verificación pendiente. Lo que hoy separa a las dos no es el puntaje sino la evidencia: CIT tiene 6 de 6 datos verificados en la propia revista y ISJ tiene 0 de 6.
 
-**Plan A — BEEI (84.0)**
-
-**Plan B — ISJ (77.0)**
-
-**Plan C — IJSSE (75.5)**
-
-| | Revista | Puntaje | Por qué en esa posición |
-|---|---|---:|---|
-| **Plan A** | BEEI | 84.0 | Gana en tres de los cinco criterios y es la que más datos tiene **verificados en fuente primaria** (5 de 6). Mejor combinación de encaje temático, visibilidad y coste. |
-| **Plan B** | ISJ | 77.0 | Empata en pertinencia con las mejores y **no exige APC**, pero publica solo 21 artículos al año: su bajo puntaje de viabilidad refleja una probabilidad de aceptación mucho menor. |
-| **Plan C** | IJSSE | 75.5 | Encaje temático idéntico al de BEEI y ciclo editorial rápido, pero pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC duplica al de BEEI. |
-| 4.º | ICS | 71.5 | El mayor prestigio de la lista (h-index 60), pero su centro editorial se inclina a factores humanos y buena parte de sus datos sigue sin verificar. |
-| 5.º | IJACSA | 69.5 | La más rápida de todas, pero de alcance genérico y con el APC más alto. |
+| | Revista | Puntaje | Estado | Por qué en esa posición |
+|---|---|---:|---|---|
+| — | BEEI | 84.0 | Ya en la lista de control | Gana en tres de los cinco criterios y tiene 5 de 6 datos **verificados en fuente primaria**. Mejor combinación de encaje temático, visibilidad y coste, pero ya figura en la lista de control. |
+| **Plan A** | CIT | 77.5 | Disponible | La mejor de las disponibles. Único caso con Q2 y factor de impacto en Web of Science verificados en la propia revista, y el único que publica detección **y mitigación**. Paga su posición en el plazo: 3–6 meses hasta la primera decisión. |
+| **Plan B** | ISJ | 77.0 | Disponible | Empata en pertinencia con las mejores y **no exige APC**, pero publica solo 21 artículos al año: su bajo puntaje de viabilidad refleja una probabilidad de aceptación mucho menor. |
+| — | IJSSE | 75.5 | Ya en la lista de control | Encaje temático idéntico al de BEEI y ciclo editorial rápido, pero pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC duplica al de BEEI. Ya figura en la lista de control. |
+| **Plan C** | ICS | 71.5 | Disponible | El mayor prestigio de la lista (h-index 60), pero su centro editorial se inclina a factores humanos y buena parte de sus datos sigue sin verificar. |
+| — | IJACSA | 69.5 | Ya en la lista de control | La más rápida de todas, pero de alcance genérico, con el APC más alto y ya registrada en la lista de control. |
 
 ---
 
 ## 7 · Justificación
 
-**BEEI es el Plan A** porque obtiene el puntaje ponderado más alto (84.0 sobre 100) y, sobre todo, porque es la candidata con más datos verificados en fuente primaria (5 de 6). Su alcance editorial nombra de forma explícita los cuatro ejes del artículo —redes de comunicaciones, seguridad de redes, aprendizaje automático y ciberseguridad—, presenta el CiteScore y el percentil más altos del conjunto (4,2 y 65) y su APC de USD 415 con coautoría es el más bajo entre las revistas que cobran.
+**CIT es el Plan A.** Con 77.5 puntos sobre 100 es la candidata mejor puntuada entre las disponibles, y tiene los 6 datos sensibles verificados en la propia revista (6 de 6).
 
-**No se eligió ISJ** pese a no exigir APC: publica solo 21 artículos al año, de modo que su capacidad —y por tanto la probabilidad de aceptación— es sustancialmente menor. Se conserva como Plan B precisamente porque su coste nulo la hace la mejor alternativa si el presupuesto desaparece.
+**No es la mejor puntuada en términos absolutos:** BEEI obtiene 84.0. Queda fuera por el filtro de disponibilidad, no por una debilidad técnica, y esa distinción se mantiene explícita en la sección 2 bis.
 
-**No se eligió IJSSE** aunque su encaje temático es equivalente: pierde en visibilidad bibliométrica y su APC duplica al del Plan A, sin ofrecer a cambio una ventaja editorial que lo compense.
+Tres razones sostienen la elección:
+
+1. **Publica exactamente este problema.** No se infiere del alcance declarado, se comprueba en sus números: detección de intrusiones con IA explicable (2024), detección de intrusiones con redes convolucionales (2026), detección de DDoS entre conjuntos de datos (2026) y una arquitectura de detección **y mitigación** de DDoS (2025). Esa última es el único antecedente, entre todas las candidatas, de un trabajo que no solo detecta sino que responde: es el mismo par detección + control inline de este proyecto.
+2. **Doble indexación verificada.** Es la única candidata cuyo Q2 aparece confirmado en la propia revista junto a un factor de impacto de Web of Science (1,7, Q3, ESCI). En las demás el cuartil sigue apoyado en fuentes secundarias.
+3. **El formato favorece a este artículo.** El límite de 20 páginas permite exponer las 28 variables, la calibración del umbral y la brecha entre error de laboratorio y de operación sin comprimir ni pagar por página adicional; en BEEI, con 8 páginas de base, ese mismo contenido obligaría a recortar o a pagar.
+
+**Lo que cuesta esa elección, dicho sin adornos:** la primera decisión tarda entre 3 y 6 meses, el plazo más largo de todas las candidatas, y la revista publica unos 55 artículos al año frente a los ≈360 de BEEI. Si la fecha de sustentación manda sobre el indexado, el Plan A deja de ser el correcto y hay que revisar la ponderación de viabilidad antes de enviar, no después.
+
+**ISJ queda como Plan B** porque no exige APC por la vía de suscripción, lo que la convierte en la mejor alternativa si el presupuesto desaparece. No es Plan A por su capacidad: publica alrededor de 21 artículos al año.
 
 La decisión **no se tomó por cuartil**. Si la visibilidad hubiera pesado el 70 %, como es habitual, el orden habría sido otro y se habría perseguido prestigio a costa del encaje y del plazo. Aquí la pertinencia temática pesa más que la visibilidad porque un mal encaje produce rechazo de escritorio antes de llegar a revisión.
 
@@ -234,3 +282,6 @@ Esta matriz **no debe usarse tal cual el día del envío**. Falta:
 - Reverificar el APC de las cinco: cambia sin aviso. El de IJSSE ya pasó de USD 700 a USD 850 entre dos consultas.
 - Confirmar por escrito con la coordinación académica el requisito exacto de cuartil o índice del programa: es un **filtro**, no un criterio ponderado.
 - Comprobar que la extensión del artículo cabe en el límite base de 8 páginas de BEEI, o presupuestar el coste por página adicional.
+- **Preguntar por escrito a CIT si el APC de 600 EUR aplica por fecha de envío o por fecha de aceptación.** La política dice «600 EUR a partir del 1 de septiembre de 2026» sin precisar el disparador; con una revisión de 3 a 6 meses, un envío de hoy se acepta después de esa fecha en cualquier escenario.
+- Pasar el manuscrito por un detector de texto generado por IA antes de enviarlo a CIT: por encima del 20 % la revista rechaza **sin derecho a revisión**.
+- Confirmar con la coordinación qué significa exactamente estar en la lista de control: si inhabilita la revista o solo la registra. Toda la sección 2 bis depende de esa respuesta.
