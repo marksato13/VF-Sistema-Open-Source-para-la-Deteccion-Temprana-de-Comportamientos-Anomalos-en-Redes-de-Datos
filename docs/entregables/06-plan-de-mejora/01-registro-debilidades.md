@@ -30,9 +30,13 @@ Es la dimensión más débil del proyecto. No afecta al funcionamiento del siste
 | **D-08** | **El dataset y el modelo no están publicados** | El repositorio excluye `artifacts/` en bloque; esa regla arrastra al dataset (708 KB) y al modelo (8 KB) junto con las dependencias (60 MB) y las capturas (24 MB) | 🔴 | **Minutos** | Excluir esos dos artefactos de la regla y publicarlos. Sube el ítem 2.2 de la ficha de 1 a 3 |
 | **D-09** | División por índice de repetición, sin jornada de holdout externa | R01–R03 entrenamiento, R04 validación, R05 prueba: los 44 perfiles aparecen en las tres particiones. Se mide repetibilidad, no generalización | 🟠 | Días | Capturar una jornada nueva y reservarla sin participar en entrenamiento ni calibración |
 | **D-10** | Seis escenarios legítimos exigidos no existen | Faltan SSH, SCP/SFTP, SMB, respaldo, streaming y actualizaciones; tampoco hay captura multi-sistema-operativo | 🟡 | Días | Capturarlos, o declararlos como límite de alcance si el jurado no los exige |
-| **D-12** | `tls_handshake_failure_ratio_60s` es constante y no observable | Vale 0,0 en todo el dataset; se demostró que Suricata no produce el evento intermedio | 🟡 | Horas | **Declararla no observable** y reportar 27 variables efectivas, en vez de mantener una constante en el vector |
 | **D-25** | Tamaño muestral por debajo de la meta declarada | 1 373 ventanas frente a la meta de 2 000–3 000; ~6 ventanas por episodio, luego no son independientes | 🟡 | Semanas | Reportar el tamaño efectivo por episodio junto al de ventanas, y declarar la brecha |
 
+> **Ya resuelto en esta fase:** `D-12` `tls_handshake_failure_ratio_60s` queda
+> declarada **no observable**; el corpus se reporta como **27 variables efectivas
+> de 28 definidas**. Evidencia:
+> [`03-diccionario-multicapa-v2.md`](../../fase02-features-multicapa/03-diccionario-multicapa-v2.md).
+>
 > **Ya resuelto en esta fase:** `D-26` los gates no cubrían duplicados ni
 > constantes — se añadieron cuatro (`constants_declared`,
 > `no_duplicate_crossing_label`, `no_duplicate_crossing_partition`,
@@ -70,11 +74,17 @@ Es la dimensión con menor puntaje en la ficha de auditoría (**55,6 %**) y la �
 
 | ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
 |---|---|---|---|---|---|
-| **D-14** | **Sin diccionario de fórmulas para las variables 15–28** | El jurado pidió "diccionario, fórmulas, unidades y ventanas"; solo existe para las 14 de la versión anterior | 🔴 | Horas | **Extraerlas del código del extractor**, que ya las implementa, y publicarlas |
 | **D-15** | Matriz de cumplimiento de requisitos obsoleta | 4 filas sin cerrar y referencias a rutas que ya no existen | 🟠 | Horas | Actualizarla al estado real y corregir las rutas |
 | **D-17** | Manual de implementación técnica pendiente | Existe manual de operación, no de instalación reproducible desde cero | 🟠 | 1 día | Redactarlo; los comandos ya están probados en los despliegues documentados |
 | **D-20** | **El PPI no refleja los resultados obtenidos** | Se redactó antes de que existieran; debe subirse actualizado al sistema LAM Research | 🔴 | Horas | Actualizar contra la tabla de correspondencia de `05-ppi/README.md` |
 | **D-06** | Determinismo y semillas sin declarar como protocolo | 10 semillas registradas, pero no cubren el modelo elegido; el determinismo del OCSVM no se documenta | 🟡 | Horas | Documentarlo explícitamente en el protocolo |
+
+> **Ya resuelto en esta fase:** `D-14` el diccionario científico de las 28
+> variables —fórmula, denominador, comportamiento con denominador cero, fuente
+> exacta, rango teórico y observado, observabilidad, coste y estado— se publica
+> **generado desde el extractor congelado**, no redactado a mano:
+> [`03-diccionario-multicapa-v2.md`](../../fase02-features-multicapa/03-diccionario-multicapa-v2.md).
+> Cierra un requisito explícito del jurado.
 
 ---
 

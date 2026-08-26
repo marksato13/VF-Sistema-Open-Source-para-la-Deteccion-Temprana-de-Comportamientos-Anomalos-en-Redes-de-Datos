@@ -7,10 +7,17 @@
 **Dataset multilayer-v2 consolidado y auditado**: 220 episodios normales /
 1,373 ventanas (train 824, validation 273, test 276) + 179 ventanas de
 anomalías reales para evaluación (161 genuinamente originadas en Kali, 18
-heredadas de una generación anterior). 28 features (14 v1 + 14 nuevas L3/L4/L7).
-`gates.pass=true`, sin episodios repartidos entre particiones, sin
-duplicados exactos nuevos sin declarar. Limitación conocida y no resuelta:
-`tls_handshake_failure_ratio_60s` sigue constante en todo el dataset (ver
+heredadas de una generación anterior). **28 features definidas, 27 con
+variación observable**: diccionario científico completo —fórmula, denominador,
+comportamiento con denominador cero, fuente, rangos teórico y observado,
+observabilidad, coste y estado— generado desde el extractor congelado en
+`docs/fase02-features-multicapa/03-diccionario-multicapa-v2.md`.
+`gates.pass=true` con gates de duplicados y constantes (`constants_declared`,
+`no_duplicate_crossing_label`, `no_duplicate_crossing_partition`,
+`duplicates_within_tolerance`), sin episodios repartidos entre particiones.
+Limitación declarada y no resuelta:
+`tls_handshake_failure_ratio_60s` es **no observable** en esta configuración y
+sigue constante en todo el dataset (ver
 `docs/fase03-dataset/175-limite-tls-handshake-failure-ratio.md`). El
 tamaño real queda por debajo de la meta aspiracional de 2,000–3,000 ventanas
 independientes (`docs/fase03-dataset/160-plan-expansion-dataset-multicapa-v2.md`).

@@ -16,6 +16,8 @@ Evidencia: [`181-correccion-catalogo-auditoria-y-gates.md`](../../fase03-dataset
 - [x] **D-32 · Reporte de auditoría regenerado** a 1 373/179; el de 75/18 archivado, no borrado.
 - [x] **D-26 · Cuatro gates nuevos** de duplicados y constantes, con prueba positiva y negativa. Suite: 88 tests en verde.
 - [x] **D-35 · Generadores de Word reproducibles** — el logo vivía en un directorio efímero y la carátula se omitía en silencio.
+- [x] **D-14 · Diccionario científico de las 28 variables**, generado desde el extractor congelado. Cierra un requisito explícito del jurado.
+- [x] **D-12 · `tls_handshake_failure_ratio_60s` declarada no observable** — se reportan **27 efectivas de 28 definidas**.
 
 SHA-256 de los CSV congelados idénticos antes y después.
 
@@ -33,8 +35,6 @@ Ninguna requiere capturar datos, reentrenar ni repetir campañas. **Cierran dos 
 
 - [ ] **D-08 · Publicar el dataset y el modelo** *(minutos)*
   Excluir `artifacts/dataset/` y `artifacts/model/` de la regla que ignora `artifacts/`. Son 716 KB en total. → *Ficha ítem 2.2: de 1 a 3*
-- [ ] **D-14 · Publicar el diccionario de fórmulas de las variables 15–28** *(horas)*
-  Extraerlas del extractor, que ya las implementa. → *Cierra un requisito explícito del jurado*
 - [ ] **D-01 · Declarar la selección posterior del modelo** *(horas)*
   Escribir en tesis y PPI que la detección reportada es una estimación optimista por haberse elegido el modelo tras ver el conjunto de prueba.
 - [ ] **D-15 · Cerrar y actualizar la matriz de cumplimiento de requisitos** *(horas)*
@@ -45,8 +45,6 @@ Ninguna requiere capturar datos, reentrenar ni repetir campañas. **Cierran dos 
   Dar una banda de variabilidad al umbral 1,8126.
 - [ ] **D-06 · Documentar determinismo y semillas como protocolo** *(horas)*
   → *Ficha ítem 2.4: de 2 a 3*
-- [ ] **D-12 · Declarar `tls_handshake_failure_ratio_60s` como no observable** *(horas)*
-  Reportar 27 variables efectivas en vez de mantener una constante.
 - [ ] **D-22 · Revertir el acceso administrativo permanente** *(horas)*
   Volver al sudoers estrecho para que la evidencia de aislamiento vuelva a ser cierta en la defensa.
 - [ ] **D-33 · Licencia, responsables, contacto, retención y usos prohibidos** *(horas)*
