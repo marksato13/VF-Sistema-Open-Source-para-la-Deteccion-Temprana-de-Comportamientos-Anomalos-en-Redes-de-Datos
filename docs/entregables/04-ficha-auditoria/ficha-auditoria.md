@@ -50,17 +50,17 @@ sustentan con 18 ítems sobre 51 puntos.
 
 | Criterio | Evidencia encontrada | Puntaje |
 |---|---|:---:|
-| Confiabilidad estadística reportada | Intervalos de Wilson 95 % en toda proporción, McNemar exacto con corrección de Holm sobre 21 comparaciones y ROC-AUC 0,974. **Alfa no aplica** (no hay escalas); **Kappa no aplica** (no hay jueces) | **3 / 4** |
-| Método de validación declarado | Hold-out con partición disjunta por episodio, umbral calibrado solo con `validation` y evaluación bloqueada de un solo paso. Falta validación cruzada y jornada de holdout externa | **3 / 4** |
+| Confiabilidad estadística reportada | Intervalos de Wilson 95 %, McNemar exacto con corrección de Holm sobre 21 comparaciones, ROC-AUC 0,974 y **validación cruzada agrupada por episodio**. **Alfa no aplica** (no hay escalas); **Kappa no aplica** (no hay jueces) | **4 / 4** |
+| Método de validación declarado | Hold-out con partición disjunta por episodio, umbral calibrado solo con `validation` y evaluación bloqueada de un solo paso, **respaldada por validación cruzada**. Falta la jornada de holdout temporal externa | **3 / 4** |
 | Confiabilidad de sistema / determinismo | Reproducción **bit a bit** verificada: el umbral coincide en sus 16 dígitos y los 7 modelos reproducen el manifiesto. Las semillas aún no se declaran como protocolo | **3 / 3** |
 | Datos y/o código disponibles públicamente | Dataset, manifiesto y los 7 modelos candidatos publicados, verificables con `sha256sum -c`, bajo licencias MIT y CC BY 4.0 | **3 / 3** |
 | Entorno y dependencias documentadas | Versiones exactas de `scikit-learn` y `numpy` en el manifiesto congelado | **3 / 3** |
 | **Pertinencia validada con usuarios reales** | **No se realizó ninguna.** Es la única ausencia total del producto | **0 / 3** |
-| **TOTAL** | | **15 / 20 · 75 %** |
+| **TOTAL** | | **16 / 20 · 80 %** |
 
 > **El único cero es la validación con personas.** No se corrige documentando:
 > exige evaluadores usando el panel. Una prueba de usabilidad con 5–8
-> participantes lo convierte en evidencia y eleva el total a **18 de 20**.
+> participantes lo convierte en evidencia y eleva el total a **19 de 20**.
 
 ---
 
@@ -137,21 +137,26 @@ sustentan con 18 ítems sobre 51 puntos.
 
 | Dimensión | Obtenido | Máximo | Porcentaje | Nivel |
 |---|---|---|---|---|
-| Confiabilidad | 9 | 15 | **60,0 %** | Medio |
+| Confiabilidad | 12 | 15 | **80,0 %** | Alto |
 | Replicabilidad | 17 | 18 | **94,4 %** | Alto |
 | Pertinencia | 10 | 18 | **55,6 %** | Medio |
-| **TOTAL** | **36** | **51** | **70,6 %** | **Alto** |
+| **TOTAL** | **39** | **51** | **76,5 %** | **Alto** |
 
-> **Evolución.** La auditoría anterior daba **32/51 = 62,7 %**. Subieron tres
+> **Evolución.** La primera auditoría dio **32/51 = 62,7 %**. Subieron cinco
 > ítems, todos con evidencia publicada: cuantificación de la incertidumbre
-> (2 → 3), datos disponibles (1 → 3) e instrucciones de reproducción (2 → 3).
+> (2 → 3), datos disponibles (1 → 3), instrucciones de reproducción (2 → 3),
+> validación cruzada (1 → 3) y estabilidad entre repeticiones (2 → 3).
+>
+> **La confiabilidad pasa de 53,3 % a 80,0 %**, que era la dimensión más débil.
+> La única que no se movió es la **pertinencia**, porque no se corrige
+> escribiendo.
 
 ### Interpretación
 
-Un **70,6 %** describe el estado actual: **sólido como artefacto de ingeniería y ya replicable por un tercero, todavía incompleto en validación humana**.
+Un **76,5 %** describe el estado actual: **sólido como artefacto de ingeniería y ya replicable por un tercero, todavía incompleto en validación humana**.
 
 - Lo que sostiene el puntaje es la **replicabilidad** (94,4 %): datos, modelos, checksums y licencias están publicados; un tercero puede clonar y reproducir el umbral en sus 16 dígitos.
-- Lo que lo baja son dos ausencias distintas, y ya no pesan igual: la **validación estadística** se redujo a un solo hueco —falta validación cruzada sobre el modelo elegido—, mientras que la **validación humana** sigue en cero absoluto.
+- Lo que lo baja es ya una sola cosa: la **validación humana**. La estadística quedó cerrada; ningún usuario ni experto externo ha evaluado el producto.
 - Ninguna de las dos ausencias invalida los resultados obtenidos; ambas **limitan el alcance de lo que puede afirmarse** a partir de ellos.
 
 ---

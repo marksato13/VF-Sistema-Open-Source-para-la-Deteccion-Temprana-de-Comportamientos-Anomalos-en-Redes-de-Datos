@@ -52,11 +52,13 @@ CONFIABILIDAD = [
     ("1.2", "Kappa de Cohen (acuerdo inter-evaluador)",
      "No se realizó evaluación por jueces ni doble etiquetado independiente; las etiquetas provienen del diseño experimental", 0),
     ("1.3", "Validación cruzada",
-     "No se aplicó sobre el modelo congelado. Existe leave-one-episode-out, pero solo sobre un pipeline descartado", 1),
+     "Ejecutada, agrupada por episodio en 5 pliegues: la detección media cae dentro del intervalo de "
+     "confianza de la evaluación de un solo paso, así que el resultado no depende de la partición elegida", 3),
     ("1.4", "Reproducibilidad de la medición",
      "Al reevaluar el modelo se obtuvieron exactamente las cifras originales (13/276 y 158/179)", 3),
     ("1.5", "Estabilidad entre repeticiones",
-     "Dos pases completos de validación operativa con resultados equivalentes (25,8 % y 23,0 %)", 2),
+     "Dos pases de validación operativa con resultados equivalentes (25,8 % y 23,0 %) y remuestreo del "
+     "umbral con B = 1 000: coeficiente de variación 4,10 %, por debajo del 5 % declarado de antemano", 3),
     ("1.6", "Cuantificación de la incertidumbre",
      "Intervalos de Wilson 95 % en toda proporción y prueba de significancia entre modelos: McNemar exacto "
      "con corrección de Holm-Bonferroni sobre las 21 comparaciones por pares", 3),
@@ -228,11 +230,13 @@ def main() -> int:
     tabla(doc, ["Criterio", "Evidencia encontrada", "Puntaje"],
           [("Confiabilidad estadística reportada (Alfa, Kappa u otra)",
             "Intervalos de Wilson 95 % en toda proporción, McNemar exacto con corrección de Holm sobre 21 "
-            "comparaciones y ROC-AUC 0,974. Alfa no aplica: no hay escalas. Kappa no aplica: no hay jueces",
-            ("3 / 4", F_AMBER)),
+            "comparaciones, ROC-AUC 0,974 y validación cruzada agrupada por episodio. Alfa no aplica: no hay "
+            "escalas. Kappa no aplica: no hay jueces",
+            ("4 / 4", F_OK)),
            ("Método de validación de resultados declarado",
             "Hold-out con partición disjunta por episodio, umbral calibrado solo con validation y evaluación "
-            "bloqueada de un solo paso. Falta validación cruzada y jornada de holdout externa",
+            "bloqueada de un solo paso, con validación cruzada por episodio que la respalda. Falta la jornada de "
+            "holdout temporal externa",
             ("3 / 4", F_AMBER)),
            ("Confiabilidad de sistema / determinismo",
             "Reproducción bit a bit verificada: el umbral coincide en sus 16 dígitos y los 7 modelos reproducen "
@@ -247,11 +251,11 @@ def main() -> int:
            ("Pertinencia validada con usuarios o stakeholders reales",
             "No se realizó ninguna. Es la única ausencia total del producto",
             ("0 / 3", F_DANGER)),
-           (("TOTAL", "EEF1F8"), "", ("15 / 20  ·  75 %", F_AMBER))],
+           (("TOTAL", "EEF1F8"), "", ("16 / 20  ·  80 %", F_AMBER))],
           widths=[5.0, 9.0, 2.0])
     parrafo(doc, "**El único cero es la validación con personas.** No se corrige documentando: exige "
                  "evaluadores usando el panel. Una prueba de usabilidad con 5–8 participantes lo convierte "
-                 "en evidencia y eleva el total a 18 de 20.", italic=True, color=DIM)
+                 "en evidencia y eleva el total a 19 de 20.", italic=True, color=DIM)
 
     doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
     a = bloque(doc, "1.  Evidencia de CONFIABILIDAD",

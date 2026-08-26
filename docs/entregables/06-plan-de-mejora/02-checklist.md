@@ -18,6 +18,7 @@ Evidencia: [`181-correccion-catalogo-auditoria-y-gates.md`](../../fase03-dataset
 - [x] **D-35 · Generadores de Word reproducibles** — el logo vivía en un directorio efímero y la carátula se omitía en silencio.
 - [x] **D-14 · Diccionario científico de las 28 variables**, generado desde el extractor congelado. Cierra un requisito explícito del jurado.
 - [x] **D-12 · `tls_handshake_failure_ratio_60s` declarada no observable** — se reportan **27 efectivas de 28 definidas**.
+- [x] **D-03 y D-05 · Validación cruzada por episodio y banda del umbral.** La detección media cae dentro del IC de la evaluación de un solo paso; CV del umbral 4,10 % < 5 %.
 - [x] **D-04 · Significancia entre los siete modelos** con McNemar exacto y corrección de Holm; los siete se recargan desde los `.joblib` publicados, verificados por SHA-256.
 - [x] **D-02 · Ablación por capas y comparación 14 vs 28**, con McNemar exacto y verificación de que la configuración completa reproduce el modelo congelado bit a bit.
 - [x] **D-34 · Model card y system card** separadas del datasheet, generadas desde el manifiesto y las corridas de F6.
@@ -43,10 +44,6 @@ Ninguna requiere capturar datos, reentrenar ni repetir campañas. **Cierran dos 
   Escribir en tesis y PPI que la detección reportada es una estimación optimista por haberse elegido el modelo tras ver el conjunto de prueba.
 - [ ] **D-15 · Cerrar y actualizar la matriz de cumplimiento de requisitos** *(horas)*
   4 filas sin cerrar y rutas rotas tras la reorganización documental.
-- [ ] **D-03 · Ejecutar validación cruzada sobre el modelo congelado** *(horas)*
-  → *Ficha ítem 1.3: de 1 a 3*
-- [ ] **D-05 · Estabilidad por remuestreo del OCSVM** *(horas)*
-  Dar una banda de variabilidad al umbral 1,8126.
 - [ ] **D-06 · Documentar determinismo y semillas como protocolo** *(horas)*
   → *Ficha ítem 2.4: de 2 a 3*
 - [ ] **D-22 · Revertir el acceso administrativo permanente** *(horas)*

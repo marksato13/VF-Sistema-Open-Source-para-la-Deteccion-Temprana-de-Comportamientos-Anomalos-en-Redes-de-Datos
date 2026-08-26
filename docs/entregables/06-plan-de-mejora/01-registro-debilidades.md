@@ -13,8 +13,6 @@ Es la dimensión más débil del proyecto. No afecta al funcionamiento del siste
 | ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
 |---|---|---|---|---|---|
 | **D-01** | El modelo final se eligió observando el conjunto de prueba | El manifiesto registra `ocsvm_scaled` como *comparador* y una política que prohibía promoverlo por ganar una métrica posterior. El 88,3 % es el máximo sobre 7 candidatos sin conjunto reservado | 🔴 | Horas | **Declararlo explícitamente** en tesis y PPI: la cifra es una estimación optimista. La corrección completa (`PM-multilayer-v2-v2` con evaluación nueva) es trabajo futuro |
-| **D-03** | Sin validación cruzada sobre el modelo congelado | Solo existe *leave-one-episode-out* sobre un pipeline descartado | 🟠 | Horas | Ejecutar validación cruzada por episodios sobre el modelo actual; datos y modelo ya existen |
-| **D-05** | El análisis de sensibilidad no cubre el modelo elegido | `manifest.stability` contiene las 4 ramas de Isolation Forest, no `ocsvm_scaled`. Además se ajustó sin ponderación pese a que 5/132 episodios concentran el 31,7 % de las filas | 🟠 | Horas | Estabilidad por remuestreo/submuestreo del OCSVM, para dar una banda al umbral 1,8126 |
 | **D-07** | Comparación con el criterio de Youden prometida y no entregada | El protocolo la anunciaba como comparación informativa | ⚪ | Horas | Calcularla y reportarla, o retirar la promesa del protocolo |
 
 > **Ya resuelto en esta fase:** ausencia de intervalos de confianza (se incorporaron intervalos de Wilson 95 % a todas las proporciones) y ausencia de ROC/AUC, recall, especificidad y F1 (se calcularon re-puntuando el modelo congelado: **ROC-AUC 0,974**).
@@ -33,6 +31,14 @@ Es la dimensión más débil del proyecto. No afecta al funcionamiento del siste
 > declarada **no observable**; el corpus se reporta como **27 variables efectivas
 > de 28 definidas**. Evidencia:
 > [`03-diccionario-multicapa-v2.md`](../../fase02-features-multicapa/03-diccionario-multicapa-v2.md).
+>
+> **Ya resuelto en esta fase:** `D-03` y `D-05` —
+> [`09-validacion-cruzada-y-estabilidad.md`](../../fase04-modelado/09-validacion-cruzada-y-estabilidad.md).
+> Validación cruzada agrupada por episodio en 5 pliegues: la detección media
+> (85,5 %) **cae dentro** del intervalo de Wilson de la evaluación de un solo
+> paso, así que el resultado no depende de la partición elegida. Remuestreo del
+> umbral con B = 1 000: **coeficiente de variación 4,10 %**, por debajo del 5 %
+> declarado de antemano, con banda [1,6496 – 1,8132].
 >
 > **Ya resuelto en esta fase:** `D-04` las comparaciones entre los siete
 > modelos tienen prueba de significancia —
