@@ -14,7 +14,6 @@ Es la dimensión más débil del proyecto. No afecta al funcionamiento del siste
 |---|---|---|---|---|---|
 | **D-01** | El modelo final se eligió observando el conjunto de prueba | El manifiesto registra `ocsvm_scaled` como *comparador* y una política que prohibía promoverlo por ganar una métrica posterior. El 88,3 % es el máximo sobre 7 candidatos sin conjunto reservado | 🔴 | Horas | **Declararlo explícitamente** en tesis y PPI: la cifra es una estimación optimista. La corrección completa (`PM-multilayer-v2-v2` con evaluación nueva) es trabajo futuro |
 | **D-03** | Sin validación cruzada sobre el modelo congelado | Solo existe *leave-one-episode-out* sobre un pipeline descartado | 🟠 | Horas | Ejecutar validación cruzada por episodios sobre el modelo actual; datos y modelo ya existen |
-| **D-04** | Sin pruebas de significancia entre modelos | Se comparan 88,3 % y 54,2 % como puntos desnudos | 🟡 | Horas | Prueba de McNemar o bootstrap pareado sobre las mismas ventanas |
 | **D-05** | El análisis de sensibilidad no cubre el modelo elegido | `manifest.stability` contiene las 4 ramas de Isolation Forest, no `ocsvm_scaled`. Además se ajustó sin ponderación pese a que 5/132 episodios concentran el 31,7 % de las filas | 🟠 | Horas | Estabilidad por remuestreo/submuestreo del OCSVM, para dar una banda al umbral 1,8126 |
 | **D-07** | Comparación con el criterio de Youden prometida y no entregada | El protocolo la anunciaba como comparación informativa | ⚪ | Horas | Calcularla y reportarla, o retirar la promesa del protocolo |
 
@@ -34,6 +33,14 @@ Es la dimensión más débil del proyecto. No afecta al funcionamiento del siste
 > declarada **no observable**; el corpus se reporta como **27 variables efectivas
 > de 28 definidas**. Evidencia:
 > [`03-diccionario-multicapa-v2.md`](../../fase02-features-multicapa/03-diccionario-multicapa-v2.md).
+>
+> **Ya resuelto en esta fase:** `D-04` las comparaciones entre los siete
+> modelos tienen prueba de significancia —
+> [`08-significancia-entre-modelos.md`](../../fase04-modelado/08-significancia-entre-modelos.md):
+> McNemar exacto por pares con corrección de Holm-Bonferroni sobre 21
+> comparaciones. Las 6 de `ocsvm_scaled` son significativas sin excepción;
+> **ninguna diferencia de falso positivo lo es**, así que afirmar que un modelo
+> comete menos falsos positivos que otro no está respaldado.
 >
 > **Ya resuelto en esta fase:** `D-02` la ablación por capas y la comparación
 > 14 vs 28 están ejecutadas —
