@@ -2,7 +2,7 @@
 
 ## Propósito
 
-## Estado vigente — 2026-08-18
+## Estado vigente — 2026-08-26
 
 **Dataset multilayer-v2 consolidado y auditado**: 220 episodios normales /
 1,373 ventanas (train 824, validation 273, test 276) + 179 ventanas de
@@ -65,7 +65,8 @@ de instalación/usuario: `docs/fase06-dashboard/01-diseno-dashboard-motor.md`.
 **Validación final F6: ejecutada** (`docs/fase07-validacion-final/`): 2 pases
 de 29 corridas con el motor activo + 2 pruebas de aislamiento. Confirmado:
 detección + bloqueo inline con lead-time ~8 s (motor al día), heurístico de
-fuerza bruta disparando en producción, disponibilidad 100 % en 57 corridas.
+fuerza bruta disparando en producción y cero caídas registradas en 58 corridas
+(55 con verificación explícita de servicios).
 **Dos limitaciones nuevas medidas y declaradas** (no ocultas): (1) el FPR
 benigno offline de 4.71 % **no se sostiene** sobre tráfico legítimo pesado —
 `iperf-tcp 200M` en aislamiento produjo un FP genuino que bloqueó al cliente
@@ -76,8 +77,10 @@ Detalle: `docs/fase07-validacion-final/02-resultados-f6.md`; mejoras
 candidatas (recalibración con tráfico pesado, parseo incremental) en
 `docs/07-mejoras-futuras/01-debilidades-y-mejoras.md` filas #11 y #12, sin
 implementar sin calibración nueva. No hay campañas de recolección activas.
-Los artefactos runtime (modelos, PCAP, datasets) permanecen fuera de Git; la
-evidencia agregada de F6 (`results/f6/*.jsonl`, pequeña) sí se versiona.
+Los CSV derivados, el manifiesto y los siete candidatos del modelo están
+publicados y verificables con `docs/dataset/SHA256SUMS`. PCAP, EVE completo,
+campañas y dependencias empaquetadas permanecen fuera de Git. La evidencia
+agregada de F6 (`results/f6/*.jsonl`, pequeña) sí se versiona.
 
 **Debilidades y mejoras futuras** recolectadas punto por punto, cada una con
 su evidencia y costo/riesgo de mejora (sin implementar ninguna sin
@@ -92,6 +95,11 @@ https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-
 ```
 
 Remoto esperado: `origin`. Rama estable: `main`.
+
+Para ciencia de datos, datasheet, PPI, modelo o métricas, Claude y Codex deben
+leer primero `docs/agent-context/ppi-data-science-context.md` y usar la habilidad
+compartida aplicable. Ese archivo es un índice: toda cifra se verifica de nuevo
+en la fuente primaria que allí se indica.
 
 Claude debe trabajar como revisor técnico adversarial y segundo ingeniero. Codex actúa principalmente como implementador y operador del laboratorio. El objetivo no es que ambos produzcan respuestas similares, sino utilizar revisión cruzada para encontrar errores antes de las pruebas y la defensa ante el jurado.
 
@@ -147,9 +155,9 @@ Las NIC externas de `172.17.25.0/24` todavía existen para instalación y recupe
 - El Sensor `10.10.10.20` sirve como referencia NTP interna.
 - Enrutamiento Cliente/Kali hacia Servidor probado mediante ICMP, TCP/22, traza y contadores de nftables.
 - Suricata 8.0.3 está instalado como IDS AF_PACKET sobre `ens35`, con `HOME_NET=[10.30.0.0/24,10.20.0.20/32]`, Emerging Threats Open, EVE JSON y una regla local de validación.
-- La captura se validó con alertas ICMP y un evento HTTP completo. Sensor y Servidor superaron reinicios controlados con configuración persistente; todavía faltan ataques reales, protocolos restantes y pruebas de carga.
+- La validación inicial de captura cubrió alertas ICMP y un evento HTTP completo; Sensor y Servidor superaron reinicios controlados. Las campañas posteriores añadieron ataques reales y pruebas de carga, documentadas en `docs/fase03-dataset/` y `docs/fase07-validacion-final/`.
 - La calibración segura fijó techos de F1 en 200 Mbit/s TCP, 50 Mbit/s UDP y 20 MB/s por transferencia HTTP/HTTPS; todas las pruebas acotadas posteriores registraron cero drops de Suricata.
-- Existe un orquestador reproducible en `scripts/campaign/`: manifiesto, inventario, contadores, serie temporal del Sensor, segmento EVE y hashes por campaña. Los artefactos runtime permanecen fuera de Git.
+- Existe un orquestador reproducible en `scripts/campaign/`: manifiesto, inventario, contadores, serie temporal del Sensor, segmento EVE y hashes por campaña. Los artefactos brutos de campaña permanecen fuera de Git; el dataset derivado y los modelos publicados son excepciones explícitas y verificadas.
 - En VM02–VM05, `useransible` puede ejecutar únicamente el reinicio exacto `/usr/bin/systemctl reboot --no-wall`; en el Sensor también puede usar los helpers versionados `ppi-suricata-metrics`, `ppi-pcap-control` y, desde el despliegue del motor, `ppi-enforce` (bloqueo nftables, ver `docs/fase05-motor-tiempo-real/01-diseno-motor-tiempo-real.md`). No dispone de sudo general ni de permiso directo sobre `tcpdump`; la prueba negativa con `/usr/bin/id` falla en las cuatro VMs. `ppi-motor-capture.service` y `ppi-motor.service` corren de forma autónoma vía systemd, sin necesitar sudo en operación diaria.
 - G4 incorpora PCAP por campaña mediante un helper raíz que fija `ens35`, filtro LAN↔DMZ, snaplen completo y rotación máxima aproximada de 2.048 GB. El diseño y riesgos están en `docs/fase01-diseno-experimental/11-diseno-captura-PCAP-G4.md`.
 - G4 pasó con DNS y HTTP. En `CAL-G4-HTTP-001`, 7,242 de 8,484 paquetes IPv4 (85.36 %) midieron 500–1500 bytes, con cero drops y SHA remoto/local verificado. Resultados: `docs/fase01-diseno-experimental/12-validacion-captura-PCAP-G4.md`.
