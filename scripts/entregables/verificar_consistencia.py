@@ -45,8 +45,9 @@ OBSOLETOS = [
      "cero caidas registradas no es lo mismo que 100 % verificado"),
     ("puntaje de ficha superado", r"32/51|62[.,]7 ?%|36/51|70[.,]6 ?%|39/51|76[.,]5 ?%",
      "la ficha vigente da 42/51 = 82,4 %"),
-    ("ablacion pendiente", r"ablaci[oó]n (est[aá] )?(pendiente|sin ejecutar|nunca se ejecut)",
-     "la ablacion esta ejecutada"),
+    ("ablacion pendiente", r"ablaci[oó]n[^.]{0,60}(pendiente|sin ejecutar|(a[uú]n )?no se (ha )?ejecut)"
+                           r"|(a[uú]n )?no se ha ejecutado[^.]{0,40}ablaci",
+     "la ablacion esta ejecutada; ver 07-ablacion-multicapa.md"),
     ("sin significancia", r"[Nn]o se (realiz[oó]|ha realizado) ninguna prueba (de significancia|\(t, Wilcoxon)",
      "McNemar con Holm esta ejecutado"),
     ("datos no publicados", r"datos (no est[aá]n|NO) publicados|dataset no (est[aá] )?publicado",
@@ -71,6 +72,8 @@ EXCEPCIONES = [
      "la frase de evolucion cita a proposito el puntaje anterior"),
     ("docs/fase04-modelado/04-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md", None,
      "documento historico, marcado como SUPERADO en su encabezado"),
+    ("docs/fase02-features-multicapa/02-validacion-extractor-G5.md", None,
+     "validacion de la puerta G5, marcada como documento historico en su encabezado"),
     ("docs/requisitos-jurado/README.md", "14 variables",
      "describe el MVP del que se parte, no el contrato vigente"),
 ]

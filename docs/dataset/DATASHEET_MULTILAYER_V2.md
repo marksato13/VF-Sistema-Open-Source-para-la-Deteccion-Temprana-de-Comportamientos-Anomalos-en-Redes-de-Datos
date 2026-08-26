@@ -234,7 +234,7 @@ El diccionario científico completo —fórmula, tipo, fuente exacta, denominado
 - `protocol_diversity_30s` se normaliza **por paquetes, no por protocolos**: tiende a 0 al crecer el volumen.
 - `http_method_entropy_60s` vale `0.0` tanto sin peticiones como con un único método.
 - `tcp_retransmission_ratio_10s` es una **heurística** por número de secuencia repetido.
-- Existen **seis pares con correlación absoluta superior a 0,8**; la ablación por capas que mediría el aporte real de cada grupo **aún no se ha ejecutado**.
+- Existen **seis pares con correlación absoluta superior a 0,8**. La ablación por capas **ya midió** el aporte de cada grupo: la expansión multicapa es significativa (p < 0,001), pero **las 8 variables L7 nuevas no aportan detección medible** (p = 1,000) y cuestan 5 falsos positivos.
 
 ---
 
@@ -284,7 +284,7 @@ Ordenadas por gravedad. Ninguna se descubre leyendo el corpus: todas están medi
 | 5 | **Tamaño por debajo de la meta declarada** | 1373 ventanas frente a la meta de 2 000–3 000; ~6 ventanas por episodio, luego **no son independientes entre sí** |
 | 6 | **Desbalance de episodios en entrenamiento** | 5 de los 132 episodios de entrenamiento concentran el 31,7 % de sus filas, y los cinco son transferencias lentas de 1 GB — el mismo tráfico pesado donde luego aparece el falso positivo operativo |
 | 7 | **Las 18 ventanas heredadas no son ataques genuinos** | Provienen del cliente legítimo reetiquetado; se reportan por separado |
-| 8 | **La ablación por capas no se ha ejecutado** | Ninguna de las 28 variables ha demostrado individualmente que se gana su lugar |
+| 8 | **No todas las variables se ganan su lugar** | La ablación lo midió: las 8 variables L7 nuevas no aportan detección medible (p = 1,000). El contrato se conserva congelado; cambiarlo exigiría un protocolo nuevo con evaluación reservada |
 | 9 | **Solo IPv4 y protocolos TCP/UDP/ICMP** | IPv6, PCAP-NG y fragmentación avanzada quedan fuera; se rechazan, no se interpretan en silencio |
 
 ### Sesgo heredado por quien use este corpus

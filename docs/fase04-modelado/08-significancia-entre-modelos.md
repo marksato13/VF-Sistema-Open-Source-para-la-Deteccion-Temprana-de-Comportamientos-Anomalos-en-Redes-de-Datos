@@ -109,6 +109,24 @@ Cero ventanas discordantes (0 y 0), p = 1,000. Comparten SHA-256: **son el mismo
 
 ---
 
+## Robustez al agrupamiento por episodio
+
+McNemar supone observaciones independientes, y **las ventanas de un mismo episodio no lo son**: 47 de los 132 episodios aportan dos ventanas correlacionadas. Ignorarlo infla el tamaño muestral efectivo y hace los valores p **anticonservadores**.
+
+Por eso el análisis se repite agregando a nivel de episodio, con dos reglas distintas:
+
+| Unidad de análisis | Unidades | Pares significativos | De los 6 del OCSVM |
+|---|---:|---:|---:|
+| Ventana (análisis principal) | 179 | 15/21 | 6/6 |
+| Episodio · detectado si **alguna** ventana lo detecta | 132 | 15/21 | 6/6 |
+| Episodio · detectado si lo detecta **la mayoría** | 132 | 15/21 | 6/6 |
+
+> **La conclusión no cambia bajo ninguna de las tres definiciones.** El agrupamiento es leve —el conglomerado máximo es de dos ventanas— y los efectos son grandes, así que corregir por él no altera qué pares resultan distinguibles.
+>
+> Se reporta igualmente porque **la objeción es metodológicamente correcta**, y responderla con una medición vale más que argumentar que el sesgo es pequeño.
+
+---
+
 ## Limitación
 
 Todas las comparaciones se hacen sobre los **mismos** conjuntos usados en la calibración original, así que los valores absolutos heredan el sesgo optimista declarado en la model card. Lo que estas pruebas sostienen es que **las diferencias entre modelos son reales y no ruido de muestreo** — una afirmación relativa, que es justamente la que faltaba respaldar.

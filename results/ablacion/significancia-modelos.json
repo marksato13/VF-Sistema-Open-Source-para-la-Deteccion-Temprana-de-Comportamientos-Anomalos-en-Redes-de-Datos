@@ -387,5 +387,22 @@
     }
   },
   "n_comparaciones": 21,
-  "reproduce_manifiesto": true
+  "reproduce_manifiesto": true,
+  "robustez_al_agrupamiento": {
+    "por_episodio_any": {
+      "del_ocsvm": 6,
+      "significativos": 15,
+      "unidades": 132
+    },
+    "por_episodio_mayoria": {
+      "del_ocsvm": 6,
+      "significativos": 15,
+      "unidades": 132
+    },
+    "por_ventana": {
+      "del_ocsvm": 6,
+      "significativos": 15,
+      "unidades": 179
+    }
+  }
 }

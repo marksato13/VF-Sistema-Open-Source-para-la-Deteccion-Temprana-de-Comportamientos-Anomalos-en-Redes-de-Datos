@@ -16,6 +16,11 @@ PROTOCOLO
    separadas: deteccion de anomalias y falso positivo benigno.
 4. Correccion de Holm-Bonferroni: son 21 comparaciones por pares, y sin
    corregir la probabilidad de un falso hallazgo es alta.
+5. ROBUSTEZ AL AGRUPAMIENTO. McNemar supone observaciones independientes, y
+   las ventanas de un mismo episodio no lo son: 47 de los 132 episodios
+   aportan dos ventanas correlacionadas. Por eso el analisis se repite
+   AGREGANDO A NIVEL DE EPISODIO, con dos reglas distintas, y se comprueba si
+   la conclusion cambia. Si cambiara, la valida seria la de episodio.
 
     python3 scripts/modeling/experiments/significancia_modelos.py
 """
@@ -51,6 +56,14 @@ def mcnemar(a: np.ndarray, b: np.ndarray) -> dict:
     n = solo_a + solo_b
     return {"solo_A": solo_a, "solo_B": solo_b, "discordantes": n,
             "p": 1.0 if n == 0 else float(binomtest(solo_a, n, 0.5).pvalue)}
+
+
+def a_episodio(vector, episodios, regla) -> np.ndarray:
+    """Agrega un vector por ventana a un vector por episodio."""
+    d: dict[str, list[bool]] = {}
+    for e, x in zip(episodios, vector):
+        d.setdefault(e, []).append(bool(x))
+    return np.array([regla(d[e]) for e in sorted(d)])
 
 
 def holm(pares: list[tuple[str, float]]) -> dict[str, dict]:
@@ -117,6 +130,25 @@ def main() -> None:
     sig = sum(1 for v in crudo_det.values() if v["significativo"])
     print(f"\n  {sig}/{len(pares)} pares con diferencia significativa en detección tras Holm")
 
+    # ---- robustez: repetir agregando a nivel de episodio ----
+    episodios = [r["episode_id"] for r in z]
+    reglas = {"any": any, "mayoria": lambda xs: sum(xs) * 2 > len(xs)}
+    robustez = {"por_ventana": {"unidades": len(z), "significativos": sig,
+                                "del_ocsvm": sum(1 for k, v in crudo_det.items()
+                                                 if "ocsvm_scaled" in k and v["significativo"])}}
+    for nombre, regla in reglas.items():
+        vec = {m: a_episodio(res[m]["det"], episodios, regla) for m in nombres}
+        ps = {f"{a} vs {b}": mcnemar(vec[a], vec[b])["p"] for a, b in pares}
+        h = holm(list(ps.items()))
+        robustez[f"por_episodio_{nombre}"] = {
+            "unidades": len(next(iter(vec.values()))),
+            "significativos": sum(1 for v in h.values() if v["significativo"]),
+            "del_ocsvm": sum(1 for k, v in h.items() if "ocsvm_scaled" in k and v["significativo"]),
+        }
+        r = robustez[f"por_episodio_{nombre}"]
+        print(f"  agregando por episodio ({nombre}): {r['significativos']}/{len(pares)} "
+              f"significativos · {r['del_ocsvm']}/6 del OCSVM")
+
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(json.dumps({
         "alpha_calibracion": ALPHA_CAL, "alpha_significancia": ALPHA_SIG,
@@ -124,14 +156,15 @@ def main() -> None:
         "reproduce_manifiesto": True,
         "modelos": {m: {k: v for k, v in d.items() if k not in ("det", "fp")} for m, d in res.items()},
         "deteccion": crudo_det, "falso_positivo": crudo_fp,
+        "robustez_al_agrupamiento": robustez,
     }, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
-    OUT_MD.write_text(informe(res, nombres, crudo_det, crudo_fp, len(te), len(an), int(kali.sum())),
-                      encoding="utf-8")
+    OUT_MD.write_text(informe(res, nombres, crudo_det, crudo_fp, len(te), len(an),
+                              int(kali.sum()), robustez), encoding="utf-8")
     print(f"\nGenerado: {OUT_JSON.relative_to(REPO)}")
     print(f"Generado: {OUT_MD.relative_to(REPO)}")
 
 
-def informe(res, nombres, det, fp, n_te, n_an, n_kali) -> str:
+def informe(res, nombres, det, fp, n_te, n_an, n_kali, robustez) -> str:
     L: list[str] = []
     a = L.append
     a("# Significancia estadística entre los siete modelos\n\n")
@@ -212,6 +245,30 @@ def informe(res, nombres, det, fp, n_te, n_an, n_kali) -> str:
           f"{es(par['p'],3)}. Comparten SHA-256: **son el mismo objeto ajustado**. Sus dos "
           "filas en cualquier tabla comparativa no son dos evidencias independientes, y "
           "contarlas como tales infla artificialmente el número de candidatos.\n")
+
+    a("\n---\n\n## Robustez al agrupamiento por episodio\n\n")
+    a("McNemar supone observaciones independientes, y **las ventanas de un mismo episodio no lo "
+      "son**: 47 de los 132 episodios aportan dos ventanas correlacionadas. Ignorarlo infla el "
+      "tamaño muestral efectivo y hace los valores p **anticonservadores**.\n\n")
+    a("Por eso el análisis se repite agregando a nivel de episodio, con dos reglas distintas:\n\n")
+    a("| Unidad de análisis | Unidades | Pares significativos | De los 6 del OCSVM |\n|---|---:|---:|---:|\n")
+    etiquetas = {"por_ventana": "Ventana (análisis principal)",
+                 "por_episodio_any": "Episodio · detectado si **alguna** ventana lo detecta",
+                 "por_episodio_mayoria": "Episodio · detectado si lo detecta **la mayoría**"}
+    for k, etq in etiquetas.items():
+        r = robustez[k]
+        a(f"| {etq} | {r['unidades']} | {r['significativos']}/21 | {r['del_ocsvm']}/6 |\n")
+    iguales = len({(r["significativos"], r["del_ocsvm"]) for r in robustez.values()}) == 1
+    if iguales:
+        a("\n> **La conclusión no cambia bajo ninguna de las tres definiciones.** El agrupamiento "
+          "es leve —el conglomerado máximo es de dos ventanas— y los efectos son grandes, así que "
+          "corregir por él no altera qué pares resultan distinguibles.\n>\n"
+          "> Se reporta igualmente porque **la objeción es metodológicamente correcta**, y "
+          "responderla con una medición vale más que argumentar que el sesgo es pequeño.\n")
+    else:
+        a("\n> **⚠️ La conclusión cambia según la unidad de análisis.** La válida es la de "
+          "episodio, porque las ventanas de un mismo episodio no son independientes. Se reporta "
+          "esa y se declara la discrepancia.\n")
 
     a("\n---\n\n## Limitación\n\n")
     a("Todas las comparaciones se hacen sobre los **mismos** conjuntos usados en la "

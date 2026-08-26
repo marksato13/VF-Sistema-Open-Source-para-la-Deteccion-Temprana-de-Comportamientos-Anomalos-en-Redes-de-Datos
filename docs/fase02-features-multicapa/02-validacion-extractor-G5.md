@@ -1,5 +1,14 @@
 # Validación del extractor multicapa — G5
 
+> ⚠️ **Documento histórico.** Registra el estado al cerrar la puerta G5, cuando
+> el contrato tenía 14 variables y no existían ni el motor en línea ni el
+> modelo final. Ambos existen hoy, y la ablación **ya se ejecutó**. Se conserva
+> sin editar porque reescribir la validación de una puerta pasada falsearía el
+> registro. Estado vigente:
+> [`03-diccionario-multicapa-v2.md`](03-diccionario-multicapa-v2.md) y
+> [`07-ablacion-multicapa.md`](../fase04-modelado/07-ablacion-multicapa.md).
+
+
 Fecha: 21 de julio de 2026. Esquema probado: `multilayer-v1`.
 
 ## Decisión
