@@ -1,7 +1,12 @@
 # Plan de validación de resultados
 
-> **Estado: pendiente de redactar.** Este documento describe **qué pide el
-> docente**, no es todavía el entregable.
+> **Estado: redactado.** El entregable es
+> [`plan-de-validacion.md`](plan-de-validacion.md) y su versión presentable
+> [`Plan-de-validacion-de-resultados.docx`](Plan-de-validacion-de-resultados.docx)
+> (~2 páginas, dentro del límite pedido). Este README documenta **qué pide el
+> docente**, para poder auditar el entregable contra la consigna.
+>
+> Regenerar el Word: `python3 scripts/entregables/generar_plan_validacion_word.py`
 
 Entregable autónomo de la **Sesión 02** del curso Investigación V
 (Mg. Nemias Saboya Rios · EP Ingeniería de Sistemas · UPeU).

@@ -10,7 +10,7 @@ APLICA) y un **entregable autónomo** (momento CREA). Solo el segundo se sube.
 | Sesión | Entregable autónomo | Formato exigido | Carpeta | Estado |
 |---|---|---|---|---|
 | **01** · Criterios y técnicas para la evaluación de resultados | Informe de evaluación crítica | PDF **2–4 pp** | [`01-evaluacion-critica/`](01-evaluacion-critica/) | ⚠️ **Excede**: ~6 pp |
-| **02** · Métodos de validación: confiabilidad, replicabilidad y pertinencia | **Plan de validación de resultados** | PDF **1–2 pp** | [`07-plan-de-validacion/`](07-plan-de-validacion/) | 🔴 **Pendiente** |
+| **02** · Métodos de validación: confiabilidad, replicabilidad y pertinencia | **Plan de validación de resultados** | PDF **1–2 pp** | [`07-plan-de-validacion/`](07-plan-de-validacion/) | ✅ **Listo** (~2 pp) |
 | **03** · Estrategias para identificar y mapear revistas científicas | *(por confirmar)* | — | — | — |
 
 Además, el taller en clase de la Sesión 02 usa una **ficha de auditoría de 6
@@ -36,7 +36,7 @@ inicio sin retirar el análisis extenso.
 | [`05-ppi/`](05-ppi/) | PPI — Proyecto de Investigación | **Pendiente** | Documento del proyecto. Debe subirse actualizado (versión 2) al sistema LAM Research |
 | [`diagramas/`](diagramas/) | Diagramas editables (draw.io) | — | Fuentes editables con iconos, para el PPI y los demás entregables |
 | [`06-plan-de-mejora/`](06-plan-de-mejora/) | Plan de mejora del producto | **Listo** | Registro único de las debilidades abiertas con evidencia, impacto, esfuerzo y mitigación, más el checklist de ejecución |
-| [`07-plan-de-validacion/`](07-plan-de-validacion/) | Plan de validación de resultados | 🔴 **Pendiente** · *entregable del curso* | **Sesión 02.** Plan prospectivo de 1–2 páginas con método y umbral por cada eje —confiabilidad, replicabilidad, pertinencia— y cronograma |
+| [`07-plan-de-validacion/`](07-plan-de-validacion/) | Plan de validación de resultados | **Listo** · *entregable del curso* | **Sesión 02.** Plan prospectivo de 1–2 páginas con método y umbral por cada eje —confiabilidad, replicabilidad, pertinencia— y cronograma |
 | — | Manual de implementación técnica | Pendiente | |
 
 ## Organización
@@ -59,7 +59,9 @@ docs/entregables/
 │   └── Ficha-auditoria-producto.docx
 ├── 05-ppi/                          documento del PPI (pendiente de actualizar)
 ├── 06-plan-de-mejora/               debilidades, mitigaciones y checklist
-└── 07-plan-de-validacion/           plan de validación (pendiente de redactar)
+└── 07-plan-de-validacion/
+    ├── plan-de-validacion.md
+    └── Plan-de-validacion-de-resultados.docx
 ```
 
 **Figuras y diagramas son cosas distintas.** `graficas/` contiene lo que se *genera* con matplotlib desde los datos reales; se regenera con un script y no se edita a mano. `diagramas/` contiene lo que se *dibuja*: topologías, arquitecturas y flujos, en draw.io con iconos. Las figuras viven en una sola carpeta y no dentro de cada entregable porque los informes 01 y 02 comparten varias; los documentos las referencian como `../graficas/`.
@@ -70,6 +72,7 @@ docs/entregables/
 .venv/bin/python3 scripts/entregables/generar_graficas.py       # las 11 figuras + intervalos de confianza
 .venv/bin/python3 scripts/entregables/generar_informe_word.py   # Word del entregable 02
 .venv/bin/python3 scripts/entregables/generar_ficha_word.py     # Word del entregable 04
+.venv/bin/python3 scripts/entregables/generar_plan_validacion_word.py  # Word del entregable 07
 ```
 
 ## Estructura del entregable 01

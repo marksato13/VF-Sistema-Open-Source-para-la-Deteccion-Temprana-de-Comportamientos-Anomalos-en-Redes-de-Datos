@@ -372,3 +372,23 @@ Los 15 archivos auditados conservaron exactamente el mismo SHA-256. La columna �
 ### Estado Git
 
 No se ejecutó `git commit` ni `git push`. Los cambios quedan deliberadamente sin publicar para la revisión adversarial independiente de Claude.
+
+---
+
+## Revisión adversarial posterior — 26 de agosto de 2026
+
+Auditado en
+[`docs/revisiones-claude/2026-08-26-revision-ppi-v2-codex.md`](../../revisiones-claude/2026-08-26-revision-ppi-v2-codex.md).
+**Aceptado con dos correcciones aplicadas al DOCX**, ninguna atribuible a este
+trabajo: ambas cifras estaban mal en la documentación del repositorio cuando se
+redactó, y se corrigieron después.
+
+| | Corrección | Origen del error |
+|---|---|---|
+| `PPI-REV-02` | «38 perfiles» → **44 perfiles** | `D-30`, detectado el 25-08-2026 |
+| `PPI-REV-03` | «57 corridas» → **55 de 58 verificadas, cero caídas registradas** | Redacción imprecisa en `02-resultados-f6.md`, corregida el 26-08-2026 |
+
+Verificado y correcto: las 4 correcciones obligatorias, las cifras del sistema
+real, la ausencia de rastros del sistema antiguo, la integridad del DOCX (419
+párrafos, 10 tablas, 4 imágenes) y que las 3 figuras insertadas coinciden por
+SHA-256 con sus fuentes.

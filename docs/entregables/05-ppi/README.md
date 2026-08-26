@@ -6,7 +6,7 @@ Carpeta del documento del PPI y de su versión actualizada.
 
 | | |
 |---|---|
-| **Situación** | Pendiente de actualizar |
+| **Situación** | **Actualizado y revisado.** Codex aplicó 18 cambios (`0245c61`); revisión adversarial en [`2026-08-26-revision-ppi-v2-codex.md`](../../revisiones-claude/2026-08-26-revision-ppi-v2-codex.md), con dos correcciones aplicadas |
 | **Destino** | Sistema **LAM Research** (versión 2, para asignación de dictaminadores) |
 | **Plazo** | Miércoles siguiente a la sesión del 12 de agosto de 2026 |
 | **Motivo** | El coordinador rechazó todos los proyectos para que cada equipo suba la versión corregida y pueda pasar al proceso formal de titulación |
@@ -24,6 +24,20 @@ El PPI se escribió antes de que existieran los resultados. La versión 2 debe i
 | Validación en operación | Sistema desplegado y medido: lead-time 8 s, disponibilidad 100 % | [`docs/fase07-validacion-final/`](../../fase07-validacion-final/) |
 | Limitación principal | FPR operativo 23–26 % sobre tráfico legítimo pesado | [`../02-validacion-y-confiabilidad/`](../02-validacion-y-confiabilidad/informe-validacion-confiabilidad.md) |
 | Auditoría del producto | 32/51 = 62,7 % (confiabilidad, replicabilidad, pertinencia) | [`../04-ficha-auditoria/`](../04-ficha-auditoria/ficha-auditoria.md) |
+
+## Estado de la revisión
+
+| | |
+|---|---|
+| Correcciones obligatorias incorporadas | 4 de 4 |
+| Cifras verificadas contra los artefactos | Sin discrepancias |
+| Errores encontrados y corregidos | 2 — «38 perfiles» → 44 · «57 corridas» → 55 de 58 verificadas |
+| Artefactos congelados | Intactos |
+| Pendiente | Figura del flujo extremo a extremo, que ninguno de los 11 PNG representa |
+
+Las tres figuras que Codex sustituyó coinciden **byte a byte** con sus fuentes
+del repositorio, y las originales del autor se conservan en el respaldo
+`PPI Editar_actual.backup-20260822-before-v2.docx`.
 
 ## Recomendación
 
