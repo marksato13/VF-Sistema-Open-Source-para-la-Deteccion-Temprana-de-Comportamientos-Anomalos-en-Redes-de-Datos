@@ -95,16 +95,20 @@ CANDIDATAS = [
             "CiteScore 2025": ("pendiente de verificar en la ficha de Scopus", "?"),
             "Cuartil SJR": ("Q2 como mejor cuartil · SJR 0,489 · h-index 33", "~"),
             "Revisión": ("pendiente de verificar en las instrucciones para autores", "?"),
-            "Periodicidad": ("6 números al año · 21 artículos en el volumen 34 (2025)", "~"),
-            "APC": ("Híbrida: publicar por la vía de suscripción no exige APC", "~"),
+            "Periodicidad": ("6 números al año · **36 · 35 · 38 artículos en 2024 · 2025 · 2026**, "
+                             "contados sobre el índice completo de dblp", "~"),
+            "APC": ("Híbrida: publicar por la vía de suscripción no exige APC. **No figura en DOAJ**, "
+                    "lo que es coherente con que no haya migrado a acceso abierto de pago", "~"),
             "Plantilla": ("pendiente de verificar", "?"),
         },
         "puntajes": {
             "pertinencia": (9, "Su alcance nombra seguridad de redes y control de acceso; publica trabajos "
                                "sobre ataques SSH y denegación de servicio HTTP, las mismas familias del corpus"),
             "visibilidad": (8, "Mejor cuartil Q2 y h-index 33, el más alto tras Emerald"),
-            "viabilidad": (4, "Solo 21 artículos en el volumen 34: capacidad muy limitada y, por tanto, "
-                              "probabilidad de aceptación baja"),
+            "viabilidad": (6, "**Corregido**: la cifra anterior de 21 artículos al año era falsa. El "
+                              "índice de dblp da 35–38, capacidad equivalente a la de CIT, repartida en "
+                              "6 números al año en vez de 4. Baja de 10 porque el tipo y el tiempo de "
+                              "revisión siguen sin verificar: dos de los cuatro componentes del criterio"),
             "costo": (10, "Sin APC obligatorio por la vía de suscripción"),
             "formato": (7, "Editorial mayor con formato estándar; requisitos concretos sin verificar"),
         },
@@ -121,8 +125,10 @@ CANDIDATAS = [
             "Cuartil SJR": ("Q2 como mejor cuartil · Q3 en Computer Networks and Communications, "
                             "Information Systems y Software · h-index 60", "~"),
             "Revisión": ("pendiente de verificar", "?"),
-            "Periodicidad": ("pendiente de verificar", "?"),
-            "APC": ("Híbrida: no exige APC por la vía de suscripción", "~"),
+            "Periodicidad": ("**34 · 38 · 42 artículos en 2023 · 2024 · 2025**, contados sobre el "
+                             "índice completo de dblp", "~"),
+            "APC": ("Híbrida: no exige APC por la vía de suscripción. **No figura en DOAJ**, lo que "
+                    "es coherente con que no haya migrado a acceso abierto de pago", "~"),
             "Plantilla": ("pendiente de verificar", "?"),
         },
         "puntajes": {
@@ -130,7 +136,9 @@ CANDIDATAS = [
                                "humanos, concienciación y cumplimiento de políticas: un artículo puramente "
                                "técnico corre riesgo de quedar fuera de foco"),
             "visibilidad": (9, "h-index 60, el más alto de todas las candidatas"),
-            "viabilidad": (5, "Sin datos verificados de tiempo ni periodicidad"),
+            "viabilidad": (6, "Capacidad creciente y la mayor de las tres disponibles —34, 38 y 42 "
+                              "artículos en 2023, 2024 y 2025—, pero el tipo y el tiempo de revisión "
+                              "siguen sin verificar"),
             "costo": (10, "Sin APC obligatorio por la vía de suscripción"),
             "formato": (6, "Requisitos sin verificar"),
         },
@@ -179,7 +187,8 @@ CANDIDATAS = [
             "Revisión": ("Single-blind, ≥2 revisores, en tres fases · **3–6 meses** en modo regular · "
                          "1–3 meses en vía rápida · cribado de texto generado por IA con rechazo "
                          "sin derecho a revisión por encima del 20 %", "✔"),
-            "Periodicidad": ("4 números al año · 16 artículos en el n.º 2 de 2026", "✔"),
+            "Periodicidad": ("4 números al año · **46 · 43 · 42 artículos en 2023 · 2024 · 2025** "
+                             "y 23 en los dos primeros números de 2026", "✔"),
             "APC": ("**600 EUR a partir del 1 de septiembre de 2026** · vía rápida 1 200 EUR · "
                     "solo se paga si el artículo se acepta", "✔"),
             "Plantilla": ("Plantilla DOCX oficial · hasta **20 páginas** · envío por correo electrónico", "✔"),
@@ -195,9 +204,10 @@ CANDIDATAS = [
             "visibilidad": (9, "Única candidata con cuartil **Q2 verificado en fuente primaria** y, a la "
                                "vez, factor de impacto en Web of Science. CiteScore 4,2, igual al de BEEI, "
                                "pero con SJR 0,456 frente al Q3 de BEEI"),
-            "viabilidad": (5, "El punto débil: 3–6 meses hasta la primera decisión —el plazo más largo "
-                              "del conjunto— y solo 4 números al año, unos 55 artículos frente a los "
-                              "≈360 de BEEI. Menor capacidad significa menor probabilidad de aceptación"),
+            "viabilidad": (5, "El punto débil: 3–6 meses hasta la primera decisión, el plazo más largo "
+                              "del conjunto. Su capacidad, en cambio, es estable y comparable a la de "
+                              "ISJ e ICS: 46, 43 y 42 artículos en 2023, 2024 y 2025, contados sobre "
+                              "los PDF de cada número"),
             "costo": (6, "600 EUR desde septiembre de 2026, por debajo de los USD 850 de IJSSE pero por "
                          "encima de los USD 415 de BEEI"),
             "formato": (9, "Límite de 20 páginas, frente a las 8 de BEEI: el artículo cabe entero sin "
@@ -336,13 +346,14 @@ def main() -> None:
         "BEEI": "Gana en tres de los cinco criterios y tiene 5 de 6 datos **verificados en "
                 "fuente primaria**. Mejor combinación de encaje temático, visibilidad y coste, "
                 "pero ya figura en la lista de control.",
-        "CIT": "La mejor de las disponibles. Único caso con Q2 y factor de impacto en Web of "
-               "Science verificados en la propia revista, y el único que publica detección "
-               "**y mitigación**. Paga su posición en el plazo: 3–6 meses hasta la primera "
-               "decisión.",
-        "ISJ": "Empata en pertinencia con las mejores y **no exige APC**, pero publica solo "
-               "21 artículos al año: su bajo puntaje de viabilidad refleja una probabilidad "
-               "de aceptación mucho menor.",
+        "ISJ": "**No exige APC** por la vía de suscripción y empata en pertinencia con las "
+               "mejores. Sube al primer puesto al corregirse su capacidad, que no era de 21 "
+               "artículos al año sino de 35–38. Su puntaje es el más frágil: 0 de 6 datos "
+               "verificados en la revista, y el tiempo de revisión sin comprobar.",
+        "CIT": "Puntúa menos, pero es la **única con los seis datos verificados en la propia "
+               "revista**, la única con Q2 y factor de impacto de Web of Science confirmados, "
+               "y la única que publica detección **y mitigación**. Su desventaja está "
+               "declarada: 3–6 meses hasta la primera decisión.",
         "IJSSE": "Encaje temático idéntico al de BEEI y ciclo editorial rápido, pero pierde "
                  "en visibilidad (CiteScore 2,8 frente a 4,2) y su APC duplica al de BEEI. "
                  "Ya figura en la lista de control.",
@@ -361,41 +372,65 @@ def main() -> None:
         a(f"| {etq} | {c['corto']} | {total(c):.1f} | {est} | {razones[c['corto']]} |\n")
 
     a("\n---\n\n## 7 · Justificación\n\n")
-    pa = libres[0]
-    v, n = completitud(pa)
-    mejor_global = orden[0]
-    a(f"**{pa['corto']} es el Plan A.** Con {total(pa):.1f} puntos sobre 100 es la candidata "
-      f"mejor puntuada entre las disponibles, y tiene los {n} datos sensibles verificados en "
-      f"la propia revista ({v} de {n}).\n\n")
-    if mejor_global is not pa:
-        a(f"**No es la mejor puntuada en términos absolutos:** {mejor_global['corto']} obtiene "
-          f"{total(mejor_global):.1f}. Queda fuera por el filtro de disponibilidad, no por una "
-          "debilidad técnica, y esa distinción se mantiene explícita en la sección 2 bis.\n\n")
-    a("Tres razones sostienen la elección:\n\n")
-    a("1. **Publica exactamente este problema.** No se infiere del alcance declarado, se "
-      "comprueba en sus números: detección de intrusiones con IA explicable (2024), "
-      "detección de intrusiones con redes convolucionales (2026), detección de DDoS entre "
-      "conjuntos de datos (2026) y una arquitectura de detección **y mitigación** de DDoS "
-      "(2025). Esa última es el único antecedente, entre todas las candidatas, de un trabajo "
-      "que no solo detecta sino que responde: es el mismo par detección + control inline de "
-      "este proyecto.\n")
-    a("2. **Doble indexación verificada.** Es la única candidata cuyo Q2 aparece confirmado "
-      "en la propia revista junto a un factor de impacto de Web of Science (1,7, Q3, ESCI). "
-      "En las demás el cuartil sigue apoyado en fuentes secundarias.\n")
-    a("3. **El formato favorece a este artículo.** El límite de 20 páginas permite exponer "
-      "las 28 variables, la calibración del umbral y la brecha entre error de laboratorio y "
-      "de operación sin comprimir ni pagar por página adicional; en BEEI, con 8 páginas de "
-      "base, ese mismo contenido obligaría a recortar o a pagar.\n\n")
-    a("**Lo que cuesta esa elección, dicho sin adornos:** la primera decisión tarda entre 3 y "
-      "6 meses, el plazo más largo de todas las candidatas, y la revista publica unos 55 "
-      "artículos al año frente a los ≈360 de BEEI. Si la fecha de sustentación manda sobre "
-      "el indexado, el Plan A deja de ser el correcto y hay que revisar la ponderación de "
-      "viabilidad antes de enviar, no después.\n\n")
-    if len(libres) > 1:
-        b = libres[1]
-        a(f"**{b['corto']} queda como Plan B** porque no exige APC por la vía de suscripción, "
-          "lo que la convierte en la mejor alternativa si el presupuesto desaparece. No es "
-          "Plan A por su capacidad: publica alrededor de 21 artículos al año.\n\n")
+    pa, pb = libres[0], libres[1]
+    a(f"**{pa['corto']} encabeza la aritmética** con {total(pa):.1f} puntos sobre 100 entre las "
+      f"candidatas disponibles, por delante de {pb['corto']} ({total(pb):.1f}). "
+      f"**{orden[0]['corto']} puntúa más alto que ambas ({total(orden[0]):.1f})**, pero queda "
+      "fuera por el filtro de disponibilidad, no por una debilidad técnica.\n\n")
+
+    a("### El orden entre el Plan A y el Plan B no está resuelto\n\n")
+    a("Hay que decirlo antes que nada, porque es la debilidad más seria de esta matriz:\n\n")
+    a(f"| | {pa['corto']} | {pb['corto']} |\n|---|---|---|\n")
+    a(f"| Puntaje | **{total(pa):.1f}** | {total(pb):.1f} |\n")
+    a(f"| Datos verificados en la revista | **{completitud(pa)[0]} de {completitud(pa)[1]}** | "
+      f"**{completitud(pb)[0]} de {completitud(pb)[1]}** |\n")
+    a("| Tipo y tiempo de revisión | Sin verificar | Single-blind · 3–6 meses |\n\n")
+    a("**El Plan A gana en parte por lo que no se sabe de él.** El criterio de viabilidad "
+      "pondera cuatro componentes —tipo de revisión, tiempo, periodicidad y capacidad— y en "
+      "ISJ dos están sin verificar, mientras que CIT declara los cuatro y es penalizada "
+      "precisamente por declarar el plazo más lento del conjunto. Una matriz que premia el "
+      "desconocimiento está mal construida, y esta lo hace en este punto.\n\n")
+    a("No se corrige inventando una penalización a posteriori, que sería justo el sesgo "
+      "inverso. Se corrige **verificando**: si el tiempo de revisión de ISJ resulta mayor que "
+      "los 3–6 meses de CIT, el orden se invierte. Esa única comprobación decide entre Plan A "
+      "y Plan B y encabeza la lista de pendientes.\n\n")
+
+    a("### Por qué ISJ está arriba\n\n")
+    a("1. **No cobra.** Es híbrida y publicar por la vía de suscripción no exige APC. Que **no "
+      "figure en DOAJ** es coherente con que no haya migrado a acceso abierto de pago. Frente "
+      "a los 600 EUR de CIT, la diferencia es todo el presupuesto del artículo.\n")
+    a("2. **Publica las mismas familias de ataque del corpus**: trabajos sobre ataques SSH y "
+      "denegación de servicio HTTP, que son exactamente dos de las familias etiquetadas.\n")
+    a("3. **La objeción que la frenaba era falsa.** Se le había atribuido una capacidad de 21 "
+      "artículos al año, cifra tomada de una fuente secundaria. El índice completo de dblp da "
+      "**36, 35 y 38 en 2024, 2025 y 2026**: capacidad equivalente a la de CIT y repartida en "
+      "seis números al año en vez de cuatro. Corregir ese dato es lo que movió a ISJ del "
+      "cuarto lugar al primero.\n\n")
+
+    a("### Por qué CIT sigue siendo la apuesta más segura\n\n")
+    a("Aunque puntúe menos, es la **única candidata con los seis datos sensibles verificados "
+      "en la propia revista**, y eso tiene un valor que el puntaje no captura.\n\n")
+    a("- **Publica exactamente este problema**, comprobado en sus números y no deducido de su "
+      "alcance: detección de intrusiones con IA explicable (2024), con redes convolucionales "
+      "(2026), detección de DDoS entre conjuntos de datos (2026) y una arquitectura de "
+      "detección **y mitigación** de DDoS (2025). Esa última es el único antecedente, entre "
+      "las seis candidatas, de un trabajo que no solo detecta sino que responde: el mismo par "
+      "detección + control inline de este proyecto.\n")
+    a("- **Doble indexación verificada:** único caso cuyo Q2 aparece confirmado en la propia "
+      "revista junto a un factor de impacto de Web of Science (1,7 · Q3 · ESCI).\n")
+    a("- **Veinte páginas de límite**, frente a las 8 de BEEI: las 28 variables, la calibración "
+      "del umbral y la brecha entre error de laboratorio y de operación entran sin recortar ni "
+      "pagar por página adicional.\n")
+    a("- **Su plazo está declarado y es malo:** 3–6 meses hasta la primera decisión. Es una "
+      "desventaja conocida, que es distinto de una desventaja ausente.\n\n")
+
+    a("### Cómo decidir\n\n")
+    a("| Si la restricción dominante es… | La revista es… |\n|---|---|\n")
+    a("| El presupuesto | **ISJ** o **ICS**: ninguna cobra por la vía de suscripción |\n")
+    a("| La certeza sobre el proceso editorial | **CIT**: es la única con todo verificado |\n")
+    a("| El encaje con un antecedente de detección + respuesta | **CIT** |\n")
+    a("| La fecha de sustentación | **Ninguna de las tres.** CIT declara 3–6 meses y las dos "
+      "híbridas de editorial mayor no publican su plazo |\n\n")
     a("La decisión **no se tomó por cuartil**. Si la visibilidad hubiera pesado el 70 %, como "
       "es habitual, el orden habría sido otro y se habría perseguido prestigio a costa del "
       "encaje y del plazo. Aquí la pertinencia temática pesa más que la visibilidad porque un "
@@ -403,7 +438,14 @@ def main() -> None:
 
     a("\n---\n\n## 8 · Pendientes antes del envío\n\n")
     a("Esta matriz **no debe usarse tal cual el día del envío**. Falta:\n\n")
-    for x in ["Verificar el **cuartil SJR** de las cinco candidatas en Scimago. Aquí figura "
+    for x in ["**Verificar el tipo y el tiempo de revisión de ISJ.** Es la comprobación que "
+              "decide entre el Plan A y el Plan B: si supera los 3–6 meses de CIT, el orden "
+              "se invierte. Hoy el Plan A puntúa más alto en parte porque dos componentes de "
+              "su criterio de viabilidad están sin verificar.",
+              "**Confirmar que ISJ e ICS siguen aceptando la vía de suscripción sin APC.** "
+              "Su puntaje de coste de 10 sostiene todo su primer puesto; si alguna migró a "
+              "acceso abierto de pago, cae al último lugar.",
+              "Verificar el **cuartil SJR** de las cinco candidatas en Scimago. Aquí figura "
               "como fuente secundaria: **el percentil de Scopus no es el cuartil SJR**, y "
               "confundirlos invalidaría el criterio de visibilidad.",
               "Completar en fuente primaria los datos marcados con `?` en ISJ, ICS e IJACSA: "
@@ -414,8 +456,10 @@ def main() -> None:
               "cuartil o índice del programa: es un **filtro**, no un criterio ponderado.",
               "Comprobar que la extensión del artículo cabe en el límite base de 8 páginas de "
               "BEEI, o presupuestar el coste por página adicional.",
-              "**Preguntar por escrito a CIT si el APC de 600 EUR aplica por fecha de envío o "
-              "por fecha de aceptación.** La política dice «600 EUR a partir del 1 de "
+              "**Aclarar con CIT cuál es su APC vigente y desde cuándo.** Hay dos cifras en "
+              "circulación: su registro en DOAJ declara 360 EUR y sus instrucciones para "
+              "autores declaran 600 EUR a partir del 1 de septiembre de 2026. Y preguntar si "
+              "aplica por fecha de envío o por fecha de aceptación: La política dice «600 EUR a partir del 1 de "
               "septiembre de 2026» sin precisar el disparador; con una revisión de 3 a 6 "
               "meses, un envío de hoy se acepta después de esa fecha en cualquier escenario.",
               "Pasar el manuscrito por un detector de texto generado por IA antes de enviarlo "
@@ -562,11 +606,12 @@ def generar_word() -> None:
     h1("5 · Plan A, B y C")
     razones = {
         "BEEI": "Mejor puntaje absoluto, pero **ya registrada** en la lista de control.",
-        "CIT": "La mejor de las disponibles. Única con Q2 y factor de impacto de Web of Science "
-               "verificados en la propia revista, y única que publica detección **y mitigación**. "
-               "Su coste es el plazo: 3–6 meses hasta la primera decisión.",
-        "ISJ": "Empata en pertinencia y **no exige APC** por la vía de suscripción, pero publica "
-               "solo 21 artículos al año: capacidad y probabilidad de aceptación mucho menores.",
+        "ISJ": "**No exige APC** por la vía de suscripción. Sube al primer puesto al corregirse "
+               "su capacidad, que no era de 21 artículos al año sino de 35-38. Su puntaje es el "
+               "más frágil del conjunto: 0 de 6 datos verificados en la revista.",
+        "CIT": "Puntúa menos, pero es la única con los seis datos verificados en la propia "
+               "revista, la única con Q2 y factor de impacto de Web of Science confirmados, y la "
+               "única que publica detección y mitigación. Su desventaja está declarada: 3-6 meses.",
         "IJSSE": "Encaje idéntico al de BEEI y ciclo rápido, pero menor visibilidad y APC del "
                  "doble. **Ya registrada** en la lista de control.",
         "ICS": "El mayor prestigio (h-index 60), pero su centro editorial se inclina a factores "
@@ -592,38 +637,49 @@ def generar_word() -> None:
         size=8.2, italic=True, color=DIM)
 
     h1("6 · Justificación")
-    v, n = completitud(libres[0])
-    par(f"**CIT es el Plan A.** Con {total(libres[0]):.1f} puntos sobre 100 es la mejor "
-        f"puntuada entre las disponibles y la única candidata con los {n} datos sensibles "
-        f"verificados en la propia revista. BEEI puntúa más alto ({total(orden[0]):.1f}), pero "
-        "queda fuera por el filtro de disponibilidad, no por una debilidad técnica.")
-    par("**Publica exactamente este problema**, y no se infiere del alcance declarado sino de "
-        "sus números: detección de intrusiones con IA explicable (2024), con redes "
-        "convolucionales (2026), detección de DDoS entre conjuntos de datos (2026) y una "
-        "arquitectura de detección **y mitigación** de DDoS (2025). Esa última es el único "
-        "antecedente, entre todas las candidatas, de un trabajo que no solo detecta sino que "
-        "responde: el mismo par detección + control inline de este proyecto.")
-    par("**Doble indexación verificada:** es la única cuyo Q2 aparece confirmado en la propia "
-        "revista junto a un factor de impacto de Web of Science (1,7 · Q3 · ESCI). Y su "
-        "**límite de 20 páginas** permite exponer las 28 variables, la calibración del umbral "
-        "y la brecha entre error de laboratorio y de operación sin comprimir ni pagar por "
-        "página adicional; en BEEI, con 8 páginas de base, ese contenido obligaría a recortar.")
-    par("**Lo que cuesta esa elección:** la primera decisión tarda de 3 a 6 meses, el plazo más "
-        "largo del conjunto, y la revista publica unos 55 artículos al año frente a los ≈360 de "
-        "BEEI. Si la fecha de sustentación manda sobre el indexado, el Plan A deja de ser el "
-        "correcto y hay que revisar el peso de la viabilidad antes de enviar, no después.")
-    par("**ISJ queda como Plan B** porque no exige APC por la vía de suscripción: es la mejor "
-        "alternativa si desaparece el presupuesto. La decisión **no se tomó por cuartil**; si "
-        "la visibilidad hubiera pesado el 70 %, como es habitual, se habría perseguido "
-        "prestigio a costa del encaje y del plazo.", italic=True)
+    pa, pb = libres[0], libres[1]
+    par(f"**{pa['corto']} encabeza la aritmética** con {total(pa):.1f} puntos entre las "
+        f"disponibles, por delante de {pb['corto']} ({total(pb):.1f}). BEEI puntúa más alto que "
+        f"ambas ({total(orden[0]):.1f}), pero queda fuera por el filtro de disponibilidad, no "
+        "por una debilidad técnica.")
+    par("**El orden entre el Plan A y el Plan B no está resuelto, y hay que decirlo primero.** "
+        f"{pa['corto']} tiene {completitud(pa)[0]} de {completitud(pa)[1]} datos verificados en "
+        f"la revista; {pb['corto']} tiene {completitud(pb)[0]} de {completitud(pb)[1]}. El "
+        "criterio de viabilidad pondera cuatro componentes —tipo de revisión, tiempo, "
+        "periodicidad y capacidad— y en ISJ dos están sin verificar, mientras que CIT declara "
+        "los cuatro y es penalizada precisamente por declarar el plazo más lento del conjunto. "
+        "**Una matriz que premia el desconocimiento está mal construida, y esta lo hace en este "
+        "punto.** No se arregla inventando una penalización a posteriori, que sería el sesgo "
+        "inverso: se arregla verificando. Si el tiempo de revisión de ISJ supera los 3-6 meses "
+        "de CIT, el orden se invierte.")
+    par("**Por qué ISJ está arriba:** no cobra —es híbrida y la vía de suscripción no exige "
+        "APC, y su ausencia de DOAJ es coherente con que no haya migrado a acceso abierto de "
+        "pago—; publica ataques SSH y denegación de servicio HTTP, dos de las familias "
+        "etiquetadas del corpus; y la objeción que la frenaba era falsa: no publica 21 "
+        "artículos al año sino 35-38 según el índice completo de dblp. Corregir ese dato es lo "
+        "que la movió del cuarto lugar al primero.")
+    par("**Por qué CIT sigue siendo la apuesta más segura** aunque puntúe menos: es la única con "
+        "los seis datos verificados en la propia revista; publica exactamente este problema, "
+        "comprobado en sus números —incluida en 2025 una arquitectura de detección Y mitigación "
+        "de DDoS, único antecedente entre las seis candidatas de un trabajo que no solo detecta "
+        "sino que responde—; es la única con Q2 y factor de impacto de Web of Science "
+        "confirmados; y su límite de 20 páginas permite exponer las 28 variables y la brecha "
+        "entre error de laboratorio y de operación sin recortar. Su plazo de 3-6 meses es una "
+        "desventaja conocida, que es distinto de una desventaja ausente.")
+    par("**Cómo decidir:** si la restricción es el presupuesto, ISJ o ICS, que no cobran por la "
+        "vía de suscripción. Si es la certeza sobre el proceso editorial o el encaje con un "
+        "antecedente de detección y respuesta, CIT. Si es la fecha de sustentación, ninguna de "
+        "las tres: CIT declara 3-6 meses y las dos híbridas no publican su plazo.", italic=True)
 
     h1("7 · Pendientes antes del envío")
-    par("**Confirmar con la coordinación qué significa estar en la lista de control:** si "
+    par("**Verificar el tipo y el tiempo de revisión de ISJ:** decide entre el Plan A y el Plan "
+        "B. · **Confirmar que ISJ e ICS siguen aceptando la vía de suscripción sin APC:** su "
+        "puntaje de coste de 10 sostiene el primer puesto. · **Confirmar con la coordinación "
+        "qué significa estar en la lista de control:** si "
         "inhabilita la revista o solo la registra. Toda la sección 2 depende de esa respuesta. "
-        "· **Preguntar por escrito a CIT si el APC de 600 EUR aplica por fecha de envío o de "
-        "aceptación**: la política dice «a partir del 1 de septiembre de 2026» sin precisar el "
-        "disparador, y con 3 a 6 meses de revisión un envío de hoy se acepta después de esa "
-        "fecha en cualquier escenario. · Pasar el manuscrito por un detector de texto generado "
+        "· **Aclarar el APC vigente de CIT:** su registro en DOAJ declara 360 EUR y sus "
+        "instrucciones para autores 600 EUR desde el 1 de septiembre de 2026; y preguntar si "
+        "aplica por fecha de envío o de aceptación. · Pasar el manuscrito por un detector de texto generado "
         "por IA: CIT rechaza **sin derecho a revisión** por encima del 20 %. · Completar en "
         "fuente primaria los datos de ISJ, ICS e IJACSA, hoy en 0 de 6. · Verificar el "
         "**cuartil SJR** en Scimago: **el percentil de Scopus no es el cuartil SJR**. · "

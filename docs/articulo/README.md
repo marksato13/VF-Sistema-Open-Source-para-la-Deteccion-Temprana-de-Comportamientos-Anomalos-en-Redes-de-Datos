@@ -21,7 +21,19 @@ Se buscó una revista fuera de esa lista, aplicando los mismos filtros de
 siempre: indexación vigente, volumen real de publicación, artículos afines
 comprobados uno por uno y **ausencia de la lista de revistas depredadoras**.
 
-## Revista objetivo — Cybernetics and Information Technologies (CIT)
+## Las tres revistas disponibles
+
+| | Revista | Editor | Puntaje | Cuartil | APC | Artículos/año |
+|---|---|---|---:|---|---|---:|
+| **A** | [Information Security Journal: A Global Perspective](https://www.tandfonline.com/journals/uiss20) | Taylor & Francis | **81,0** | Q2 (SJR 0,489) | **Ninguno** por suscripción | 35–38 |
+| **B** | [Cybernetics and Information Technologies](https://cit.iict.bas.bg/) | Academia Búlgara de Ciencias | **77,5** | **Q2** Scopus · Q3 WoS | 600 EUR desde el 1/sep | 42–46 |
+| **C** | [Information and Computer Security](https://www.emeraldgrouppublishing.com/journal/ics) | Emerald | **73,5** | Q2 · h-index 60 | **Ninguno** por suscripción | 34–42 |
+
+**El orden entre A y B no está resuelto.** ISJ encabeza la aritmética, pero con
+**0 de 6** datos verificados en la propia revista; CIT tiene **6 de 6**. Una sola
+comprobación —el tiempo de revisión de ISJ— decide cuál va primero.
+
+### Cybernetics and Information Technologies (CIT)
 
 [`cit.iict.bas.bg`](https://cit.iict.bas.bg/) · Instituto de TIC de la
 **Academia Búlgara de Ciencias** · ISSN 1314-4081 ·
@@ -36,15 +48,16 @@ fuentes secundarias.
 | SCImago | **SJR 0,456 · Q2** · h-index 27 | ídem |
 | Web of Science | **ESCI con factor de impacto 1,7 · Q3** · IF a 5 años 1,4 | ídem |
 | Revisión | Single-blind, ≥2 revisores, tres fases · **3–6 meses**; vía rápida 1–3 meses | [política de revisión](https://cit.iict.bas.bg/cit-peer-review.html) |
-| Periodicidad | 4 números al año · 16 artículos en el n.º 2 de 2026 | [contenidos](https://cit.iict.bas.bg/cit-online-contents.html) |
+| Periodicidad | 4 números al año · **46 · 43 · 42 artículos** en 2023 · 2024 · 2025 | [contenidos](https://cit.iict.bas.bg/cit-online-contents.html) |
 | Extensión | **Hasta 20 páginas** · plantilla DOCX · envío por correo | [instrucciones](https://cit.iict.bas.bg/cit-inst-authors.html) |
 | APC | **600 EUR desde el 1 de septiembre de 2026** · vía rápida 1 200 EUR · solo si se acepta | ídem |
+| ⚠ APC en DOAJ | **360 EUR** — cifra distinta de la que publica la propia revista | [registro DOAJ](https://doaj.org/toc/1314-4081) |
 
 Indexada además en DOAJ, INSPEC, ACM Digital Library, Engineering Village,
 MathSciNet, EBSCO y ProQuest. Adhesión declarada a las *Core Practices* de
 COPE. Archivo de números desde 2001.
 
-### Por qué esta y no otra
+### Por qué CIT sigue siendo la apuesta más segura
 
 **Publica exactamente este problema.** No se dedujo de su alcance editorial: se
 comprobó en sus números.
@@ -57,7 +70,7 @@ comprobó en sus números.
 | 2026 · n.º 2 | *A Semantic-Aware File Metadata Generation Framework for Disk-Level Anomaly Detection in Virtual Machine Backups* |
 | 2024 · n.º 1 | *Enhancing Intrusion Detection with Explainable AI: A Transparent Approach to Network Security* |
 
-El primero es el hallazgo que decide: entre **todas** las candidatas evaluadas,
+El primero es el hallazgo que más pesa: entre **todas** las candidatas evaluadas,
 es el único antecedente de un trabajo que no solo detecta sino que **responde**.
 Ese es el mismo par —detección más control inline— que sostiene este proyecto.
 
@@ -71,22 +84,12 @@ CIT eso entra completo.
 | | |
 |---|---|
 | ⏳ **Plazo** | 3–6 meses hasta la primera decisión: el más largo de todas las candidatas |
-| 📉 **Capacidad** | ≈55 artículos al año frente a los ≈360 de BEEI: menor probabilidad de aceptación |
+| 📉 **Capacidad** | 46 · 43 · 42 artículos en 2023 · 2024 · 2025, contados sobre los PDF de cada número. Estable, y comparable a la de ISJ e ICS — pero lejos de los ≈360 de BEEI |
 | 💶 **APC** | 600 EUR ≈ USD 700. Más que BEEI (USD 415), menos que IJSSE (USD 850) |
 | 🤖 **Cribado de IA** | Por encima del **20 % de texto generado por IA, rechaza sin derecho a revisión**. También aplica iThenticate con tope del 30 % |
 
 **Si la fecha de sustentación manda sobre el indexado, esta no es la revista.**
 Con 3–6 meses de revisión, un envío hoy no se publica antes de 2027.
-
-### Dos preguntas que hay que hacer antes de enviar
-
-1. **A la coordinación:** estar en la lista de control ¿inhabilita la revista o
-   solo la registra? Toda esta decisión depende de esa respuesta.
-2. **Al editor de CIT:** el APC de 600 EUR ¿aplica por fecha de envío o de
-   aceptación? La política dice «a partir del 1 de septiembre de 2026» sin
-   precisar el disparador. Con 3–6 meses de revisión, un envío de hoy se acepta
-   después de esa fecha en cualquier escenario, así que conviene preguntarlo por
-   escrito y no suponerlo.
 
 ## Descartadas en esta búsqueda
 
@@ -98,18 +101,60 @@ Con 3–6 meses de revisión, un envío hoy no se publica antes de 2027.
 | **International Journal of Information Security** · Springer | APC de USD 3 690 si se elige acceso abierto |
 | **Ingénierie des Systèmes d'Information** · IIETA | CiteScore 2,6 y Q3, pero su alcance declarado **no menciona seguridad de redes**: es de sistemas de información y gestión de datos |
 
-## Planes de respaldo
+## Cómo quedó el orden, y por qué se movió
 
-| | Revista | Puntaje | Por qué |
-|---|---|---:|---|
-| **Plan A** | Cybernetics and Information Technologies | 77,5 | Arriba |
-| **Plan B** | [Information Security Journal: A Global Perspective](https://www.tandfonline.com/journals/uiss20) · Taylor & Francis | 77,0 | **Sin APC** por la vía de suscripción. Publica ataques SSH y denegación de servicio HTTP: las mismas familias del corpus. Su límite es la capacidad, ≈21 artículos al año |
-| **Plan C** | [Information and Computer Security](https://www.emeraldgrouppublishing.com/journal/ics) · Emerald | 71,5 | CiteScore 6,9 y h-index 60, el mayor prestigio del conjunto, también sin APC obligatorio. Riesgo real: su centro editorial se inclina a factores humanos y cumplimiento, no a lo puramente técnico |
+La pregunta «¿cuántos artículos publican al año?» destapó un error mío. A ISJ se
+le habían atribuido **21 artículos al año**, cifra tomada de una fuente
+secundaria. El índice completo de dblp da **36, 35 y 38** en 2024, 2025 y 2026.
+Con la capacidad corregida, ISJ pasó del cuarto lugar al primero.
 
-**Plan B y Plan C tienen 0 de 6 datos verificados en fuente primaria.** La
-distancia entre el Plan A y el Plan B es de **medio punto**, menor que lo que
-puede mover una sola verificación pendiente. Hoy no los separa el puntaje sino
-la evidencia.
+| Revista | Artículos/año | Fuente del conteo |
+|---|---|---|
+| CIT | 46 · 43 · 42 (2023–2025) | PDF de cada número, contados uno a uno |
+| ISJ | 36 · 35 · 38 (2024–2026) | índice completo de dblp |
+| ICS | 34 · 38 · 42 (2023–2025) | índice completo de dblp |
+
+**Las tres tienen capacidad equivalente.** Ninguna se parece a BEEI, que publica
+≈360 al año: son revistas selectivas, y eso significa más rechazo.
+
+### La debilidad de método que esto deja a la vista
+
+El criterio de viabilidad pondera cuatro cosas: tipo de revisión, tiempo,
+periodicidad y capacidad. En ISJ **dos están sin verificar**. En CIT las cuatro
+están declaradas, y CIT es penalizada precisamente por declarar el plazo más
+lento del conjunto.
+
+> **Una matriz que premia el desconocimiento está mal construida**, y esta lo
+> hace en este punto. No se arregla inventando una penalización a posteriori
+> —eso sería el sesgo inverso— sino verificando.
+
+Si el tiempo de revisión de ISJ resulta mayor que los 3–6 meses de CIT, el orden
+se invierte. Es la primera verificación pendiente.
+
+### Qué elegir según la restricción
+
+| Si lo que manda es… | La revista es… |
+|---|---|
+| El presupuesto | **ISJ** o **ICS** — ninguna cobra por la vía de suscripción |
+| La certeza sobre el proceso editorial | **CIT** — la única con todo verificado |
+| El encaje con un antecedente de detección + respuesta | **CIT** |
+| La fecha de sustentación | **Ninguna de las tres.** CIT declara 3–6 meses y las dos híbridas no publican su plazo |
+
+## Tres preguntas antes de enviar
+
+1. **A la coordinación:** estar en la lista de control ¿inhabilita la revista o
+   solo la registra? Si solo la registra, BEEI vuelve a ser la primera opción
+   con 84,0 puntos.
+2. **A Taylor & Francis:** ¿sigue abierta la vía de suscripción sin APC en ISJ?
+   Su puntaje de coste de 10 es lo que sostiene el primer puesto; si la revista
+   migró a acceso abierto de pago, cae al último lugar. La misma pregunta vale
+   para Emerald y el Plan C.
+3. **Al editor de CIT:** ¿cuál es el APC vigente y desde cuándo? Hay **dos
+   cifras en circulación** — su registro en DOAJ declara 360 EUR y sus
+   instrucciones para autores declaran 600 EUR desde el 1 de septiembre de 2026.
+   Y ¿aplica por fecha de envío o de aceptación? La política no lo precisa, y
+   con 3–6 meses de revisión un envío de hoy se acepta después de esa fecha en
+   cualquier escenario.
 
 Matriz completa, con criterios, pesos y la ficha de las seis candidatas:
 [`../entregables/09-matriz-revistas/`](../entregables/09-matriz-revistas/matriz-decision-revistas.md)
@@ -184,7 +229,9 @@ falso positivo operativo, que es justamente la contribución.
 |---|---|---|---|
 | 26/08/2026 | APC de IJSSE | USD 700 | **USD 850** — [página oficial](https://www.iieta.org/journals/ijsse/Article%20Processing%20Charge) |
 | 26/08/2026 | Cuartil de BEEI | «Q3» a secas | **Q1 por CiteScore · Q3 por SJR** — son rankings distintos |
-| 26/08/2026 | APC de CIT | «Diamond OA, sin APC» | **600 EUR desde el 1 de septiembre de 2026** — [instrucciones oficiales](https://cit.iict.bas.bg/cit-inst-authors.html) |
+| 26/08/2026 | APC de CIT | «Diamond OA, sin APC» | **600 EUR desde el 1 de septiembre de 2026** — [instrucciones oficiales](https://cit.iict.bas.bg/cit-inst-authors.html). DOAJ registra 360 EUR: sin resolver |
+| 26/08/2026 | Capacidad de ISJ | ≈21 artículos al año | **35–38** — [índice de dblp](https://dblp.org/db/journals/isjgp/index.html). Este error mantenía a ISJ fuera del primer puesto |
+| 26/08/2026 | Capacidad de CIT | ≈55 artículos al año | **42–46** — conteo de los PDF de cada número |
 
 Los tres errores vinieron de **extractos de búsqueda o agregadores**, no de las
 páginas oficiales. El de CIT es el más instructivo: un agregador la describía
