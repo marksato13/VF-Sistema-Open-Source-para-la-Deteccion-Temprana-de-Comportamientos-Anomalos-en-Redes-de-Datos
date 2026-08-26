@@ -32,6 +32,19 @@ Es la dimensión más débil del proyecto. No afecta al funcionamiento del siste
 > de 28 definidas**. Evidencia:
 > [`03-diccionario-multicapa-v2.md`](../../fase02-features-multicapa/03-diccionario-multicapa-v2.md).
 >
+> **Ya resuelto en esta fase:** `D-06` — protocolo de determinismo y semillas
+> en [`10-protocolo-determinismo-y-semillas.md`](../../fase04-modelado/10-protocolo-determinismo-y-semillas.md).
+> Declara qué componentes son estocásticos y cuáles no —el OCSVM **no admite
+> semilla porque su ajuste no tiene componente aleatoria**— y lo **verifica**:
+> 10 ajustes repetidos producen el mismo SHA-256 y el mismo umbral.
+>
+> **Ya resuelto en esta fase:** `D-15` — matriz de trazabilidad cerrada en
+> [`requisitos-jurado/README.md`](../../requisitos-jurado/README.md). Ninguna
+> fila queda en «Planificado»: cada requisito está cumplido con evidencia
+> enlazada, cumplido con una reserva medida, o declarado pendiente con lo que
+> concretamente falta. Corregidas además 7 rutas rotas por el renombrado de
+> carpetas.
+>
 > **Ya resuelto en esta fase:** `D-03` y `D-05` —
 > [`09-validacion-cruzada-y-estabilidad.md`](../../fase04-modelado/09-validacion-cruzada-y-estabilidad.md).
 > Validación cruzada agrupada por episodio en 5 pliegues: la detección media
@@ -94,10 +107,8 @@ Es la dimensión con menor puntaje en la ficha de auditoría (**55,6 %**) y la �
 
 | ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
 |---|---|---|---|---|---|
-| **D-15** | Matriz de cumplimiento de requisitos obsoleta | 4 filas sin cerrar y referencias a rutas que ya no existen | 🟠 | Horas | Actualizarla al estado real y corregir las rutas |
 | **D-17** | Manual de implementación técnica pendiente | Existe manual de operación, no de instalación reproducible desde cero | 🟠 | 1 día | Redactarlo; los comandos ya están probados en los despliegues documentados |
 | **D-20** | **El PPI no refleja los resultados obtenidos** | Se redactó antes de que existieran; debe subirse actualizado al sistema LAM Research | 🔴 | Horas | Actualizar contra la tabla de correspondencia de `05-ppi/README.md` |
-| **D-06** | Determinismo y semillas sin declarar como protocolo | 10 semillas registradas, pero no cubren el modelo elegido; el determinismo del OCSVM no se documenta | 🟡 | Horas | Documentarlo explícitamente en el protocolo |
 
 > **Ya resuelto en esta fase:** `D-14` el diccionario científico de las 28
 > variables —fórmula, denominador, comportamiento con denominador cero, fuente

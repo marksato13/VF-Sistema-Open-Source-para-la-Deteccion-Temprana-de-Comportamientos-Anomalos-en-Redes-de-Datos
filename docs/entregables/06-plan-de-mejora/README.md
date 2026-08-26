@@ -6,8 +6,8 @@ Registro único de **todo lo que falta** en el producto del PPI, con su evidenci
 |---|---|
 | **Producto** | Sistema de detección de anomalías de red con control inline (VM02) |
 | **Fecha de corte** | 25 de agosto de 2026 |
-| **Puntos abiertos en este registro** | **20** |
-| **Ya corregidos durante esta fase** | **20** (fuera del registro, listados como resueltos en cada sección) |
+| **Puntos abiertos en este registro** | **18** |
+| **Ya corregidos durante esta fase** | **22** (fuera del registro, listados como resueltos en cada sección) |
 | **Corregidos en el registro técnico previo** | **7 de 12** |
 
 ## Documentos de esta carpeta
@@ -42,20 +42,20 @@ La prioridad sale del cruce: **alto impacto con bajo esfuerzo va primero**, siem
 
 ## Matriz de priorización
 
-Contiene los 20 puntos abiertos. Un punto sin celda es un punto sin plan.
+Contiene los 18 puntos abiertos. Un punto sin celda es un punto sin plan.
 
 |  | **Minutos–Horas** | **Días** | **Semanas** |
 |---|---|---|---|
 | 🔴 **Crítico** | **P1 · Hacer ya**<br>D-01 declarar selección post hoc<br>D-20 actualizar el PPI | **P2 · Planificar** | **P3 · Trabajo futuro**<br>D-11 recalibrar con tráfico pesado |
-| 🟠 **Alto** | **P1 · Hacer ya**<br>D-15 cerrar matriz de requisitos | **P2 · Planificar**<br>D-17 manual técnico<br>D-18 validación con usuarios | **P3 · Trabajo futuro**<br>D-09 holdout temporal externo |
-| 🟡 **Medio** | **P2**<br>D-06 documentar determinismo<br>D-22 revertir acceso root | **P3**<br>D-10 escenarios faltantes<br>D-19 pruebas de evasión<br>D-27 heurístico sin calibrar<br>D-28 sin juicio experto | **P4 · Declarar**<br>D-13 segundo umbral (LIMIT)<br>D-25 tamaño muestral |
+| 🟠 **Alto** | **P1 · Hacer ya** | **P2 · Planificar**<br>D-17 manual técnico<br>D-18 validación con usuarios | **P3 · Trabajo futuro**<br>D-09 holdout temporal externo |
+| 🟡 **Medio** | **P2**<br>D-22 revertir acceso root | **P3**<br>D-10 escenarios faltantes<br>D-19 pruebas de evasión<br>D-27 heurístico sin calibrar<br>D-28 sin juicio experto | **P4 · Declarar**<br>D-13 segundo umbral (LIMIT)<br>D-25 tamaño muestral |
 | ⚪ **Bajo** | **P3**<br>D-07 Youden<br>D-23 gráficos de la ficha<br>D-24 ajustar extensión | **P4 · Declarar**<br>D-16 monitoreo de deriva | **P4 · Declarar**<br>D-21 control por identidad |
 
 ---
 
 ## El hallazgo más rentable
 
-**Las acciones de minutos u horas** (D-01, D-15) cierran **dos requisitos explícitos del jurado** y la principal objeción metodológica, sin experimentación nueva. Elevan además el puntaje de la ficha de auditoría de **62,7 % a 76,5 %**.
+**La acción de horas que queda** (D-01, declarar la selección posterior en la tesis) cierran **dos requisitos explícitos del jurado** y la principal objeción metodológica, sin experimentación nueva. Elevan además el puntaje de la ficha de auditoría de **62,7 % a 76,5 %**.
 
 Ninguna de ellas exige capturar datos, reentrenar el modelo ni repetir campañas: el material ya existe y solo hay que publicarlo, ejecutarlo o declararlo.
 

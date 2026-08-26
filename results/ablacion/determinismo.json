@@ -1,0 +1,13 @@
+{
+  "coincide_con_manifiesto": true,
+  "determinista": true,
+  "hashes_distintos": 1,
+  "n_ejecuciones": 10,
+  "numpy": "2.5.1",
+  "scikit_learn": "1.9.0",
+  "sha256_del_objeto_ajustado": [
+    "90780d0862bc5db34d953b2b0f1e00841b52e80b6adb70ffe196c061cae36eb0"
+  ],
+  "umbral": 1.8126087939765134,
+  "umbrales_distintos": 1
+}

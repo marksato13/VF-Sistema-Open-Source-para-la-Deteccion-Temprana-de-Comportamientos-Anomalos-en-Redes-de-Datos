@@ -122,7 +122,7 @@ sustentan con 18 ítems sobre 51 puntos.
 |---|---|---|---|
 | 3.1 | **Validación con usuarios reales** | No se realizó. No hubo pruebas con analistas de seguridad ni medición de experiencia de uso del panel operativo | **0** |
 | 3.2 | **Evaluación por expertos o jueces** | No se aplicó ningún instrumento de juicio experto (Delphi, SUS u otro) | **0** |
-| 3.3 | **Trazabilidad de requisitos** | Existe una matriz de cumplimiento de los requisitos del jurado, pero **4 filas siguen sin cerrar** y referencia rutas desactualizadas | **1** |
+| 3.3 | **Trazabilidad de requisitos** | **Matriz cerrada**: cada requisito cumplido con evidencia enlazada, cumplido con reserva medida, o declarado pendiente con lo que concretamente falta. Ninguna fila en «Planificado» | **3** |
 | 3.4 | **Validación en entorno de operación real** | El sistema se midió **desplegado y activo**, no solo en laboratorio: 2 pases de 29 corridas con motor y bloqueo funcionando sobre tráfico real | **3** |
 | 3.5 | **Alineación con el problema declarado** | El producto detecta y bloquea las 6 familias de ataque previstas, con métricas medidas por familia | **3** |
 | 3.6 | **Declaración de alcance y limitaciones** | Limitaciones medidas, cuantificadas y publicadas, incluido el resultado desfavorable del error operativo (23–26 %) | **3** |
@@ -138,25 +138,25 @@ sustentan con 18 ítems sobre 51 puntos.
 | Dimensión | Obtenido | Máximo | Porcentaje | Nivel |
 |---|---|---|---|---|
 | Confiabilidad | 12 | 15 | **80,0 %** | Alto |
-| Replicabilidad | 17 | 18 | **94,4 %** | Alto |
-| Pertinencia | 10 | 18 | **55,6 %** | Medio |
-| **TOTAL** | **39** | **51** | **76,5 %** | **Alto** |
+| Replicabilidad | 18 | 18 | **100 %** | Alto |
+| Pertinencia | 12 | 18 | **66,7 %** | Medio-alto |
+| **TOTAL** | **42** | **51** | **82,4 %** | **Alto** |
 
-> **Evolución.** La primera auditoría dio **32/51 = 62,7 %**. Subieron cinco
-> ítems, todos con evidencia publicada: cuantificación de la incertidumbre
-> (2 → 3), datos disponibles (1 → 3), instrucciones de reproducción (2 → 3),
-> validación cruzada (1 → 3) y estabilidad entre repeticiones (2 → 3).
+> **Evolución.** La primera auditoría dio **32/51 = 62,7 %**. Subieron siete
+> ítems, todos con evidencia publicada: cuantificación de la incertidumbre,
+> datos disponibles, instrucciones de reproducción, validación cruzada,
+> estabilidad entre repeticiones, determinismo y trazabilidad de requisitos.
 >
-> **La confiabilidad pasa de 53,3 % a 80,0 %**, que era la dimensión más débil.
-> La única que no se movió es la **pertinencia**, porque no se corrige
-> escribiendo.
+> **La replicabilidad llega al 100 %** y la confiabilidad pasa de 53,3 % a
+> 80,0 %. Lo que sigue frenando el puntaje es la **pertinencia**: los dos ítems
+> de validación con personas siguen en **cero**, y no se corrigen escribiendo.
 
 ### Interpretación
 
-Un **76,5 %** describe el estado actual: **sólido como artefacto de ingeniería y ya replicable por un tercero, todavía incompleto en validación humana**.
+Un **82,4 %** describe el estado actual: **sólido como artefacto de ingeniería y ya replicable por un tercero, todavía incompleto en validación humana**.
 
 - Lo que sostiene el puntaje es la **replicabilidad** (94,4 %): datos, modelos, checksums y licencias están publicados; un tercero puede clonar y reproducir el umbral en sus 16 dígitos.
-- Lo que lo baja es ya una sola cosa: la **validación humana**. La estadística quedó cerrada; ningún usuario ni experto externo ha evaluado el producto.
+- Lo que lo baja es ya una sola cosa: la **validación humana**. La estadística quedó cerrada y la replicabilidad está completa; lo que falta es que alguien externo al equipo use el producto.
 - Ninguna de las dos ausencias invalida los resultados obtenidos; ambas **limitan el alcance de lo que puede afirmarse** a partir de ellos.
 
 ---

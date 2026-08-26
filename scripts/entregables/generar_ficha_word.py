@@ -72,7 +72,8 @@ REPLICABILIDAD = [
     ("2.3", "Entorno documentado",
      "Versiones exactas fijadas, script de instalación idempotente y playbooks de Ansible", 3),
     ("2.4", "Determinismo y semillas",
-     "10 semillas registradas, pero no cubren el modelo elegido; el determinismo no se declara como protocolo", 2),
+     "Protocolo declarado: qué componentes son estocásticos y cuáles no, con verificación de 10 ajustes "
+     "repetidos que producen el mismo SHA-256 y el mismo umbral", 3),
     ("2.5", "Integridad verificable",
      "SHA-256 de datos, modelo y calibrador; repositorio verificado limpio antes y después", 3),
     ("2.6", "Instrucciones de reproducción",
@@ -85,7 +86,8 @@ PERTINENCIA = [
     ("3.2", "Evaluación por expertos o jueces",
      "No se aplicó ningún instrumento de juicio experto (Delphi, SUS u otro)", 0),
     ("3.3", "Trazabilidad de requisitos",
-     "Existe matriz de cumplimiento del jurado, pero 4 filas sin cerrar y con rutas desactualizadas", 1),
+     "Matriz cerrada: cada requisito está cumplido con evidencia enlazada, cumplido con una reserva medida, "
+     "o declarado pendiente con lo que concretamente falta. Ninguna fila queda en Planificado", 3),
     ("3.4", "Validación en operación real",
      "Sistema medido desplegado y activo: 2 pases de 29 corridas con motor y bloqueo sobre tráfico real", 3),
     ("3.5", "Alineación con el problema",
@@ -315,7 +317,7 @@ def main() -> int:
            ("Ejecutar validación cruzada sobre el modelo congelado", "1.3", "1 → 3", ("Horas", F_OK)),
            ("Cerrar y actualizar la matriz de trazabilidad de requisitos", "3.3", "1 → 3", ("Horas", F_OK)),
            ("Documentar semillas y determinismo como protocolo explícito", "2.4", "2 → 3", ("Horas", F_OK)),
-           ("Cerrar la matriz de trazabilidad de requisitos", "3.3", "1 → 3", ("Horas", F_OK)),
+           ("Aplicar juicio experto con 3 evaluadores", "3.2", "0 → 2", ("Días", F_AMBER)),
            ("Aplicar un instrumento validado (SUS) con 5–8 evaluadores", "3.1 · 3.2", "0 → 2", ("3–5 días", F_AMBER)),
            ("Repetir la validación operativa para tener más de dos mediciones", "1.5", "2 → 3", ("Días", F_AMBER))],
           widths=[8.6, 2.2, 2.4, 2.8])

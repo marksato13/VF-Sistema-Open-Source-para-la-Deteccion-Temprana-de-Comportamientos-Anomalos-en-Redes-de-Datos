@@ -265,15 +265,58 @@ Cada resultado deberá vincularse con:
 10. Ejecutar la validación temporal final.
 11. Publicar resultados y limitaciones.
 
-## 8. Matriz de trazabilidad inicial
+## 8. Matriz de trazabilidad
 
-| Requisito | Estado | Evidencia esperada |
+*Cerrada al 26 de agosto de 2026. Cada fila enlaza a evidencia verificable; una
+fila sin evidencia se declara pendiente, no se marca como cumplida.*
+
+### Observación 1 — Tráfico legítimo pesado
+
+| Requisito | Estado | Evidencia |
 |---|---|---|
-| Dataset normal con tráfico pesado | En ejecución: 4 celdas HTTP, 4 HTTPS y HTTP-C2/C4 oficiales aceptadas | Canarios 07–14 y `../07-dataset-campanas/19-canario-HTTP-C2-F1.md`–`../07-dataset-campanas/20-canario-HTTP-C4-F1.md` |
-| Paquetes normales entre 500 y 1500 bytes | HTTP: 91.6077–98.7155 %; HTTPS: 95.4127–98.0435 %; C2: 95.7053 %; C4: 96.1803 % | PCAP, hashes y distribución en los diez canarios pesados |
-| Variable de Capa 3 | Implementada y observada en campañas oficiales | `unique_dst_ip_ratio_30s=1.0` en `../07-dataset-campanas/17-canario-HTTP-MULTI-1-F1.md` y `0.2` en `../07-dataset-campanas/18-canario-HTTP-MULTI-5-F1.md` |
-| Variable de Capa 4 | Implementada y observada en campaña oficial | SYN, completitud y flujos en `../07-dataset-campanas/15-canario-HTTP-404-5-F1.md` |
-| Variable de Capa 7 | Implementada y observada en campañas oficiales | `http_error_ratio_60s=1` en `../07-dataset-campanas/15-canario-HTTP-404-5-F1.md` y `tls_session_rate_60s=20/60` en `../07-dataset-campanas/16-canario-TLS-SESSIONS-20-F1.md` |
-| Comparación contra 14 features | Planificado | Tabla de métricas y prueba de ablación |
-| Validación sin mezcla de sesiones | Planificado | Manifiesto de particiones |
-| Automatización reproducible | Planificado | Playbooks y logs de Ansible |
+| Dataset normal con tráfico pesado | ✅ **Cumplido** | 44 perfiles con transferencias de 10 MB a 1 GB y 2–8 flujos concurrentes · [datasheet §4](../dataset/DATASHEET_MULTILAYER_V2.md) |
+| Paquetes normales entre 500 y 1500 bytes | ✅ **Cumplido** | HTTP 91,6–98,7 % · HTTPS 95,4–98,0 % · C2 95,7 % · C4 96,2 % en los diez canarios pesados |
+| Un paquete grande no debe ser señal de ataque por sí solo | ⚠️ **Cumplido con reserva medida** | El tráfico pesado entra como normalidad, pero la validación operativa demostró que **aún genera falsos positivos**: 22,97 % frente al 4,71 % de laboratorio · [system card](../dataset/SYSTEM_CARD_MOTOR.md) |
+| Cargas legítimas reproducibles y concurrentes | ✅ **Cumplido** | Generadores versionados con techos calibrados (200 Mbit/s TCP, 50 Mbit/s UDP) |
+| Separación correcta de entrenamiento, validación y prueba | ⚠️ **Cumplido en la forma, no en el fondo** | Ningún episodio se reparte (gate `no_episode_split`, 0 violaciones), pero **los 44 perfiles aparecen en las tres particiones**: se mide repetibilidad, no generalización |
+
+### Observación 2 — Variables multicapa
+
+| Requisito | Estado | Evidencia |
+|---|---|---|
+| Variable de Capa 3 | ✅ **Cumplido** | 9 variables L3 · [diccionario](../fase02-features-multicapa/03-diccionario-multicapa-v2.md) |
+| Variable de Capa 4 | ✅ **Cumplido** | 8 variables L4 · ídem |
+| Variable de Capa 7 | ✅ **Cumplido** | 11 variables L7, incluida la señal semántica de fallo de autenticación · ídem |
+| Definición matemática, ventana temporal y fuente de datos | ✅ **Cumplido** | Diez campos por variable, **generados desde el extractor congelado** · ídem |
+| Tratamiento de valores faltantes | ✅ **Cumplido** | Convenio de denominador cero declarado; cero valores faltantes en las 1 552 ventanas |
+| Coste de cálculo en línea | ✅ **Cumplido** | Declarado por variable; el motor las calcula cada 10 s en producción |
+| Justificación de por qué representa comportamiento | ✅ **Cumplido** | Columna «estado» del diccionario, con las redundancias declaradas |
+| **Comparación contra las 14 variables anteriores** | ✅ **Cumplido** | 66,5 % → 88,8 % de detección, **p < 0,001** · [ablación](../fase04-modelado/07-ablacion-multicapa.md) |
+| **Evaluación de aporte por capa (ablación)** | ✅ **Cumplido** | Cuatro configuraciones progresivas más retirada por grupo. **Resultado incómodo declarado:** las 8 variables L7 nuevas no aportan detección medible |
+| No aceptar una variable solo porque su nombre menciona una capa | ✅ **Cumplido** | `tls_handshake_failure_ratio_60s` **declarada no observable**: 27 efectivas de 28 definidas |
+
+### Requisitos transversales
+
+| Requisito | Estado | Evidencia |
+|---|---|---|
+| **Validación sin mezcla de sesiones** | ✅ **Cumplido** | Gate `no_episode_split` con 0 violaciones, más los gates de duplicados que cruzan partición, con tolerancia cero |
+| **Automatización reproducible** | ✅ **Cumplido** | 1 150 playbooks de Ansible, generadores versionados y `sha256sum -c` sobre los artefactos publicados |
+| Prevención de fuga de información | ✅ **Cumplido** | Ventanas estrictamente causales, verificado con prueba unitaria; etiqueta unida tras extraer las variables |
+| Métricas con medida de incertidumbre | ✅ **Cumplido** | Intervalos de Wilson en toda proporción y McNemar con corrección de Holm · [significancia](../fase04-modelado/08-significancia-entre-modelos.md) |
+| Robustez del resultado frente a la partición | ✅ **Cumplido** | Validación cruzada agrupada por episodio · [validación cruzada](../fase04-modelado/09-validacion-cruzada-y-estabilidad.md) |
+| Datos y código disponibles | ✅ **Cumplido** | Dataset, manifiesto y 7 modelos publicados con licencias MIT y CC BY 4.0 |
+
+### Lo que sigue pendiente, declarado
+
+| Requisito | Estado | Qué falta |
+|---|---|---|
+| Jornada de holdout temporal externa | 🔴 **Pendiente** | Capturar una jornada nueva y reservarla sin participar en entrenamiento ni calibración |
+| Seis escenarios legítimos previstos | 🔴 **Pendiente** | SSH, SCP/SFTP, SMB, respaldo, streaming y actualizaciones |
+| Captura multi-sistema-operativo | 🔴 **Pendiente** | Un solo sistema operativo cliente |
+| Validación con usuarios reales | 🔴 **Pendiente** | Instrumento y guion listos en [`08-validacion-usuarios/`](../entregables/08-validacion-usuarios/README.md); falta convocar evaluadores |
+| Falso positivo aceptable sobre tráfico pesado | 🔴 **Pendiente** | Recalibrar el umbral incluyendo ese tráfico como normalidad y repetir la validación operativa |
+
+> **Ninguna fila queda en «Planificado».** Cada requisito está cumplido con
+> evidencia enlazada, cumplido con una reserva medida, o declarado pendiente
+> con lo que concretamente falta. Un requisito sin evidencia no se marca como
+> cumplido.
