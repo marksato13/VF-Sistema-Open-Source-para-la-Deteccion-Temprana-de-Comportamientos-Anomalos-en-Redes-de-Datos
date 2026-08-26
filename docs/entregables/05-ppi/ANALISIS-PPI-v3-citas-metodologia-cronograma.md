@@ -2,7 +2,12 @@
 
 **Fecha:** 26 de agosto de 2026
 **Alcance:** desde la sección 2 (Metodología) en adelante, más el sistema de citas
-**Estado:** propuestas **sin aplicar**, para aprobación punto por punto
+**Estado:** ✅ **aplicadas al documento** el 26 de agosto de 2026
+
+> Respaldo previo en `PPI Editar_actual.backup-20260826-before-v3.docx`.
+> Integridad verificada tras editar: 434 párrafos, 11 tablas y **las 4 imágenes
+> intactas**. Las ecuaciones se generaron en **OMML nativo de Word**, no como
+> texto ni como imagen, para que se vean como ecuaciones.
 
 > **Sobre gestores bibliográficos.** No hay integración con Zotero ni con
 > ningún gestor. Lo que sí se hizo aquí: **verificar cada DOI propuesto**
@@ -242,3 +247,30 @@ enlace a evidencia verificable pesa más que un párrafo que la resume**.
 **Los tres primeros son los que un dictaminador detecta sin leer el
 contenido**: falta de bibliografía, matemática del modelo equivocado y un
 cronograma que dice que el desarrollo no se hizo.
+
+---
+
+## Estado de aplicación
+
+| # | Acción | Estado |
+|---|---|---|
+| 1 | Lista de referencias | ⚠️ **Parcial** — tres entradas con DOI verificado; el resto queda declarado como pendiente de exportar desde Mendeley |
+| 2 | Matemática del OCSVM en lugar de Isolation Forest | ✅ Aplicada |
+| 3 | Cronograma con fechas reales | ✅ Aplicada |
+| 4 | Renumeración por el salto de 2.2 y limpieza de títulos | ✅ Aplicada |
+| 5 | 2.6.5 como tabla riesgo–mitigación | ✅ Aplicada |
+| 6 | Reducir 1.2.3 | ⏳ Pendiente |
+| 7 | Anexo B con enlaces al repositorio | ✅ Aplicada |
+| 8 | Diagrama del flujo extremo a extremo | ⏳ Pendiente |
+| 9 | Unir secciones cortas | ⏳ Pendiente |
+
+### Por qué la bibliografía quedó parcial
+
+**No se inventó ninguna referencia.** Se incorporaron las tres cuyo DOI se
+verificó resolviéndolo —Schölkopf et al. (2001), Tax y Duin (2004) y Liu et al.
+(2008)— y las demás quedan enumeradas por autor y tema en una nota dentro del
+propio documento.
+
+Completar el resto exige la biblioteca Mendeley del autor: son trabajos que él
+seleccionó y que solo él puede identificar sin ambigüedad. Fabricar entradas
+con DOI plausibles habría sido mucho peor que dejar la carencia declarada.
