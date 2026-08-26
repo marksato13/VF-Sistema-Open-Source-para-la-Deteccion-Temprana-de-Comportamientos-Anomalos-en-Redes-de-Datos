@@ -19,6 +19,10 @@ from docx.shared import Cm, Pt, RGBColor
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _docx_estilo import rematar
+
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generar_informe_word import (  # reutiliza el formato ya definido
     ACCENT, AMBER, DANGER, DIM, F_AMBER, F_DANGER, F_OK, INK, OK,
     caja, cell_text, figura, h1, h2, parrafo, shade, tabla, vineta,
@@ -381,6 +385,11 @@ def main() -> int:
         vineta(doc, ref)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
+    rematar(doc,
+            "Ficha de auditoría del producto",
+            "Auditoría de confiabilidad, replicabilidad y pertinencia",
+            "Ficha de auditoría del producto · Salazar Tocas & Sauñe Fernandez",
+            "Investigación V · Sesión 02 · UPeU")
     doc.save(OUT)
     print(f"Generado: {OUT.relative_to(REPO)}")
     print(f"  Confiabilidad {a[0]}/{a[1]} · Replicabilidad {b[0]}/{b[1]} · Pertinencia {c[0]}/{c[1]}")

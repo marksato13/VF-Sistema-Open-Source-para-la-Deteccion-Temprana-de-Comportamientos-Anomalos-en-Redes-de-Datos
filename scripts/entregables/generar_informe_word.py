@@ -22,6 +22,10 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _docx_estilo import rematar
+
 REPO = Path(__file__).resolve().parents[2]
 GRAF = REPO / "docs" / "entregables" / "graficas"
 OUT = (REPO / "docs" / "entregables" / "02-validacion-y-confiabilidad"
@@ -464,6 +468,11 @@ def main() -> int:
          fill="EEF1F8")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
+    rematar(doc,
+            "Informe de validación y confiabilidad",
+            "Validación interna, externa y confiabilidad del sistema de detección",
+            "Informe de validación y confiabilidad · Salazar Tocas & Sauñe Fernandez",
+            "Investigación V · UPeU")
     doc.save(OUT)
     print(f"Generado: {OUT.relative_to(REPO)}")
     return 0

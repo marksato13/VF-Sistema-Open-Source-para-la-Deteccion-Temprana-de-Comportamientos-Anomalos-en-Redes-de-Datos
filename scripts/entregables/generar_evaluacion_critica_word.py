@@ -16,6 +16,10 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _docx_estilo import rematar
+
 REPO = Path(__file__).resolve().parents[2]
 LOGO = REPO / "docs/entregables/assets/logo-upeu.png"
 GRAF = REPO / "docs/entregables/graficas"
@@ -173,6 +177,16 @@ def main() -> None:
     par(doc, "Detalle completo, con las 11 figuras y la trazabilidad de cada cifra, en "
              "informe-evaluacion-critica.md del repositorio del proyecto.",
         size=7.8, italic=True, color=DIM)
+
+    rematar(doc,
+
+            "Informe de evaluación crítica de resultados",
+
+            "Investigación V · Sesión 01 · Evaluación crítica de los resultados de la tesis",
+
+            "Informe de evaluación crítica · Salazar Tocas & Sauñe Fernandez",
+
+            "Investigación V · Sesión 01 · UPeU")
 
     doc.save(OUT)
     print(f"Generado: {OUT.relative_to(REPO)}")

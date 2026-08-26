@@ -15,6 +15,10 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _docx_estilo import rematar
+
 REPO = Path(__file__).resolve().parents[2]
 LOGO = REPO / "docs" / "entregables" / "assets" / "logo-upeu.png"
 OUT = REPO / "docs/entregables/07-plan-de-validacion/Plan-de-validacion-de-resultados.docx"
@@ -209,6 +213,16 @@ def main() -> None:
                  "**selección posterior del modelo** exige un protocolo nuevo con evaluación "
                  "reservada. Ambas se declaran como límite, no se simulan.")
     parrafo(doc, "✔ = ya ejecutado y publicado.", size=8, italic=True, color=DIM)
+
+    rematar(doc,
+
+            "Plan de validación de resultados",
+
+            "Método y umbral por cada eje de validación, con cronograma",
+
+            "Plan de validación de resultados · Salazar Tocas & Sauñe Fernandez",
+
+            "Investigación V · Sesión 02 · UPeU")
 
     doc.save(OUT)
     print(f"Generado: {OUT.relative_to(REPO)}")
