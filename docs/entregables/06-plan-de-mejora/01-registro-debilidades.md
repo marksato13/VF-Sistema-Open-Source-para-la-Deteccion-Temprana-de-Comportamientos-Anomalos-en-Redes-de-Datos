@@ -79,7 +79,7 @@ Es la dimensión con menor puntaje en la ficha de auditoría (**55,6 %**) y la �
 
 | ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
 |---|---|---|---|---|---|
-| **D-18** | **Ninguna validación con usuarios reales** | No hubo pruebas con analistas de seguridad ni medición de experiencia de uso del panel | 🟠 | 3–5 días | Aplicar un instrumento validado (SUS) con 5–8 evaluadores sobre el panel operativo |
+| **D-18** | **Ninguna validación con usuarios reales** | No hubo pruebas con analistas de seguridad ni medición de experiencia de uso del panel | 🟠 | 3–5 días | **Instrumento, guion y script de cálculo ya preparados** en [`08-validacion-usuarios/`](../08-validacion-usuarios/README.md); falta convocar a los 5–8 evaluadores |
 | **D-28** | Sin evaluación por expertos o jueces | No se aplicó Delphi, juicio experto ni instrumento equivalente | 🟡 | Días | Sesión de juicio experto con 3 evaluadores, o declarar la ausencia |
 
 ---
@@ -115,7 +115,7 @@ Es la dimensión con menor puntaje en la ficha de auditoría (**55,6 %**) y la �
 
 | ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
 |---|---|---|---|---|---|
-| **D-23** | La ficha de auditoría no tiene ningún gráfico | El puntaje 62,7 % y la proyección a 76,5 % se comunican solo con tablas | ⚪ | Horas | Añadir barras de las tres dimensiones y un gráfico antes/después |
+| **D-23** | La ficha de auditoría no tiene ningún gráfico | El puntaje 70,6 % y su evolución se comunican solo con tablas | ⚪ | Horas | Añadir barras de las tres dimensiones y un gráfico antes/después |
 | **D-24** | El informe de validación excede la extensión pedida | ~5,2 páginas frente a las 3–4 solicitadas | ⚪ | Horas | Mover las referencias a anexo o condensar las tablas |
 
 ---

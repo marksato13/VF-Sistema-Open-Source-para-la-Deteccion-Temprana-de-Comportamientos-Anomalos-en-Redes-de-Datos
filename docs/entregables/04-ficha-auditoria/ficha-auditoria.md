@@ -43,6 +43,27 @@ Para que la ficha sea verificable y no una autoevaluación complaciente, se fij�
 
 ---
 
+## Ficha de auditoría de validación — esquema del curso
+
+Los seis criterios sobre 20 puntos de la Sesión 02. Las secciones 1 a 3 los
+sustentan con 18 ítems sobre 51 puntos.
+
+| Criterio | Evidencia encontrada | Puntaje |
+|---|---|:---:|
+| Confiabilidad estadística reportada | Intervalos de Wilson 95 % en toda proporción, McNemar exacto con corrección de Holm sobre 21 comparaciones y ROC-AUC 0,974. **Alfa no aplica** (no hay escalas); **Kappa no aplica** (no hay jueces) | **3 / 4** |
+| Método de validación declarado | Hold-out con partición disjunta por episodio, umbral calibrado solo con `validation` y evaluación bloqueada de un solo paso. Falta validación cruzada y jornada de holdout externa | **3 / 4** |
+| Confiabilidad de sistema / determinismo | Reproducción **bit a bit** verificada: el umbral coincide en sus 16 dígitos y los 7 modelos reproducen el manifiesto. Las semillas aún no se declaran como protocolo | **3 / 3** |
+| Datos y/o código disponibles públicamente | Dataset, manifiesto y los 7 modelos candidatos publicados, verificables con `sha256sum -c`, bajo licencias MIT y CC BY 4.0 | **3 / 3** |
+| Entorno y dependencias documentadas | Versiones exactas de `scikit-learn` y `numpy` en el manifiesto congelado | **3 / 3** |
+| **Pertinencia validada con usuarios reales** | **No se realizó ninguna.** Es la única ausencia total del producto | **0 / 3** |
+| **TOTAL** | | **15 / 20 · 75 %** |
+
+> **El único cero es la validación con personas.** No se corrige documentando:
+> exige evaluadores usando el panel. Una prueba de usabilidad con 5–8
+> participantes lo convierte en evidencia y eleva el total a **18 de 20**.
+
+---
+
 ## 1. Evidencia de CONFIABILIDAD
 
 *¿Los resultados son estables y consistentes al repetir la medición?*
@@ -116,17 +137,21 @@ Para que la ficha sea verificable y no una autoevaluación complaciente, se fij�
 
 | Dimensión | Obtenido | Máximo | Porcentaje | Nivel |
 |---|---|---|---|---|
-| Confiabilidad | 8 | 15 | **53,3 %** | Medio |
-| Replicabilidad | 14 | 18 | **77,8 %** | Alto |
+| Confiabilidad | 9 | 15 | **60,0 %** | Medio |
+| Replicabilidad | 17 | 18 | **94,4 %** | Alto |
 | Pertinencia | 10 | 18 | **55,6 %** | Medio |
-| **TOTAL** | **32** | **51** | **62,7 %** | **Medio-alto** |
+| **TOTAL** | **36** | **51** | **70,6 %** | **Alto** |
+
+> **Evolución.** La auditoría anterior daba **32/51 = 62,7 %**. Subieron tres
+> ítems, todos con evidencia publicada: cuantificación de la incertidumbre
+> (2 → 3), datos disponibles (1 → 3) e instrucciones de reproducción (2 → 3).
 
 ### Interpretación
 
-Un **62,7 %** describe con precisión el estado del producto: **sólido como artefacto de ingeniería, incompleto como evidencia científica**.
+Un **70,6 %** describe el estado actual: **sólido como artefacto de ingeniería y ya replicable por un tercero, todavía incompleto en validación humana**.
 
-- Lo que sostiene el puntaje es la **replicabilidad** (77,8 %): el trabajo es verificable, versionado y auditable por un tercero.
-- Lo que lo baja son dos ausencias distintas: **validación estadística** (sin validación cruzada del modelo elegido) y **validación humana** (ningún usuario o experto externo evaluó el producto).
+- Lo que sostiene el puntaje es la **replicabilidad** (94,4 %): datos, modelos, checksums y licencias están publicados; un tercero puede clonar y reproducir el umbral en sus 16 dígitos.
+- Lo que lo baja son dos ausencias distintas, y ya no pesan igual: la **validación estadística** se redujo a un solo hueco —falta validación cruzada sobre el modelo elegido—, mientras que la **validación humana** sigue en cero absoluto.
 - Ninguna de las dos ausencias invalida los resultados obtenidos; ambas **limitan el alcance de lo que puede afirmarse** a partir de ellos.
 
 ---

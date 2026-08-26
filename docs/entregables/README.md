@@ -32,10 +32,11 @@ inicio sin retirar el análisis extenso.
 | [`01-evaluacion-critica/`](01-evaluacion-critica/) | Informe de resultados y evaluación crítica | **Listo** · *entregable del curso* | **Sesión 01.** El `.md` es el análisis completo con las 11 gráficas; el `.docx` es la versión de 3 páginas con la estructura que pide la consigna: qué se abordó, qué falta y cómo se está abordando |
 | [`02-validacion-y-confiabilidad/`](02-validacion-y-confiabilidad/) | Informe de validación y confiabilidad | **Listo** | Informe **en pasado** sobre validación interna, externa y confiabilidad. **No sustituye al plan de la Sesión 02**, que es prospectivo y de 1–2 páginas |
 | [`03-auditoria-comparativa/`](03-auditoria-comparativa/) | Auditoría comparativa MVP vs versión final | **Listo** | Contrasta repositorios, arquitectura, modelo, dataset y cumplimiento de las observaciones del jurado |
-| [`04-ficha-auditoria/`](04-ficha-auditoria/) | Ficha de auditoría del producto | **Listo** · *entregable del curso* | Auditoría en tres dimensiones (confiabilidad, replicabilidad, pertinencia). Puntaje: **32/51 = 62,7 %** |
+| [`04-ficha-auditoria/`](04-ficha-auditoria/) | Ficha de auditoría del producto | **Listo** · *entregable del curso* | Los 6 criterios sobre 20 puntos del docente (**15/20**) más el análisis extenso en tres dimensiones: **36/51 = 70,6 %** |
 | [`05-ppi/`](05-ppi/) | PPI — Proyecto de Investigación | **Pendiente** | Documento del proyecto. Debe subirse actualizado (versión 2) al sistema LAM Research |
 | [`diagramas/`](diagramas/) | Diagramas editables (draw.io) | — | Fuentes editables con iconos, para el PPI y los demás entregables |
 | [`06-plan-de-mejora/`](06-plan-de-mejora/) | Plan de mejora del producto | **Listo** | Registro único de las debilidades abiertas con evidencia, impacto, esfuerzo y mitigación, más el checklist de ejecución |
+| [`08-validacion-usuarios/`](08-validacion-usuarios/) | Validación con usuarios (SUS) | **Instrumento listo, sin aplicar** | Cuestionario, guion de observación, plantilla de captura y script de cálculo. Cierra a la vez el criterio 6 de la ficha, el eje de pertinencia del plan y `D-18` |
 | [`07-plan-de-validacion/`](07-plan-de-validacion/) | Plan de validación de resultados | **Listo** · *entregable del curso* | **Sesión 02.** Plan prospectivo de 1–2 páginas con método y umbral por cada eje —confiabilidad, replicabilidad, pertinencia— y cronograma |
 | — | Manual de implementación técnica | Pendiente | |
 
@@ -60,9 +61,10 @@ docs/entregables/
 │   └── Ficha-auditoria-producto.docx
 ├── 05-ppi/                          documento del PPI (pendiente de actualizar)
 ├── 06-plan-de-mejora/               debilidades, mitigaciones y checklist
-└── 07-plan-de-validacion/
-    ├── plan-de-validacion.md
-    └── Plan-de-validacion-de-resultados.docx
+├── 07-plan-de-validacion/
+│   ├── plan-de-validacion.md
+│   └── Plan-de-validacion-de-resultados.docx
+└── 08-validacion-usuarios/          instrumento SUS, guion y plantilla
 ```
 
 **Figuras y diagramas son cosas distintas.** `graficas/` contiene lo que se *genera* con matplotlib desde los datos reales; se regenera con un script y no se edita a mano. `diagramas/` contiene lo que se *dibuja*: topologías, arquitecturas y flujos, en draw.io con iconos. Las figuras viven en una sola carpeta y no dentro de cada entregable porque los informes 01 y 02 comparten varias; los documentos las referencian como `../graficas/`.

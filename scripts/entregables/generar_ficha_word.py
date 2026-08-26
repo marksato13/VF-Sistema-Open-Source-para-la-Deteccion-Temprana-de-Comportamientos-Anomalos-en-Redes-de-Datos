@@ -54,14 +54,15 @@ CONFIABILIDAD = [
     ("1.5", "Estabilidad entre repeticiones",
      "Dos pases completos de validación operativa con resultados equivalentes (25,8 % y 23,0 %)", 2),
     ("1.6", "Cuantificación de la incertidumbre",
-     "Intervalos de confianza de Wilson 95 % sobre todas las proporciones; incorporados a posteriori", 2),
+     "Intervalos de Wilson 95 % en toda proporción y prueba de significancia entre modelos: McNemar exacto "
+     "con corrección de Holm-Bonferroni sobre las 21 comparaciones por pares", 3),
 ]
 REPLICABILIDAD = [
     ("2.1", "Código disponible",
      f"Repositorio público con {N_ARCHIVOS} archivos versionados y {N_COMMITS} registros de cambios trazables", 3),
     ("2.2", "Datos disponibles",
-     "NO publicados. El repositorio excluye artifacts/ en bloque y esa regla arrastra al dataset (708 KB) y al "
-     "modelo (8 KB) junto con lo que sí pesa: 60 MB de dependencias y 24 MB de capturas", 1),
+     "Publicados: dataset, manifiesto y los 7 modelos candidatos, con checksums verificables por "
+     "sha256sum -c y licencias MIT para el código y CC BY 4.0 para los datos", 3),
     ("2.3", "Entorno documentado",
      "Versiones exactas fijadas, script de instalación idempotente y playbooks de Ansible", 3),
     ("2.4", "Determinismo y semillas",
@@ -69,7 +70,8 @@ REPLICABILIDAD = [
     ("2.5", "Integridad verificable",
      "SHA-256 de datos, modelo y calibrador; repositorio verificado limpio antes y después", 3),
     ("2.6", "Instrucciones de reproducción",
-     "Manual de operación y documentación por fases disponibles; falta el manual de implementación técnica", 2),
+     "El datasheet documenta el procedimiento exacto de descarga, verificación y regeneración; queda "
+     "pendiente el manual de instalación desde cero", 3),
 ]
 PERTINENCIA = [
     ("3.1", "Validación con usuarios reales",
@@ -214,19 +216,53 @@ def main() -> int:
            (("N/A", "EEF1F8"), "No aplica", "No corresponde al tipo de producto (se excluye del cálculo)")],
           widths=[1.8, 3.0, 11.2])
 
+    # ------------------------------ FICHA DEL DOCENTE (6 criterios / 20) ----
     doc.add_paragraph()
+    h1(doc, "Ficha de auditoría de validación — esquema del curso")
+    parrafo(doc, "Los seis criterios sobre 20 puntos de la Sesión 02. El análisis extenso de las "
+                 "secciones 1 a 3 los sustenta con 18 ítems sobre 51 puntos.")
+    tabla(doc, ["Criterio", "Evidencia encontrada", "Puntaje"],
+          [("Confiabilidad estadística reportada (Alfa, Kappa u otra)",
+            "Intervalos de Wilson 95 % en toda proporción, McNemar exacto con corrección de Holm sobre 21 "
+            "comparaciones y ROC-AUC 0,974. Alfa no aplica: no hay escalas. Kappa no aplica: no hay jueces",
+            ("3 / 4", F_AMBER)),
+           ("Método de validación de resultados declarado",
+            "Hold-out con partición disjunta por episodio, umbral calibrado solo con validation y evaluación "
+            "bloqueada de un solo paso. Falta validación cruzada y jornada de holdout externa",
+            ("3 / 4", F_AMBER)),
+           ("Confiabilidad de sistema / determinismo",
+            "Reproducción bit a bit verificada: el umbral coincide en sus 16 dígitos y los 7 modelos reproducen "
+            "el manifiesto. Las semillas aún no se declaran como protocolo",
+            ("3 / 3", F_OK)),
+           ("Datos y/o código disponibles públicamente",
+            "Dataset, manifiesto y los 7 modelos candidatos publicados, verificables con sha256sum -c, "
+            "bajo licencias MIT y CC BY 4.0", ("3 / 3", F_OK)),
+           ("Entorno y dependencias documentadas",
+            "Versiones exactas de scikit-learn y numpy registradas en el manifiesto congelado, con script de "
+            "instalación idempotente", ("3 / 3", F_OK)),
+           ("Pertinencia validada con usuarios o stakeholders reales",
+            "No se realizó ninguna. Es la única ausencia total del producto",
+            ("0 / 3", F_DANGER)),
+           (("TOTAL", "EEF1F8"), "", ("15 / 20  ·  75 %", F_AMBER))],
+          widths=[5.0, 9.0, 2.0])
+    parrafo(doc, "**El único cero es la validación con personas.** No se corrige documentando: exige "
+                 "evaluadores usando el panel. Una prueba de usabilidad con 5–8 participantes lo convierte "
+                 "en evidencia y eleva el total a 18 de 20.", italic=True, color=DIM)
+
+    doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
     a = bloque(doc, "1.  Evidencia de CONFIABILIDAD",
                "¿Los resultados son estables y consistentes al repetir la medición?", CONFIABILIDAD,
-               "**Lectura.** Alta en **reproducibilidad técnica** —el resultado se vuelve a obtener exactamente— "
-               "pero baja en **validación estadística**: falta validación cruzada sobre el modelo elegido y no hay "
-               "acuerdo inter-evaluador porque el diseño no lo contempla.")
+               "**Lectura.** La cuantificación de la incertidumbre pasó de parcial a completa: toda proporción "
+               "lleva intervalo de Wilson y las comparaciones entre modelos tienen prueba de significancia. "
+               "Lo que sigue faltando es **validación cruzada sobre el modelo elegido**; el acuerdo "
+               "inter-evaluador no aplica porque el diseño no contempla jueces.")
 
     doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
     b = bloque(doc, "2.  Evidencia de REPLICABILIDAD",
                "¿Puede un tercero reconstruir el estudio y obtener lo mismo?", REPLICABILIDAD,
-               "**Lectura.** Es la dimensión **más fuerte** del producto. La cadena de integridad (hashes, "
-               "repositorio limpio, versiones fijadas) es superior a lo habitual. La brecha real es que **los datos "
-               "no están publicados**, lo que impide replicar el entrenamiento de forma independiente.")
+               "**Lectura.** Es la dimensión **más fuerte** del producto, y la que más subió: la publicación del "
+               "dataset y de los siete modelos con checksums y licencias cerró la única brecha que quedaba. "
+               "Un tercero puede hoy clonar el repositorio y reproducir el umbral en sus 16 dígitos.")
 
     doc.add_paragraph()
     c = bloque(doc, "3.  Evidencia de PERTINENCIA",
@@ -267,11 +303,11 @@ def main() -> int:
     h1(doc, "5.  Acciones para elevar el puntaje")
     parrafo(doc, "Ordenadas por costo. Las de horas y días **no requieren capturar datos nuevos**.")
     tabla(doc, ["Acción", "Sube", "De → a", "Tiempo"],
-          [("Publicar los datasets (o un subconjunto) con enlace citable", "2.2", "1 → 3", ("Horas", F_OK)),
+          [("**Aplicar una prueba de usabilidad (SUS) con 5–8 evaluadores**", "3.1 y 3.2", "0 → 2", ("3–5 días", F_AMBER)),
            ("Ejecutar validación cruzada sobre el modelo congelado", "1.3", "1 → 3", ("Horas", F_OK)),
            ("Cerrar y actualizar la matriz de trazabilidad de requisitos", "3.3", "1 → 3", ("Horas", F_OK)),
            ("Documentar semillas y determinismo como protocolo explícito", "2.4", "2 → 3", ("Horas", F_OK)),
-           ("Completar el manual de implementación técnica", "2.6", "2 → 3", ("1 día", F_AMBER)),
+           ("Cerrar la matriz de trazabilidad de requisitos", "3.3", "1 → 3", ("Horas", F_OK)),
            ("Aplicar un instrumento validado (SUS) con 5–8 evaluadores", "3.1 · 3.2", "0 → 2", ("3–5 días", F_AMBER)),
            ("Repetir la validación operativa para tener más de dos mediciones", "1.5", "2 → 3", ("Días", F_AMBER))],
           widths=[8.6, 2.2, 2.4, 2.8])
