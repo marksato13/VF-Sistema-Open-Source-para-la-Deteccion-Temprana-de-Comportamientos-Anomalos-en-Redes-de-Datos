@@ -26,8 +26,7 @@ REPO = Path(__file__).resolve().parents[2]
 GRAF = REPO / "docs" / "entregables" / "graficas"
 OUT = (REPO / "docs" / "entregables" / "02-validacion-y-confiabilidad"
        / "Informe-validacion-confiabilidad.docx")
-LOGO = Path("/tmp/claude-1000/-home-m4rk-Documentos-pronteacomopepa-vf-sistema-final/"
-            "dbe9d115-fcc7-401a-b5b5-92e1a041bbd5/scratchpad/logo-upeu.png")
+LOGO = REPO / "docs" / "entregables" / "assets" / "logo-upeu.png"
 
 # Paleta coherente con las gráficas del informe
 INK = RGBColor(0x13, 0x1B, 0x2E)
@@ -209,9 +208,10 @@ def main() -> int:
     st.font.size = Pt(10)
 
     # ---------------------------------------------------------- CARÁTULA ----
-    if LOGO.exists():
-        doc.add_picture(str(LOGO), width=Cm(7.5))
-        doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    if not LOGO.exists():
+        raise SystemExit(f"falta el logo: {LOGO}")
+    doc.add_picture(str(LOGO), width=Cm(7.5))
+    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
     for txt, sz, col, bold in [
         ("Universidad Peruana Unión", 13, INK, True),
         ("Facultad de Ingeniería y Arquitectura", 11, DIM, False),
@@ -341,7 +341,7 @@ def main() -> int:
     doc.add_paragraph()
     h2(doc, "No abordado", DANGER, "✘  ")
     vineta(doc, "**Partición por sesiones independientes.** La división se hizo por índice de repetición, "
-                "por lo que los **38 perfiles** de tráfico aparecen en las tres particiones: se mide "
+                "por lo que los **44 perfiles** de tráfico aparecen en las tres particiones: se mide "
                 "repetibilidad del escenario, no generalización a tráfico no visto.")
     vineta(doc, "**Jornada de validación temporal externa.** No existe un conjunto capturado en fecha distinta "
                 "y reservado sin participar en entrenamiento ni calibración.")

@@ -205,7 +205,7 @@ Las 10 semillas, la ponderación por episodio y el colapso de duplicados se apli
 → *Solución:* recalibrar incluyendo tráfico pesado (1-2 semanas). Mientras tanto, **declararlo**: un FPR medido y admitido es más defendible que uno refutado por la evidencia propia.
 
 **D6 · La división es por índice de repetición, no por sesión independiente.** *(severidad alta)*
-R01–R03 → entrenamiento, R04 → validación, R05 → prueba. **Los 38 perfiles aparecen en las tres particiones**: se mide repetibilidad del escenario, no generalización. No existe la **jornada de holdout temporal externa** que el jurado exigió. Explica en buena parte D5.
+R01–R03 → entrenamiento, R04 → validación, R05 → prueba. **Los 44 perfiles aparecen en las tres particiones**: se mide repetibilidad del escenario, no generalización. No existe la **jornada de holdout temporal externa** que el jurado exigió. Explica en buena parte D5.
 → *Solución:* capturar una jornada nueva como holdout externo — días.
 
 **D7 · Cobertura de escenarios incompleta.** *(severidad media)*

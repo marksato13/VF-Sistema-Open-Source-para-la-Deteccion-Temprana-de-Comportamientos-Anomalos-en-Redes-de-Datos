@@ -28,11 +28,16 @@ Es la dimensión más débil del proyecto. No afecta al funcionamiento del siste
 |---|---|---|---|---|---|
 | **D-02** | **La ablación por capas L3/L4/L7 nunca se ejecutó** | Requisito explícito del jurado, aún marcado "Planificado". No existe script ni artefacto. Ninguna de las 28 variables ha demostrado que se gana su lugar | 🔴 | 1–2 días | Ejecutar las cuatro configuraciones (Base 14 · +L3 · +L3+L4 · Multicapa) y la retirada por grupo. **No requiere campañas nuevas** |
 | **D-08** | **El dataset y el modelo no están publicados** | El repositorio excluye `artifacts/` en bloque; esa regla arrastra al dataset (708 KB) y al modelo (8 KB) junto con las dependencias (60 MB) y las capturas (24 MB) | 🔴 | **Minutos** | Excluir esos dos artefactos de la regla y publicarlos. Sube el ítem 2.2 de la ficha de 1 a 3 |
-| **D-09** | División por índice de repetición, sin jornada de holdout externa | R01–R03 entrenamiento, R04 validación, R05 prueba: los 38 perfiles aparecen en las tres particiones. Se mide repetibilidad, no generalización | 🟠 | Días | Capturar una jornada nueva y reservarla sin participar en entrenamiento ni calibración |
+| **D-09** | División por índice de repetición, sin jornada de holdout externa | R01–R03 entrenamiento, R04 validación, R05 prueba: los 44 perfiles aparecen en las tres particiones. Se mide repetibilidad, no generalización | 🟠 | Días | Capturar una jornada nueva y reservarla sin participar en entrenamiento ni calibración |
 | **D-10** | Seis escenarios legítimos exigidos no existen | Faltan SSH, SCP/SFTP, SMB, respaldo, streaming y actualizaciones; tampoco hay captura multi-sistema-operativo | 🟡 | Días | Capturarlos, o declararlos como límite de alcance si el jurado no los exige |
 | **D-12** | `tls_handshake_failure_ratio_60s` es constante y no observable | Vale 0,0 en todo el dataset; se demostró que Suricata no produce el evento intermedio | 🟡 | Horas | **Declararla no observable** y reportar 27 variables efectivas, en vez de mantener una constante en el vector |
 | **D-25** | Tamaño muestral por debajo de la meta declarada | 1 373 ventanas frente a la meta de 2 000–3 000; ~6 ventanas por episodio, luego no son independientes | 🟡 | Semanas | Reportar el tamaño efectivo por episodio junto al de ventanas, y declarar la brecha |
-| **D-26** | Los gates no cubren duplicados ni constantes | `gates.pass = true` convive con 22 vectores duplicados exactos y una variable constante | ⚪ | Horas | Declararlo, o convertirlos en gates con umbral tolerado |
+
+> **Ya resuelto en esta fase:** `D-26` los gates no cubrían duplicados ni
+> constantes — se añadieron cuatro (`constants_declared`,
+> `no_duplicate_crossing_label`, `no_duplicate_crossing_partition`,
+> `duplicates_within_tolerance`), con prueba positiva y negativa.
+> Evidencia: [`181-correccion-catalogo-auditoria-y-gates.md`](../../fase03-dataset/181-correccion-catalogo-auditoria-y-gates.md).
 
 ---
 
@@ -88,6 +93,28 @@ Es la dimensión con menor puntaje en la ficha de auditoría (**55,6 %**) y la �
 |---|---|---|---|---|---|
 | **D-23** | La ficha de auditoría no tiene ningún gráfico | El puntaje 62,7 % y la proyección a 76,5 % se comunican solo con tablas | ⚪ | Horas | Añadir barras de las tres dimensiones y un gráfico antes/después |
 | **D-24** | El informe de validación excede la extensión pedida | ~5,2 páginas frente a las 3–4 solicitadas | ⚪ | Horas | Mover las referencias a anexo o condensar las tablas |
+
+---
+
+## H · Datasheet y publicación del corpus
+
+Dimensión detectada por la evaluación de rúbrica de datasheet (61/100). La
+identidad formal del dataset es la peor puntuada: **2/6**.
+
+| ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
+|---|---|---|---|---|---|
+| **D-29** | **No existe un datasheet canónico del dataset** | La evidencia está repartida entre configuraciones, informes, código y artefactos locales; no hay documento único de procedencia, estructura, calidad y límites | 🔴 | 1 día | Redactar `docs/dataset/DATASHEET_MULTILAYER_V2.md` con las once secciones de la rúbrica |
+| **D-33** | Sin licencia, responsables, contacto ni política de uso | No hay licencia del dataset, retención, anonimización ni usos prohibidos declarados | 🟠 | Horas | Redactarlas; el tráfico es de laboratorio y sin datos personales, así que la política es corta pero debe existir |
+| **D-34** | Sin *model card* ni *system card* separadas del datasheet | Datos, modelo y sistema desplegado se describen mezclados en los mismos informes | 🟡 | Horas | Tres documentos: datasheet (datos), model card (OCSVM), system card (motor inline, bloqueo, FPR operativo) |
+
+> **Ya resuelto en esta fase**, con evidencia en
+> [`181-correccion-catalogo-auditoria-y-gates.md`](../../fase03-dataset/181-correccion-catalogo-auditoria-y-gates.md):
+>
+> - `D-30` cinco documentos afirmaban **38 perfiles** normales; el dataset tiene **44**, y los 44 aparecen en las tres particiones.
+> - `D-31` el catálogo de anomalías declaraba **3 de 9** familias; se completó separando `profiles` (heredados, VM05) de `kali_profiles` (ofensivos, VM04), sin debilitar la lista blanca benigna.
+> - `D-32` el reporte de auditoría almacenado describía el corpus de 75/18; regenerado a 1 373/179 y el anterior archivado sin borrar.
+> - `D-35` los generadores de Word tomaban el logo de un directorio efímero de sesión y omitían la carátula **en silencio** al faltar; logo llevado al repositorio y fallo ahora ruidoso.
+
 
 ---
 

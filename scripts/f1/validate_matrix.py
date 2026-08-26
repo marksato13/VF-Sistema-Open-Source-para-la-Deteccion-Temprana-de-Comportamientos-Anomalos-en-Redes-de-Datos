@@ -15,6 +15,14 @@ ALLOWED_SCENARIOS = {
     "dns-valid", "dns-nxdomain", "dns-mixed", "dns-multi", "api-normal", "api-auth-fail", "ping", "tcp-refused",
     "iperf-tcp", "iperf-udp", "frag-udp", "mixed-light",
 }
+# Escenarios ofensivos: se ejecutan SOLO por scripts/campaign/run-f1-kali.sh
+# desde VM04. Deliberadamente fuera de ALLOWED_SCENARIOS, que es la lista del
+# generador benigno run-benign.sh: mezclarlas permitiria colar trafico ofensivo
+# por la ruta benigna. Debe coincidir con el `case` de run-f1-kali.sh.
+ALLOWED_KALI_SCENARIOS = {
+    "tcp-syn-rate", "tcp-port-scan", "port-scan-wide",
+    "udp-probe", "password-spray", "dns-entropy",
+}
 SAFE_ARGUMENT = re.compile(r"^[A-Za-z0-9._-]+$")
 SAFE_ID = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,47}$")
 PCAP_REJECTION_BYTES = 1_945_600_000

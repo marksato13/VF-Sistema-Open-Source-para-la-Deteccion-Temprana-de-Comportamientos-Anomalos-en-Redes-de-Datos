@@ -5,9 +5,9 @@ Registro único de **todo lo que falta** en el producto del PPI, con su evidenci
 | | |
 |---|---|
 | **Producto** | Sistema de detección de anomalías de red con control inline (VM02) |
-| **Fecha de corte** | 19 de agosto de 2026 |
-| **Puntos abiertos en este registro** | **28** |
-| **Ya corregidos durante esta fase** | **5** (fuera del registro, listados como resueltos en cada sección) |
+| **Fecha de corte** | 25 de agosto de 2026 |
+| **Puntos abiertos en este registro** | **30** |
+| **Ya corregidos durante esta fase** | **10** (fuera del registro, listados como resueltos en cada sección) |
 | **Corregidos en el registro técnico previo** | **7 de 12** |
 
 ## Documentos de esta carpeta
@@ -42,11 +42,13 @@ La prioridad sale del cruce: **alto impacto con bajo esfuerzo va primero**, siem
 
 ## Matriz de priorización
 
+Contiene los 30 puntos abiertos. Un punto sin celda es un punto sin plan.
+
 |  | **Minutos–Horas** | **Días** | **Semanas** |
 |---|---|---|---|
-| 🔴 **Crítico** | **P1 · Hacer ya**<br>D-01 declarar selección post hoc<br>D-08 publicar dataset y modelo<br>D-14 diccionario de fórmulas<br>D-20 actualizar el PPI | **P2 · Planificar**<br>D-02 ablación por capas | **P3 · Trabajo futuro**<br>D-11 recalibrar con tráfico pesado |
-| 🟠 **Alto** | **P1 · Hacer ya**<br>D-03 validación cruzada<br>D-05 estabilidad por remuestreo<br>D-15 cerrar matriz de requisitos | **P2 · Planificar**<br>D-17 manual técnico<br>D-18 validación con usuarios | **P3 · Trabajo futuro**<br>D-09 holdout temporal externo |
-| 🟡 **Medio** | **P2**<br>D-04 pruebas de significancia<br>D-06 documentar determinismo<br>D-12 declarar feature no observable<br>D-22 revertir acceso root | **P3**<br>D-10 escenarios faltantes<br>D-19 pruebas de evasión | **P4 · Declarar**<br>D-13 segundo umbral (LIMIT) |
+| 🔴 **Crítico** | **P1 · Hacer ya**<br>D-01 declarar selección post hoc<br>D-08 publicar dataset y modelo<br>D-14 diccionario de fórmulas<br>D-20 actualizar el PPI | **P2 · Planificar**<br>D-02 ablación por capas<br>D-29 datasheet canónico | **P3 · Trabajo futuro**<br>D-11 recalibrar con tráfico pesado |
+| 🟠 **Alto** | **P1 · Hacer ya**<br>D-03 validación cruzada<br>D-05 estabilidad por remuestreo<br>D-15 cerrar matriz de requisitos<br>D-33 licencia y política de uso | **P2 · Planificar**<br>D-17 manual técnico<br>D-18 validación con usuarios | **P3 · Trabajo futuro**<br>D-09 holdout temporal externo |
+| 🟡 **Medio** | **P2**<br>D-04 pruebas de significancia<br>D-06 documentar determinismo<br>D-12 declarar feature no observable<br>D-22 revertir acceso root<br>D-34 model card y system card | **P3**<br>D-10 escenarios faltantes<br>D-19 pruebas de evasión<br>D-27 heurístico sin calibrar<br>D-28 sin juicio experto | **P4 · Declarar**<br>D-13 segundo umbral (LIMIT)<br>D-25 tamaño muestral |
 | ⚪ **Bajo** | **P3**<br>D-07 Youden<br>D-23 gráficos de la ficha<br>D-24 ajustar extensión | **P4 · Declarar**<br>D-16 monitoreo de deriva | **P4 · Declarar**<br>D-21 control por identidad |
 
 ---

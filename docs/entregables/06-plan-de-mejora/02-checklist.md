@@ -6,6 +6,21 @@ Referencia completa de cada punto en [`01-registro-debilidades.md`](01-registro-
 
 ---
 
+## ✅ Hecho — 25 de agosto de 2026
+
+Corrección de información publicada que contradecía al dataset congelado.
+Evidencia: [`181-correccion-catalogo-auditoria-y-gates.md`](../../fase03-dataset/181-correccion-catalogo-auditoria-y-gates.md).
+
+- [x] **D-30 · `38 perfiles` → `44 perfiles`** en cinco documentos y en el generador del Word.
+- [x] **D-31 · Catálogo de anomalías de 3 a 9 familias**, separando `profiles` (VM05) de `kali_profiles` (VM04) sin debilitar la lista blanca benigna.
+- [x] **D-32 · Reporte de auditoría regenerado** a 1 373/179; el de 75/18 archivado, no borrado.
+- [x] **D-26 · Cuatro gates nuevos** de duplicados y constantes, con prueba positiva y negativa. Suite: 88 tests en verde.
+- [x] **D-35 · Generadores de Word reproducibles** — el logo vivía en un directorio efímero y la carátula se omitía en silencio.
+
+SHA-256 de los CSV congelados idénticos antes y después.
+
+---
+
 ## 🔥 Bloque 0 — Con fecha límite
 
 - [ ] **D-20 · Actualizar el PPI y subirlo a LAM Research** — vence el miércoles. Contrastar contra la tabla de correspondencia de [`../05-ppi/README.md`](../05-ppi/README.md), que ya mapea cada aspecto del proyecto con su evidencia real.
@@ -34,6 +49,8 @@ Ninguna requiere capturar datos, reentrenar ni repetir campañas. **Cierran dos 
   Reportar 27 variables efectivas en vez de mantener una constante.
 - [ ] **D-22 · Revertir el acceso administrativo permanente** *(horas)*
   Volver al sudoers estrecho para que la evidencia de aislamiento vuelva a ser cierta en la defensa.
+- [ ] **D-33 · Licencia, responsables, contacto, retención y usos prohibidos** *(horas)*
+  → *Rúbrica de datasheet, sección de privacidad: de 2 a 4*
 
 > **Efecto acumulado del bloque 1:** la ficha de auditoría pasa de **62,7 % a 76,5 %** sin experimentación nueva.
 
@@ -46,6 +63,10 @@ Ninguna requiere capturar datos, reentrenar ni repetir campañas. **Cierran dos 
 - [ ] **D-17 · Redactar el manual de implementación técnica**
   Instalación reproducible desde cero; los comandos ya están probados en los despliegues documentados. → *Ficha ítem 2.6: de 2 a 3*
 - [ ] **D-04 · Prueba de significancia entre modelos** *(McNemar o bootstrap pareado)*
+- [ ] **D-29 · Redactar el datasheet canónico** `docs/dataset/DATASHEET_MULTILAYER_V2.md`
+  Once secciones de la rúbrica. Depende del diccionario completo (D-14).
+- [ ] **D-34 · Separar model card y system card** del datasheet
+  Ensamblaje de material existente, no investigación nueva.
 
 ---
 
@@ -82,7 +103,6 @@ Estos puntos se documentan como límite del alcance. Declararlos con evidencia e
 - [ ] **D-21** · Control por identidad más robusta que la IP — limitación estructural.
 - [ ] **D-16** · Monitoreo de deriva del modelo — documentar el procedimiento, no implementarlo.
 - [ ] **D-25** · Tamaño muestral bajo la meta — reportar el efectivo por episodio junto al de ventanas.
-- [ ] **D-26** · Duplicados y constantes fuera de los gates.
 - [ ] **D-27** · El heurístico de fuerza bruta no está calibrado estadísticamente.
 - [ ] **D-28** · Sin evaluación por jueces expertos.
 

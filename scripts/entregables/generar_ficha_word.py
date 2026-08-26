@@ -38,8 +38,7 @@ N_ARCHIVOS = _git("ls-files")
 N_COMMITS = _git("log", "--oneline")
 OUT = (REPO / "docs" / "entregables" / "04-ficha-auditoria"
        / "Ficha-auditoria-producto.docx")
-LOGO = Path("/tmp/claude-1000/-home-m4rk-Documentos-pronteacomopepa-vf-sistema-final/"
-            "dbe9d115-fcc7-401a-b5b5-92e1a041bbd5/scratchpad/logo-upeu.png")
+LOGO = REPO / "docs" / "entregables" / "assets" / "logo-upeu.png"
 
 # ------------------------------------------------------------- puntuaciones --
 # (id, criterio, evidencia, puntaje)  ·  "N/A" se excluye del cálculo
@@ -128,9 +127,10 @@ def main() -> int:
     doc.styles["Normal"].font.size = Pt(9.5)
 
     # -------------------------------------------------------- CARÁTULA -----
-    if LOGO.exists():
-        doc.add_picture(str(LOGO), width=Cm(7.0))
-        doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    if not LOGO.exists():
+        raise SystemExit(f"falta el logo: {LOGO}")
+    doc.add_picture(str(LOGO), width=Cm(7.0))
+    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
     for txt, sz, col, bold in [("Universidad Peruana Unión", 12.5, INK, True),
                                ("Facultad de Ingeniería y Arquitectura", 10.5, DIM, False),
                                ("E.P. de Ingeniería de Sistemas", 10.5, DIM, False)]:

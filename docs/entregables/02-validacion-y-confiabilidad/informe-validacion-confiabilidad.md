@@ -76,7 +76,7 @@ Los intervalos **no se solapan**, de modo que la diferencia no se explica por az
 
 ### No abordado
 
-- **Partición por sesiones independientes.** La división se hizo por índice de repetición (R01–R03 entrenamiento, R04 validación, R05 prueba), por lo que **los 38 perfiles de tráfico aparecen en las tres particiones**. Se mide repetibilidad del escenario, no generalización a tráfico no visto.
+- **Partición por sesiones independientes.** La división se hizo por índice de repetición (R01–R03 entrenamiento, R04 validación, R05 prueba), por lo que **los 44 perfiles de tráfico aparecen en las tres particiones**. Se mide repetibilidad del escenario, no generalización a tráfico no visto.
 - **Jornada de validación temporal externa.** No existe un conjunto capturado en una fecha distinta y reservado sin participar en entrenamiento ni calibración.
 - **Diversidad de escenarios.** Faltan seis escenarios legítimos previstos (SSH, SCP/SFTP, SMB, respaldo, streaming y actualizaciones) y no hay captura multi-sistema-operativo.
 

@@ -1,17 +1,187 @@
 {
-  "schema_version": "multilayer-v2-anomalies",
-  "feature_schema": "multilayer-v2",
-  "label": "anomaly",
-  "execution_policy": "evaluation_only",
-  "profiles": [
-    {"id":"ANOM-SYN-RATE-10","scenario":"tcp-refused","args":["10"],"purpose":"controlled-evaluation","expected_signals":["syn_rate_10s","rst_ratio_10s"]},
-    {"id":"ANOM-DNS-NX-200","scenario":"dns-nxdomain","args":["200"],"purpose":"controlled-evaluation","expected_signals":["dns_nxdomain_ratio_60s","dns_query_rate_60s"]},
-    {"id":"ANOM-AUTH-FAIL-50","scenario":"api-auth-fail","args":["50"],"purpose":"controlled-evaluation","expected_signals":["http_auth_failure_ratio_60s","http_request_rate_60s"]}
-  ],
-  "rules": [
-    "No mezclar estas campañas con train ni validation normales.",
-    "Reservar para evaluación ciega después de congelar normales v2.",
-    "Ejecutar únicamente dentro de la topología PPI y sin Internet.",
-    "Conservar PCAP, EVE, logs de aplicación/DNS, comandos y criterio de parada."
-  ]
+ "schema_version": "multilayer-v2-anomalies",
+ "feature_schema": "multilayer-v2",
+ "label": "anomaly",
+ "execution_policy": "evaluation_only",
+ "dataset_snapshot": {
+  "source": "artifacts/dataset/multilayer-v2-anomalies.csv",
+  "note": "Cifras derivadas del CSV congelado, no transcritas. Regenerar con scripts/dataset/audit_multilayer_v2.py.",
+  "windows_total": 179,
+  "episodes_total": 132,
+  "families_total": 9,
+  "kali_real": {
+   "families": 6,
+   "windows": 161,
+   "episodes": 120
+  },
+  "legacy_relabeled": {
+   "families": 3,
+   "windows": 18,
+   "episodes": 12
+  }
+ },
+ "profiles": [
+  {
+   "id": "ANOM-SYN-RATE-10",
+   "scenario": "tcp-refused",
+   "args": [
+    "10"
+   ],
+   "purpose": "controlled-evaluation",
+   "expected_signals": [
+    "syn_rate_10s",
+    "rst_ratio_10s"
+   ],
+   "origin": "VM05 cliente legitimo (10.20.0.20)",
+   "traffic_class": "benign_relabeled",
+   "runner": "scripts/dataset/run_v2_anomaly.py",
+   "observed_windows": 6,
+   "observed_episodes": 4
+  },
+  {
+   "id": "ANOM-DNS-NX-200",
+   "scenario": "dns-nxdomain",
+   "args": [
+    "200"
+   ],
+   "purpose": "controlled-evaluation",
+   "expected_signals": [
+    "dns_nxdomain_ratio_60s",
+    "dns_query_rate_60s"
+   ],
+   "origin": "VM05 cliente legitimo (10.20.0.20)",
+   "traffic_class": "benign_relabeled",
+   "runner": "scripts/dataset/run_v2_anomaly.py",
+   "observed_windows": 6,
+   "observed_episodes": 4
+  },
+  {
+   "id": "ANOM-AUTH-FAIL-50",
+   "scenario": "api-auth-fail",
+   "args": [
+    "50"
+   ],
+   "purpose": "controlled-evaluation",
+   "expected_signals": [
+    "http_auth_failure_ratio_60s",
+    "http_request_rate_60s"
+   ],
+   "origin": "VM05 cliente legitimo (10.20.0.20)",
+   "traffic_class": "benign_relabeled",
+   "runner": "scripts/dataset/run_v2_anomaly.py",
+   "observed_windows": 6,
+   "observed_episodes": 4
+  }
+ ],
+ "kali_profiles": [
+  {
+   "id": "ANOM-KALI-SYN-RATE-50",
+   "scenario": "tcp-syn-rate",
+   "args": [
+    "50"
+   ],
+   "purpose": "controlled-evaluation",
+   "expected_signals": [
+    "syn_rate_10s",
+    "rst_ratio_10s",
+    "unique_dst_port_ratio_30s"
+   ],
+   "origin": "VM04 Kali (10.20.0.100)",
+   "traffic_class": "offensive",
+   "runner": "scripts/dataset/run_v2_anomaly_kali.py",
+   "observed_windows": 31,
+   "observed_episodes": 20
+  },
+  {
+   "id": "ANOM-KALI-PORT-SCAN",
+   "scenario": "tcp-port-scan",
+   "args": [],
+   "purpose": "controlled-evaluation",
+   "expected_signals": [
+    "unique_dst_port_ratio_30s",
+    "syn_completion_ratio_10s"
+   ],
+   "origin": "VM04 Kali (10.20.0.100)",
+   "traffic_class": "offensive",
+   "runner": "scripts/dataset/run_v2_anomaly_kali.py",
+   "observed_windows": 20,
+   "observed_episodes": 20
+  },
+  {
+   "id": "ANOM-KALI-PORT-SCAN-WIDE",
+   "scenario": "port-scan-wide",
+   "args": [
+    "1-1000"
+   ],
+   "purpose": "controlled-evaluation",
+   "expected_signals": [
+    "unique_dst_port_ratio_30s",
+    "syn_rate_10s"
+   ],
+   "origin": "VM04 Kali (10.20.0.100)",
+   "traffic_class": "offensive",
+   "runner": "scripts/dataset/run_v2_anomaly_kali.py",
+   "observed_windows": 20,
+   "observed_episodes": 20
+  },
+  {
+   "id": "ANOM-KALI-UDP-PROBE-50",
+   "scenario": "udp-probe",
+   "args": [
+    "50"
+   ],
+   "purpose": "controlled-evaluation",
+   "expected_signals": [
+    "packet_rate_10s",
+    "protocol_diversity_30s"
+   ],
+   "origin": "VM04 Kali (10.20.0.100)",
+   "traffic_class": "offensive",
+   "runner": "scripts/dataset/run_v2_anomaly_kali.py",
+   "observed_windows": 40,
+   "observed_episodes": 20
+  },
+  {
+   "id": "ANOM-KALI-PASSWORD-SPRAY-50",
+   "scenario": "password-spray",
+   "args": [
+    "50"
+   ],
+   "purpose": "controlled-evaluation",
+   "expected_signals": [
+    "http_auth_failure_ratio_60s",
+    "http_request_rate_60s"
+   ],
+   "origin": "VM04 Kali (10.20.0.100)",
+   "traffic_class": "offensive",
+   "runner": "scripts/dataset/run_v2_anomaly_kali.py",
+   "observed_windows": 29,
+   "observed_episodes": 20
+  },
+  {
+   "id": "ANOM-KALI-DNS-ENTROPY-50",
+   "scenario": "dns-entropy",
+   "args": [
+    "50"
+   ],
+   "purpose": "controlled-evaluation",
+   "expected_signals": [
+    "dns_nxdomain_ratio_60s",
+    "unique_dns_name_ratio_60s"
+   ],
+   "origin": "VM04 Kali (10.20.0.100)",
+   "traffic_class": "offensive",
+   "runner": "scripts/dataset/run_v2_anomaly_kali.py",
+   "observed_windows": 21,
+   "observed_episodes": 20
+  }
+ ],
+ "rules": [
+  "No mezclar estas campañas con train ni validation normales.",
+  "Reservar para evaluación ciega después de congelar normales v2.",
+  "Ejecutar únicamente dentro de la topología PPI y sin Internet.",
+  "Conservar PCAP, EVE, logs de aplicación/DNS, comandos y criterio de parada.",
+  "Los perfiles de kali_profiles son trafico realmente ofensivo desde VM04 y usan la lista de escenarios de scripts/campaign/run-f1-kali.sh, no la lista benigna de run-benign.sh.",
+  "Reportar deteccion de kali_real por separado de legacy_relabeled: no son la misma evidencia."
+ ]
 }

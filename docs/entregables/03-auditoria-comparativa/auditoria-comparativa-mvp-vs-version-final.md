@@ -303,7 +303,7 @@ La puerta automática devuelve `pass=true`, pero constantes y duplicados no la h
 
 ### 7.3 Limitaciones
 
-1. **Mismos perfiles en las tres particiones.** Los 38 perfiles normales aparecen en train, validation y test; R01–R03 entrenan, R04 valida y R05 prueba. Se mide repetibilidad de escenarios conocidos, no generalización a condiciones nuevas.
+1. **Mismos perfiles en las tres particiones.** Los 44 perfiles normales aparecen en train, validation y test; R01–R03 entrenan, R04 valida y R05 prueba. Se mide repetibilidad de escenarios conocidos, no generalización a condiciones nuevas.
 2. **Sin día externo.** No existe una captura posterior reservada antes de la selección final.
 3. **Tamaño inferior a la meta.** Se obtuvieron 1.373 ventanas normales frente a la meta documental de 2.000–3.000 ventanas independientes.
 4. **Ventanas solapadas.** Más filas no equivalen automáticamente a más observaciones independientes.
@@ -521,7 +521,7 @@ Solo entonces podrá afirmarse que el cambio de modelo mejora la generalización
 ### H-03 — Falta de validación externa temporal
 
 - **Severidad:** alta.
-- **Hecho:** las particiones repiten los mismos 38 perfiles en R01–R05.
+- **Hecho:** las particiones repiten los mismos 44 perfiles en R01–R05.
 - **Riesgo:** medir repetibilidad en vez de generalización.
 - **Corrección:** capturar una fecha posterior, nuevos perfiles e idealmente más de un SO; no usarla para ajustar nada.
 - **Estado:** abierto.

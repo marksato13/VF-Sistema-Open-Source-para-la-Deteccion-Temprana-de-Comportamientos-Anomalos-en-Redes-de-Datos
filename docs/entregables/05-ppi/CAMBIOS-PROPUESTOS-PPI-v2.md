@@ -222,7 +222,7 @@ Los cambios están ordenados por gravedad: primero afirmaciones falsas o insoste
 | **ID** | `PPI-14` |
 | **Ubicación** | §2.5.1; `P0262`; página por confirmar en Word |
 | **Texto actual** | “En síntesis, el diseño muestral se orienta a construir un conjunto de datos representativo del comportamiento de red en laboratorio, suficiente para entrenar, ajustar y validar el modelo de detección de anomalías.” |
-| **Texto propuesto** | “En síntesis, el diseño muestral permite entrenar y evaluar el sistema dentro del laboratorio, pero no demuestra generalización externa. Los mismos 38 perfiles aparecen en train, validation y test mediante repeticiones distintas, no existe una jornada temporal externa y faltan escenarios legítimos previstos; estas condiciones limitan el alcance de las conclusiones.” |
+| **Texto propuesto** | “En síntesis, el diseño muestral permite entrenar y evaluar el sistema dentro del laboratorio, pero no demuestra generalización externa. Los mismos 44 perfiles aparecen en train, validation y test mediante repeticiones distintas, no existe una jornada temporal externa y faltan escenarios legítimos previstos; estas condiciones limitan el alcance de las conclusiones.” |
 | **Justificación** | `docs/entregables/02-validacion-y-confiabilidad/informe-validacion-confiabilidad.md` documenta la división R01–R03/R04/R05, la ausencia de holdout temporal y los escenarios faltantes. |
 | **Debilidad asociada** | `D-09`, `D-10`, `D-25` |
 | **Tipo** | adición de limitación · corrección metodológica |

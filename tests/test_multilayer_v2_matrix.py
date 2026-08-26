@@ -130,6 +130,55 @@ class MultilayerV2AnomaliesMatrixTests(unittest.TestCase):
                 f"{profile['id']}: el sufijo numérico del id no aparece en args={profile['args']}",
             )
 
+    def test_kali_profiles_are_separate_and_offensive(self) -> None:
+        # Los perfiles de Kali no comparten contrato con los heredados: no
+        # llevan sufijo numerico obligatorio (tcp-port-scan no tiene conteo) y
+        # usan la lista de escenarios ofensivos, no la benigna.
+        seen = {p["id"] for p in self.matrix["profiles"]}
+        for profile in self.matrix["kali_profiles"]:
+            self.assertRegex(profile["id"], validator.SAFE_ID.pattern)
+            self.assertNotIn(profile["id"], seen, f"id duplicado {profile['id']}")
+            seen.add(profile["id"])
+            self.assertIn(profile["scenario"], validator.ALLOWED_KALI_SCENARIOS)
+            self.assertNotIn(
+                profile["scenario"],
+                validator.ALLOWED_SCENARIOS,
+                "un escenario ofensivo no debe ser ejecutable por la ruta benigna",
+            )
+            self.assertEqual(profile["traffic_class"], "offensive")
+            for argument in profile["args"]:
+                self.assertRegex(argument, validator.SAFE_ARGUMENT.pattern)
+            unknown = set(profile["expected_signals"]) - self.feature_names
+            self.assertFalse(unknown, f"{profile['id']}: señales desconocidas {unknown}")
+
+    def test_kali_scenario_allowlist_matches_runner(self) -> None:
+        # Guarda contra deriva: la constante y el `case` de run-f1-kali.sh
+        # deben declarar exactamente los mismos escenarios.
+        runner = (REPO_ROOT / "scripts/campaign/run-f1-kali.sh").read_text(encoding="utf-8")
+        declared = set()
+        for line in runner.splitlines():
+            stripped = line.strip()
+            if stripped.endswith(") ;;") and "|" in stripped:
+                declared = set(stripped.split(")")[0].split("|"))
+                break
+        self.assertEqual(declared, validator.ALLOWED_KALI_SCENARIOS)
+
+    def test_dataset_snapshot_matches_declared_profiles(self) -> None:
+        snapshot = self.matrix["dataset_snapshot"]
+        self.assertEqual(snapshot["legacy_relabeled"]["families"], len(self.matrix["profiles"]))
+        self.assertEqual(snapshot["kali_real"]["families"], len(self.matrix["kali_profiles"]))
+        self.assertEqual(snapshot["families_total"], len(self.matrix["profiles"]) + len(self.matrix["kali_profiles"]))
+        self.assertEqual(
+            snapshot["windows_total"],
+            snapshot["kali_real"]["windows"] + snapshot["legacy_relabeled"]["windows"],
+        )
+        for group in ("profiles", "kali_profiles"):
+            key = "legacy_relabeled" if group == "profiles" else "kali_real"
+            self.assertEqual(
+                sum(p["observed_windows"] for p in self.matrix[group]),
+                snapshot[key]["windows"],
+            )
+
     def test_tcp_refused_count_is_within_run_benign_limits(self) -> None:
         profile = next(p for p in self.matrix["profiles"] if p["scenario"] == "tcp-refused")
         # scripts/f1/run-benign.sh caso tcp-refused solo acepta 3, 5 o 10.
