@@ -27,7 +27,6 @@ Es la dimensión más débil del proyecto. No afecta al funcionamiento del siste
 | ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
 |---|---|---|---|---|---|
 | **D-02** | **La ablación por capas L3/L4/L7 nunca se ejecutó** | Requisito explícito del jurado, aún marcado "Planificado". No existe script ni artefacto. Ninguna de las 28 variables ha demostrado que se gana su lugar | 🔴 | 1–2 días | Ejecutar las cuatro configuraciones (Base 14 · +L3 · +L3+L4 · Multicapa) y la retirada por grupo. **No requiere campañas nuevas** |
-| **D-08** | **El dataset y el modelo no están publicados** | El repositorio excluye `artifacts/` en bloque; esa regla arrastra al dataset (708 KB) y al modelo (8 KB) junto con las dependencias (60 MB) y las capturas (24 MB) | 🔴 | **Minutos** | Excluir esos dos artefactos de la regla y publicarlos. Sube el ítem 2.2 de la ficha de 1 a 3 |
 | **D-09** | División por índice de repetición, sin jornada de holdout externa | R01–R03 entrenamiento, R04 validación, R05 prueba: los 44 perfiles aparecen en las tres particiones. Se mide repetibilidad, no generalización | 🟠 | Días | Capturar una jornada nueva y reservarla sin participar en entrenamiento ni calibración |
 | **D-10** | Seis escenarios legítimos exigidos no existen | Faltan SSH, SCP/SFTP, SMB, respaldo, streaming y actualizaciones; tampoco hay captura multi-sistema-operativo | 🟡 | Días | Capturarlos, o declararlos como límite de alcance si el jurado no los exige |
 | **D-25** | Tamaño muestral por debajo de la meta declarada | 1 373 ventanas frente a la meta de 2 000–3 000; ~6 ventanas por episodio, luego no son independientes | 🟡 | Semanas | Reportar el tamaño efectivo por episodio junto al de ventanas, y declarar la brecha |
@@ -113,9 +112,20 @@ identidad formal del dataset es la peor puntuada: **2/6**.
 
 | ID | Debilidad | Evidencia | Impacto | Esfuerzo | Mitigación |
 |---|---|---|---|---|---|
-| **D-33** | Sin licencia, responsables, contacto ni política de uso | No hay licencia del dataset, retención, anonimización ni usos prohibidos declarados | 🟠 | Horas | Redactarlas; el tráfico es de laboratorio y sin datos personales, así que la política es corta pero debe existir |
 | **D-34** | Sin *model card* ni *system card* separadas del datasheet | Datos, modelo y sistema desplegado se describen mezclados en los mismos informes | 🟡 | Horas | Tres documentos: datasheet (datos), model card (OCSVM), system card (motor inline, bloqueo, FPR operativo) |
 
+> **Ya resuelto en esta fase:** `D-08` el dataset, el manifiesto y **los siete
+> modelos candidatos** (5,7 MB) se publican con el repositorio, verificables con
+> `sha256sum -c docs/dataset/SHA256SUMS`. Se descubrió al hacerlo que los seis
+> comparadores sí existían en el disco de evidencias y que sus hashes coinciden
+> con el manifiesto, así que la comparación de modelos pasa a ser reproducible,
+> no solo citable.
+>
+> **Ya resuelto en esta fase:** `D-33` licencias (MIT para el código, CC BY 4.0
+> para datos y documentación), responsables, contacto institucional, política de
+> retención y usos prohibidos, declarados en `LICENSE`, `LICENSE-DATA`, `README.md`
+> y las secciones 1 y 10 del datasheet.
+>
 > **Ya resuelto en esta fase:** `D-29` el datasheet canónico existe —
 > [`docs/dataset/DATASHEET_MULTILAYER_V2.md`](../../dataset/DATASHEET_MULTILAYER_V2.md),
 > generado desde los artefactos y con las once secciones de la rúbrica. Sus

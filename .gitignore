@@ -7,4 +7,20 @@ __pycache__/
 *.vault-password
 *.pem
 *.key
-artifacts/
+# artifacts/ se excluye por CONTENIDO, no como carpeta: git no permite
+# re-incluir un archivo cuyo directorio padre esta excluido.
+# El volumen real son wheels/ (60 MB) y campaigns/ (24 MB); el dataset y el
+# modelo suman 824 KB y SI se publican (ver LICENSE-DATA y el datasheet).
+artifacts/*
+!artifacts/dataset/
+artifacts/dataset/*
+!artifacts/dataset/multilayer-v2-normal.csv
+!artifacts/dataset/multilayer-v2-anomalies.csv
+!artifacts/dataset/multilayer-v2-audit-report.json
+!artifacts/dataset/partition-map-normal-v2.json
+!artifacts/model/
+artifacts/model/*
+!artifacts/model/manifest.json
+!artifacts/model/ocsvm_scaled.joblib
+!artifacts/model/candidates/
+!artifacts/model/candidates/*.joblib

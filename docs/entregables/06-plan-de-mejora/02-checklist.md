@@ -18,6 +18,8 @@ Evidencia: [`181-correccion-catalogo-auditoria-y-gates.md`](../../fase03-dataset
 - [x] **D-35 · Generadores de Word reproducibles** — el logo vivía en un directorio efímero y la carátula se omitía en silencio.
 - [x] **D-14 · Diccionario científico de las 28 variables**, generado desde el extractor congelado. Cierra un requisito explícito del jurado.
 - [x] **D-12 · `tls_handshake_failure_ratio_60s` declarada no observable** — se reportan **27 efectivas de 28 definidas**.
+- [x] **D-08 · Dataset, manifiesto y los 7 modelos candidatos publicados** (5,7 MB), verificables con `sha256sum -c`.
+- [x] **D-33 · Licencias, responsables, contacto, retención y usos prohibidos** declarados.
 - [x] **D-29 · Datasheet canónico** con las once secciones de la rúbrica, generado desde los artefactos y con guardián contra reportes desactualizados.
 
 SHA-256 de los CSV congelados idénticos antes y después.
@@ -34,8 +36,6 @@ SHA-256 de los CSV congelados idénticos antes y después.
 
 Ninguna requiere capturar datos, reentrenar ni repetir campañas. **Cierran dos requisitos del jurado y la principal objeción metodológica.**
 
-- [ ] **D-08 · Publicar el dataset y el modelo** *(minutos)*
-  Excluir `artifacts/dataset/` y `artifacts/model/` de la regla que ignora `artifacts/`. Son 716 KB en total. → *Ficha ítem 2.2: de 1 a 3*
 - [ ] **D-01 · Declarar la selección posterior del modelo** *(horas)*
   Escribir en tesis y PPI que la detección reportada es una estimación optimista por haberse elegido el modelo tras ver el conjunto de prueba.
 - [ ] **D-15 · Cerrar y actualizar la matriz de cumplimiento de requisitos** *(horas)*
@@ -48,8 +48,6 @@ Ninguna requiere capturar datos, reentrenar ni repetir campañas. **Cierran dos 
   → *Ficha ítem 2.4: de 2 a 3*
 - [ ] **D-22 · Revertir el acceso administrativo permanente** *(horas)*
   Volver al sudoers estrecho para que la evidencia de aislamiento vuelva a ser cierta en la defensa.
-- [ ] **D-33 · Licencia, responsables, contacto, retención y usos prohibidos** *(horas)*
-  → *Rúbrica de datasheet, sección de privacidad: de 2 a 4*
 
 > **Efecto acumulado del bloque 1:** la ficha de auditoría pasa de **62,7 % a 76,5 %** sin experimentación nueva.
 

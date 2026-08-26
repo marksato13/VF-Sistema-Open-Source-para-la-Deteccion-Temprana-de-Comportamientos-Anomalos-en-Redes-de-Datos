@@ -1,0 +1,81 @@
+{
+  "anomaly_episodes": 132,
+  "anomaly_labels": {
+    "anomaly": 179
+  },
+  "anomaly_rows": 179,
+  "anomaly_sha256": "d115ef987cbd845118038314b7c55a7ad4e359ff4ebfd486c0e664ed3d8078c3",
+  "constant_features": {
+    "tls_handshake_failure_ratio_60s": 1
+  },
+  "declared_constant_features": [
+    "tls_handshake_failure_ratio_60s"
+  ],
+  "duplicate_excess_ratio": 0.014175,
+  "duplicate_excess_tolerance": 0.02,
+  "duplicate_feature_vectors_total": 22,
+  "duplicate_groups": 14,
+  "duplicate_groups_crossing_label": 0,
+  "duplicate_groups_crossing_partition": 0,
+  "duplicate_rows_excess": 22,
+  "duplicate_rows_involved": 36,
+  "episode_split_violations": {},
+  "feature_count": 28,
+  "gates": {
+    "anomaly_labels_clean": true,
+    "constants_declared": true,
+    "duplicates_within_tolerance": true,
+    "no_duplicate_crossing_label": true,
+    "no_duplicate_crossing_partition": true,
+    "no_episode_split": true,
+    "no_missing_values": true,
+    "normal_labels_clean": true,
+    "partition_values_valid": true,
+    "pass": true,
+    "schema_complete": true
+  },
+  "invalid_partition_values": [],
+  "layer_feature_counts": {
+    "L3": 9,
+    "L4": 8,
+    "L7": 11
+  },
+  "missing_by_feature": {
+    "byte_rate_10s": 0,
+    "dns_nxdomain_ratio_60s": 0,
+    "dns_query_rate_60s": 0,
+    "flow_attempt_rate_10s": 0,
+    "flow_duration_mean_30s": 0,
+    "fragment_ratio_10s": 0,
+    "http_auth_failure_ratio_60s": 0,
+    "http_error_ratio_60s": 0,
+    "http_method_entropy_60s": 0,
+    "http_request_rate_60s": 0,
+    "http_status_5xx_ratio_60s": 0,
+    "icmp_ratio_10s": 0,
+    "large_ip_ratio_10s": 0,
+    "mean_ip_len_10s": 0,
+    "packet_rate_10s": 0,
+    "protocol_diversity_30s": 0,
+    "rst_ratio_10s": 0,
+    "syn_completion_ratio_10s": 0,
+    "syn_rate_10s": 0,
+    "tcp_retransmission_ratio_10s": 0,
+    "tls_handshake_failure_ratio_60s": 0,
+    "tls_session_rate_60s": 0,
+    "tls_version_ratio_60s": 0,
+    "ttl_mean_10s": 0,
+    "tx_rx_byte_ratio_30s": 0,
+    "unique_dns_name_ratio_60s": 0,
+    "unique_dst_ip_ratio_30s": 0,
+    "unique_dst_port_ratio_30s": 0
+  },
+  "normal_episodes": 220,
+  "normal_labels": {
+    "normal": 1373
+  },
+  "normal_rows": 1373,
+  "normal_sha256": "3846d44c0fe32ac4b4c98f022adac7c459c6add2c6b95062e6bb3237fe9b28ab",
+  "schema_version": "multilayer-v2-audit",
+  "undeclared_constant_features": []
+}

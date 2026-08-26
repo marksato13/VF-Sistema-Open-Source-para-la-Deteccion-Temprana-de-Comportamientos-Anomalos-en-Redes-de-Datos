@@ -93,14 +93,24 @@ def main() -> None:
     a("\n> **Por qué no se llama `v2.1`.** Declarar una variable como no observable es una "
       "**anotación documental**, no un corpus nuevo. El dataset sigue siendo `multilayer-v2` "
       "con los mismos hashes; lo que se versiona por separado es este documento.\n")
-    a("\n### Pendiente de formalizar\n\n")
-    a("Estos campos **no están cerrados** y se completan en el bloque de gobernanza. "
-      "Declararlo es preferible a inventarlo:\n\n")
-    a("| Campo | Estado |\n|---|---|\n")
-    a("| **Responsables** | Autor y coautor de la tesis; falta declararlos aquí con su afiliación |\n")
-    a("| **Licencia** | **Sin definir.** Propuesta: CC BY 4.0 para los datos derivados. Requiere decisión del autor y un archivo `LICENSE` en el repositorio |\n")
-    a("| **Contacto** | Falta una dirección institucional. No se publica un correo personal sin autorización expresa |\n")
-    a("| **Registro de cambios** | Este datasheet inaugura el historial; los cambios previos del corpus están en `docs/fase03-dataset/` |\n")
+    a("\n### Responsables, licencia y contacto\n\n")
+    a("| | |\n|---|---|\n")
+    a("| **Autor** | Rubén Mark Salazar Tocas |\n")
+    a("| **Coautor** | Uziel Elias Sauñe Fernandez |\n")
+    a("| **Afiliación** | Universidad Peruana Unión · Facultad de Ingeniería y Arquitectura · E.P. de Ingeniería de Sistemas |\n")
+    a("| **Contacto** | `ruben.salazar@upeu.edu.pe` |\n")
+    a("| **Licencia de los datos** | **CC BY 4.0** — [`LICENSE-DATA`](../../LICENSE-DATA) |\n")
+    a("| **Licencia del código** | MIT — [`LICENSE`](../../LICENSE) |\n")
+    a("| **Repositorio** | https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos |\n")
+    a("\n### Cómo citar\n\n")
+    a("> Salazar Tocas, R. M. y Sauñe Fernandez, U. E. (2026). *Dataset `multilayer-v2`:\n"
+      "> ventanas causales multicapa para detección de anomalías de red* [Conjunto de\n"
+      "> datos]. Universidad Peruana Unión.\n")
+    a("\n### Registro de cambios\n\n")
+    a("| Versión | Fecha | Cambio |\n|---|---|---|\n")
+    a(f"| 1.0 | {FECHA} | Primer datasheet canónico. El corpus no cambia; se documenta |\n")
+    a("\nEl historial del corpus, campaña por campaña, está en "
+      "[`docs/fase03-dataset/README.md`](../fase03-dataset/README.md).\n")
 
     # ------------------------------------------------- 2 · topologia
     a("\n---\n\n## 2 · Topología y entorno de captura\n\n")
@@ -333,9 +343,15 @@ def main() -> None:
     a("\n**Prohibido:** usar los perfiles ofensivos documentados como guía de ataque contra "
       "sistemas de terceros. El tráfico ofensivo se generó exclusivamente dentro del "
       "laboratorio, contra máquinas propias y autorizadas.\n")
-    a("\n### Retención — pendiente\n\n")
-    a("No existe una política formal de retención de los PCAP originales ni de los datos "
-      "derivados. Es un vacío declarado, no resuelto.\n")
+    a("\n### Retención\n\n")
+    a("| Artefacto | Retención | Dónde |\n|---|---|---|\n")
+    a("| Ventanas derivadas, modelo y manifiesto | **Permanente**, versionados en el repositorio | Git |\n")
+    a("| PCAP y `eve.json` por campaña | Mientras exista el laboratorio; **fuera de Git** | Disco de evidencias de VM01 |\n")
+    a("| Reportes de auditoría superados | **Se archivan, no se borran** | `artifacts/dataset/archive/` |\n")
+    a("\n**Borrado.** La eliminación de un PCAP exige identificador exacto de campaña, "
+      "verificación previa de `SHA256SUMS` y una copia de respaldo. Nunca un borrado amplio. "
+      "Es un procedimiento administrativo deliberado: la evidencia bruta es lo único que no "
+      "se puede reconstruir.\n")
 
     # ------------------------------------------------- 11 · reproduccion
     a("\n---\n\n## 11 · Reproducción, publicación y mantenimiento\n\n")
@@ -348,15 +364,37 @@ def main() -> None:
     a("| **Entorno** | Versiones de `scikit-learn` y `numpy` registradas en el manifiesto |\n")
     a("| **Trazabilidad** | Cada campaña tiene manifiesto, inventario, contadores y hashes |\n")
     a("| **Diccionario** | Generado desde el extractor; falla si una variable no existe en él |\n")
-    a("\n### Lo que todavía impide reproducir desde un clon\n\n")
-    a("> **`artifacts/` está excluido del repositorio en bloque**, y esa regla arrastra al "
-      "dataset y al modelo junto con las dependencias y las capturas.\n")
-    a("\nQuien clone el repositorio **no recibe** los CSV, el manifiesto, el modelo OCSVM ni "
-      "los seis comparadores. Los hashes permiten verificar archivos que ya se tengan, pero "
-      "no descargarlos.\n\n")
-    a(f"El coste de resolverlo es bajo: el dataset ocupa **{(NORMAL.stat().st_size + ANOM.stat().st_size)//1024} KB** "
-      "y el modelo unos 8 KB. El volumen real de `artifacts/` son las dependencias y las "
-      "capturas, no los datos. **Excluir esos dos artefactos de la regla es cuestión de minutos.**\n")
+    a("\n### Descarga y verificación\n\n")
+    a("**El dataset y el modelo se publican con el repositorio.** Clonar basta:\n\n")
+    a("```bash\ngit clone https://github.com/marksato13/"
+      "VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos.git\n"
+      "cd VF-Sistema-Open-Source-*\nsha256sum -c docs/dataset/SHA256SUMS\n```\n\n")
+    pub = [NORMAL, ANOM, AUDIT, A / "partition-map-normal-v2.json",
+           REPO / "artifacts/model/manifest.json", REPO / "artifacts/model/ocsvm_scaled.joblib"]
+    cand = sorted((REPO / "artifacts/model/candidates").glob("*.joblib"))
+    a("| Artefacto | Tamaño |\n|---|---:|\n")
+    for f in pub:
+        a(f"| `{f.relative_to(REPO)}` | {f.stat().st_size // 1024} KB |\n")
+    a(f"| `artifacts/model/candidates/` — **los {len(cand)} modelos evaluados** | "
+      f"{sum(f.stat().st_size for f in cand) // 1024} KB |\n")
+    a(f"| **Total** | **{(sum(f.stat().st_size for f in pub + cand)) // 1024} KB** |\n")
+    a("\n**Los siete candidatos se publican, no solo el ganador.** `candidates/` contiene "
+      "los objetos ajustados de los siete modelos comparados —los cuatro Isolation Forest, "
+      "LOF, Elliptic Envelope y el OCSVM— **byte a byte como los produjo la calibración**: "
+      "sus SHA-256 coinciden con los `model_hashes` del manifiesto. Sin ellos, la "
+      "comparación de modelos no sería reproducible, solo citable.\n")
+    a("\n> Dos de esos hashes son idénticos: `if_uniform` e `if_exact_collapsed` son **el "
+      "mismo objeto ajustado**. No es un error de copia; es un hecho del modelado que el "
+      "manifiesto ya registraba y que conviene saber antes de compararlos.\n")
+    a("\n> **Verifica antes de cargar el modelo.** `ocsvm_scaled.joblib` es un *pickle*: "
+      "cargarlo **ejecuta código**. Comprueba su SHA-256 contra `docs/dataset/SHA256SUMS` "
+      "antes de abrirlo, vengas de donde vengas. No es una formalidad.\n")
+    a("\n### Lo que sigue sin publicarse, y por qué\n\n")
+    a("| Artefacto | Motivo |\n|---|---|\n")
+    a("| PCAP crudo y `eve.json` (24 MB) | Snaplen completo: conserva carga útil, URI y posibles credenciales en claro |\n")
+    a("| Dependencias empaquetadas (60 MB) | Reconstruibles desde `pip`; no son evidencia |\n")
+
+    a("| Diagnóstico intermedio del pipeline | Artefacto de trabajo, superado por el reporte de auditoría |\n")
     a("\n### Mantenimiento\n\n")
     a("| Regla | |\n|---|---|\n")
     a("| **El corpus está congelado** | Ninguna corrección modifica los CSV. Si una mitigación exigiera cambiar los datos, nace una versión formal nueva |\n")

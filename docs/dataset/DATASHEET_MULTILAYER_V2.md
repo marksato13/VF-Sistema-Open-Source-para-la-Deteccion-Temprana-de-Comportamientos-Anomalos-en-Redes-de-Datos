@@ -23,16 +23,31 @@ Sigue **las once secciones de la rúbrica de datasheet**, en ese orden, para que
 
 > **Por qué no se llama `v2.1`.** Declarar una variable como no observable es una **anotación documental**, no un corpus nuevo. El dataset sigue siendo `multilayer-v2` con los mismos hashes; lo que se versiona por separado es este documento.
 
-### Pendiente de formalizar
+### Responsables, licencia y contacto
 
-Estos campos **no están cerrados** y se completan en el bloque de gobernanza. Declararlo es preferible a inventarlo:
-
-| Campo | Estado |
+| | |
 |---|---|
-| **Responsables** | Autor y coautor de la tesis; falta declararlos aquí con su afiliación |
-| **Licencia** | **Sin definir.** Propuesta: CC BY 4.0 para los datos derivados. Requiere decisión del autor y un archivo `LICENSE` en el repositorio |
-| **Contacto** | Falta una dirección institucional. No se publica un correo personal sin autorización expresa |
-| **Registro de cambios** | Este datasheet inaugura el historial; los cambios previos del corpus están en `docs/fase03-dataset/` |
+| **Autor** | Rubén Mark Salazar Tocas |
+| **Coautor** | Uziel Elias Sauñe Fernandez |
+| **Afiliación** | Universidad Peruana Unión · Facultad de Ingeniería y Arquitectura · E.P. de Ingeniería de Sistemas |
+| **Contacto** | `ruben.salazar@upeu.edu.pe` |
+| **Licencia de los datos** | **CC BY 4.0** — [`LICENSE-DATA`](../../LICENSE-DATA) |
+| **Licencia del código** | MIT — [`LICENSE`](../../LICENSE) |
+| **Repositorio** | https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos |
+
+### Cómo citar
+
+> Salazar Tocas, R. M. y Sauñe Fernandez, U. E. (2026). *Dataset `multilayer-v2`:
+> ventanas causales multicapa para detección de anomalías de red* [Conjunto de
+> datos]. Universidad Peruana Unión.
+
+### Registro de cambios
+
+| Versión | Fecha | Cambio |
+|---|---|---|
+| 1.0 | 25 de agosto de 2026 | Primer datasheet canónico. El corpus no cambia; se documenta |
+
+El historial del corpus, campaña por campaña, está en [`docs/fase03-dataset/README.md`](../fase03-dataset/README.md).
 
 ---
 
@@ -305,9 +320,15 @@ La cadena de hashes prueba **integridad**, no anonimización. Son garantías dis
 
 **Prohibido:** usar los perfiles ofensivos documentados como guía de ataque contra sistemas de terceros. El tráfico ofensivo se generó exclusivamente dentro del laboratorio, contra máquinas propias y autorizadas.
 
-### Retención — pendiente
+### Retención
 
-No existe una política formal de retención de los PCAP originales ni de los datos derivados. Es un vacío declarado, no resuelto.
+| Artefacto | Retención | Dónde |
+|---|---|---|
+| Ventanas derivadas, modelo y manifiesto | **Permanente**, versionados en el repositorio | Git |
+| PCAP y `eve.json` por campaña | Mientras exista el laboratorio; **fuera de Git** | Disco de evidencias de VM01 |
+| Reportes de auditoría superados | **Se archivan, no se borran** | `artifacts/dataset/archive/` |
+
+**Borrado.** La eliminación de un PCAP exige identificador exacto de campaña, verificación previa de `SHA256SUMS` y una copia de respaldo. Nunca un borrado amplio. Es un procedimiento administrativo deliberado: la evidencia bruta es lo único que no se puede reconstruir.
 
 ---
 
@@ -325,13 +346,40 @@ No existe una política formal de retención de los PCAP originales ni de los da
 | **Trazabilidad** | Cada campaña tiene manifiesto, inventario, contadores y hashes |
 | **Diccionario** | Generado desde el extractor; falla si una variable no existe en él |
 
-### Lo que todavía impide reproducir desde un clon
+### Descarga y verificación
 
-> **`artifacts/` está excluido del repositorio en bloque**, y esa regla arrastra al dataset y al modelo junto con las dependencias y las capturas.
+**El dataset y el modelo se publican con el repositorio.** Clonar basta:
 
-Quien clone el repositorio **no recibe** los CSV, el manifiesto, el modelo OCSVM ni los seis comparadores. Los hashes permiten verificar archivos que ya se tengan, pero no descargarlos.
+```bash
+git clone https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos.git
+cd VF-Sistema-Open-Source-*
+sha256sum -c docs/dataset/SHA256SUMS
+```
 
-El coste de resolverlo es bajo: el dataset ocupa **702 KB** y el modelo unos 8 KB. El volumen real de `artifacts/` son las dependencias y las capturas, no los datos. **Excluir esos dos artefactos de la regla es cuestión de minutos.**
+| Artefacto | Tamaño |
+|---|---:|
+| `artifacts/dataset/multilayer-v2-normal.csv` | 618 KB |
+| `artifacts/dataset/multilayer-v2-anomalies.csv` | 84 KB |
+| `artifacts/dataset/multilayer-v2-audit-report.json` | 2 KB |
+| `artifacts/dataset/partition-map-normal-v2.json` | 1 KB |
+| `artifacts/model/manifest.json` | 29 KB |
+| `artifacts/model/ocsvm_scaled.joblib` | 7 KB |
+| `artifacts/model/candidates/` — **los 7 modelos evaluados** | 4931 KB |
+| **Total** | **5674 KB** |
+
+**Los siete candidatos se publican, no solo el ganador.** `candidates/` contiene los objetos ajustados de los siete modelos comparados —los cuatro Isolation Forest, LOF, Elliptic Envelope y el OCSVM— **byte a byte como los produjo la calibración**: sus SHA-256 coinciden con los `model_hashes` del manifiesto. Sin ellos, la comparación de modelos no sería reproducible, solo citable.
+
+> Dos de esos hashes son idénticos: `if_uniform` e `if_exact_collapsed` son **el mismo objeto ajustado**. No es un error de copia; es un hecho del modelado que el manifiesto ya registraba y que conviene saber antes de compararlos.
+
+> **Verifica antes de cargar el modelo.** `ocsvm_scaled.joblib` es un *pickle*: cargarlo **ejecuta código**. Comprueba su SHA-256 contra `docs/dataset/SHA256SUMS` antes de abrirlo, vengas de donde vengas. No es una formalidad.
+
+### Lo que sigue sin publicarse, y por qué
+
+| Artefacto | Motivo |
+|---|---|
+| PCAP crudo y `eve.json` (24 MB) | Snaplen completo: conserva carga útil, URI y posibles credenciales en claro |
+| Dependencias empaquetadas (60 MB) | Reconstruibles desde `pip`; no son evidencia |
+| Diagnóstico intermedio del pipeline | Artefacto de trabajo, superado por el reporte de auditoría |
 
 ### Mantenimiento
 
