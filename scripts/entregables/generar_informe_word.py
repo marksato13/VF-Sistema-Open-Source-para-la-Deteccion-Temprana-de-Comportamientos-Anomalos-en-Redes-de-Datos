@@ -302,8 +302,10 @@ def main() -> int:
                 f"métrica posterior. En consecuencia, el **{det:.1f} %** de detección es el máximo entre "
                 "**7 candidatos** evaluados sobre los mismos datos, sin conjunto reservado que permita una "
                 "estimación sin sesgo optimista.")
-    vineta(doc, "**Pruebas de significancia estadística.** No se realizó ninguna prueba (t, Wilcoxon o "
-                "equivalente) que compare los modelos entre sí.")
+    vineta(doc, "**Pruebas de significancia estadística.** Ejecutadas: McNemar exacto por pares con "
+                "corrección de Holm-Bonferroni sobre las 21 comparaciones. Las **seis del OCSVM son "
+                "significativas sin excepción**; en cambio **ninguna diferencia de falso positivo lo es**, "
+                "así que afirmar que un modelo comete menos falsos positivos que otro no está respaldado.")
 
     # --------------------------------------------- 3. VALIDACIÓN EXTERNA ---
     doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
@@ -400,9 +402,9 @@ def main() -> int:
            (("A3", F_OK), "Sustituir las conclusiones sobre familias con n ≤ 6 por declaración de muestra insuficiente", "Confiabilidad", ("Horas", F_OK)),
            (("A4", F_OK), "Reportar el error operativo (23–26 %) junto al de laboratorio (4,71 %)", "Validez externa", ("Horas", F_OK)),
            (("A5", F_OK), "Publicar el diccionario de fórmulas de las 14 variables nuevas", "Constructo", ("Horas", F_OK)),
-           (("B1", F_AMBER), "Ejecutar la prueba de ablación por capas (L3/L4/L7) y la comparación 14 vs. 28 variables", "Constructo", ("1–2 días", F_AMBER)),
+           (("B1", F_OK), "Ablación por capas y comparación 14 vs. 28: la expansión queda justificada (66,5 % a 88,8 %, p < 0,001), pero las 8 variables L7 nuevas no aportan detección medible", "Constructo", ("hecho", F_OK)),
            (("B2", F_AMBER), "Prueba de estabilidad por remuestreo del modelo elegido", "Validez interna", ("Horas", F_AMBER)),
-           (("B3", F_AMBER), "Prueba de significancia entre modelos", "Validez interna", ("Horas", F_AMBER)),
+           (("B3", F_OK), "Prueba de significancia entre modelos: McNemar exacto con corrección de Holm", "Validez interna", ("hecho", F_OK)),
            (("C1", F_DANGER), "Capturar una jornada nueva y reservarla como validación temporal externa", "Validez externa", ("Días", F_DANGER)),
            (("C2", F_DANGER), "Recalibrar el umbral incluyendo tráfico legítimo intenso y repetir la validación", "Validez externa", ("1–2 semanas", F_DANGER))],
           widths=[1.2, 9.0, 3.2, 2.6])
@@ -424,9 +426,16 @@ def main() -> int:
     parrafo(doc, "No sostienen todavía que el sistema sea apto para operación desatendida: sobre tráfico legítimo "
                  "de alto volumen el error alcanza **23–26 %**. Esa limitación **está medida, cuantificada y "
                  "declarada**, que es la condición que la hace defendible ante una revisión por pares.")
-    parrafo(doc, "La prioridad antes de cerrar no es mejorar el sistema, sino **corregir la inferencia**: declarar "
-                 "la selección posterior del modelo, acompañar cada cifra de su intervalo de confianza y ejecutar "
-                 "la ablación pendiente.")
+    parrafo(doc, "La prioridad ya no es corregir la inferencia: **quedó corregida**. Se declaró la selección "
+                 "posterior del modelo, toda proporción lleva su intervalo de confianza, se ejecutó la ablación "
+                 "por capas y se añadieron las pruebas de significancia que faltaban.")
+    parrafo(doc, "**La única dimensión sin ninguna evidencia es la pertinencia**: el sistema nunca se sometió a "
+                 "evaluación con usuarios reales. Una prueba de usabilidad con 5–8 evaluadores es la acción de "
+                 "menor costo con mayor efecto, porque cierra a la vez el eje de pertinencia, el criterio "
+                 "correspondiente de la ficha de auditoría y la debilidad registrada en el plan de mejora.")
+    parrafo(doc, "Y **la limitación principal del sistema sigue abierta**: el falso positivo sobre tráfico "
+                 "legítimo pesado no se corrige documentándolo, sino recalibrando el umbral con ese tráfico "
+                 "como normalidad y repitiendo la validación operativa.")
 
     # ----------------------------------------------------- REFERENCIAS ----
     doc.add_paragraph()

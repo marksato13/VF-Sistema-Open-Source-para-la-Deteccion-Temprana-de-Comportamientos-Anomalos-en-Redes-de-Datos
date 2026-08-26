@@ -9,7 +9,7 @@ APLICA) y un **entregable autónomo** (momento CREA). Solo el segundo se sube.
 
 | Sesión | Entregable autónomo | Formato exigido | Carpeta | Estado |
 |---|---|---|---|---|
-| **01** · Criterios y técnicas para la evaluación de resultados | Informe de evaluación crítica | PDF **2–4 pp** | [`01-evaluacion-critica/`](01-evaluacion-critica/) | ⚠️ **Excede**: ~6 pp |
+| **01** · Criterios y técnicas para la evaluación de resultados | Informe de evaluación crítica | PDF **2–4 pp** | [`01-evaluacion-critica/`](01-evaluacion-critica/) | ✅ **Listo** (~3 pp) |
 | **02** · Métodos de validación: confiabilidad, replicabilidad y pertinencia | **Plan de validación de resultados** | PDF **1–2 pp** | [`07-plan-de-validacion/`](07-plan-de-validacion/) | ✅ **Listo** (~2 pp) |
 | **03** · Estrategias para identificar y mapear revistas científicas | *(por confirmar)* | — | — | — |
 
@@ -29,7 +29,7 @@ inicio sin retirar el análisis extenso.
 
 | Carpeta | Entregable | Estado | Para qué |
 |---|---|---|---|
-| [`01-evaluacion-critica/`](01-evaluacion-critica/) | Informe de resultados y evaluación crítica | **Listo** | Documento extenso con las 11 gráficas y el detalle completo de cada hallazgo. Funciona como **anexo técnico** de los demás |
+| [`01-evaluacion-critica/`](01-evaluacion-critica/) | Informe de resultados y evaluación crítica | **Listo** · *entregable del curso* | **Sesión 01.** El `.md` es el análisis completo con las 11 gráficas; el `.docx` es la versión de 3 páginas con la estructura que pide la consigna: qué se abordó, qué falta y cómo se está abordando |
 | [`02-validacion-y-confiabilidad/`](02-validacion-y-confiabilidad/) | Informe de validación y confiabilidad | **Listo** | Informe **en pasado** sobre validación interna, externa y confiabilidad. **No sustituye al plan de la Sesión 02**, que es prospectivo y de 1–2 páginas |
 | [`03-auditoria-comparativa/`](03-auditoria-comparativa/) | Auditoría comparativa MVP vs versión final | **Listo** | Contrasta repositorios, arquitectura, modelo, dataset y cumplimiento de las observaciones del jurado |
 | [`04-ficha-auditoria/`](04-ficha-auditoria/) | Ficha de auditoría del producto | **Listo** · *entregable del curso* | Auditoría en tres dimensiones (confiabilidad, replicabilidad, pertinencia). Puntaje: **32/51 = 62,7 %** |
@@ -48,7 +48,8 @@ docs/entregables/
 │   ├── topologia-laboratorio.drawio
 │   └── exportados/                  PNG 300 dpi para Word y PDF
 ├── 01-evaluacion-critica/
-│   └── informe-evaluacion-critica.md
+│   ├── informe-evaluacion-critica.md      ← detallado
+│   └── Informe-evaluacion-critica.docx    ← preciso, 3 pp
 ├── 02-validacion-y-confiabilidad/
 │   ├── informe-validacion-confiabilidad.md
 │   └── Informe-validacion-confiabilidad.docx
@@ -70,6 +71,7 @@ docs/entregables/
 
 ```bash
 .venv/bin/python3 scripts/entregables/generar_graficas.py       # las 11 figuras + intervalos de confianza
+.venv/bin/python3 scripts/entregables/generar_evaluacion_critica_word.py  # Word del entregable 01
 .venv/bin/python3 scripts/entregables/generar_informe_word.py   # Word del entregable 02
 .venv/bin/python3 scripts/entregables/generar_ficha_word.py     # Word del entregable 04
 .venv/bin/python3 scripts/entregables/generar_plan_validacion_word.py  # Word del entregable 07

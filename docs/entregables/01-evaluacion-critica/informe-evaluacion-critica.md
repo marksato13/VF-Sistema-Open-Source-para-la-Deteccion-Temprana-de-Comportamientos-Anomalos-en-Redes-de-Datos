@@ -169,7 +169,11 @@ El propio `manifest.json` registra:
 > `model_selection_policy`: *"if_primary_weighted es la conclusion principal; LOF/OCSVM (…) no lo reemplazan por ganar una metrica posterior en test o evaluation_only."*
 
 y asigna a `ocsvm_scaled` el rol `sensitivity_or_comparator`. **El modelo congelado es el comparador que esa política prohibía promover.** Consecuencia: el 88,3 % (y el AUC de 0,974) son el máximo sobre 7 candidatos evaluados en los mismos conjuntos, sin datos reservados que permitan una estimación insesgada.
-→ *Solución:* declararlo explícitamente. La corrección completa exige `PM-multilayer-v2-v2` con evaluación nueva (semanas). **Matiz importante:** la superioridad sobre Isolation Forest sí es sólida — 88,3 % [82,7–92,2] frente a 54,2 % [46,9–61,3], intervalos que no se solapan.
+→ *Solución:* declararlo explícitamente. La corrección completa exige `PM-multilayer-v2-v2` con evaluación nueva (semanas).
+
+> **🟡 Parcialmente atendida.** La declaración ya está incorporada en la [model card](../../dataset/MODEL_CARD_OCSVM.md) —sección 3, antes de cualquier métrica— y en el PPI v2. Lo que sigue abierto es la corrección de fondo: un protocolo nuevo con evaluación reservada.
+>
+> **Matiz reforzado con estadística:** la superioridad sobre Isolation Forest no solo tiene intervalos que no se solapan; las **seis comparaciones por pares del OCSVM contra los otros modelos son significativas** con McNemar exacto tras corrección de Holm. Ver [`08-significancia-entre-modelos.md`](../../fase04-modelado/08-significancia-entre-modelos.md).
 
 **D2 · No se calculó ninguna medida de incertidumbre.** *(severidad alta)*
 No había intervalos de confianza, errores estándar ni pruebas de significancia. Los de este informe son un aporte propio, y revelan lo que las cifras puntuales ocultaban:
@@ -183,9 +187,26 @@ No había intervalos de confianza, errores estándar ni pruebas de significancia
 
 → *Solución:* incorporarlos (hecho aquí, coste: minutos).
 
+> **✅ Resuelta.** Los intervalos de Wilson se incorporaron a toda proporción del proyecto. Se añadió además lo que faltaba: **prueba de significancia entre modelos** con McNemar exacto y corrección de Holm-Bonferroni sobre las 21 comparaciones por pares.
+>
+> Hallazgo derivado que conviene citar: **ninguna diferencia de falso positivo entre los siete modelos alcanza significancia** (p mínimo = 0,52). Afirmar que un modelo comete menos falsos positivos que otro **no está respaldado por estos datos**.
+
 **D3 · La ablación exigida por el jurado nunca se ejecutó.** *(severidad alta)*
 El requisito pedía comparar cuatro configuraciones (Base 14 · +L3 · +L3+L4 · Multicapa) y retirar cada grupo de capa por separado. Sigue marcada *"Planificado"*; no existe script ni artefacto. **Ninguna de las 28 features ha demostrado empíricamente que se gana su lugar.** Además hay 6 pares con |r| > 0,8 (redundancia ya medida).
 → *Solución:* ejecutarla — 1-2 días, sin campañas nuevas.
+
+> **✅ Resuelta.** Ejecutada en [`07-ablacion-multicapa.md`](../../fase04-modelado/07-ablacion-multicapa.md), con la configuración completa reproduciendo el modelo congelado **bit a bit** antes de comparar nada.
+>
+> | Configuración | Vars | FPR | Detección Kali |
+> |---|---:|---:|---:|
+> | `base-14` | 14 | 2,90 % | 66,5 % |
+> | `base+L3+L4` | 20 | 2,90 % | **89,4 %** |
+> | `multicapa-28` | 28 | 4,71 % | 88,8 % |
+> | `sin-L4` | 20 | 5,80 % | 42,2 % |
+>
+> **La expansión multicapa está justificada** (66,5 % → 88,8 %, p < 0,001). **Pero «hacen falta las 28» no se sostiene:** las 8 variables L7 nuevas no aportan detección medible (p = 1,000) y cuestan 5 falsos positivos. No se promueve la configuración de 20 porque hacerlo repetiría exactamente el error de D1.
+>
+> **La capa 4 es la que sostiene el sistema:** retirarla hunde la detección a 42,2 % sin ganar una sola ventana.
 
 **D4 · El análisis de sensibilidad no cubre el modelo elegido.** *(severidad media)*
 Las 10 semillas, la ponderación por episodio y el colapso de duplicados se aplicaron **solo a Isolation Forest** (`manifest.stability` no contiene `ocsvm_scaled`). OCSVM además se ajustó **sin ponderación**, pese al desbalance documentado: *"5/132 episodios (3,8 %) concentran 261/824 filas train (31,7 %)"*.
@@ -214,11 +235,17 @@ De los 14 escenarios normales exigidos faltan **SSH, SCP/SFTP, SMB, respaldo, st
 
 ### 8.3 De constructo y documentación
 
-**D8 · Sin diccionario de fórmulas para las features 15–28.** *(severidad media)* — El jurado pidió *"diccionario, fórmulas, unidades y ventanas"*. Solo existe para las 14 de v1. → *Solución: publicarlo extrayéndolo del extractor — horas.*
+**D8 · Sin diccionario de fórmulas para las features 15–28.** *(severidad media)* — El jurado pidió *"diccionario, fórmulas, unidades y ventanas"*. Solo existía para las 14 de v1.
 
-**D9 · Una feature es constante y no observable.** *(severidad media)* — `tls_handshake_failure_ratio_60s` vale 0,0 en todo el dataset; se demostró que Suricata no puede producir el evento intermedio. → *Solución: declararla no observable y reportar 27 features efectivas.*
+> **✅ Resuelta.** Publicado el [diccionario científico de las 28 variables](../../fase02-features-multicapa/03-diccionario-multicapa-v2.md), con diez campos por variable: fórmula, tipo y rango teórico, fuente exacta, denominador, comportamiento con denominador cero, rango observado, observabilidad, coste en línea y estado. **Generado desde el extractor congelado**, y el script aborta si una variable del contrato no aparece en él.
 
-**D10 · Los gates no cubren duplicados ni constantes.** *(severidad baja)* — `gates.pass = true` convive con 22 vectores duplicados exactos y una feature constante. → *Solución: declararlo.*
+**D9 · Una feature es constante y no observable.** *(severidad media)* — `tls_handshake_failure_ratio_60s` vale 0,0 en todo el dataset; se demostró que Suricata no puede producir el evento intermedio.
+
+> **✅ Resuelta.** Declarada **no observable**; el corpus se reporta como **27 variables efectivas de 28 definidas**. La ablación lo confirmó numéricamente: la configuración sin esa variable da resultados **idénticos** al contrato completo, mismo umbral incluido.
+
+**D10 · Los gates no cubren duplicados ni constantes.** *(severidad baja)* — `gates.pass = true` convivía con 22 vectores duplicados exactos y una feature constante.
+
+> **✅ Resuelta.** Cuatro gates nuevos con prueba positiva y negativa: `constants_declared`, `no_duplicate_crossing_label`, `no_duplicate_crossing_partition` y `duplicates_within_tolerance`. Los tres primeros son de **tolerancia cero** — un duplicado que cruce etiqueta o partición indica fuga y falla siempre—; el presupuesto del 2 % en duplicados se declara como valor elegido, no derivado de los datos.
 
 ### 8.4 Del mecanismo de control
 
@@ -239,33 +266,51 @@ Detección del 88,8 % [83,0–92,8] sobre ataques genuinos, ROC-AUC 0,974, bloqu
 
 Lo que sí compromete la calidad académica no es el falso positivo —está medido y es defendible— sino **la ablación ausente y la falta de cuantificación de incertidumbre**, porque afectan a la validez de las conclusiones, no al desempeño del artefacto.
 
-## 10. Priorización antes de cerrar la tesis
+## 10. Estado de la remediación
 
-**Bloque A — horas (imprescindible).**
+*Actualizado al 26 de agosto de 2026.*
 
-| # | Acción | Resuelve |
+### 10.1 Ya resuelto, con evidencia publicada
+
+Ninguna de estas acciones requirió capturar datos nuevos ni reentrenar el modelo congelado.
+
+| Debilidad | Qué se hizo | Evidencia |
 |---|---|---|
-| 1 | Publicar diccionario de fórmulas de features 15–28 | D8 |
-| 2 | Incorporar los IC de Wilson a toda proporción | D2 |
-| 3 | Sustituir conclusiones con n ≤ 6 por declaración de insuficiencia muestral | D2 |
-| 4 | Declarar selección post hoc, separación 161/18 y FPR operativo | D1, D5 |
-| 5 | Actualizar la matriz de cumplimiento del jurado (está obsoleta) | — |
+| **D2** Sin medidas de incertidumbre | Intervalos de Wilson en toda proporción **y** McNemar exacto con corrección de Holm sobre 21 comparaciones | [`08-significancia`](../../fase04-modelado/08-significancia-entre-modelos.md) |
+| **D3** Ablación nunca ejecutada | Ejecutada, con la configuración completa reproduciendo el modelo congelado bit a bit | [`07-ablacion`](../../fase04-modelado/07-ablacion-multicapa.md) |
+| **D8** Sin diccionario de las variables 15–28 | Publicado, generado desde el extractor congelado | [`03-diccionario`](../../fase02-features-multicapa/03-diccionario-multicapa-v2.md) |
+| **D9** Variable constante no declarada | Declarada no observable: **27 efectivas de 28** | ídem |
+| **D10** Gates sin duplicados ni constantes | Cuatro gates nuevos, con prueba positiva y negativa | [`181-correccion`](../../fase03-dataset/181-correccion-catalogo-auditoria-y-gates.md) |
+| **D1** Selección posterior | **Declarada** en la model card antes de cualquier métrica y en el PPI v2 | [`MODEL_CARD`](../../dataset/MODEL_CARD_OCSVM.md) |
+| — Datos y código no reproducibles desde un clon | Dataset, manifiesto y **los 7 modelos candidatos** publicados con checksums y licencias MIT + CC BY 4.0 | [`SHA256SUMS`](../../dataset/SHA256SUMS) |
+| — Sin documentación canónica de los datos | *Datasheet* de 11 secciones, *model card* y *system card* | [`docs/dataset/`](../../dataset/README.md) |
 
-**Bloque B — 1 a 2 días (alto retorno).**
+### 10.2 Lo que la ablación cambió en las conclusiones
 
-| # | Acción | Resuelve |
+Ejecutar D3 no solo cerró un requisito: **modificó lo que este informe puede afirmar.**
+
+- La expansión multicapa **queda justificada con significancia**: 66,5 % → 88,8 % de detección sobre ataques genuinos, p < 0,001.
+- Pero **«hacen falta las 28 variables» no se sostiene**: una configuración de 20 iguala la detección (p = 1,000) con **8 falsos positivos en vez de 13**. Las 8 variables L7 nuevas no aportan detección medible.
+- **La capa 4 es la que sostiene el sistema**: retirarla hunde la detección a 42,2 % sin ganar una sola ventana.
+- Que L7 no aporte *al vector del modelo* no significa que sobre: el motor la usa en un detector heurístico que en F6 **detectó un ataque real por sí solo**.
+
+> **No se promueve la configuración de 20 variables.** Hacerlo repetiría exactamente el error de D1: elegir por ganar una comparación sobre el mismo conjunto de prueba. Adoptarla exige un protocolo nuevo con evaluación reservada.
+
+### 10.3 Lo que sigue abierto
+
+| Bloque | Acción | Resuelve |
 |---|---|---|
-| 6 | **Ejecutar la ablación L3/L4/L7 y la comparación 14 vs 28** | D3 |
-| 7 | Estabilidad por submuestreo del OCSVM | D4 |
+| **Horas** | Cerrar la matriz de cumplimiento del jurado | requisito formal |
+| **Horas** | Validación cruzada agrupada por episodio sobre el modelo congelado | D4 |
+| **Horas** | Estabilidad del umbral por remuestreo, con banda declarada | D4 |
+| **Días** | **Validación con usuarios: SUS con 5–8 evaluadores** | pertinencia |
+| **Días** | Escenarios legítimos faltantes | D7 |
+| **Semanas** | Jornada nueva como holdout temporal externo | D6 |
+| **Semanas** | **Recalibrar incluyendo tráfico pesado y repetir F6** | D5 |
 
-**Bloque C — si el calendario lo permite.**
+> **Mínimo defendible restante: el bloque de horas más el SUS.** El bloque de horas cierra la inferencia estadística; el SUS es el **único cero absoluto** que queda —cero en la ficha de auditoría, cero en el eje de pertinencia del plan de validación— y una sola sesión lo convierte en evidencia.
 
-| # | Acción | Resuelve |
-|---|---|---|
-| 8 | Jornada nueva como holdout temporal externo | D6 |
-| 9 | Recalibrar incluyendo tráfico pesado y repetir F6 | D5 |
-
-> **Mínimo defendible: Bloque A + punto 6.** Cubre los dos requisitos formales incumplidos y corrige la principal deficiencia de inferencia, sin experimentación nueva.
+**D5 sigue siendo la debilidad principal del sistema** y no se resuelve escribiendo: exige recalibrar con tráfico legítimo pesado como normalidad y repetir la validación operativa.
 
 ## 11. Limitaciones de este propio informe
 

@@ -44,7 +44,7 @@
 ### No abordado
 
 - **Selección del modelo sin contaminar la prueba.** El modelo congelado se eligió **después** de observar su desempeño en el conjunto de prueba. El propio registro del proyecto documenta que ese modelo estaba designado como "comparador" y que la política prohibía promoverlo por ganar una métrica posterior. En consecuencia, el 88,3 % de detección es el **máximo entre 7 candidatos evaluados sobre los mismos datos**, sin ningún conjunto reservado que permita una estimación sin sesgo optimista.
-- **Pruebas de significancia estadística.** No se realizó ninguna prueba (t, Wilcoxon o equivalente) que compare los modelos.
+- **Pruebas de significancia estadística.** ✅ **Ejecutadas.** McNemar exacto por pares —la prueba correcta cuando los modelos se evalúan sobre las mismas ventanas— con corrección de Holm-Bonferroni sobre las 21 comparaciones. Las **seis del OCSVM son significativas sin excepción**; en cambio **ninguna diferencia de falso positivo lo es** (p mínimo 0,52), así que afirmar que un modelo comete menos falsos positivos que otro no está respaldado por estos datos.
 
 ---
 
@@ -126,9 +126,9 @@ Ordenado por relación entre costo y beneficio. **Ninguna acción del bloque A n
 | **A3** | Sustituir las conclusiones sobre familias con n ≤ 6 por una declaración de muestra insuficiente | Confiabilidad | Horas |
 | **A4** | Reportar el error operativo (23–26 %) junto al de laboratorio (4,71 %) | Validez externa | Horas |
 | **A5** | Publicar el diccionario de fórmulas de las 14 variables nuevas | Validez de constructo | Horas |
-| **B1** | Ejecutar la prueba de ablación por capas (L3/L4/L7) y la comparación 14 frente a 28 variables | Validez de constructo | 1–2 días |
+| ~~**B1**~~ | ✅ **Ejecutada.** La expansión multicapa queda justificada (66,5 % → 88,8 %, p < 0,001), pero las 8 variables L7 nuevas **no aportan detección medible** y cuestan 5 falsos positivos | Validez de constructo | *hecho* |
 | **B2** | Prueba de estabilidad por remuestreo del modelo elegido | Validez interna | Horas |
-| **B3** | Prueba de significancia entre modelos | Validez interna | Horas |
+| ~~**B3**~~ | ✅ **Ejecutada.** McNemar exacto con corrección de Holm sobre 21 comparaciones | Validez interna | *hecho* |
 | **C1** | Capturar una jornada nueva y reservarla como validación temporal externa | Validez externa | Días |
 | **C2** | Recalibrar el umbral incluyendo tráfico legítimo intenso y repetir la validación operativa | Validez externa | 1–2 semanas |
 
@@ -142,7 +142,11 @@ Los resultados sostienen una afirmación **acotada y verdadera**: se demostró l
 
 No sostienen todavía que el sistema sea apto para operación desatendida: sobre tráfico legítimo de alto volumen el error alcanza 23–26 %. Esa limitación **está medida, cuantificada y declarada**, que es la condición que la hace defendible ante una revisión por pares.
 
-La prioridad antes de cerrar no es mejorar el sistema, sino **corregir la inferencia**: declarar la selección posterior del modelo, acompañar cada cifra de su intervalo de confianza y ejecutar la ablación pendiente.
+La prioridad ya no es corregir la inferencia: **quedó corregida**. Se declaró la selección posterior del modelo, toda proporción lleva su intervalo de confianza, se ejecutó la ablación por capas y se añadieron las pruebas de significancia que faltaban.
+
+Lo que queda es de otro tipo. **La única dimensión sin ninguna evidencia es la pertinencia**: el sistema nunca se sometió a evaluación con usuarios reales. Una prueba de usabilidad con 5–8 evaluadores es la acción de menor costo con mayor efecto, porque cierra a la vez el eje de pertinencia, el criterio correspondiente de la ficha de auditoría y la debilidad registrada en el plan de mejora.
+
+Y **la limitación principal del sistema sigue abierta**: el falso positivo sobre tráfico legítimo pesado no se corrige documentándolo, sino recalibrando el umbral con ese tráfico como normalidad y repitiendo la validación operativa.
 
 ---
 
