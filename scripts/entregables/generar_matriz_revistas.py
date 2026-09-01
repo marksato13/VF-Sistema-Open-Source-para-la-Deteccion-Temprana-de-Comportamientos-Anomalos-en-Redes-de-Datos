@@ -109,7 +109,8 @@ CANDIDATAS = [
                               "índice de dblp da 35–38, capacidad equivalente a la de CIT, repartida en "
                               "6 números al año en vez de 4. Baja de 10 porque el tipo y el tiempo de "
                               "revisión siguen sin verificar: dos de los cuatro componentes del criterio"),
-            "costo": (10, "Sin APC obligatorio por la vía de suscripción"),
+            "costo": (10, "Sin APC obligatorio por la vía de suscripción. El acceso abierto "
+                          "opcional cuesta USD 3.390, pero nadie está obligado a tomarlo"),
             "formato": (7, "Editorial mayor con formato estándar; requisitos concretos sin verificar"),
         },
     },
@@ -139,7 +140,8 @@ CANDIDATAS = [
             "viabilidad": (6, "Capacidad creciente y la mayor de las tres disponibles —34, 38 y 42 "
                               "artículos en 2023, 2024 y 2025—, pero el tipo y el tiempo de revisión "
                               "siguen sin verificar"),
-            "costo": (10, "Sin APC obligatorio por la vía de suscripción"),
+            "costo": (10, "Sin APC obligatorio por la vía de suscripción. El acceso abierto "
+                          "opcional cuesta USD 3.390, pero nadie está obligado a tomarlo"),
             "formato": (6, "Requisitos sin verificar"),
         },
     },
@@ -267,20 +269,26 @@ CANDIDATAS = [
             "Cuartil SJR": ("**Q2**", "~"),
             "Revisión": ("pendiente de verificar en las instrucciones para autores", "?"),
             "Periodicidad": ("**Mensual** · **661 · 640 artículos** en 2024 y 2025", "~"),
-            "APC": ("**Híbrida: publicar por la vía de suscripción no exige APC.** No figura en "
-                    "DOAJ, coherente con que no haya migrado a acceso abierto de pago", "~"),
+            "APC": ("**Híbrida: publicar por la vía de suscripción no exige APC**, pero el "
+                    "artículo queda tras el muro de pago. La vía de acceso abierto (Open "
+                    "Choice) cuesta **USD 3.390 · EUR 2.690 · GBP 2.390**. No figura en DOAJ. "
+                    "Medido: de **714 artículos publicados desde 2025, 648 (90,8 %) están "
+                    "cerrados** y solo 29 son de acceso abierto pagado", "~"),
             "Plantilla": ("pendiente de verificar", "?"),
         },
         "puntajes": {
             "pertinencia": (8, "Alcance amplio de tecnologías de la información, menos específico que "
                                "IJIES, pero con **50 artículos desde 2024** cuyo título nombra "
                                "detección de intrusiones, de anomalías o seguridad de redes"),
-            "visibilidad": (8, "Q2 por SJR y respaldo de Springer Nature. CiteScore 2,6, por debajo "
-                               "de IJIES"),
+            "visibilidad": (7, "Q2 por SJR y respaldo de Springer Nature, pero CiteScore 2,6 está "
+                               "por debajo de IJIES y **el 90,8 % de sus artículos quedan tras "
+                               "el muro de pago**: la vía gratuita reduce el alcance real del "
+                               "trabajo"),
             "viabilidad": (8, "Mensual y con el mayor volumen absoluto del conjunto —unos 640 "
                               "artículos al año—, pero **su tiempo de revisión está sin verificar**: "
                               "no se le puntúa 10 por un dato que no se conoce"),
-            "costo": (10, "Sin APC obligatorio por la vía de suscripción"),
+            "costo": (10, "Sin APC obligatorio por la vía de suscripción. El acceso abierto "
+                          "opcional cuesta USD 3.390, pero nadie está obligado a tomarlo"),
             "formato": (7, "Formato estándar de Springer; requisitos concretos sin verificar"),
         },
     },

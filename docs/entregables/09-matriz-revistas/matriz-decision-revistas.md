@@ -98,14 +98,14 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 ## 4 · Matriz
 
-| Criterio (peso) | IJIES | BEEI | IJIT | ISJ | CIT | IJSSE | ICS | IJACSA | ISI |
+| Criterio (peso) | IJIES | BEEI | ISJ | IJIT | CIT | IJSSE | ICS | IJACSA | ISI |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Pertinencia temática (30 %) | 9 | 9 | 8 | 9 | 9 | 9 | 6 | 6 | 7 |
-| Visibilidad bibliométrica (25 %) | 8 | 8 | 8 | 8 | 9 | 6 | 9 | 8 | 7 |
-| Viabilidad editorial (20 %) | 10 | 9 | 8 | 6 | 5 | 9 | 6 | 10 | 8 |
+| Pertinencia temática (30 %) | 9 | 9 | 9 | 8 | 9 | 9 | 6 | 6 | 7 |
+| Visibilidad bibliométrica (25 %) | 8 | 8 | 8 | 7 | 9 | 6 | 9 | 8 | 7 |
+| Viabilidad editorial (20 %) | 10 | 9 | 6 | 8 | 5 | 9 | 6 | 10 | 8 |
 | Costo y accesibilidad (15 %) | 9 | 8 | 10 | 10 | 6 | 5 | 10 | 3 | 5 |
 | Compatibilidad formal (10 %) | 7 | 7 | 7 | 7 | 9 | 8 | 6 | 7 | 7 |
-| **PUNTAJE PONDERADO** | **87.5** | **84.0** | **82.0** | **81.0** | **77.5** | **75.5** | **73.5** | **69.5** | **69.0** |
+| **PUNTAJE PONDERADO** | **87.5** | **84.0** | **81.0** | **79.5** | **77.5** | **75.5** | **73.5** | **69.5** | **69.0** |
 | Datos con fuente primaria | 5/6 | 5/6 | 0/6 | 0/6 | 6/6 | 5/6 | 0/6 | 0/6 | 5/6 |
 
 ---
@@ -154,28 +154,7 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | Costo y accesibilidad | **8** | USD 415 con coautoría, el más bajo de las candidatas con APC |
 | Compatibilidad formal | **7** | Plantilla disponible, pero el límite base de 8 páginas obliga a comprimir o a pagar por página adicional |
 
-### 3. International Journal of Information Technology (IJIT) — 82.0 puntos
-
-`Springer Nature · BVICAM, Nueva Delhi` · ISSN 2511-2104 · [ficha en Scopus](https://www.scopus.com/sourceid/21101022413)
-
-| Dato | Valor | |
-|---|---|:--:|
-| CiteScore 2025 | 2,6 · h-index 23 | ~ |
-| Cuartil SJR | **Q2** | ~ |
-| Revisión | pendiente de verificar en las instrucciones para autores | ? |
-| Periodicidad | **Mensual** · **661 · 640 artículos** en 2024 y 2025 | ~ |
-| APC | **Híbrida: publicar por la vía de suscripción no exige APC.** No figura en DOAJ, coherente con que no haya migrado a acceso abierto de pago | ~ |
-| Plantilla | pendiente de verificar | ? |
-
-| Criterio | Puntaje | Justificación |
-|---|:--:|---|
-| Pertinencia temática | **8** | Alcance amplio de tecnologías de la información, menos específico que IJIES, pero con **50 artículos desde 2024** cuyo título nombra detección de intrusiones, de anomalías o seguridad de redes |
-| Visibilidad bibliométrica | **8** | Q2 por SJR y respaldo de Springer Nature. CiteScore 2,6, por debajo de IJIES |
-| Viabilidad editorial | **8** | Mensual y con el mayor volumen absoluto del conjunto —unos 640 artículos al año—, pero **su tiempo de revisión está sin verificar**: no se le puntúa 10 por un dato que no se conoce |
-| Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción |
-| Compatibilidad formal | **7** | Formato estándar de Springer; requisitos concretos sin verificar |
-
-### 4. Information Security Journal: A Global Perspective — 81.0 puntos
+### 3. Information Security Journal: A Global Perspective — 81.0 puntos
 
 `Taylor & Francis · Reino Unido` · ISSN 1939-3555 · [ficha en Scopus](https://www.scopus.com/sourceid/19700187807)
 
@@ -193,8 +172,29 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | Pertinencia temática | **9** | Su alcance nombra seguridad de redes y control de acceso; publica trabajos sobre ataques SSH y denegación de servicio HTTP, las mismas familias del corpus |
 | Visibilidad bibliométrica | **8** | Mejor cuartil Q2 y h-index 33, el más alto tras Emerald |
 | Viabilidad editorial | **6** | **Corregido**: la cifra anterior de 21 artículos al año era falsa. El índice de dblp da 35–38, capacidad equivalente a la de CIT, repartida en 6 números al año en vez de 4. Baja de 10 porque el tipo y el tiempo de revisión siguen sin verificar: dos de los cuatro componentes del criterio |
-| Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción |
+| Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción. El acceso abierto opcional cuesta USD 3.390, pero nadie está obligado a tomarlo |
 | Compatibilidad formal | **7** | Editorial mayor con formato estándar; requisitos concretos sin verificar |
+
+### 4. International Journal of Information Technology (IJIT) — 79.5 puntos
+
+`Springer Nature · BVICAM, Nueva Delhi` · ISSN 2511-2104 · [ficha en Scopus](https://www.scopus.com/sourceid/21101022413)
+
+| Dato | Valor | |
+|---|---|:--:|
+| CiteScore 2025 | 2,6 · h-index 23 | ~ |
+| Cuartil SJR | **Q2** | ~ |
+| Revisión | pendiente de verificar en las instrucciones para autores | ? |
+| Periodicidad | **Mensual** · **661 · 640 artículos** en 2024 y 2025 | ~ |
+| APC | **Híbrida: publicar por la vía de suscripción no exige APC**, pero el artículo queda tras el muro de pago. La vía de acceso abierto (Open Choice) cuesta **USD 3.390 · EUR 2.690 · GBP 2.390**. No figura en DOAJ. Medido: de **714 artículos publicados desde 2025, 648 (90,8 %) están cerrados** y solo 29 son de acceso abierto pagado | ~ |
+| Plantilla | pendiente de verificar | ? |
+
+| Criterio | Puntaje | Justificación |
+|---|:--:|---|
+| Pertinencia temática | **8** | Alcance amplio de tecnologías de la información, menos específico que IJIES, pero con **50 artículos desde 2024** cuyo título nombra detección de intrusiones, de anomalías o seguridad de redes |
+| Visibilidad bibliométrica | **7** | Q2 por SJR y respaldo de Springer Nature, pero CiteScore 2,6 está por debajo de IJIES y **el 90,8 % de sus artículos quedan tras el muro de pago**: la vía gratuita reduce el alcance real del trabajo |
+| Viabilidad editorial | **8** | Mensual y con el mayor volumen absoluto del conjunto —unos 640 artículos al año—, pero **su tiempo de revisión está sin verificar**: no se le puntúa 10 por un dato que no se conoce |
+| Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción. El acceso abierto opcional cuesta USD 3.390, pero nadie está obligado a tomarlo |
+| Compatibilidad formal | **7** | Formato estándar de Springer; requisitos concretos sin verificar |
 
 ### 5. Cybernetics and Information Technologies (CIT) — 77.5 puntos
 
@@ -256,7 +256,7 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | Pertinencia temática | **6** | Cubre la categoría de redes, pero su centro editorial se inclina a factores humanos, concienciación y cumplimiento de políticas: un artículo puramente técnico corre riesgo de quedar fuera de foco |
 | Visibilidad bibliométrica | **9** | h-index 60, el más alto de todas las candidatas |
 | Viabilidad editorial | **6** | Capacidad creciente y la mayor de las tres disponibles —34, 38 y 42 artículos en 2023, 2024 y 2025—, pero el tipo y el tiempo de revisión siguen sin verificar |
-| Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción |
+| Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción. El acceso abierto opcional cuesta USD 3.390, pero nadie está obligado a tomarlo |
 | Compatibilidad formal | **6** | Requisitos sin verificar |
 
 ### 8. International Journal of Advanced Computer Science and Applications (IJACSA) — 69.5 puntos
@@ -319,8 +319,8 @@ Los planes se asignan **solo entre las candidatas disponibles**, es decir, las q
 |---|---|---:|---|---|
 | **Plan A** | IJIES | 87.5 | Disponible | **El mayor volumen de las disponibles** —481, 556 y 467 artículos en 2024, 2025 y 2026— con el APC más bajo del conjunto y publicación 2 meses después de aceptar. Con reserva: hay que confirmar que sigue activa en Scopus. |
 | — | BEEI | 84.0 | Ya en la lista de control | Gana en tres de los cinco criterios y tiene 5 de 6 datos **verificados en fuente primaria**. Mejor combinación de encaje temático, visibilidad y coste, pero ya figura en la lista de control. |
-| **Plan B** | IJIT | 82.0 | Disponible | Volumen comparable con respaldo de Springer, que elimina el riesgo de descontinuación, y **sin APC** por la vía de suscripción. Su tiempo de revisión está sin verificar. |
-| **Plan C** | ISJ | 81.0 | Disponible | **No exige APC** por la vía de suscripción y empata en pertinencia con las mejores. Sube al primer puesto al corregirse su capacidad, que no era de 21 artículos al año sino de 35–38. Su puntaje es el más frágil: 0 de 6 datos verificados en la revista, y el tiempo de revisión sin comprobar. |
+| **Plan B** | ISJ | 81.0 | Disponible | **No exige APC** por la vía de suscripción y empata en pertinencia con las mejores. Sube al primer puesto al corregirse su capacidad, que no era de 21 artículos al año sino de 35–38. Su puntaje es el más frágil: 0 de 6 datos verificados en la revista, y el tiempo de revisión sin comprobar. |
+| **Plan C** | IJIT | 79.5 | Disponible | Volumen comparable con respaldo de Springer, que elimina el riesgo de descontinuación, y **sin APC** por la vía de suscripción. Su tiempo de revisión está sin verificar. |
 | — | CIT | 77.5 | Disponible | Puntúa menos, pero es la **única con los seis datos verificados en la propia revista**, la única con Q2 y factor de impacto de Web of Science confirmados, y la única que publica detección **y mitigación**. Su desventaja está declarada: 3–6 meses hasta la primera decisión. |
 | — | IJSSE | 75.5 | Ya en la lista de control | Encaje temático idéntico al de BEEI y ciclo editorial rápido, pero pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC duplica al de BEEI. Ya figura en la lista de control. |
 | — | ICS | 73.5 | Disponible | El mayor prestigio de la lista (h-index 60), pero su centro editorial se inclina a factores humanos y buena parte de sus datos sigue sin verificar. |
@@ -331,7 +331,7 @@ Los planes se asignan **solo entre las candidatas disponibles**, es decir, las q
 
 ## 7 · Justificación
 
-**IJIES encabeza con 87.5 puntos sobre 100**, por delante de IJIT (82.0) y ISJ (81.0). Es la única candidata que supera a BEEI (87.5) en la puntuación absoluta.
+**IJIES encabeza con 87.5 puntos sobre 100**, por delante de ISJ (81.0) y IJIT (79.5). Es la única candidata que supera a BEEI (87.5) en la puntuación absoluta.
 
 ### Volumen anual, contado en la misma fuente para todas
 

@@ -28,7 +28,7 @@ Tras exigir **volumen alto** además de todo lo anterior:
 | | Revista | Editor | Puntaje | Cuartil | APC | Artículos/año |
 |---|---|---|---:|---|---|---:|
 | **A** | [Int. J. of Intelligent Engineering and Systems](https://inass.org/publications/) | INASS · Japón | **87,5** | **Q2** (CiteScore 3,3) | **USD 300** → 400 en octubre | **556** |
-| **B** | [Int. J. of Information Technology](https://link.springer.com/journal/41870) | **Springer Nature** · BVICAM | **82,0** | **Q2** (SJR) | **Ninguno** por suscripción | **640** |
+| **B** | [Int. J. of Information Technology](https://link.springer.com/journal/41870) | **Springer Nature** · BVICAM | **79,5** | **Q2** (SJR) | **Ninguno** por suscripción — *el artículo queda tras el muro de pago*; abrirlo cuesta USD 3.390 | **640** |
 | **C** | [Ingénierie des Systèmes d'Information](https://www.iieta.org/Journals/ISI) | IIETA | 69,0 | **Q3** (SJR 0,236) | USD 850 | **305** |
 
 Ninguna está en tu Excel ni en la lista de depredadoras.
@@ -142,9 +142,46 @@ Existe precisamente para cubrir ese riesgo:
 - 50 artículos desde 2024 sobre detección de intrusiones, anomalías o seguridad
   de redes.
 
-Su punto ciego es el opuesto al de IJIES: **su tiempo de revisión no está
+### Qué se paga exactamente — verificado el 01/09/2026
+
+Publicar **no cuesta nada**. IJIT es una revista **por suscripción con opción de
+acceso abierto** (Open Choice de Springer), no una revista de acceso abierto:
+
+| Vía | Costo | Consecuencia |
+|---|---:|---|
+| **Suscripción** (la normal) | **USD 0** | El artículo queda **tras el muro de pago**: solo lo lee quien tenga suscripción institucional |
+| **Open Choice** (opcional) | **USD 3.390 · EUR 2.690 · GBP 2.390** | Lectura libre para cualquiera |
+
+No es una estimación. Sobre los **714 artículos publicados desde 2025**, el
+reparto real de acceso es:
+
+| Estado | Artículos | % |
+|---|---:|---:|
+| Cerrado (muro de pago) | **648** | **90,8 %** |
+| Acceso abierto pagado (*hybrid*) | 29 | 4,1 % |
+| *Bronze* | 34 | 4,8 % |
+| *Green* (repositorio) | 3 | 0,4 % |
+
+Fuente: OpenAlex, `filter=primary_location.source.issn:2511-2104,from_publication_date:2025-01-01&group_by=open_access.oa_status`. La ficha de la revista
+confirma `is_oa: false` y `is_in_doaj: false`.
+
+**Esto le costó 2,5 puntos.** La visibilidad baja de 8 a 7 y el total de **82,0
+a 79,5**: nueve de cada diez artículos de esta revista no los puede leer quien no
+pague. El costo sigue en 10 porque nadie te obliga a tomar la vía abierta. Cuesta
+distinguir las dos cosas — lo que pagas y quién te lee — pero mezclarlas ocultaría
+justo el intercambio que tienes que decidir.
+
+**El intercambio con el Plan A, en una línea:** IJIES cobra **USD 300** y tu
+artículo lo lee cualquiera; IJIT cobra **USD 0** y lo lee quien tenga suscripción.
+
+Su otro punto ciego es el opuesto al de IJIES: **su tiempo de revisión no está
 verificado**, y por eso puntúa 8 y no 10 en viabilidad. No se premia un dato que
 no se conoce — es la lección de la corrección anterior.
+
+> Springer bloquea el acceso automatizado (`Client Challenge` en `link.springer.com`
+> y `springer.com`, el mismo bloqueo que encontró Codex). El precio de Open Choice
+> queda marcado `~`: **confírmalo en la propia página de la revista antes de
+> decidir**. El reparto de acceso sí es medición directa.
 
 ## Descartadas al exigir volumen
 
@@ -384,6 +421,7 @@ Revisión completa, con las dos afirmaciones suyas que refuté:
 | 26/08/2026 | Capacidad de CIT | ≈55 artículos al año | **42–46** — conteo de los PDF de cada número |
 | 26/08/2026 | Extensión de ISI | «sin límite estrecho declarado» | **6–12 páginas** — [instrucciones oficiales](https://www.iieta.org/journals/isi/Instructions%20for%20Authors). Hallazgo de Codex |
 | 26/08/2026 | Plazo de revisión de ISI | «~2 meses» | **No lo declara.** Era un arrastre de la ficha de IJSSE |
+| 01/09/2026 | Acceso de IJIT | «No cobra APC» a secas | Cierto, **pero el 90,8 % de sus artículos quedan tras el muro de pago**; abrirlo cuesta USD 3.390. Visibilidad 8→7, total 82,0→**79,5** |
 
 Los tres errores vinieron de **extractos de búsqueda o agregadores**, no de las
 páginas oficiales. El de CIT es el más instructivo: un agregador la describía
