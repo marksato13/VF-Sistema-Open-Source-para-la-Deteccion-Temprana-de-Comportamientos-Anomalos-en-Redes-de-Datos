@@ -340,6 +340,44 @@ VOLUMEN = {  # artículos por año, medidos con OpenAlex el 26/08/2026
 UMBRAL_VOLUMEN = 200  # "que publique muchos artículos al año"
 
 
+# Acceso abierto, medido con OpenAlex el 01/09/2026 sobre todo lo publicado desde
+# 2025-01-01. clave -> (estado dominante, cerrados, total, licencia declarada, nota)
+ACCESO = {
+    "BEEI":   ("diamond", 0,   682,  "CC BY-SA",
+               "Su propia portada declara literalmente que «provides immediate open access to "
+               "all published articles». Ninguno de sus 682 artículos de 2025 está cerrado"),
+    "IJACSA": ("diamond", 0,   2156, "—",
+               "Ninguno de sus 2.156 artículos de 2025 está cerrado"),
+    "CIT":    ("diamond", 0,   58,   "CC BY",
+               "**La única del conjunto registrada en DOAJ.** Ninguno de sus artículos cerrado"),
+    "IJSSE":  ("hybrid",  34,  400,  "CC BY",
+               "Los PDF se descargan sin pago y llevan licencia CC BY, pero la revista **no "
+               "está registrada en DOAJ** y un 8,5 % de sus artículos figura como cerrado"),
+    "ISI":    ("hybrid",  81,  521,  "CC BY",
+               "Los PDF se descargan sin pago y llevan licencia CC BY, pero la revista **no "
+               "está registrada en DOAJ** y un 15,5 % de sus artículos figura como cerrado"),
+    "IJIES":  ("bronze",  75,  1098, "ninguna",
+               "Se lee gratis, pero en la categoría más débil de acceso abierto: **bronce**, "
+               "sin ninguna licencia declarada. El editor puede retirar el acceso cuando "
+               "quiera y el lector no tiene derechos de reutilización. Tampoco está en DOAJ"),
+    "IJIT":   ("closed",  648, 714,  "—",
+               "**El 90,8 % de sus artículos está tras el muro de pago.** Abrir uno cuesta "
+               "USD 3.390 por la vía Open Choice"),
+    "ISJ":    ("closed",  89,  101,  "—",
+               "**El 88,1 % de sus artículos está tras el muro de pago**"),
+    "ICS":    ("closed",  79,  101,  "—",
+               "**El 78,2 % de sus artículos está tras el muro de pago**"),
+}
+
+# Planes fijados por el autor el 01/09/2026, no derivados del puntaje.
+PLANES = {"IJIES": "Plan A", "ISI": "Plan B", "BEEI": "Plan C", "IJSSE": "Plan D"}
+
+
+def abierta(c) -> bool:
+    """Acceso abierto real: el lector no paga por leer."""
+    return ACCESO[c["corto"]][0] != "closed"
+
+
 def volumen_ok(c) -> bool:
     return VOLUMEN[c["corto"]][1] >= UMBRAL_VOLUMEN
 
@@ -430,6 +468,38 @@ def main() -> None:
       "a las fuentes oficiales el 26/08/2026 da **Q1 por CiteScore y Q3 por SJR** para BEEI y "
       "**USD 850** para IJSSE. Las discrepancias se dejan a la vista en vez de promediarse.\n")
 
+    a("\n---\n\n## 2 ter · Filtro de acceso abierto\n\n")
+    a("**Requisito del autor, 01/09/2026: si no es de acceso abierto, se descarta.** Funciona "
+      "como un tercer filtro de entrada, igual que los dos anteriores: no toca ningún puntaje, "
+      "decide quién sigue en carrera.\n\n")
+    a("Se midió con un criterio único para las nueve: el estado de acceso de **todo lo que cada "
+      "revista publicó desde el 1 de enero de 2025**, según OpenAlex, y una descarga real de "
+      "PDF sin sesión iniciada para comprobar que el lector no topa con un muro.\n\n")
+    a("| Revista | Estado | Cerrados | Licencia | Veredicto | Detalle |\n"
+      "|---|---|---:|---|---|---|\n")
+    nombres = {"diamond": "Diamante", "hybrid": "Híbrido", "bronze": "**Bronce**",
+               "closed": "**Cerrado**"}
+    for c in sorted(CANDIDATAS, key=lambda x: (not abierta(x), ACCESO[x["corto"]][1] / ACCESO[x["corto"]][2])):
+        est, cer, tot, lic, nota = ACCESO[c["corto"]]
+        v = "Pasa" if abierta(c) else "**Descartada**"
+        a(f"| **{c['corto']}** | {nombres[est]} | {cer}/{tot} ({100*cer/tot:.1f} %) | {lic} | "
+          f"{v} | {nota} |\n")
+    a("\n**Tres candidatas caen aquí: IJIT, ISJ e ICS.** Las tres eran gratuitas para el autor "
+      "por la vía de suscripción, y eso las hacía atractivas en el criterio de costo. El "
+      "filtro deja a la vista lo que ese ahorro costaba: entre el 78 % y el 91 % de sus "
+      "artículos no los puede leer nadie sin suscripción institucional.\n\n")
+    a("> **Gratis para el autor y abierto para el lector son cosas distintas**, y esta matriz "
+      "las confundía hasta hoy. IJIT puntuaba 10 en costo por no cobrar APC, sin que nada "
+      "reflejara que su artículo quedaría cerrado. El filtro corrige esa confusión sin "
+      "retocar puntajes.\n\n")
+    a("> **No todas las que pasan son iguales.** BEEI y CIT son acceso abierto pleno: cero "
+      "artículos cerrados y licencia declarada. IJIES es el caso más débil de las que pasan "
+      "—**bronce, sin licencia**—: se lee gratis hoy porque el editor lo permite, no porque "
+      "el lector tenga derecho. Y **solo CIT figura en DOAJ**, el registro de referencia del "
+      "acceso abierto; ni IJIES, ni ISI, ni IJSSE, ni siquiera BEEI aparecen en él según "
+      "OpenAlex. Ese dato no pudo confirmarse contra DOAJ, que respondió HTTP 502 y 403 el "
+      "01/09/2026: queda marcado como pendiente de comprobación manual.\n\n")
+
     a("\n---\n\n## 3 · Criterios y pesos\n\n")
     a("| Criterio | Peso | Regla de puntuación |\n|---|---:|---|\n")
     for _, nom, peso, regla in CRITERIOS:
@@ -464,65 +534,70 @@ def main() -> None:
         a("\n")
     a("> `✔` verificado en fuente primaria · `~` fuente secundaria · `?` pendiente\n")
 
-    a("\n---\n\n## 6 · Plan A, B y C\n\n")
-    libres = [c for c in orden if disponible(c)]
-    a("Los planes se asignan **solo entre las candidatas disponibles**, es decir, las que "
-      "superan el filtro de legitimidad y además no figuran en la lista de control. Los "
-      "puntajes de las tres ya registradas se conservan a la vista para que la comparación "
-      "siga siendo completa.\n\n")
-    a("> **El orden por debajo del Plan A es provisional.** Solo BEEI, IJSSE y CIT tienen sus "
-      "datos sensibles verificados en fuente primaria; ISJ, ICS e IJACSA se puntuaron con "
-      "fuentes secundarias. Completar esa verificación **puede reordenar las posiciones "
-      "siguientes**, y por eso la sección 8 enumera lo que falta comprobar antes del envío.\n>\n"
-      "> Se presenta así, con las lagunas a la vista, porque ocultar la diferencia de "
-      "verificación entre candidatas sería el error más grave de esta matriz.\n>\n"
-      "> **La distancia entre el Plan A y el Plan B es de medio punto** (77,5 frente a 77,0), "
-      "menor que lo que puede mover una sola verificación pendiente. Lo que hoy separa a las "
-      "dos no es el puntaje sino la evidencia: CIT tiene 6 de 6 datos verificados en la propia "
-      "revista y ISJ tiene 0 de 6.\n\n")
     razones = {
-        "BEEI": "Gana en tres de los cinco criterios y tiene 5 de 6 datos **verificados en "
-                "fuente primaria**. Mejor combinación de encaje temático, visibilidad y coste, "
-                "pero ya figura en la lista de control.",
-        "IJIES": "**El mayor volumen de las disponibles** —481, 556 y 467 artículos en 2024, "
-                 "2025 y 2026— con el APC más bajo del conjunto y publicación 2 meses después de "
-                 "aceptar. Con reserva: hay que confirmar que sigue activa en Scopus.",
-        "ISI": "El único **Q3** verificado de las disponibles, con 305 artículos al año y "
-               "revisión de unos 2 meses. Su APC de USD 850 y su menor producción temática la "
-               "dejan por debajo, pero cumple todos los criterios.",
-        "IJIT": "Volumen comparable con respaldo de Springer, que elimina el riesgo de "
-                "descontinuación, y **sin APC** por la vía de suscripción. Su tiempo de revisión "
-                "está sin verificar.",
-        "ISJ": "**No exige APC** por la vía de suscripción y empata en pertinencia con las "
-               "mejores. Sube al primer puesto al corregirse su capacidad, que no era de 21 "
-               "artículos al año sino de 35–38. Su puntaje es el más frágil: 0 de 6 datos "
-               "verificados en la revista, y el tiempo de revisión sin comprobar.",
-        "CIT": "Puntúa menos, pero es la **única con los seis datos verificados en la propia "
-               "revista**, la única con Q2 y factor de impacto de Web of Science confirmados, "
-               "y la única que publica detección **y mitigación**. Su desventaja está "
-               "declarada: 3–6 meses hasta la primera decisión.",
-        "IJSSE": "Encaje temático idéntico al de BEEI y ciclo editorial rápido, pero pierde "
-                 "en visibilidad (CiteScore 2,8 frente a 4,2) y su APC duplica al de BEEI. "
-                 "Ya figura en la lista de control.",
-        "ICS": "El mayor prestigio de la lista (h-index 60), pero su centro editorial se "
-               "inclina a factores humanos y buena parte de sus datos sigue sin verificar.",
-        "IJACSA": "La más rápida de todas, pero de alcance genérico, con el APC más alto y "
-                  "ya registrada en la lista de control.",
+        "IJIES": "**El mayor volumen del conjunto abierto** —481, 556 y 467 artículos en 2024, "
+                 "2025 y 2026— con el APC más bajo (USD 300) y publicación 2 meses después de "
+                 "aceptar. Dos reservas: hay que confirmar que sigue activa en Scopus, y su "
+                 "acceso abierto es **bronce sin licencia**, el más débil de los cuatro planes.",
+        "ISI": "El único **Q3** verificado, con 305 artículos al año, licencia **CC BY** y PDF "
+               "de descarga libre comprobada. En contra: APC de USD 850, extensión de 6 a 12 "
+               "páginas y **ningún plazo de revisión declarado**.",
+        "BEEI": "**El acceso abierto más sólido de los cuatro** —diamante, CC BY-SA, cero "
+                "artículos cerrados y declaración explícita en su portada— con el segundo mejor "
+                "puntaje absoluto (84,0) y 682 artículos en 2025. Su única objeción es "
+                "administrativa: **figura en la lista de control**.",
+        "IJSSE": "Encaje temático idéntico al de BEEI y ciclo editorial rápido, con licencia "
+                 "CC BY. Pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC de USD 850 "
+                 "duplica al de BEEI. También **figura en la lista de control**.",
+        "CIT": "Fuera de los planes solo por volumen: 35 artículos al año. Sigue siendo la "
+               "**única con los seis datos verificados en la propia revista**, la única "
+               "registrada en DOAJ y la única con factor de impacto de Web of Science.",
+        "IJACSA": "Diamante y con el mayor volumen del conjunto (1.347 al año), pero de alcance "
+                  "genérico, con el APC más alto y **ya registrada** en la lista de control.",
+        "IJIT": "**Descartada por acceso**: el 90,8 % de sus artículos queda tras el muro de "
+                "pago. Era el Plan B hasta el 01/09/2026.",
+        "ISJ": "**Descartada por acceso**: el 88,1 % cerrado. Además publica 62 al año, por "
+               "debajo del listón de volumen.",
+        "ICS": "**Descartada por acceso**: el 78,2 % cerrado. Además publica 52 al año.",
     }
-    a("| | Revista | Puntaje | Estado | Por qué en esa posición |\n|---|---|---:|---|---|\n")
-    etiquetas = {}
-    for etq, c in zip(("**Plan A**", "**Plan B**", "**Plan C**"), libres):
-        etiquetas[c["corto"]] = etq
-    for c in orden:
-        etq = etiquetas.get(c["corto"], "—")
-        est = "Disponible" if disponible(c) else "Ya en la lista de control"
-        a(f"| {etq} | {c['corto']} | {total(c):.1f} | {est} | {razones[c['corto']]} |\n")
+    a("\n---\n\n## 6 · Plan A, B, C y D\n\n")
+    elegidas = [c for c in CANDIDATAS if c["corto"] in PLANES]
+    a("**Los cuatro planes los fijó el autor el 01/09/2026**, entre las candidatas que superan "
+      "los tres filtros de entrada. No se derivan del puntaje: se derivan de una decisión, y "
+      "el puntaje queda a la vista al lado para que la diferencia se pueda discutir.\n\n")
+    a("| | Revista | Puntaje | Acceso | En la lista de control | Por qué en esa posición |\n"
+      "|---|---|---:|---|---|---|\n")
+    for etq in ("Plan A", "Plan B", "Plan C", "Plan D"):
+        c = next(x for x in CANDIDATAS if PLANES.get(x["corto"]) == etq)
+        est = ACCESO[c["corto"]][0]
+        nom = {"diamond": "Diamante", "hybrid": "Híbrido", "bronze": "**Bronce**"}[est]
+        lst = "No" if disponible(c) else "**Sí**"
+        a(f"| **{etq}** | {c['corto']} | {total(c):.1f} | {nom} | {lst} | "
+          f"{razones[c['corto']]} |\n")
+    a("\n### Dos tensiones que el autor asume, y conviene tener escritas\n\n")
+    a("**1. El Plan A es el acceso abierto más débil de los cuatro.** IJIES encabeza por "
+      "puntaje (87,5), volumen (556 al año) y precio (USD 300), pero su acceso abierto es "
+      "**bronce sin licencia**: gratis de leer mientras el editor quiera, sin derecho de "
+      "reutilización y fuera de DOAJ. BEEI —el Plan C— es el más sólido en esto: diamante, "
+      "CC BY-SA, cero cerrados y declaración explícita en su portada. Si lo que se busca es "
+      "acceso abierto en sentido estricto, el orden se invertiría.\n\n")
+    a("**2. Los Planes C y D figuran en la lista de control de la coordinación.** Es la razón "
+      "por la que ambos estaban excluidos hasta hoy. Volver a incluirlos es una decisión del "
+      "autor y **depende de una pregunta que sigue sin responder**: si la lista inhabilita la "
+      "revista o solo registra lo ya publicado. Conviene resolverla con la coordinación antes "
+      "de enviar a cualquiera de las dos.\n\n")
+    a("> Las tres descartadas por acceso —IJIT, ISJ e ICS— conservan su puntaje en las tablas "
+      "anteriores. No se borran: si el criterio de acceso abierto cambiara, vuelven "
+      "inmediatamente y sin recalcular nada.\n\n")
 
     a("\n---\n\n## 7 · Justificación\n\n")
-    pa, pb, pc = libres[0], libres[1], libres[2]
-    a(f"**{pa['corto']} encabeza con {total(pa):.1f} puntos sobre 100**, por delante de "
-      f"{pb['corto']} ({total(pb):.1f}) y {pc['corto']} ({total(pc):.1f}). Es la única candidata "
-      f"que supera a BEEI ({total(orden[0]):.1f}) en la puntuación absoluta.\n\n")
+    pa = next(c for c in CANDIDATAS if PLANES.get(c["corto"]) == "Plan A")
+    pc = next(c for c in CANDIDATAS if PLANES.get(c["corto"]) == "Plan C")
+    a(f"**{pa['corto']} encabeza con {total(pa):.1f} puntos sobre 100**, la puntuación más alta "
+      f"de las nueve candidatas, por delante de {pc['corto']} ({total(pc):.1f}). Con los tres "
+      f"filtros de entrada aplicados —legitimidad, lista de control y acceso abierto—, es "
+      f"además la única de las cuatro elegidas que no arrastra ninguna objeción "
+      f"administrativa.\n\n")
 
     a("### Volumen anual, contado en la misma fuente para todas\n\n")
     a("El volumen se midió con OpenAlex, que indexa el registro completo de cada revista, para que "
@@ -831,53 +906,76 @@ def generar_word() -> None:
           [5.4] + [2.5] * len(orden),
           fondos=[None] * len(CRITERIOS) + [F_OK, F_AMBER])
 
-    h1("5 · Plan A, B y C")
-    razones = {
-        "BEEI": "Mejor puntaje absoluto, pero **ya registrada** en la lista de control.",
-        "IJIES": "**El mayor volumen de las disponibles** —481, 556 y 467 artículos en 2024, "
-                 "2025 y 2026— con el APC más bajo del conjunto y publicación 2 meses después de "
-                 "aceptar. Con reserva: hay que confirmar que sigue activa en Scopus.",
-        "ISI": "El único **Q3** verificado de las disponibles, con 305 artículos al año y "
-               "revisión de unos 2 meses. Su APC de USD 850 y su menor producción temática la "
-               "dejan por debajo, pero cumple todos los criterios.",
-        "IJIT": "Volumen comparable con respaldo de Springer, que elimina el riesgo de "
-                "descontinuación, y **sin APC** por la vía de suscripción. Su tiempo de revisión "
-                "está sin verificar.",
-        "ISJ": "**No exige APC** por la vía de suscripción. Sube al primer puesto al corregirse "
-               "su capacidad, que no era de 21 artículos al año sino de 35-38. Su puntaje es el "
-               "más frágil del conjunto: 0 de 6 datos verificados en la revista.",
-        "CIT": "Puntúa menos, pero es la única con los seis datos verificados en la propia "
-               "revista, la única con Q2 y factor de impacto de Web of Science confirmados, y la "
-               "única que publica detección y mitigación. Su desventaja está declarada: 3-6 meses.",
-        "IJSSE": "Encaje idéntico al de BEEI y ciclo rápido, pero menor visibilidad y APC del "
-                 "doble. **Ya registrada** en la lista de control.",
-        "ICS": "El mayor prestigio (h-index 60), pero su centro editorial se inclina a factores "
-               "humanos y sus datos siguen sin verificar.",
-        "IJACSA": "La más rápida, pero de alcance genérico, con el APC más alto y **ya "
-                  "registrada** en la lista de control.",
-    }
-    libres = [c for c in orden if disponible(c)]
-    etq = {c["corto"]: e for e, c in zip(("Plan A", "Plan B", "Plan C"), libres)}
-    par("Los planes se asignan **solo entre las candidatas disponibles**. Los puntajes de las "
-        "tres ya registradas se conservan a la vista para que la comparación siga completa.",
-        size=8.2)
-    tabla(["", "Revista", "Puntaje", "Por qué en esa posición"],
-          [[etq.get(c["corto"], "—"), c["corto"], f"{total(c):.1f}", razones[c["corto"]]]
-           for c in orden],
-          [1.8, 2.4, 1.8, 11.8],
-          fondos=[F_OK if c["corto"] in etq else None for c in orden])
-    par("**El orden por debajo del Plan A es provisional.** Solo BEEI, IJSSE y CIT tienen sus "
-        "datos sensibles verificados en fuente primaria; ISJ, ICS e IJACSA se puntuaron con "
-        "fuentes secundarias, y completar esa verificación puede reordenarlas. La distancia "
-        "entre CIT (77,5) y ISJ (77,0) es de medio punto: menor que el margen que puede mover "
-        "una sola verificación pendiente.",
-        size=8.2, italic=True, color=DIM)
+    h1("5 · Filtro de acceso abierto")
+    par("Requisito del autor, 01/09/2026: si no es de acceso abierto, se descarta. Tercer "
+        "filtro de entrada — no toca ningún puntaje, decide quién sigue en carrera. Medido "
+        "con OpenAlex sobre todo lo publicado desde el 1 de enero de 2025, más una descarga "
+        "real de PDF sin sesión iniciada.", size=8.6)
+    nom = {"diamond": "Diamante", "hybrid": "Híbrido", "bronze": "Bronce", "closed": "Cerrado"}
+    filas_oa = []
+    for c in sorted(CANDIDATAS, key=lambda x: (not abierta(x),
+                                               ACCESO[x["corto"]][1] / ACCESO[x["corto"]][2])):
+        est, cer, tot, lic, _ = ACCESO[c["corto"]]
+        filas_oa.append([c["corto"], nom[est], f"{cer}/{tot} ({100*cer/tot:.1f} %)", lic,
+                         "Pasa" if abierta(c) else "DESCARTADA"])
+    tabla(["Revista", "Estado", "Cerrados", "Licencia", "Veredicto"], filas_oa,
+          [2.4, 2.4, 3.4, 3.0, 6.6],
+          fondos=[F_OK if abierta(c) else None
+                  for c in sorted(CANDIDATAS, key=lambda x: (not abierta(x),
+                                  ACCESO[x["corto"]][1] / ACCESO[x["corto"]][2]))])
+    par("Caen tres: IJIT, ISJ e ICS. Las tres eran gratuitas para el autor por la vía de "
+        "suscripción, y eso las hacía atractivas en el criterio de costo. El filtro deja a la "
+        "vista lo que ese ahorro costaba: entre el 78 % y el 91 % de sus artículos no los "
+        "puede leer nadie sin suscripción institucional. Gratis para el autor y abierto para "
+        "el lector son cosas distintas.", size=8.2, italic=True, color=DIM)
 
-    h1("6 · Justificación")
-    pa, pb = libres[0], libres[1]
-    par(f"**{pa['corto']} encabeza con {total(pa):.1f} puntos sobre 100**, por delante de "
-        f"{pb['corto']} ({total(pb):.1f}), y es la única candidata que supera a BEEI "
-        f"({total(orden[0]):.1f}) en puntuación absoluta.")
+    h1("6 · Plan A, B, C y D")
+    razones = {
+        "IJIES": "Mayor volumen del conjunto abierto (556 al año), APC más bajo (USD 300) y "
+                 "publicación 2 meses tras la aceptación. Reservas: confirmar Scopus, y su "
+                 "acceso abierto es bronce sin licencia, el más débil de los cuatro.",
+        "ISI": "Único Q3 verificado, 305 artículos al año, licencia CC BY y PDF de descarga "
+               "libre comprobada. En contra: APC de USD 850, 6-12 páginas y ningún plazo de "
+               "revisión declarado.",
+        "BEEI": "El acceso abierto más sólido de los cuatro: diamante, CC BY-SA, cero cerrados "
+                "y declaración explícita en portada. Segundo mejor puntaje absoluto y 682 "
+                "artículos en 2025. Su única objeción es administrativa: está en la lista.",
+        "IJSSE": "Encaje idéntico al de BEEI, ciclo rápido y licencia CC BY. Menor visibilidad "
+                 "(CiteScore 2,8 frente a 4,2) y APC del doble. También está en la lista.",
+        "CIT": "Fuera solo por volumen: 35 al año. Única con los seis datos verificados en la "
+               "propia revista, única en DOAJ y única con factor de impacto de Web of Science.",
+        "IJACSA": "Diamante y el mayor volumen (1.347 al año), pero de alcance genérico, APC "
+                  "más alto y ya registrada en la lista de control.",
+        "IJIT": "DESCARTADA por acceso: 90,8 % tras el muro de pago. Era el Plan B hasta hoy.",
+        "ISJ": "DESCARTADA por acceso: 88,1 % cerrado. Además, 62 artículos al año.",
+        "ICS": "DESCARTADA por acceso: 78,2 % cerrado. Además, 52 artículos al año.",
+    }
+    par("Los cuatro planes los fijó el autor el 01/09/2026 entre las candidatas que superan "
+        "los tres filtros. No se derivan del puntaje: se derivan de una decisión, y el "
+        "puntaje queda al lado para que la diferencia se pueda discutir.", size=8.2)
+    nomb = {"diamond": "Diamante", "hybrid": "Híbrido", "bronze": "Bronce"}
+    filas_pl = []
+    for e in ("Plan A", "Plan B", "Plan C", "Plan D"):
+        c = next(x for x in CANDIDATAS if PLANES.get(x["corto"]) == e)
+        filas_pl.append([e, c["corto"], f"{total(c):.1f}", nomb[ACCESO[c["corto"]][0]],
+                         "No" if disponible(c) else "SÍ", razones[c["corto"]]])
+    tabla(["", "Revista", "Puntaje", "Acceso", "En la lista", "Por qué en esa posición"],
+          filas_pl, [1.8, 2.0, 1.7, 2.0, 1.9, 8.4],
+          fondos=[F_OK] * 4)
+    par("Dos tensiones que el autor asume. (1) El Plan A es el acceso abierto más débil de los "
+        "cuatro: IJIES encabeza por puntaje, volumen y precio, pero su acceso es bronce sin "
+        "licencia y fuera de DOAJ; BEEI, el Plan C, es el más sólido en esto. Si se busca "
+        "acceso abierto en sentido estricto, el orden se invertiría. (2) Los Planes C y D "
+        "figuran en la lista de control de la coordinación, y volver a incluirlos depende de "
+        "una pregunta sin responder: si la lista inhabilita la revista o solo registra lo ya "
+        "publicado.", size=8.2, italic=True, color=DIM)
+
+    h1("7 · Justificación")
+    pa = next(c for c in CANDIDATAS if PLANES.get(c["corto"]) == "Plan A")
+    pc = next(c for c in CANDIDATAS if PLANES.get(c["corto"]) == "Plan C")
+    par(f"**{pa['corto']} encabeza con {total(pa):.1f} puntos sobre 100**, la puntuación más "
+        f"alta de las nueve, por delante de {pc['corto']} ({total(pc):.1f}). Es además la "
+        f"única de las cuatro elegidas sin objeción administrativa pendiente.")
     par("**Volumen anual, medido con OpenAlex para que todas se cuenten igual:**", size=8.6)
     tabla(["Revista", "2023", "2024", "2025", "2026", "Estado"],
           [["IJIES", "389", "481", "556", "467", "Disponible"],

@@ -25,52 +25,65 @@ comprobados uno por uno y **ausencia de la lista de revistas depredadoras**.
 
 Tras exigir **volumen alto** además de todo lo anterior:
 
-| | Revista | Editor | Puntaje | Cuartil | APC | Artículos/año |
+| | Revista | Editor | Puntaje | Acceso abierto | APC | Artículos/año |
 |---|---|---|---:|---|---|---:|
-| **A** | [Int. J. of Intelligent Engineering and Systems](https://inass.org/publications/) | INASS · Japón | **87,5** | **Q2** (CiteScore 3,3) | **USD 300** → 400 en octubre | **556** |
-| **B** | [Int. J. of Information Technology](https://link.springer.com/journal/41870) | **Springer Nature** · BVICAM | **79,5** | **Q2** (SJR) | **Ninguno** por suscripción — *el artículo queda tras el muro de pago*; abrirlo cuesta USD 3.390 | **640** |
-| **C** | [Ingénierie des Systèmes d'Information](https://www.iieta.org/Journals/ISI) | IIETA | 69,0 | **Q3** (SJR 0,236) | USD 850 | **305** |
+| **A** | [Int. J. of Intelligent Engineering and Systems](https://inass.org/publications/) | INASS · Japón | **87,5** | **Bronce** — sin licencia | **USD 300** → 400 en octubre | **556** |
+| **B** | [Ingénierie des Systèmes d'Information](https://www.iieta.org/Journals/ISI) | IIETA · Francia | 69,0 | Híbrido — **CC BY** | USD 850 | **305** |
+| **C** | [Bulletin of Electrical Engineering and Informatics](https://beei.org/index.php/EEI) | IAES · Indonesia | **84,0** | **Diamante — CC BY-SA** | USD 415 | **682** |
+| **D** | [Int. J. of Safety and Security Engineering](https://www.iieta.org/Journals/IJSSE) | IIETA · Canadá | 75,5 | Híbrido — **CC BY** | USD 850 | **253** |
 
-Ninguna está en tu Excel ni en la lista de depredadoras.
+**Orden fijado por el autor el 01/09/2026**, no derivado del puntaje.
+
+**Descartadas por no ser de acceso abierto:** IJIT (Springer, 90,8 % cerrado),
+ISJ (88,1 %) e ICS (78,2 %). Las tres eran gratuitas para el autor por la vía de
+suscripción; lo que ese ahorro costaba era que casi nadie pudiera leer el
+artículo.
+
+**Aviso sobre los Planes C y D:** BEEI e IJSSE **sí figuran en la lista de
+control de la coordinación** — era la razón por la que estaban excluidas. Antes
+de enviar a cualquiera de las dos hay que preguntar si la lista inhabilita la
+revista o solo registra lo ya publicado.
+
+Ninguna de las cuatro figura en la lista de revistas depredadoras.
 
 **ISJ, ICS y CIT quedaron fuera al exigir volumen** — publican 62, 52 y 35 al año.
 Conservan su puntaje y siguen documentadas en la matriz por si el volumen deja
 de ser un requisito: **ISJ puntúa 81,0**, más que ISI.
 
-## ¿Cumplen las tres todos los criterios? No del todo
+## ¿Cumplen las cuatro todos los criterios? No del todo
 
-| Criterio | IJIES | IJIT | ISI |
-|---|:--:|:--:|:--:|
-| Cuartil Q3 preferido, Q2 aceptable | ~ | ~ | ✔ |
-| Tema afín a ciberseguridad o redes | ✔ | ✔ | ✔ |
-| **Fácil de publicar** | ✘ | ? | ? |
-| Fuera de la lista de depredadoras | ✔ | ✔ | ✔ |
-| Fuera de tu lista de control | ✔ | ✔ | ✔ |
-| Publica muchos artículos al año | ✔ | ✔ | ✔ |
-| **Indexación vigente comprobada** | ✘ | ✔ | ✔ |
-| Enlace y fuente por cada dato | ✔ | ✘ | ~ |
+| Criterio | IJIES | ISI | BEEI | IJSSE |
+|---|:--:|:--:|:--:|:--:|
+| Cuartil Q3 preferido, Q2 aceptable | ~ | ✔ | ✔ | ✔ |
+| Tema afín a ciberseguridad o redes | ✔ | ✔ | ✔ | ✔ |
+| **Fácil de publicar** | ✘ | ? | ? | ? |
+| Fuera de la lista de depredadoras | ✔ | ✔ | ✔ | ✔ |
+| Fuera de tu lista de control | ✔ | ✔ | **✘** | **✘** |
+| Publica muchos artículos al año | ✔ | ✔ | ✔ | ✔ |
+| **Acceso abierto** | ~ | ✔ | ✔ | ✔ |
+| **Indexación vigente comprobada** | ✘ | ✔ | ✔ | ✔ |
+| Enlace y fuente por cada dato | ✔ | ~ | ✔ | ✔ |
 
 `✔` cumple · `~` parcial · `?` sin dato · `✘` no cumple o sin confirmar
 
-**Ninguna cumple los ocho**, y cada una falla en algo distinto:
+**Ninguna cumple los nueve**, y cada una falla en algo distinto:
 
 | Revista | Lo que le falta |
 |---|---|
-| **IJIES** | Confirmar que sigue en Scopus — es lo único que la separa de cumplirlo todo |
-| **IJIT** | Todo su expediente es de segunda mano: 0 de 6 datos en fuente primaria |
-| **ISI** | El APC más alto (USD 850), la menor producción temática, **6–12 páginas** de extensión y **sin plazo de revisión declarado**. Es Plan C **por eliminación**: la única otra candidata que supera el listón de volumen |
+| **IJIES** (A) | Confirmar que sigue en Scopus, y su acceso abierto es **bronce sin licencia**: se lee gratis mientras el editor quiera, sin derecho de reutilización y fuera de DOAJ |
+| **ISI** (B) | El APC más alto (USD 850), la menor producción temática, **6–12 páginas** de extensión y **sin plazo de revisión declarado** |
+| **BEEI** (C) | Solo una cosa, y es administrativa: **figura en tu lista de control**. En todo lo demás es la más sólida de las cuatro |
+| **IJSSE** (D) | **Figura en tu lista de control**, y pierde en visibilidad frente a BEEI (CiteScore 2,8 contra 4,2) con un APC del doble |
 
 **Dos criterios no se pueden cerrar con ninguna.**
 
 - **«Fácil de publicar»:** solo IJIES publica su tasa de aceptación, y es del
-  17,9 %. Las otras dos no publican el dato, así que su casilla queda en `?` y
+  17,9 %. Las otras tres no publican el dato, así que su casilla queda en `?` y
   no en `✔` — **no saber no es aprobar**.
-- **Cuartil Q3:** solo ISI lo tiene verificado. IJIES e IJIT son Q2, que
-  aceptaste como alternativa pero no era tu primera opción.
-
-> Si «fácil de publicar» pesa más que el volumen, hoy **no tengo evidencia para
-> responderte**. Pedir la tasa de aceptación por correo a IJIT e ISI serviría
-> más que cualquier reordenamiento de puntajes.
+- **DOAJ:** el registro de referencia del acceso abierto respondió HTTP 502 y
+  403 el 01/09/2026, así que no pude comprobarlo directamente. Según OpenAlex,
+  **ninguna de las cuatro figura en DOAJ** — solo CIT, que quedó fuera por
+  volumen. Conviene confirmarlo a mano en [doaj.org](https://doaj.org).
 
 ## Volumen anual, contado igual para todas
 
@@ -130,58 +143,70 @@ descontinuada invalidaría el artículo para cualquier requisito de indexación 
 programa. No pude verificarlo yo: Scimago y Scopus bloquean el acceso
 automatizado desde aquí. **Es una comprobación de dos minutos en tu navegador.**
 
-## Plan B — IJIT (Springer)
+## Plan B — ISI (IIETA)
 
-Existe precisamente para cubrir ese riesgo:
+| Dato | Valor | Fuente |
+|---|---|---|
+| Cuartil | **Q3** · SJR 0,236 · CiteScore 2,6 | [página de la revista](https://www.iieta.org/Journals/ISI) |
+| Acceso | **Híbrido con licencia CC BY** · PDF de descarga libre comprobada el 01/09/2026 | medición OpenAlex |
+| APC | **USD 850** | [cargos](https://www.iieta.org/journals/isi/Article%20Processing%20Charge) |
+| Periodicidad | 12 números al año · **305 artículos** en 2025 | medición OpenAlex |
+| Extensión | **6 a 12 páginas** · mínimo **20 referencias** | [instrucciones](https://www.iieta.org/journals/isi/Instructions%20for%20Authors) |
+| Revisión | Doble ciego, ≥2 expertos · **no declara plazo** | [política de revisión](https://www.iieta.org/journals/isi/Instructions%20for%20Authors) |
 
-- **Volumen comparable:** ~640 artículos al año, mensual.
-- **Editada por Springer Nature**, así que la descontinuación deja de ser una
-  preocupación.
-- **No cobra APC** por la vía de suscripción.
-- **Q2** por SJR · CiteScore 2,6.
-- 50 artículos desde 2024 sobre detección de intrusiones, anomalías o seguridad
-  de redes.
+Publica 11 artículos sobre detección de intrusiones desde 2024. Es la de menor
+puntaje de las cuatro (69,0): entra por acceso abierto verificado y volumen
+suficiente, no por mérito comparativo.
 
-### Qué se paga exactamente — verificado el 01/09/2026
+## Plan C — BEEI (IAES)
 
-Publicar **no cuesta nada**. IJIT es una revista **por suscripción con opción de
-acceso abierto** (Open Choice de Springer), no una revista de acceso abierto:
+**Es la más sólida de las cuatro en todo salvo en un punto, y ese punto es
+administrativo.**
 
-| Vía | Costo | Consecuencia |
+| Dato | Valor | Fuente |
+|---|---|---|
+| Cuartil | **Q1 por CiteScore (4,2)** · Q3 por SJR | [página de la revista](https://beei.org/index.php/EEI) |
+| Acceso | **Diamante · CC BY-SA** · **0 de 682** artículos de 2025 cerrados | medición OpenAlex |
+| Declaración | *«provides immediate open access to all published articles»* | [portada de BEEI](https://beei.org/index.php/EEI) |
+| APC | USD 415 | [cargos](https://beei.org/index.php/EEI/about) |
+| Periodicidad | Bimestral · **682 artículos** en 2025 | medición OpenAlex |
+
+**El único obstáculo: está en tu lista de control.** Si la coordinación confirma
+que la lista solo registra lo ya publicado y no inhabilita la revista, BEEI es
+objetivamente la mejor opción del expediente — mejor acceso abierto, mayor
+volumen, mejor CiteScore y APC intermedio.
+
+## Plan D — IJSSE (IIETA)
+
+| Dato | Valor | Fuente |
+|---|---|---|
+| Cuartil | Q3 · CiteScore 2,8 | [página de la revista](https://www.iieta.org/Journals/IJSSE) |
+| Acceso | Híbrido con licencia **CC BY** · 34 de 400 cerrados (8,5 %) | medición OpenAlex |
+| APC | **USD 850** | [cargos](https://www.iieta.org/journals/ijsse/Article%20Processing%20Charge) |
+| Periodicidad | **253 artículos** en 2025 | medición OpenAlex |
+
+Encaje temático idéntico al de BEEI —seguridad es su nombre— pero con la mitad
+de visibilidad y el doble de APC. **También figura en tu lista de control.**
+
+## Descartadas por no ser de acceso abierto — 01/09/2026
+
+Requisito nuevo del autor: si el lector no puede abrirlo, se descarta. Medido
+sobre todo lo publicado desde el 1 de enero de 2025 con OpenAlex, más una
+descarga real de PDF sin sesión iniciada.
+
+| Revista | Cerrados | Qué significa |
 |---|---:|---|
-| **Suscripción** (la normal) | **USD 0** | El artículo queda **tras el muro de pago**: solo lo lee quien tenga suscripción institucional |
-| **Open Choice** (opcional) | **USD 3.390 · EUR 2.690 · GBP 2.390** | Lectura libre para cualquiera |
+| **IJIT** · Springer | **648 / 714 — 90,8 %** | Era el Plan B. Publicar es gratis; abrir el artículo cuesta **USD 3.390** |
+| **ISJ** · Taylor & Francis | 89 / 101 — 88,1 % | Ya estaba fuera por volumen (62 al año) |
+| **ICS** · Emerald | 79 / 101 — 78,2 % | Ya estaba fuera por volumen (52 al año) |
 
-No es una estimación. Sobre los **714 artículos publicados desde 2025**, el
-reparto real de acceso es:
+Las tres compartían el mismo atractivo: **no cobran APC** por la vía de
+suscripción. El filtro deja a la vista lo que ese ahorro costaba.
 
-| Estado | Artículos | % |
-|---|---:|---:|
-| Cerrado (muro de pago) | **648** | **90,8 %** |
-| Acceso abierto pagado (*hybrid*) | 29 | 4,1 % |
-| *Bronze* | 34 | 4,8 % |
-| *Green* (repositorio) | 3 | 0,4 % |
-
-Fuente: OpenAlex, `filter=primary_location.source.issn:2511-2104,from_publication_date:2025-01-01&group_by=open_access.oa_status`. La ficha de la revista
-confirma `is_oa: false` y `is_in_doaj: false`.
-
-**Esto le costó 2,5 puntos.** La visibilidad baja de 8 a 7 y el total de **82,0
-a 79,5**: nueve de cada diez artículos de esta revista no los puede leer quien no
-pague. El costo sigue en 10 porque nadie te obliga a tomar la vía abierta. Cuesta
-distinguir las dos cosas — lo que pagas y quién te lee — pero mezclarlas ocultaría
-justo el intercambio que tienes que decidir.
-
-**El intercambio con el Plan A, en una línea:** IJIES cobra **USD 300** y tu
-artículo lo lee cualquiera; IJIT cobra **USD 0** y lo lee quien tenga suscripción.
-
-Su otro punto ciego es el opuesto al de IJIES: **su tiempo de revisión no está
-verificado**, y por eso puntúa 8 y no 10 en viabilidad. No se premia un dato que
-no se conoce — es la lección de la corrección anterior.
-
-> Springer bloquea el acceso automatizado (`Client Challenge` en `link.springer.com`
-> y `springer.com`, el mismo bloqueo que encontró Codex). El precio de Open Choice
-> queda marcado `~`: **confírmalo en la propia página de la revista antes de
-> decidir**. El reparto de acceso sí es medición directa.
+> **Gratis para el autor y abierto para el lector son cosas distintas**, y la
+> matriz las confundía hasta hoy: IJIT puntuaba 10 en costo por no cobrar, sin
+> que nada reflejara que el artículo quedaría cerrado. Se corrigió con un filtro
+> de entrada, no bajando puntajes, para que la matriz siga siendo reproducible.
 
 ## Descartadas al exigir volumen
 
@@ -299,8 +324,9 @@ puesto; si es largo, se queda donde está.
 | Si lo que manda es… | La revista es… |
 |---|---|
 | **El volumen y la rapidez** | **IJIES** — 556 al año, publica 2 meses tras aceptar |
-| **El presupuesto** | **IJIT**, **ISJ** o **ICS** — ninguna cobra por la vía de suscripción |
-| **Que la revista no caiga del índice** | **IJIT** — respaldo de Springer |
+| **El presupuesto** | **IJIES** — USD 300, el APC más bajo de las cuatro |
+| **Que la revista no caiga del índice** | **BEEI** — 682 artículos en 2025 y sin señales de discontinuación |
+| **Acceso abierto en sentido estricto** | **BEEI** — diamante, CC BY-SA, cero artículos cerrados |
 | **La certeza sobre el proceso editorial** | **CIT** — la única con los seis datos verificados |
 | **El encaje con un antecedente de detección *y respuesta*** | **CIT** |
 | **La fecha de sustentación** | **IJIES**, y solo si su cobertura en Scopus se confirma |
@@ -314,16 +340,21 @@ En orden de importancia:
    Es la comprobación que decide todo el Plan A, y no pude hacerla desde aquí:
    Scopus y Scimago bloquean el acceso automatizado. Mira que la cobertura
    llegue hasta el presente y que no haya aviso de discontinuación.
-2. **¿Cuánto tarda la revisión en IJIT?** Es lo único que le impide competir por
-   el primer puesto. Hoy puntúa 8 en viabilidad en vez de 10 porque el dato no
-   existe, no porque sea malo.
-3. **A la coordinación:** estar en la lista de control ¿inhabilita la revista o
-   solo la registra? Si solo la registra, BEEI (84,0) y IJACSA —que publica
-   **1 347 al año**— vuelven al juego.
-4. **A Taylor & Francis, Emerald y Springer:** ¿sigue abierta la vía de
-   suscripción sin APC? El puntaje de coste de 10 sostiene buena parte de la
-   posición de IJIT, ISJ e ICS.
-5. **Al editor de CIT:** ¿cuál es el APC vigente? Hay **dos cifras en
+2. **A la coordinación: estar en la lista de control ¿inhabilita la revista o
+   solo la registra?** De esto dependen los Planes C y D enteros. Si solo
+   registra, **BEEI pasa a ser la mejor opción del expediente**: mejor acceso
+   abierto, mayor volumen y mejor CiteScore que el actual Plan A.
+3. **¿Alguna de las cuatro está en [DOAJ](https://doaj.org)?** Según OpenAlex,
+   ninguna. No pude confirmarlo —DOAJ respondió 502 y 403 el 01/09/2026— y es
+   el registro que un jurado consultaría para dar por buena una revista de
+   acceso abierto.
+4. **A INASS (IJIES): ¿bajo qué licencia se publican sus artículos?** Hoy salen
+   como **bronce, sin licencia declarada**: gratis de leer, sin derecho de
+   reutilización. Si declaran CC BY, el Plan A deja de tener este punto débil.
+5. **A los editores de ISI e IJSSE:** tasa de aceptación y plazo de revisión.
+   Ninguna de las dos publica esos datos, y por eso su casilla de «fácil de
+   publicar» quedó en `?`.
+6. **Al editor de CIT:** ¿cuál es el APC vigente? Hay **dos cifras en
    circulación** — DOAJ declara 360 EUR y sus instrucciones para autores 600 EUR
    desde el 1 de septiembre de 2026.
 
@@ -421,6 +452,9 @@ Revisión completa, con las dos afirmaciones suyas que refuté:
 | 26/08/2026 | Capacidad de CIT | ≈55 artículos al año | **42–46** — conteo de los PDF de cada número |
 | 26/08/2026 | Extensión de ISI | «sin límite estrecho declarado» | **6–12 páginas** — [instrucciones oficiales](https://www.iieta.org/journals/isi/Instructions%20for%20Authors). Hallazgo de Codex |
 | 26/08/2026 | Plazo de revisión de ISI | «~2 meses» | **No lo declara.** Era un arrastre de la ficha de IJSSE |
+| 01/09/2026 | Criterio de acceso abierto | No existía como filtro | **Añadido como tercer filtro de entrada.** Descarta IJIT, ISJ e ICS (78–91 % de artículos cerrados) |
+| 01/09/2026 | Acceso de IJIES | Se daba por acceso abierto sin matiz | **Bronce, sin licencia declarada** y fuera de DOAJ: se lee gratis mientras el editor quiera |
+| 01/09/2026 | Orden de los planes | Derivado del puntaje | **Fijado por el autor**: A IJIES · B ISI · C BEEI · D IJSSE. BEEI e IJSSE reingresan pese a estar en la lista de control |
 | 01/09/2026 | Acceso de IJIT | «No cobra APC» a secas | Cierto, **pero el 90,8 % de sus artículos quedan tras el muro de pago**; abrirlo cuesta USD 3.390. Visibilidad 8→7, total 82,0→**79,5** |
 
 Los tres errores vinieron de **extractos de búsqueda o agregadores**, no de las

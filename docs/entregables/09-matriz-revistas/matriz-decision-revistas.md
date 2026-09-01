@@ -79,6 +79,33 @@ La coordinación mantiene una **lista de control de artículos** con 17 revistas
 
 ---
 
+## 2 ter · Filtro de acceso abierto
+
+**Requisito del autor, 01/09/2026: si no es de acceso abierto, se descarta.** Funciona como un tercer filtro de entrada, igual que los dos anteriores: no toca ningún puntaje, decide quién sigue en carrera.
+
+Se midió con un criterio único para las nueve: el estado de acceso de **todo lo que cada revista publicó desde el 1 de enero de 2025**, según OpenAlex, y una descarga real de PDF sin sesión iniciada para comprobar que el lector no topa con un muro.
+
+| Revista | Estado | Cerrados | Licencia | Veredicto | Detalle |
+|---|---|---:|---|---|---|
+| **BEEI** | Diamante | 0/682 (0.0 %) | CC BY-SA | Pasa | Su propia portada declara literalmente que «provides immediate open access to all published articles». Ninguno de sus 682 artículos de 2025 está cerrado |
+| **IJACSA** | Diamante | 0/2156 (0.0 %) | — | Pasa | Ninguno de sus 2.156 artículos de 2025 está cerrado |
+| **CIT** | Diamante | 0/58 (0.0 %) | CC BY | Pasa | **La única del conjunto registrada en DOAJ.** Ninguno de sus artículos cerrado |
+| **IJIES** | **Bronce** | 75/1098 (6.8 %) | ninguna | Pasa | Se lee gratis, pero en la categoría más débil de acceso abierto: **bronce**, sin ninguna licencia declarada. El editor puede retirar el acceso cuando quiera y el lector no tiene derechos de reutilización. Tampoco está en DOAJ |
+| **IJSSE** | Híbrido | 34/400 (8.5 %) | CC BY | Pasa | Los PDF se descargan sin pago y llevan licencia CC BY, pero la revista **no está registrada en DOAJ** y un 8,5 % de sus artículos figura como cerrado |
+| **ISI** | Híbrido | 81/521 (15.5 %) | CC BY | Pasa | Los PDF se descargan sin pago y llevan licencia CC BY, pero la revista **no está registrada en DOAJ** y un 15,5 % de sus artículos figura como cerrado |
+| **ICS** | **Cerrado** | 79/101 (78.2 %) | — | **Descartada** | **El 78,2 % de sus artículos está tras el muro de pago** |
+| **ISJ** | **Cerrado** | 89/101 (88.1 %) | — | **Descartada** | **El 88,1 % de sus artículos está tras el muro de pago** |
+| **IJIT** | **Cerrado** | 648/714 (90.8 %) | — | **Descartada** | **El 90,8 % de sus artículos está tras el muro de pago.** Abrir uno cuesta USD 3.390 por la vía Open Choice |
+
+**Tres candidatas caen aquí: IJIT, ISJ e ICS.** Las tres eran gratuitas para el autor por la vía de suscripción, y eso las hacía atractivas en el criterio de costo. El filtro deja a la vista lo que ese ahorro costaba: entre el 78 % y el 91 % de sus artículos no los puede leer nadie sin suscripción institucional.
+
+> **Gratis para el autor y abierto para el lector son cosas distintas**, y esta matriz las confundía hasta hoy. IJIT puntuaba 10 en costo por no cobrar APC, sin que nada reflejara que su artículo quedaría cerrado. El filtro corrige esa confusión sin retocar puntajes.
+
+> **No todas las que pasan son iguales.** BEEI y CIT son acceso abierto pleno: cero artículos cerrados y licencia declarada. IJIES es el caso más débil de las que pasan —**bronce, sin licencia**—: se lee gratis hoy porque el editor lo permite, no porque el lector tenga derecho. Y **solo CIT figura en DOAJ**, el registro de referencia del acceso abierto; ni IJIES, ni ISI, ni IJSSE, ni siquiera BEEI aparecen en él según OpenAlex. Ese dato no pudo confirmarse contra DOAJ, que respondió HTTP 502 y 403 el 01/09/2026: queda marcado como pendiente de comprobación manual.
+
+
+---
+
 ## 3 · Criterios y pesos
 
 | Criterio | Peso | Regla de puntuación |
@@ -305,33 +332,31 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 ---
 
-## 6 · Plan A, B y C
+## 6 · Plan A, B, C y D
 
-Los planes se asignan **solo entre las candidatas disponibles**, es decir, las que superan el filtro de legitimidad y además no figuran en la lista de control. Los puntajes de las tres ya registradas se conservan a la vista para que la comparación siga siendo completa.
+**Los cuatro planes los fijó el autor el 01/09/2026**, entre las candidatas que superan los tres filtros de entrada. No se derivan del puntaje: se derivan de una decisión, y el puntaje queda a la vista al lado para que la diferencia se pueda discutir.
 
-> **El orden por debajo del Plan A es provisional.** Solo BEEI, IJSSE y CIT tienen sus datos sensibles verificados en fuente primaria; ISJ, ICS e IJACSA se puntuaron con fuentes secundarias. Completar esa verificación **puede reordenar las posiciones siguientes**, y por eso la sección 8 enumera lo que falta comprobar antes del envío.
->
-> Se presenta así, con las lagunas a la vista, porque ocultar la diferencia de verificación entre candidatas sería el error más grave de esta matriz.
->
-> **La distancia entre el Plan A y el Plan B es de medio punto** (77,5 frente a 77,0), menor que lo que puede mover una sola verificación pendiente. Lo que hoy separa a las dos no es el puntaje sino la evidencia: CIT tiene 6 de 6 datos verificados en la propia revista y ISJ tiene 0 de 6.
+| | Revista | Puntaje | Acceso | En la lista de control | Por qué en esa posición |
+|---|---|---:|---|---|---|
+| **Plan A** | IJIES | 87.5 | **Bronce** | No | **El mayor volumen del conjunto abierto** —481, 556 y 467 artículos en 2024, 2025 y 2026— con el APC más bajo (USD 300) y publicación 2 meses después de aceptar. Dos reservas: hay que confirmar que sigue activa en Scopus, y su acceso abierto es **bronce sin licencia**, el más débil de los cuatro planes. |
+| **Plan B** | ISI | 69.0 | Híbrido | No | El único **Q3** verificado, con 305 artículos al año, licencia **CC BY** y PDF de descarga libre comprobada. En contra: APC de USD 850, extensión de 6 a 12 páginas y **ningún plazo de revisión declarado**. |
+| **Plan C** | BEEI | 84.0 | Diamante | **Sí** | **El acceso abierto más sólido de los cuatro** —diamante, CC BY-SA, cero artículos cerrados y declaración explícita en su portada— con el segundo mejor puntaje absoluto (84,0) y 682 artículos en 2025. Su única objeción es administrativa: **figura en la lista de control**. |
+| **Plan D** | IJSSE | 75.5 | Híbrido | **Sí** | Encaje temático idéntico al de BEEI y ciclo editorial rápido, con licencia CC BY. Pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC de USD 850 duplica al de BEEI. También **figura en la lista de control**. |
 
-| | Revista | Puntaje | Estado | Por qué en esa posición |
-|---|---|---:|---|---|
-| **Plan A** | IJIES | 87.5 | Disponible | **El mayor volumen de las disponibles** —481, 556 y 467 artículos en 2024, 2025 y 2026— con el APC más bajo del conjunto y publicación 2 meses después de aceptar. Con reserva: hay que confirmar que sigue activa en Scopus. |
-| — | BEEI | 84.0 | Ya en la lista de control | Gana en tres de los cinco criterios y tiene 5 de 6 datos **verificados en fuente primaria**. Mejor combinación de encaje temático, visibilidad y coste, pero ya figura en la lista de control. |
-| **Plan B** | ISJ | 81.0 | Disponible | **No exige APC** por la vía de suscripción y empata en pertinencia con las mejores. Sube al primer puesto al corregirse su capacidad, que no era de 21 artículos al año sino de 35–38. Su puntaje es el más frágil: 0 de 6 datos verificados en la revista, y el tiempo de revisión sin comprobar. |
-| **Plan C** | IJIT | 79.5 | Disponible | Volumen comparable con respaldo de Springer, que elimina el riesgo de descontinuación, y **sin APC** por la vía de suscripción. Su tiempo de revisión está sin verificar. |
-| — | CIT | 77.5 | Disponible | Puntúa menos, pero es la **única con los seis datos verificados en la propia revista**, la única con Q2 y factor de impacto de Web of Science confirmados, y la única que publica detección **y mitigación**. Su desventaja está declarada: 3–6 meses hasta la primera decisión. |
-| — | IJSSE | 75.5 | Ya en la lista de control | Encaje temático idéntico al de BEEI y ciclo editorial rápido, pero pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC duplica al de BEEI. Ya figura en la lista de control. |
-| — | ICS | 73.5 | Disponible | El mayor prestigio de la lista (h-index 60), pero su centro editorial se inclina a factores humanos y buena parte de sus datos sigue sin verificar. |
-| — | IJACSA | 69.5 | Ya en la lista de control | La más rápida de todas, pero de alcance genérico, con el APC más alto y ya registrada en la lista de control. |
-| — | ISI | 69.0 | Disponible | El único **Q3** verificado de las disponibles, con 305 artículos al año y revisión de unos 2 meses. Su APC de USD 850 y su menor producción temática la dejan por debajo, pero cumple todos los criterios. |
+### Dos tensiones que el autor asume, y conviene tener escritas
+
+**1. El Plan A es el acceso abierto más débil de los cuatro.** IJIES encabeza por puntaje (87,5), volumen (556 al año) y precio (USD 300), pero su acceso abierto es **bronce sin licencia**: gratis de leer mientras el editor quiera, sin derecho de reutilización y fuera de DOAJ. BEEI —el Plan C— es el más sólido en esto: diamante, CC BY-SA, cero cerrados y declaración explícita en su portada. Si lo que se busca es acceso abierto en sentido estricto, el orden se invertiría.
+
+**2. Los Planes C y D figuran en la lista de control de la coordinación.** Es la razón por la que ambos estaban excluidos hasta hoy. Volver a incluirlos es una decisión del autor y **depende de una pregunta que sigue sin responder**: si la lista inhabilita la revista o solo registra lo ya publicado. Conviene resolverla con la coordinación antes de enviar a cualquiera de las dos.
+
+> Las tres descartadas por acceso —IJIT, ISJ e ICS— conservan su puntaje en las tablas anteriores. No se borran: si el criterio de acceso abierto cambiara, vuelven inmediatamente y sin recalcular nada.
+
 
 ---
 
 ## 7 · Justificación
 
-**IJIES encabeza con 87.5 puntos sobre 100**, por delante de ISJ (81.0) y IJIT (79.5). Es la única candidata que supera a BEEI (87.5) en la puntuación absoluta.
+**IJIES encabeza con 87.5 puntos sobre 100**, la puntuación más alta de las nueve candidatas, por delante de BEEI (84.0). Con los tres filtros de entrada aplicados —legitimidad, lista de control y acceso abierto—, es además la única de las cuatro elegidas que no arrastra ninguna objeción administrativa.
 
 ### Volumen anual, contado en la misma fuente para todas
 
