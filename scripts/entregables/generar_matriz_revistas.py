@@ -44,7 +44,8 @@ CANDIDATAS = [
             "CiteScore 2025": ("4,2 · percentil 65 en Computer Networks and Communications", "✔"),
             "Cuartil SJR": ("Q3 · la revista declara además Q1 por CiteScore", "~"),
             "Revisión": ("Single-blind, ≥2 revisores; 8–12 semanas declaradas", "✔"),
-            "Periodicidad": ("Bimestral · 76 artículos en el número de agosto de 2026", "✔"),
+            "Periodicidad": ("Bimestral · 76 artículos en el número de agosto de 2026 · "
+                             "**377 artículos en 2025**, 453 en 2024 y 415 en 2023", "✔"),
             "APC": ("USD 415 hasta 8 páginas · USD 50 por página adicional · USD 830 si es autor único", "✔"),
             "Plantilla": ("DOCX oficial disponible", "✔"),
         },
@@ -52,8 +53,10 @@ CANDIDATAS = [
             "pertinencia": (9, "Su alcance declara explícitamente redes de comunicaciones, seguridad de "
                                "redes, aprendizaje automático y ciberseguridad: los cuatro ejes del artículo"),
             "visibilidad": (8, "CiteScore 4,2 y percentil 65, el más alto de las candidatas verificadas"),
-            "viabilidad": (9, "Bimestral con 76 artículos por número: alta capacidad y ciclo declarado corto"),
-            "costo": (8, "USD 415 con coautoría, el más bajo de las candidatas con APC"),
+            "viabilidad": (9, "Bimestral con 76 artículos por número y ciclo declarado de 8 a 12 "
+                              "semanas. Su volumen anual (377) es menor que el de IJIES (556)"),
+            "costo": (8, "USD 415 con coautoría —USD 830 si fuera autor único—, por encima de "
+                         "los USD 300 de IJIES y por debajo de los USD 850 de ISI e IJSSE"),
             "formato": (7, "Plantilla disponible, pero el límite base de 8 páginas obliga a comprimir o "
                            "a pagar por página adicional"),
         },
@@ -232,7 +235,7 @@ CANDIDATAS = [
             "Cuartil SJR": ("pendiente de verificar en Scimago, hoy bloqueado por Cloudflare", "?"),
             "Revisión": ("Publicación unos 2 meses después de la aceptación · **tasa de aceptación "
                          "declarada: 17,9 % en 2025, 17,8 % en 2024, 14,1 % en 2023**", "✔"),
-            "Periodicidad": ("**Mensual desde 2025** · **481 · 556 · 467 artículos** en 2024 · 2025 · "
+            "Periodicidad": ("**Mensual desde 2025** · **481 · 556 · 542 artículos** en 2024 · 2025 · "
                              "2026, el mayor volumen de las candidatas disponibles", "✔"),
             "APC": ("**USD 300** · **USD 400 desde el 1 de octubre de 2026** · USD 100 extra si no se "
                     "usa su plantilla · USD 50 por página a partir de la 10.ª", "✔"),
@@ -246,7 +249,8 @@ CANDIDATAS = [
                                "título**. Ninguna otra candidata se acerca a ese volumen temático"),
             "visibilidad": (8, "CiteScore 3,3 y Q2 en sus dos categorías. Por debajo del 4,2 de BEEI y "
                                "CIT, pero con cuartil verificado en la propia revista"),
-            "viabilidad": (10, "Mensual, con el mayor volumen del conjunto y publicación unos 2 meses "
+            "viabilidad": (10, "Mensual, con el mayor volumen de las candidatas de acceso abierto "
+                               "—556 al año, frente a 377 de BEEI— y publicación unos 2 meses "
                                "después de aceptar. **Y publica su tasa de aceptación**, que ninguna "
                                "otra hace: 17,9 %"),
             "costo": (9, "USD 300 hoy y USD 400 desde octubre: el más bajo de todas las candidatas que "
@@ -284,7 +288,7 @@ CANDIDATAS = [
                                "por debajo de IJIES y **el 90,8 % de sus artículos quedan tras "
                                "el muro de pago**: la vía gratuita reduce el alcance real del "
                                "trabajo"),
-            "viabilidad": (8, "Mensual y con el mayor volumen absoluto del conjunto —unos 640 "
+            "viabilidad": (8, "Mensual y con el mayor volumen absoluto de las nueve —unos 640 "
                               "artículos al año—, pero **su tiempo de revisión está sin verificar**: "
                               "no se le puntúa 10 por un dato que no se conoce"),
             "costo": (10, "Sin APC obligatorio por la vía de suscripción. El acceso abierto "
@@ -345,7 +349,8 @@ UMBRAL_VOLUMEN = 200  # "que publique muchos artículos al año"
 ACCESO = {
     "BEEI":   ("diamond", 0,   682,  "CC BY-SA",
                "Su propia portada declara literalmente que «provides immediate open access to "
-               "all published articles». Ninguno de sus 682 artículos de 2025 está cerrado"),
+               "all published articles». Ninguno de sus 682 artículos publicados desde enero "
+               "de 2025 está cerrado"),
     "IJACSA": ("diamond", 0,   2156, "—",
                "Ninguno de sus 2.156 artículos de 2025 está cerrado"),
     "CIT":    ("diamond", 0,   58,   "CC BY",
@@ -550,8 +555,8 @@ def main() -> None:
     a("> `✔` verificado en fuente primaria · `~` fuente secundaria · `?` pendiente\n")
 
     razones = {
-        "IJIES": "**El mayor volumen del conjunto abierto** —481, 556 y 467 artículos en 2024, "
-                 "2025 y 2026— con el APC más bajo (USD 300) y publicación 2 meses después de "
+        "IJIES": "**El mayor volumen del conjunto abierto** —556 al año en 2025, frente a "
+                 "los 377 de BEEI— con el APC más bajo (USD 300) y publicación 2 meses después de "
                  "aceptar. Dos reservas: hay que confirmar que sigue activa en Scopus, y su "
                  "acceso abierto es **bronce sin licencia**, el más débil de los cuatro planes.",
         "ISI": "El único **Q3** verificado, con 305 artículos al año, licencia **CC BY** y PDF "
@@ -559,7 +564,7 @@ def main() -> None:
                "páginas y **ningún plazo de revisión declarado**.",
         "BEEI": "**El acceso abierto más sólido de los cuatro** —diamante, CC BY-SA, cero "
                 "artículos cerrados y declaración explícita en su portada— con el segundo mejor "
-                "puntaje absoluto (84,0) y 682 artículos en 2025. Su única objeción es "
+                "puntaje absoluto (84,0) y 377 artículos en 2025. Su única objeción es "
                 "administrativa: **figura en la lista de control**.",
         "IJSSE": "Encaje temático idéntico al de BEEI y ciclo editorial rápido, con licencia "
                  "CC BY. Pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC de USD 850 "
@@ -619,7 +624,7 @@ def main() -> None:
       "las cifras sean comparables entre sí y no dependan de cómo publique su índice cada editorial.\n\n")
     a("| Revista | 2023 | 2024 | 2025 | 2026 | Estado |\n|---|---:|---:|---:|---:|---|\n")
     for nom, c23, c24, c25, c26, est in [
-            ("**IJIES**", 389, 481, 556, 467, "Disponible"),
+            ("**IJIES**", 389, 481, 556, 542, "Plan A"),
             ("**IJIT**", "—", 661, 640, "—", "Disponible"),
             ("IJACSA", 1447, 1539, 1347, 707, "Ya en la lista"),
             ("BEEI", 415, 453, 377, 305, "Ya en la lista"),
@@ -953,7 +958,7 @@ def generar_word() -> None:
                "libre comprobada. En contra: APC de USD 850, 6-12 páginas y ningún plazo de "
                "revisión declarado.",
         "BEEI": "El acceso abierto más sólido de los cuatro: diamante, CC BY-SA, cero cerrados "
-                "y declaración explícita en portada. Segundo mejor puntaje absoluto y 682 "
+                "y declaración explícita en portada. Segundo mejor puntaje absoluto y 377 "
                 "artículos en 2025. Su única objeción es administrativa: está en la lista.",
         "IJSSE": "Encaje idéntico al de BEEI, ciclo rápido y licencia CC BY. Menor visibilidad "
                  "(CiteScore 2,8 frente a 4,2) y APC del doble. También está en la lista.",
@@ -993,7 +998,7 @@ def generar_word() -> None:
         f"única de las cuatro elegidas sin objeción administrativa pendiente.")
     par("**Volumen anual, medido con OpenAlex para que todas se cuenten igual:**", size=8.6)
     tabla(["Revista", "2023", "2024", "2025", "2026", "Estado"],
-          [["IJIES", "389", "481", "556", "467", "Disponible"],
+          [["IJIES", "389", "481", "556", "542", "Plan A"],
            ["IJIT", "—", "661", "640", "—", "Disponible"],
            ["IJACSA", "1447", "1539", "1347", "707", "Ya en la lista"],
            ["BEEI", "415", "453", "377", "305", "Ya en la lista"],

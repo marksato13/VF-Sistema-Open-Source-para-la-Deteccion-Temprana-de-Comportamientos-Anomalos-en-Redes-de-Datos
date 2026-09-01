@@ -87,7 +87,7 @@ Se midió con un criterio único para las nueve: el estado de acceso de **todo l
 
 | Revista | Estado | Cerrados | Licencia | Veredicto | Detalle |
 |---|---|---:|---|---|---|
-| **BEEI** | Diamante | 0/682 (0.0 %) | CC BY-SA | Pasa | Su propia portada declara literalmente que «provides immediate open access to all published articles». Ninguno de sus 682 artículos de 2025 está cerrado |
+| **BEEI** | Diamante | 0/682 (0.0 %) | CC BY-SA | Pasa | Su propia portada declara literalmente que «provides immediate open access to all published articles». Ninguno de sus 682 artículos publicados desde enero de 2025 está cerrado |
 | **IJACSA** | Diamante | 0/2156 (0.0 %) | — | Pasa | Ninguno de sus 2.156 artículos de 2025 está cerrado |
 | **CIT** | Diamante | 0/58 (0.0 %) | CC BY | Pasa | **La única del conjunto registrada en DOAJ.** Ninguno de sus artículos cerrado |
 | **IJIES** | **Bronce** | 75/1098 (6.8 %) | ninguna | Pasa | Se lee gratis, pero en la categoría más débil de acceso abierto: **bronce**, sin ninguna licencia declarada. El editor puede retirar el acceso cuando quiera y el lector no tiene derechos de reutilización. Tampoco está en DOAJ |
@@ -162,7 +162,7 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | CiteScore 2025 | 3,3 · percentil 62 en General Engineering y 52 en General Computer Science, **Q2 en ambas** | ✔ |
 | Cuartil SJR | pendiente de verificar en Scimago, hoy bloqueado por Cloudflare | ? |
 | Revisión | Publicación unos 2 meses después de la aceptación · **tasa de aceptación declarada: 17,9 % en 2025, 17,8 % en 2024, 14,1 % en 2023** | ✔ |
-| Periodicidad | **Mensual desde 2025** · **481 · 556 · 467 artículos** en 2024 · 2025 · 2026, el mayor volumen de las candidatas disponibles | ✔ |
+| Periodicidad | **Mensual desde 2025** · **481 · 556 · 542 artículos** en 2024 · 2025 · 2026, el mayor volumen de las candidatas disponibles | ✔ |
 | APC | **USD 300** · **USD 400 desde el 1 de octubre de 2026** · USD 100 extra si no se usa su plantilla · USD 50 por página a partir de la 10.ª | ✔ |
 | Plantilla | `IJIES_Format.docx` obligatoria · **límite de 10 páginas** antes del recargo | ✔ |
 
@@ -170,7 +170,7 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 |---|:--:|---|
 | Pertinencia temática | **9** | Su alcance nombra ingeniería de redes y computación inteligente, pero lo que decide es su producción: **86 artículos desde 2024 con «intrusion detection», «anomaly detection» o «network security» en el título**. Ninguna otra candidata se acerca a ese volumen temático |
 | Visibilidad bibliométrica | **8** | CiteScore 3,3 y Q2 en sus dos categorías. Por debajo del 4,2 de BEEI y CIT, pero con cuartil verificado en la propia revista |
-| Viabilidad editorial | **10** | Mensual, con el mayor volumen del conjunto y publicación unos 2 meses después de aceptar. **Y publica su tasa de aceptación**, que ninguna otra hace: 17,9 % |
+| Viabilidad editorial | **10** | Mensual, con el mayor volumen de las candidatas de acceso abierto —556 al año, frente a 377 de BEEI— y publicación unos 2 meses después de aceptar. **Y publica su tasa de aceptación**, que ninguna otra hace: 17,9 % |
 | Costo y accesibilidad | **9** | USD 300 hoy y USD 400 desde octubre: el más bajo de todas las candidatas que cobran, por debajo incluso de los USD 415 de BEEI |
 | Compatibilidad formal | **7** | Plantilla propia obligatoria y **límite de 10 páginas**: la mitad que CIT. Este artículo pagaría páginas adicionales |
 
@@ -183,7 +183,7 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | CiteScore 2025 | 4,2 · percentil 65 en Computer Networks and Communications | ✔ |
 | Cuartil SJR | Q3 · la revista declara además Q1 por CiteScore | ~ |
 | Revisión | Single-blind, ≥2 revisores; 8–12 semanas declaradas | ✔ |
-| Periodicidad | Bimestral · 76 artículos en el número de agosto de 2026 | ✔ |
+| Periodicidad | Bimestral · 76 artículos en el número de agosto de 2026 · **377 artículos en 2025**, 453 en 2024 y 415 en 2023 | ✔ |
 | APC | USD 415 hasta 8 páginas · USD 50 por página adicional · USD 830 si es autor único | ✔ |
 | Plantilla | DOCX oficial disponible | ✔ |
 
@@ -191,8 +191,8 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 |---|:--:|---|
 | Pertinencia temática | **9** | Su alcance declara explícitamente redes de comunicaciones, seguridad de redes, aprendizaje automático y ciberseguridad: los cuatro ejes del artículo |
 | Visibilidad bibliométrica | **8** | CiteScore 4,2 y percentil 65, el más alto de las candidatas verificadas |
-| Viabilidad editorial | **9** | Bimestral con 76 artículos por número: alta capacidad y ciclo declarado corto |
-| Costo y accesibilidad | **8** | USD 415 con coautoría, el más bajo de las candidatas con APC |
+| Viabilidad editorial | **9** | Bimestral con 76 artículos por número y ciclo declarado de 8 a 12 semanas. Su volumen anual (377) es menor que el de IJIES (556) |
+| Costo y accesibilidad | **8** | USD 415 con coautoría —USD 830 si fuera autor único—, por encima de los USD 300 de IJIES y por debajo de los USD 850 de ISI e IJSSE |
 | Compatibilidad formal | **7** | Plantilla disponible, pero el límite base de 8 páginas obliga a comprimir o a pagar por página adicional |
 
 ### 3. Information Security Journal: A Global Perspective — 81.0 puntos
@@ -233,7 +233,7 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 |---|:--:|---|
 | Pertinencia temática | **8** | Alcance amplio de tecnologías de la información, menos específico que IJIES, pero con **50 artículos desde 2024** cuyo título nombra detección de intrusiones, de anomalías o seguridad de redes |
 | Visibilidad bibliométrica | **7** | Q2 por SJR y respaldo de Springer Nature, pero CiteScore 2,6 está por debajo de IJIES y **el 90,8 % de sus artículos quedan tras el muro de pago**: la vía gratuita reduce el alcance real del trabajo |
-| Viabilidad editorial | **8** | Mensual y con el mayor volumen absoluto del conjunto —unos 640 artículos al año—, pero **su tiempo de revisión está sin verificar**: no se le puntúa 10 por un dato que no se conoce |
+| Viabilidad editorial | **8** | Mensual y con el mayor volumen absoluto de las nueve —unos 640 artículos al año—, pero **su tiempo de revisión está sin verificar**: no se le puntúa 10 por un dato que no se conoce |
 | Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción. El acceso abierto opcional cuesta USD 3.390, pero nadie está obligado a tomarlo |
 | Compatibilidad formal | **7** | Formato estándar de Springer; requisitos concretos sin verificar |
 
@@ -352,9 +352,9 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 | | Revista | Puntaje | Acceso | En la lista de control | Por qué en esa posición |
 |---|---|---:|---|---|---|
-| **Plan A** | IJIES | 87.5 | **Bronce** | No | **El mayor volumen del conjunto abierto** —481, 556 y 467 artículos en 2024, 2025 y 2026— con el APC más bajo (USD 300) y publicación 2 meses después de aceptar. Dos reservas: hay que confirmar que sigue activa en Scopus, y su acceso abierto es **bronce sin licencia**, el más débil de los cuatro planes. |
+| **Plan A** | IJIES | 87.5 | **Bronce** | No | **El mayor volumen del conjunto abierto** —556 al año en 2025, frente a los 377 de BEEI— con el APC más bajo (USD 300) y publicación 2 meses después de aceptar. Dos reservas: hay que confirmar que sigue activa en Scopus, y su acceso abierto es **bronce sin licencia**, el más débil de los cuatro planes. |
 | **Plan B** | ISI | 69.0 | Híbrido | No | El único **Q3** verificado, con 305 artículos al año, licencia **CC BY** y PDF de descarga libre comprobada. En contra: APC de USD 850, extensión de 6 a 12 páginas y **ningún plazo de revisión declarado**. |
-| **Plan C** | BEEI | 84.0 | Diamante | **Sí** | **El acceso abierto más sólido de los cuatro** —diamante, CC BY-SA, cero artículos cerrados y declaración explícita en su portada— con el segundo mejor puntaje absoluto (84,0) y 682 artículos en 2025. Su única objeción es administrativa: **figura en la lista de control**. |
+| **Plan C** | BEEI | 84.0 | Diamante | **Sí** | **El acceso abierto más sólido de los cuatro** —diamante, CC BY-SA, cero artículos cerrados y declaración explícita en su portada— con el segundo mejor puntaje absoluto (84,0) y 377 artículos en 2025. Su única objeción es administrativa: **figura en la lista de control**. |
 | **Plan D** | IJSSE | 75.5 | Híbrido | **Sí** | Encaje temático idéntico al de BEEI y ciclo editorial rápido, con licencia CC BY. Pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC de USD 850 duplica al de BEEI. También **figura en la lista de control**. |
 
 ### Dos tensiones que el autor asume, y conviene tener escritas
@@ -378,7 +378,7 @@ El volumen se midió con OpenAlex, que indexa el registro completo de cada revis
 
 | Revista | 2023 | 2024 | 2025 | 2026 | Estado |
 |---|---:|---:|---:|---:|---|
-| **IJIES** | 389 | 481 | 556 | 467 | Disponible |
+| **IJIES** | 389 | 481 | 556 | 542 | Plan A |
 | **IJIT** | — | 661 | 640 | — | Disponible |
 | IJACSA | 1447 | 1539 | 1347 | 707 | Ya en la lista |
 | BEEI | 415 | 453 | 377 | 305 | Ya en la lista |

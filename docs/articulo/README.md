@@ -21,6 +21,12 @@ Se buscó una revista fuera de esa lista, aplicando los mismos filtros de
 siempre: indexación vigente, volumen real de publicación, artículos afines
 comprobados uno por uno y **ausencia de la lista de revistas depredadoras**.
 
+> **Actualización del 01/09/2026.** El autor decidió readmitir a BEEI e IJSSE
+> como Planes C y D pese a figurar en la lista, y añadió el **acceso abierto**
+> como requisito eliminatorio. Estar en la lista pasa a ser una **advertencia
+> pendiente de resolver con la coordinación**, no una exclusión automática. Lo
+> que sigue refleja esa decisión.
+
 ## Las revistas disponibles, ordenadas
 
 Tras exigir **volumen alto** además de todo lo anterior:
@@ -29,7 +35,7 @@ Tras exigir **volumen alto** además de todo lo anterior:
 |---|---|---|---:|---|---|---:|
 | **A** | [Int. J. of Intelligent Engineering and Systems](https://inass.org/publications/) | INASS · Japón | **87,5** | **Bronce** — sin licencia | **USD 300** → 400 en octubre | **556** |
 | **B** | [Ingénierie des Systèmes d'Information](https://www.iieta.org/Journals/ISI) | IIETA · Francia | 69,0 | Híbrido — **CC BY** | USD 850 | **305** |
-| **C** | [Bulletin of Electrical Engineering and Informatics](https://beei.org/index.php/EEI) | IAES · Indonesia | **84,0** | **Diamante — CC BY-SA** | USD 415 | **682** |
+| **C** | [Bulletin of Electrical Engineering and Informatics](https://beei.org/index.php/EEI) | IAES · Indonesia | **84,0** | **Diamante — CC BY-SA** | USD 415 | 377 |
 | **D** | [Int. J. of Safety and Security Engineering](https://www.iieta.org/Journals/IJSSE) | IIETA · Canadá | 75,5 | Híbrido — **CC BY** | USD 850 | **253** |
 
 **Orden fijado por el autor el 01/09/2026**, no derivado del puntaje.
@@ -46,9 +52,14 @@ revista o solo registra lo ya publicado.
 
 Ninguna de las cuatro figura en la lista de revistas depredadoras.
 
-**ISJ, ICS y CIT quedaron fuera al exigir volumen** — publican 62, 52 y 35 al año.
-Conservan su puntaje y siguen documentadas en la matriz por si el volumen deja
-de ser un requisito: **ISJ puntúa 81,0**, más que ISI.
+**CIT quedó fuera al exigir volumen** — publica 35 al año frente a los 556 de
+IJIES. Conserva su puntaje (77,5) y sigue documentada más abajo: si el volumen
+dejara de ser un requisito, vuelve, y es la **única candidata registrada en
+DOAJ**.
+
+**ISJ e ICS caen por partida doble**: volumen (62 y 52 al año) *y* acceso (88,1 %
+y 78,2 % de artículos cerrados). El puntaje de 81,0 de ISJ ya no sirve como
+alternativa: no supera el filtro de entrada.
 
 ## ¿Cumplen las cuatro todos los criterios? No del todo
 
@@ -81,10 +92,9 @@ de ser un requisito: **ISJ puntúa 81,0**, más que ISI.
 - **«Fácil de publicar»:** solo IJIES publica su tasa de aceptación, y es del
   17,9 %. Las otras tres no publican el dato, así que su casilla queda en `?` y
   no en `✔` — **no saber no es aprobar**.
-- **DOAJ:** el registro de referencia del acceso abierto respondió HTTP 502 y
-  403 el 01/09/2026, así que no pude comprobarlo directamente. Según OpenAlex,
-  **ninguna de las cuatro figura en DOAJ** — solo CIT, que quedó fuera por
-  volumen. Conviene confirmarlo a mano en [doaj.org](https://doaj.org).
+- **DOAJ:** **ninguna de las cuatro está registrada.** Comprobado por tres vías
+  independientes con control positivo — ver la sección
+  [«DOAJ: ninguna de las cuatro está registrada»](#doaj-ninguna-de-las-cuatro-está-registrada--01092026).
 
 ## Volumen anual, contado igual para todas
 
@@ -92,20 +102,26 @@ Medido con **OpenAlex**, que indexa el registro completo de cada revista, para
 que las cifras sean comparables y no dependan de cómo publique su índice cada
 editorial.
 
-| Revista | 2023 | 2024 | 2025 | 2026 | |
+| Revista | 2023 | 2024 | 2025 | 2026 | Estado |
 |---|---:|---:|---:|---:|---|
-| **IJIES** | 389 | 481 | **556** | 467 | Disponible |
-| **IJIT** · Springer | — | 661 | **640** | — | Disponible |
-| IJACSA | 1 447 | 1 539 | 1 347 | 707 | *ya en tu lista* |
-| BEEI | 415 | 453 | 377 | 305 | *ya en tu lista* |
-| IJSSE | 129 | 187 | 253 | 133 | *ya en tu lista* |
-| ISJ | 17 | 39 | 62 | 39 | Disponible |
-| ICS | 44 | 42 | 52 | 47 | Disponible |
-| CIT | 46 | 43 | 35 | 23 | Disponible |
+| **IJIES** | 389 | 481 | **556** | 542 | **Plan A** |
+| **ISI** | 188 | 235 | **305** | 216 | **Plan B** |
+| **BEEI** | 415 | 453 | **377** | 305 | **Plan C** — en tu lista de control |
+| **IJSSE** | 129 | 187 | **253** | 147 | **Plan D** — en tu lista de control |
+| IJACSA | 1 447 | 1 539 | 1 347 | 707 | En tu lista de control |
+| IJIT | — | 661 | 640 | — | Descartada: 90,8 % cerrado |
+| ISJ | 17 | 39 | 62 | 39 | Descartada: 88,1 % cerrado |
+| ICS | 44 | 42 | 52 | 47 | Descartada: 78,2 % cerrado |
+| CIT | 46 | 43 | 35 | 23 | Descartada: volumen |
 
-**La diferencia es de un orden de magnitud.** IJIES e IJIT publican entre diez y
-quince veces más que CIT, ISJ o ICS. Donde CIT abre 4 números al año, IJIES abre
-12.
+**IJIES es la de mayor volumen de las cuatro elegidas**: 556 artículos en 2025,
+casi el doble que BEEI (377) y más de quince veces lo que publica CIT. Donde CIT
+abre 4 números al año, IJIES abre 12.
+
+> **Ojo con la cifra de BEEI.** La medición de acceso abierto cuenta desde el 1
+> de enero de 2025 e incluye 2026, así que da **682**: eso es un acumulado de
+> veinte meses, no una cifra anual. El dato anual es **377**. Esta columna
+> cuenta por año calendario y es la que hay que citar.
 
 ### El matiz que no conviene perder
 
@@ -123,7 +139,7 @@ y saca número cada mes. CIT tarda de 3 a 6 meses solo en la primera decisión.
 | Dato | Valor | Fuente |
 |---|---|---|
 | Scopus | CiteScore 3,3 · **Q2** en General Engineering (pct. 62) y General Computer Science (pct. 52) | [página de la revista](https://inass.org/publications/) |
-| Periodicidad | **Mensual desde 2025** · 481 · 556 · 467 artículos en 2024 · 2025 · 2026 | ídem + OpenAlex |
+| Periodicidad | **Mensual desde 2025** · 481 · 556 · 542 artículos en 2024 · 2025 · 2026 | ídem + OpenAlex |
 | Aceptación | **17,9 % (2025)** · 17,8 % (2024) · 14,1 % (2023) | ídem |
 | APC | **USD 300** · **USD 400 desde el 1 de octubre de 2026** · +USD 100 si no usas su plantilla · +USD 50 por página desde la 10.ª | [cargos](https://inass.org/publications/pub-charges/) |
 | Publicación | Unos **2 meses** tras la aceptación | ídem |
@@ -167,15 +183,23 @@ administrativo.**
 | Dato | Valor | Fuente |
 |---|---|---|
 | Cuartil | **Q1 por CiteScore (4,2)** · Q3 por SJR | [página de la revista](https://beei.org/index.php/EEI) |
-| Acceso | **Diamante · CC BY-SA** · **0 de 682** artículos de 2025 cerrados | medición OpenAlex |
+| Acceso | **Diamante · CC BY-SA** · **0 de 682** artículos cerrados desde enero de 2025 | medición OpenAlex |
 | Declaración | *«provides immediate open access to all published articles»* | [portada de BEEI](https://beei.org/index.php/EEI) |
 | APC | USD 415 | [cargos](https://beei.org/index.php/EEI/about) |
-| Periodicidad | Bimestral · **682 artículos** en 2025 | medición OpenAlex |
+| Periodicidad | Bimestral · **377 artículos en 2025** (415 en 2023, 453 en 2024) | medición OpenAlex |
 
 **El único obstáculo: está en tu lista de control.** Si la coordinación confirma
-que la lista solo registra lo ya publicado y no inhabilita la revista, BEEI es
-objetivamente la mejor opción del expediente — mejor acceso abierto, mayor
-volumen, mejor CiteScore y APC intermedio.
+que la lista solo registra lo ya publicado y no inhabilita la revista, BEEI
+compite de frente con IJIES: **mejor acceso abierto y mejor CiteScore (4,2
+frente a 3,3)**, pero **menos volumen (377 frente a 556)** y un APC que cuesta
+USD 115 más.
+
+> **El APC de USD 415 rige para artículos con más de un autor.** BEEI cobra el
+> doble —USD 830— a los de autor único, y este artículo va firmado por dos, así
+> que aplica la tarifa normal. Se suman USD 50 por página a partir de la 9.ª.
+> Verificado en sus [instrucciones de envío](https://beei.org/index.php/EEI/about/submissions):
+> *«Each accepted paper will be charged USD 415 for paper collaboration… Papers
+> with a single (sole) author will be charged twice, i.e., USD 830»*.
 
 ## Plan D — IJSSE (IIETA)
 
@@ -250,7 +274,10 @@ Afecta de forma desigual:
 > Ninguna de las cuatro menciona DOAJ en su propio sitio: 0 apariciones en
 > `beei.org`, `iieta.org` e `inass.org`. No se lo atribuyen a sí mismas.
 
-## Descartadas al exigir volumen
+## Descartadas en la búsqueda de alto volumen
+
+Todas estas se evaluaron *como candidatas de alto volumen* y cayeron por motivos
+que **no son el volumen**: indexación, lista de depredadoras o métricas.
 
 | Revista | Motivo |
 |---|---|
@@ -259,11 +286,12 @@ Afecta de forma desigual:
 | **MDPI en bloque** — *J. of Cybersecurity and Privacy, Electronics, Applied Sciences, Sensors, Future Internet, Information, Computers* | **Las siete figuran en tu lista de depredadoras.** Es la editorial de mayor volumen del mercado y queda fuera entera |
 | **IJASEIT** | CiteScore 1,5 y volumen en descenso: 343 → 257 → 239 |
 
-## La que sigue siendo la mejor evidenciada — CIT
+## Fuera de los planes, pero la mejor evidenciada — CIT
 
-Cae al cuarto puesto **solo por volumen**: publica 35–46 al año. Todo lo demás
-sigue en pie, y es la única candidata con los **seis datos verificados en la
-propia revista**.
+**Queda fuera de los cuatro planes solo por volumen**: publica 35–46 al año,
+frente a los 556 de IJIES. Todo lo demás sigue en pie, y conserva dos títulos que
+ninguna de las cuatro elegidas tiene: es la **única con los seis datos
+verificados en la propia revista** y la **única registrada en DOAJ**.
 
 ### Cybernetics and Information Technologies (CIT)
 
@@ -316,7 +344,7 @@ CIT eso entra completo.
 | | |
 |---|---|
 | ⏳ **Plazo** | 3–6 meses hasta la primera decisión: el más largo de todas las candidatas |
-| 📉 **Capacidad** | 46 · 43 · 42 artículos en 2023 · 2024 · 2025, contados sobre los PDF de cada número. Estable, y comparable a la de ISJ e ICS — pero lejos de los ≈360 de BEEI |
+| 📉 **Capacidad** | 46 · 43 · 42 artículos en 2023 · 2024 · 2025, contados sobre los PDF de cada número. Estable, y comparable a la de ISJ e ICS — pero lejos de los 377 de BEEI y los 556 de IJIES |
 | 💶 **APC** | 600 EUR ≈ USD 700. Más que BEEI (USD 415), menos que IJSSE (USD 850) |
 | 🤖 **Cribado de IA** | Por encima del **20 % de texto generado por IA, rechaza sin derecho a revisión**. También aplica iThenticate con tope del 30 % |
 
@@ -331,7 +359,7 @@ Con 3–6 meses de revisión, un envío hoy no se publica antes de 2027.
 | **International Journal of Electrical and Computer Engineering** · IAES | **Descontinuada de Scopus en 2025** |
 | **Journal on Information Security** · Springer, ex-EURASIP | Encaje directo, pero APC de **USD 1 590** sin vía gratuita |
 | **International Journal of Information Security** · Springer | APC de USD 3 690 si se elige acceso abierto |
-| **Ingénierie des Systèmes d'Information** · IIETA | CiteScore 2,6 y Q3, pero su alcance declarado **no menciona seguridad de redes**: es de sistemas de información y gestión de datos |
+| ~~**Ingénierie des Systèmes d'Information** · IIETA~~ | **Readmitida el 26/08/2026 y hoy es el Plan B.** Se había descartado por su alcance declarado, aplicando un criterio que no se usó con las demás: a CIT se la juzgó por lo que publica, no por su alcance. Con el mismo rasero, ISI publica **11 artículos de detección de intrusiones desde 2024** |
 
 ## Registro: cómo se movió el orden y por qué
 
@@ -348,18 +376,18 @@ favor de OpenAlex, que cubre a las ocho candidatas con el mismo criterio.
 ### La debilidad de método que esto deja a la vista
 
 El criterio de viabilidad pondera cuatro cosas: tipo de revisión, tiempo,
-periodicidad y capacidad. **En IJIT y en ISJ dos están sin verificar.** En CIT e
-IJIES están declaradas, y CIT es penalizada precisamente por declarar el plazo
-más lento del conjunto.
+periodicidad y capacidad. **En ISI dos siguen sin verificar** —no declara plazo
+de revisión ni tasa de aceptación—. En CIT e IJIES están declaradas, y CIT es
+penalizada precisamente por declarar el plazo más lento del conjunto.
 
 > **Una matriz que premia el desconocimiento está mal construida.** No se
 > arregla inventando una penalización a posteriori —eso sería el sesgo inverso—
 > sino verificando.
 
 La regla que quedó de aquí: **a un dato desconocido no se le da la nota máxima.**
-Por eso IJIT puntúa 8 y no 10 en viabilidad pese a publicar 640 artículos al año:
-su tiempo de revisión no se conoce. Si resulta corto, IJIT compite por el primer
-puesto; si es largo, se queda donde está.
+Se aplicó a IJIT mientras estuvo en carrera, y hoy se aplica a ISI: su casilla de
+«fácil de publicar» está en `?` y no en `✔`, porque no publica ni su plazo ni su
+tasa de aceptación. **No saber no es aprobar.**
 
 ### Qué elegir según la restricción
 
@@ -367,7 +395,7 @@ puesto; si es largo, se queda donde está.
 |---|---|
 | **El volumen y la rapidez** | **IJIES** — 556 al año, publica 2 meses tras aceptar |
 | **El presupuesto** | **IJIES** — USD 300, el APC más bajo de las cuatro |
-| **Que la revista no caiga del índice** | **BEEI** — 682 artículos en 2025 y sin señales de discontinuación |
+| **Que la revista no caiga del índice** | **BEEI** — 24 años de archivo continuo y sin señales de discontinuación |
 | **Acceso abierto en sentido estricto** | **BEEI** — diamante, CC BY-SA, cero artículos cerrados |
 | **La certeza sobre el proceso editorial** | **CIT** — la única con los seis datos verificados |
 | **El encaje con un antecedente de detección *y respuesta*** | **CIT** |
@@ -384,8 +412,10 @@ En orden de importancia:
    llegue hasta el presente y que no haya aviso de discontinuación.
 2. **A la coordinación: estar en la lista de control ¿inhabilita la revista o
    solo la registra?** De esto dependen los Planes C y D enteros. Si solo
-   registra, **BEEI pasa a ser la mejor opción del expediente**: mejor acceso
-   abierto, mayor volumen y mejor CiteScore que el actual Plan A.
+   registra, **BEEI compite de frente con IJIES**: mejor acceso abierto
+   (diamante con CC BY-SA frente a bronce sin licencia) y mejor CiteScore (4,2
+   frente a 3,3), pero **menos volumen** —377 al año frente a 556— y USD 115 más
+   de APC.
 3. ~~¿Alguna de las cuatro está en DOAJ?~~ **Resuelto el 01/09/2026: ninguna.**
    Comprobado por tres vías independientes con control positivo. Si el jurado
    pregunta por DOAJ, la respuesta hay que tenerla preparada.
@@ -482,6 +512,51 @@ ISI nunca declaró ese plazo.
 Revisión completa, con las dos afirmaciones suyas que refuté:
 [`../revisiones-claude/2026-08-26-revision-verificacion-revistas-codex.md`](../revisiones-claude/2026-08-26-revision-verificacion-revistas-codex.md)
 
+## Auditoría de consistencia interna — 1 de septiembre de 2026
+
+El expediente se reescribió cinco veces en seis días —tres cambios de criterio y
+dos correcciones de datos— y cada reescritura dejó restos. Se revisó línea por
+línea buscando **contradicciones dentro del propio archivo**. Se encontraron diez.
+
+| # | Hallazgo | Severidad | Estado |
+|---|---|---|---|
+| **C-01** | **El volumen de BEEI estaba inflado a 682/año.** La cifra real es **377**. 682 es el acumulado de veinte meses (2025 + 2026) que arrojó la medición de acceso abierto, usada por error como cifra anual | **Alta** | Corregida |
+| **C-02** | **ISI figuraba a la vez como Plan B y como «descartada»**, con el motivo «su alcance no menciona seguridad de redes» | **Alta** | Corregida |
+| **C-03** | **Contradicción sobre DOAJ:** una sección lo daba por «sin comprobar, confírmalo a mano» y otra lo daba por resuelto con tres vías | Media | Corregida |
+| **C-04** | La tabla de volumen marcaba **IJIT, ISJ e ICS como «Disponible»** después de haber sido descartadas por acceso | Media | Corregida |
+| **C-05** | El párrafo de viabilidad discutía **si IJIT «compite por el primer puesto»**, revista ya fuera del expediente | Media | Corregida |
+| **C-06** | El encabezado **«Descartadas al exigir volumen»** agrupaba revistas caídas por indexación, lista de depredadoras o métricas — no por volumen | Baja | Corregida |
+| **C-07** | **CIT «cae al cuarto puesto»**: con cuatro planes asignados, CIT no ocupa ninguno | Baja | Corregida |
+| **C-08** | La introducción decía que se buscaba una revista **fuera de la lista de control**, cuando los Planes C y D están en ella | Media | Corregida |
+| **C-09** | Se ofrecía **ISJ (81,0) como alternativa** «si el volumen deja de ser un requisito», pero ISJ también cae por acceso | Media | Corregida |
+| **C-10** | Volumen 2026 de IJIES desactualizado (467 → **542**) y de BEEI aproximado (≈360 → **377**) | Baja | Corregida |
+
+### C-01 merece explicación, porque cambia una conclusión
+
+El error nace de mezclar dos ventanas de tiempo. La medición de acceso abierto
+cuenta **desde el 1 de enero de 2025**, así que incluye 2025 y 2026: para BEEI
+da 682. Esa cifra se copió a la columna «artículos/año».
+
+| BEEI, por año | 2023 | 2024 | **2025** | 2026 |
+|---|---:|---:|---:|---:|
+| OpenAlex | 415 | 453 | **377** | 305 |
+
+377 + 305 = 682. La suma cuadra y confirma el diagnóstico.
+
+**La conclusión que cae:** se afirmó que BEEI superaba a IJIES en volumen. Es al
+revés — **IJIES publica 556 al año y BEEI 377**, casi un 50 % más. El argumento a
+favor de BEEI sigue en pie por acceso abierto y CiteScore, pero **el volumen deja
+de ser uno de sus puntos fuertes y pasa a serlo de IJIES**.
+
+### Lo que esta auditoría no resuelve
+
+- **La `.xlsx` de mapeo por secciones** (`mapeo-secciones-BEEI-IJSSE.xlsx`) cubre
+  BEEI e IJSSE, que hoy son los Planes C y D. **Faltan IJIES e ISI**, que son A y
+  B. Hay que rehacerla antes de redactar.
+- Los datos de ISI marcados `~` y `?` siguen igual: **su plazo de revisión y su
+  tasa de aceptación no están publicados en ninguna parte** y solo salen
+  preguntando al editor.
+
 ## Correcciones de datos registradas
 
 | Fecha | Dato | Valor anterior | Valor verificado |
@@ -493,6 +568,8 @@ Revisión completa, con las dos afirmaciones suyas que refuté:
 | 26/08/2026 | Capacidad de CIT | ≈55 artículos al año | **42–46** — conteo de los PDF de cada número |
 | 26/08/2026 | Extensión de ISI | «sin límite estrecho declarado» | **6–12 páginas** — [instrucciones oficiales](https://www.iieta.org/journals/isi/Instructions%20for%20Authors). Hallazgo de Codex |
 | 26/08/2026 | Plazo de revisión de ISI | «~2 meses» | **No lo declara.** Era un arrastre de la ficha de IJSSE |
+| 01/09/2026 | Volumen de BEEI | 682 artículos al año | **377.** 682 era el acumulado 2025 + 2026 de la medición de acceso. **IJIES (556) publica más que BEEI, no al revés** |
+| 01/09/2026 | Volumen 2026 de IJIES | 467 | **542** — medición nueva |
 | 01/09/2026 | Registro en DOAJ | «Según OpenAlex, ninguna; sin confirmar» | **Confirmado: ninguna de las cuatro.** Tres vías independientes (OpenAlex, Wikidata P5115, Internet Archive) sobre los nueve ISSN, con CIT como control positivo detectado en las tres |
 | 01/09/2026 | Criterio de acceso abierto | No existía como filtro | **Añadido como tercer filtro de entrada.** Descarta IJIT, ISJ e ICS (78–91 % de artículos cerrados) |
 | 01/09/2026 | Acceso de IJIES | Se daba por acceso abierto sin matiz | **Bronce, sin licencia declarada** y fuera de DOAJ: se lee gratis mientras el editor quiera |
