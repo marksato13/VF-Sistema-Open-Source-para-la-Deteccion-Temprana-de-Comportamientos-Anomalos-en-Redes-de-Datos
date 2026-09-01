@@ -169,7 +169,7 @@ automatizado desde aquí. **Es una comprobación de dos minutos en tu navegador.
 | APC | **USD 850** | [cargos](https://www.iieta.org/journals/isi/Article%20Processing%20Charge) |
 | Periodicidad | 12 números al año · **305 artículos** en 2025 | medición OpenAlex |
 | Extensión | **6 a 12 páginas** · mínimo **20 referencias** | [instrucciones](https://www.iieta.org/journals/isi/Instructions%20for%20Authors) |
-| Revisión | Doble ciego, ≥2 expertos · **no declara plazo** | [política de revisión](https://www.iieta.org/journals/isi/Instructions%20for%20Authors) |
+| Revisión | Doble ciego, ≥2 expertos · no declara plazo, pero **medido: mediana de 156 días a la primera decisión y 250 hasta publicar** | [política](https://www.iieta.org/journals/isi/Instructions%20for%20Authors) + medición sobre 4 artículos |
 
 Publica 11 artículos sobre detección de intrusiones desde 2024. Es la de menor
 puntaje de las cuatro (69,0): entra por acceso abierto verificado y volumen
@@ -422,39 +422,75 @@ En orden de importancia:
 4. **A INASS (IJIES): ¿bajo qué licencia se publican sus artículos?** Hoy salen
    como **bronce, sin licencia declarada**: gratis de leer, sin derecho de
    reutilización. Si declaran CC BY, el Plan A deja de tener este punto débil.
-5. **A los editores de ISI e IJSSE:** tasa de aceptación y plazo de revisión.
-   Ninguna de las dos publica esos datos, y por eso su casilla de «fácil de
-   publicar» quedó en `?`.
+5. **A los editores de ISI e IJSSE: tasa de aceptación.** El **plazo de
+   revisión ya no hace falta preguntarlo** — se midió sobre los propios
+   artículos (mediana de 250 días en ISI). Falta solo la tasa de aceptación, que
+   ninguna de las dos publica.
 6. **Al editor de CIT:** ¿cuál es el APC vigente? Hay **dos cifras en
    circulación** — DOAJ declara 360 EUR y sus instrucciones para autores 600 EUR
    desde el 1 de septiembre de 2026.
 
-## Mapeo por secciones
+## Plazos editoriales reales, medidos — 1 de septiembre de 2026
 
-[`mapeo-secciones-BEEI-IJSSE.xlsx`](mapeo-secciones-BEEI-IJSSE.xlsx) — cómo
-estructuran su artículo diez trabajos afines, cinco de cada revista.
+Ni IJIES ni ISI publican su tiempo de revisión como política. **Pero los dos
+imprimen las fechas en la primera página de cada artículo**, así que el plazo se
+puede medir en vez de preguntarlo. Se midió sobre los nueve artículos del mapeo.
 
-> **Pendiente:** este mapeo cubre BEEI e IJSSE, las dos revistas que quedaron en
-> la lista de control. Falta rehacerlo sobre los cinco artículos de CIT
-> enumerados arriba, cuyos PDF son de acceso abierto y ya están localizados.
+| Revista | Primera decisión | Hasta publicar |
+|---|---|---|
+| **IJIES** (Plan A) | 18 a 113 días · **mediana 41** | 105 a 223 días · **mediana 158** |
+| **ISI** (Plan B) | 149 a 266 días · **mediana 156** | 244 a 315 días · **mediana 250** |
 
-| Hoja | Contenido |
-|---|---|
-| `Cómo se hizo` | Criterio de selección y precisión de cada cifra |
-| `BEEI` | 5 artículos con título, DOI, metadatos y una columna por sección |
-| `IJSSE` | Ídem |
-| `Patrones` | Lo comparable entre ambas revistas |
+Caso a caso:
 
-**Las cifras se contaron sobre el PDF completo de cada artículo**, no sobre
-resúmenes ni metadatos. Los conteos de párrafos son aproximados —bloques
-separados por línea en blanco con más de 120 caracteres—; citas, tablas y
-figuras son exactas.
+| Revista | Artículo | Recibido | 1.ª decisión | Publicado | Total |
+|---|---|---|---:|---|---:|
+| IJIES | Two-Stage IDS | 15/01/2025 | **18 d** | 30/04/2025 | **105 d** |
+| IJIES | PSO-LightBoost | 23/12/2024 | 41 d | 30/04/2025 | 128 d |
+| IJIES | Weight-Based Voting | 24/11/2023 | 40 d | 30/04/2024 | 158 d |
+| IJIES | Thresholding | 02/01/2024 | 64 d | 30/06/2024 | 180 d |
+| IJIES | HIDE-6G | 22/03/2024 | 113 d | 31/10/2024 | 223 d |
+| ISI | ML-Based Anomaly | 25/04/2024 | 149 d | 25/12/2024 | 244 d |
+| ISI | Statistical Anomaly | 12/02/2024 | 162 d | 24/10/2024 | 255 d |
+| ISI | Cloud Data Classif. | 20/12/2023 | 266 d | 24/10/2024 | 309 d |
+| ISI | Multistage Approach | 14/12/2023 | 260 d | 24/10/2024 | **315 d** |
 
-Regenerar:
+**ISI tarda entre tres y cuatro veces más que IJIES.** Su mediana de 250 días
+hasta publicar son **más de ocho meses**; la de IJIES, poco más de cinco. El
+peor caso de ISI llega a **315 días**.
 
-```bash
-python3 scripts/articulo/generar_mapeo_revistas.py
-```
+> **Esto resuelve el `?` que quedaba abierto** y refuerza el Plan A por una razón
+> nueva: si la fecha de sustentación manda, IJIES no es solo la mejor puntuada —
+> es la única de las dos que llega a tiempo. También corrige la matriz por el
+> lado contrario: ISI puntuaba 8 en viabilidad *porque no se conocía su plazo*, y
+> ahora se conoce y es malo.
+
+## Mapeo por secciones — las cuatro revistas
+
+[`mapeo-secciones-revistas.xlsx`](mapeo-secciones-revistas.xlsx) · generado por
+[`scripts/articulo/generar_mapeo_secciones.py`](../../scripts/articulo/generar_mapeo_secciones.py)
+
+**19 artículos afines**, medidos sobre el PDF completo de cada uno: 5 de IJIES,
+4 de ISI, 5 de BEEI y 5 de IJSSE. Las cifras no están escritas a mano — se
+extrajo el texto con `pdftotext`, se localizaron los encabezados numerados y se
+contaron párrafos, citas, subsecciones, figuras y tablas de cada sección. Cada
+fila lleva su DOI para repetir la medición.
+
+Ocho hojas: cómo se hizo · una por revista · plazos reales · patrones
+comparados · qué implica para el nuestro.
+
+### Lo que la muestra dice sobre cómo escribir el artículo
+
+| Observación | Evidencia | Qué hacer |
+|---|---|---|
+| **La conclusión no cita** | **0 de 19** artículos citan en la conclusión | Cerrar sin citas; comparar con la literatura en la discusión |
+| **El método es la sección más larga** | Hasta 36 párrafos en IJIES, 27 en BEEI, 21 en IJSSE | Las 28 variables, la ventana y la calibración del umbral caben ahí, con subsecciones numeradas |
+| **El método casi no cita** | IJIES: 0, 15, 8, 7 y 6 citas, frente a 15-20 en la introducción | Concentrar las citas en introducción y estado del arte |
+| **El límite de 10 páginas de IJIES no es rígido** | Sus 5 artículos miden 10, 11, 13, 14 y **17** páginas | Se puede pasar, pero cuesta USD 50 por página: 14 páginas ≈ **USD 500** en total |
+| **ISI sí respeta sus 6-12 páginas** | Sus 4 artículos miden 8, 10, 11 y 12 | En el Plan B hay que ajustarse de verdad |
+| **El dataset no lleva sección propia** | En 3 de las 4 revistas va dentro del método | Describir multilayer-v2 como subsección, no como sección numerada |
+| **Casi nadie declara limitaciones** | 0 de 9 en IJIES e ISI; 3 de 10 en BEEI e IJSSE, siempre como subsección | Nuestra brecha 4,71 % → 23-26 % es una fortaleza: declararla como subsección de discusión |
+| **Ninguno cierra el lazo** | **0 de 19** combinan detección con respuesta automática | Es el argumento de novedad. Decirlo explícito en la introducción |
 
 ## Patrones que conviene respetar al escribir
 
@@ -550,12 +586,13 @@ de ser uno de sus puntos fuertes y pasa a serlo de IJIES**.
 
 ### Lo que esta auditoría no resuelve
 
-- **La `.xlsx` de mapeo por secciones** (`mapeo-secciones-BEEI-IJSSE.xlsx`) cubre
-  BEEI e IJSSE, que hoy son los Planes C y D. **Faltan IJIES e ISI**, que son A y
-  B. Hay que rehacerla antes de redactar.
-- Los datos de ISI marcados `~` y `?` siguen igual: **su plazo de revisión y su
-  tasa de aceptación no están publicados en ninguna parte** y solo salen
-  preguntando al editor.
+- ~~La `.xlsx` de mapeo solo cubre BEEI e IJSSE.~~ **Resuelto el 01/09/2026:**
+  rehecha como `mapeo-secciones-revistas.xlsx` con las cuatro revistas y 19
+  artículos medidos.
+- ~~El plazo de revisión de ISI no está publicado.~~ **Resuelto:** medido sobre
+  sus propios artículos — mediana de 250 días hasta publicar.
+- **Sigue pendiente la tasa de aceptación de ISI e IJSSE.** Ninguna la publica y
+  no hay forma de medirla desde fuera: solo sale preguntando al editor.
 
 ## Correcciones de datos registradas
 
@@ -568,6 +605,8 @@ de ser uno de sus puntos fuertes y pasa a serlo de IJIES**.
 | 26/08/2026 | Capacidad de CIT | ≈55 artículos al año | **42–46** — conteo de los PDF de cada número |
 | 26/08/2026 | Extensión de ISI | «sin límite estrecho declarado» | **6–12 páginas** — [instrucciones oficiales](https://www.iieta.org/journals/isi/Instructions%20for%20Authors). Hallazgo de Codex |
 | 26/08/2026 | Plazo de revisión de ISI | «~2 meses» | **No lo declara.** Era un arrastre de la ficha de IJSSE |
+| 01/09/2026 | Plazo de revisión de ISI | «No lo declara» — casilla en `?` | **Medido sobre 4 de sus artículos: mediana de 156 días a la primera decisión y 250 hasta publicar.** Tres a cuatro veces más lento que IJIES |
+| 01/09/2026 | Plazo de IJIES | «~2 meses tras la aceptación» (dato de la revista) | **Confirmado y ampliado: mediana de 41 días a la primera decisión y 158 hasta publicar**, medido sobre 5 artículos |
 | 01/09/2026 | Volumen de BEEI | 682 artículos al año | **377.** 682 era el acumulado 2025 + 2026 de la medición de acceso. **IJIES (556) publica más que BEEI, no al revés** |
 | 01/09/2026 | Volumen 2026 de IJIES | 467 | **542** — medición nueva |
 | 01/09/2026 | Registro en DOAJ | «Según OpenAlex, ninguna; sin confirmar» | **Confirmado: ninguna de las cuatro.** Tres vías independientes (OpenAlex, Wikidata P5115, Internet Archive) sobre los nueve ISSN, con CIT como control positivo detectado en las tres |
