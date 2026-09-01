@@ -495,10 +495,25 @@ def main() -> None:
     a("> **No todas las que pasan son iguales.** BEEI y CIT son acceso abierto pleno: cero "
       "artículos cerrados y licencia declarada. IJIES es el caso más débil de las que pasan "
       "—**bronce, sin licencia**—: se lee gratis hoy porque el editor lo permite, no porque "
-      "el lector tenga derecho. Y **solo CIT figura en DOAJ**, el registro de referencia del "
-      "acceso abierto; ni IJIES, ni ISI, ni IJSSE, ni siquiera BEEI aparecen en él según "
-      "OpenAlex. Ese dato no pudo confirmarse contra DOAJ, que respondió HTTP 502 y 403 el "
-      "01/09/2026: queda marcado como pendiente de comprobación manual.\n\n")
+      "el lector tenga derecho.\n\n")
+    a("### DOAJ: solo CIT está registrada\n\n")
+    a("DOAJ bloquea el acceso automatizado (Cloudflare, HTTP 403 en API, `/toc/` y búsqueda), "
+      "así que se comprobó por **tres vías independientes**, cada una validada con un "
+      "**control positivo**: CIT, la única del conjunto que sí consta en DOAJ. Se probaron "
+      "**todos los ISSN de cada revista**, porque DOAJ registra por cualquiera de ellos.\n\n")
+    a("| Revista | OpenAlex `is_in_doaj` | Wikidata `P5115` | Ficha DOAJ archivada |\n"
+      "|---|:--:|:--:|:--:|\n")
+    for n, oa, wd, ar in [("**CIT** *(control)*", "**true**", "**`1314-4081`**",
+                           "**Sí — desde 2018**"),
+                          ("IJIES", "false", "ausente", "no"),
+                          ("ISI", "false", "ausente", "no"),
+                          ("BEEI", "false", "ausente", "no"),
+                          ("IJSSE", "false", "ausente", "no")]:
+        a(f"| {n} | {oa} | {wd} | {ar} |\n")
+    a("\nLas tres vías coinciden y el control se detecta en las tres. **Ninguna de las cuatro "
+      "elegidas figura en DOAJ.** No las descalifica —todas están en Scopus, con editor "
+      "identificable y política de revisión pública— pero les quita una garantía externa. "
+      "Ninguna menciona DOAJ en su propio sitio.\n\n")
 
     a("\n---\n\n## 3 · Criterios y pesos\n\n")
     a("| Criterio | Peso | Regla de puntuación |\n|---|---:|---|\n")

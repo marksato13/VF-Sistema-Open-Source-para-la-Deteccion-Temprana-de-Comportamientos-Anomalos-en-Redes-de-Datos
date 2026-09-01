@@ -61,12 +61,13 @@ de ser un requisito: **ISJ puntúa 81,0**, más que ISI.
 | Fuera de tu lista de control | ✔ | ✔ | **✘** | **✘** |
 | Publica muchos artículos al año | ✔ | ✔ | ✔ | ✔ |
 | **Acceso abierto** | ~ | ✔ | ✔ | ✔ |
+| **Registrada en DOAJ** | ✘ | ✘ | ✘ | ✘ |
 | **Indexación vigente comprobada** | ✘ | ✔ | ✔ | ✔ |
 | Enlace y fuente por cada dato | ✔ | ~ | ✔ | ✔ |
 
 `✔` cumple · `~` parcial · `?` sin dato · `✘` no cumple o sin confirmar
 
-**Ninguna cumple los nueve**, y cada una falla en algo distinto:
+**Ninguna cumple los diez**, y cada una falla en algo distinto:
 
 | Revista | Lo que le falta |
 |---|---|
@@ -208,6 +209,47 @@ suscripción. El filtro deja a la vista lo que ese ahorro costaba.
 > que nada reflejara que el artículo quedaría cerrado. Se corrigió con un filtro
 > de entrada, no bajando puntajes, para que la matriz siga siendo reproducible.
 
+## DOAJ: ninguna de las cuatro está registrada — 01/09/2026
+
+**DOAJ bloquea el acceso automatizado** (Cloudflare: HTTP 403 en su API, en
+`/toc/` y en la búsqueda, con `curl` y con recuperación de páginas). Así que la
+comprobación se hizo por **tres vías independientes**, cada una con un **control
+positivo**: CIT, la única candidata que sí consta en DOAJ. Si el método no
+detectara a CIT, no valdría nada.
+
+| Revista | ISSN comprobados | OpenAlex `is_in_doaj` | Wikidata `P5115` | Ficha DOAJ archivada |
+|---|---|:--:|:--:|:--:|
+| **CIT** *(control)* | 1311-9702 · 1314-4081 | **true** | **`1314-4081`** | **Sí — desde 2018** |
+| **IJIES** (A) | 1882-708X · 2185-310X · 2185-3118 | false | ausente | no |
+| **ISI** (B) | 1633-1311 · 2116-7125 | false | ausente | no |
+| **BEEI** (C) | 2089-3191 · 2302-9285 | false | ausente | no |
+| **IJSSE** (D) | 2041-9031 · 2041-904X | false | ausente | no |
+
+Se comprobaron **los nueve ISSN**, no uno por revista: DOAJ registra por
+cualquiera de ellos, y buscar solo el electrónico habría dado un falso negativo.
+
+**Las tres vías coinciden y el control se detecta en las tres.** La conclusión es
+firme: **ninguna de las cuatro figura en DOAJ.**
+
+### Por qué importa y por qué no es descalificante
+
+DOAJ es el registro de referencia del acceso abierto, y un jurado o un
+bibliotecario puede consultarlo para dar por buena una revista. No estar en él
+**no significa que la revista sea ilegítima** —las cuatro están en Scopus, tienen
+editor identificable y política de revisión pública—, pero sí quita una garantía
+externa que habría sido cómoda tener.
+
+Afecta de forma desigual:
+
+- **BEEI (Plan C)** es el caso más llamativo: cero artículos cerrados, licencia
+  CC BY-SA y declaración explícita de acceso abierto inmediato en su portada.
+  Cumple lo que DOAJ exige; simplemente no está inscrita.
+- **IJIES (Plan A)** es el caso que más pesa: ya era **bronce sin licencia**, y
+  la ausencia de DOAJ deja su acceso abierto sin ningún respaldo externo.
+
+> Ninguna de las cuatro menciona DOAJ en su propio sitio: 0 apariciones en
+> `beei.org`, `iieta.org` e `inass.org`. No se lo atribuyen a sí mismas.
+
 ## Descartadas al exigir volumen
 
 | Revista | Motivo |
@@ -344,10 +386,9 @@ En orden de importancia:
    solo la registra?** De esto dependen los Planes C y D enteros. Si solo
    registra, **BEEI pasa a ser la mejor opción del expediente**: mejor acceso
    abierto, mayor volumen y mejor CiteScore que el actual Plan A.
-3. **¿Alguna de las cuatro está en [DOAJ](https://doaj.org)?** Según OpenAlex,
-   ninguna. No pude confirmarlo —DOAJ respondió 502 y 403 el 01/09/2026— y es
-   el registro que un jurado consultaría para dar por buena una revista de
-   acceso abierto.
+3. ~~¿Alguna de las cuatro está en DOAJ?~~ **Resuelto el 01/09/2026: ninguna.**
+   Comprobado por tres vías independientes con control positivo. Si el jurado
+   pregunta por DOAJ, la respuesta hay que tenerla preparada.
 4. **A INASS (IJIES): ¿bajo qué licencia se publican sus artículos?** Hoy salen
    como **bronce, sin licencia declarada**: gratis de leer, sin derecho de
    reutilización. Si declaran CC BY, el Plan A deja de tener este punto débil.
@@ -452,6 +493,7 @@ Revisión completa, con las dos afirmaciones suyas que refuté:
 | 26/08/2026 | Capacidad de CIT | ≈55 artículos al año | **42–46** — conteo de los PDF de cada número |
 | 26/08/2026 | Extensión de ISI | «sin límite estrecho declarado» | **6–12 páginas** — [instrucciones oficiales](https://www.iieta.org/journals/isi/Instructions%20for%20Authors). Hallazgo de Codex |
 | 26/08/2026 | Plazo de revisión de ISI | «~2 meses» | **No lo declara.** Era un arrastre de la ficha de IJSSE |
+| 01/09/2026 | Registro en DOAJ | «Según OpenAlex, ninguna; sin confirmar» | **Confirmado: ninguna de las cuatro.** Tres vías independientes (OpenAlex, Wikidata P5115, Internet Archive) sobre los nueve ISSN, con CIT como control positivo detectado en las tres |
 | 01/09/2026 | Criterio de acceso abierto | No existía como filtro | **Añadido como tercer filtro de entrada.** Descarta IJIT, ISJ e ICS (78–91 % de artículos cerrados) |
 | 01/09/2026 | Acceso de IJIES | Se daba por acceso abierto sin matiz | **Bronce, sin licencia declarada** y fuera de DOAJ: se lee gratis mientras el editor quiera |
 | 01/09/2026 | Orden de los planes | Derivado del puntaje | **Fijado por el autor**: A IJIES · B ISI · C BEEI · D IJSSE. BEEI e IJSSE reingresan pese a estar en la lista de control |

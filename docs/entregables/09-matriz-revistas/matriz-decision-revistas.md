@@ -101,7 +101,21 @@ Se midió con un criterio único para las nueve: el estado de acceso de **todo l
 
 > **Gratis para el autor y abierto para el lector son cosas distintas**, y esta matriz las confundía hasta hoy. IJIT puntuaba 10 en costo por no cobrar APC, sin que nada reflejara que su artículo quedaría cerrado. El filtro corrige esa confusión sin retocar puntajes.
 
-> **No todas las que pasan son iguales.** BEEI y CIT son acceso abierto pleno: cero artículos cerrados y licencia declarada. IJIES es el caso más débil de las que pasan —**bronce, sin licencia**—: se lee gratis hoy porque el editor lo permite, no porque el lector tenga derecho. Y **solo CIT figura en DOAJ**, el registro de referencia del acceso abierto; ni IJIES, ni ISI, ni IJSSE, ni siquiera BEEI aparecen en él según OpenAlex. Ese dato no pudo confirmarse contra DOAJ, que respondió HTTP 502 y 403 el 01/09/2026: queda marcado como pendiente de comprobación manual.
+> **No todas las que pasan son iguales.** BEEI y CIT son acceso abierto pleno: cero artículos cerrados y licencia declarada. IJIES es el caso más débil de las que pasan —**bronce, sin licencia**—: se lee gratis hoy porque el editor lo permite, no porque el lector tenga derecho.
+
+### DOAJ: solo CIT está registrada
+
+DOAJ bloquea el acceso automatizado (Cloudflare, HTTP 403 en API, `/toc/` y búsqueda), así que se comprobó por **tres vías independientes**, cada una validada con un **control positivo**: CIT, la única del conjunto que sí consta en DOAJ. Se probaron **todos los ISSN de cada revista**, porque DOAJ registra por cualquiera de ellos.
+
+| Revista | OpenAlex `is_in_doaj` | Wikidata `P5115` | Ficha DOAJ archivada |
+|---|:--:|:--:|:--:|
+| **CIT** *(control)* | **true** | **`1314-4081`** | **Sí — desde 2018** |
+| IJIES | false | ausente | no |
+| ISI | false | ausente | no |
+| BEEI | false | ausente | no |
+| IJSSE | false | ausente | no |
+
+Las tres vías coinciden y el control se detecta en las tres. **Ninguna de las cuatro elegidas figura en DOAJ.** No las descalifica —todas están en Scopus, con editor identificable y política de revisión pública— pero les quita una garantía externa. Ninguna menciona DOAJ en su propio sitio.
 
 
 ---
