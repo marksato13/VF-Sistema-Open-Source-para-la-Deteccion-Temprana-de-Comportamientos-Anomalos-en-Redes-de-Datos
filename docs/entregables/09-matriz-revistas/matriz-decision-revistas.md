@@ -524,7 +524,7 @@ Verificación punto por punto contra la guía de la sesión. La columna de la iz
 | 34 | Matriz sobre **todas** las revistas legítimas, no solo cuatro | ✔ Las nueve |
 | 24 · 31 · 34 · 35 | Plan A, B y C según el orden de puntajes | ✔ Calculado desde la matriz, no escrito a mano |
 | **33 · 34** | Justificación escrita de **media página a una página**, aparte de la matriz | ✔ Documento propio: `Justificacion-revista-objetivo.docx` |
-| 27 | Compartir la matriz con el asesor **antes** de enviar | Pendiente |
+| 27 | Compartir la matriz con los asesores **antes** de enviar | Pendiente |
 
 **Catorce de quince cumplidos y uno con reserva.** El único abierto es la confirmación escrita de la coordinación sobre el requisito institucional, que depende de un tercero. El orden de los planes, que estaba incumplido, se corrigió el 02/09/2026: ahora se calcula desde la matriz.
 

@@ -896,7 +896,7 @@ def main() -> None:
         ("**33 · 34**", "Justificación escrita de **media página a una página**, "
          "aparte de la matriz",
          "✔ Documento propio: `Justificacion-revista-objetivo.docx`"),
-        ("27", "Compartir la matriz con el asesor **antes** de enviar", "Pendiente"),
+        ("27", "Compartir la matriz con los asesores **antes** de enviar", "Pendiente"),
     ]:
         a(f"| {d} | {ex} | {est} |\n")
     a("\n**Catorce de quince cumplidos y uno con reserva.** El único abierto es la "
