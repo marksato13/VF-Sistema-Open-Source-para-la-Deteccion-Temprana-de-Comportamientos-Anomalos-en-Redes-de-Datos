@@ -198,25 +198,26 @@ def main() -> None:
     h1(doc, "2 ·", "Lo que NO está listo")
     par(doc, "Solo lo que sigue abierto hoy. **Lo ya resuelto está en la sección 1 y no se repite "
              "aquí.** Las cinco están medidas, no supuestas.")
-    tabla(doc, ["Qué falta", "Evidencia de que falta", "Gravedad"], [
-        ["**El sistema bloquea tráfico legítimo pesado**", "En laboratorio se equivoca el 4,71 % de las veces; en operación, 25,81 % y 22,97 %. Una transferencia legítima de 200 Mbit/s bloqueó a un cliente real durante 120 s", "Crítica"],
-        ["**El modelo se eligió mirando el examen final**", "Se compararon 7 candidatos sobre el mismo conjunto de prueba y se escogió el mejor. El 88,8 % es un máximo, no una estimación limpia", "Crítica"],
-        ["**Nadie ha usado el panel salvo el equipo**", "El instrumento SUS está preparado, pero el archivo de respuestas tiene 0 filas: no se ha aplicado", "Alta"],
-        ["**No se sabe si funciona en otra jornada**", "Los 44 perfiles aparecen en las tres particiones. Falta una captura nueva que el modelo no haya visto", "Alta"],
-        ["**Faltan 4 escenarios legítimos del jurado**", "SSH, SCP/SFTP, backup y actualizaciones no están en el dataset", "Media"],
-    ], [5.2, 9.0, 2.2], fondos=[F_RED, F_RED, F_AMBER, F_AMBER, F_ZEBRA])
+    tabla(doc, ["", "Qué falta", "Evidencia de que falta", "Gravedad"], [
+        ["**P-1**", "**El sistema bloquea tráfico legítimo pesado**", "En laboratorio se equivoca el 4,71 % de las veces; en operación, 25,81 % y 22,97 %. Una transferencia legítima de 200 Mbit/s bloqueó a un cliente real durante 120 s", "Crítica"],
+        ["**P-2**", "**El modelo se eligió mirando el examen final**", "Se compararon 7 candidatos sobre el mismo conjunto de prueba y se escogió el mejor. El 88,8 % es un máximo, no una estimación limpia", "Crítica"],
+        ["**P-3**", "**Nadie ha usado el panel salvo el equipo**", "El instrumento SUS está preparado, pero el archivo de respuestas tiene 0 filas: no se ha aplicado", "Alta"],
+        ["**P-4**", "**No se sabe si funciona en otra jornada**", "Los 44 perfiles aparecen en las tres particiones. Falta una captura nueva que el modelo no haya visto", "Alta"],
+        ["**P-5**", "**Faltan 4 escenarios legítimos del jurado**", "SSH, SCP/SFTP, backup y actualizaciones no están en el dataset", "Media"],
+    ], [1.5, 4.6, 8.4, 2.1], fondos=[F_RED, F_RED, F_AMBER, F_AMBER, F_ZEBRA])
 
     # ---------------------------------------------------------------- 3
     h1(doc, "3 ·", "Cómo se va a abordar")
-    par(doc, "Una acción por cada fila de la sección 2, en el mismo orden. Todas caben en el "
-             "laboratorio actual: **ninguna exige equipo ni presupuesto nuevo**.")
-    tabla(doc, ["Qué falta", "Qué se hará", "¿Lo resuelve del todo?"], [
-        ["Bloquea tráfico legítimo pesado", "Reentrenar incluyendo la transferencia de 200 Mbit/s como tráfico **normal** y repetir las 29 corridas de validación", "Sí, si el error baja. Si no baja, queda declarado como límite del sistema"],
-        ["Modelo elegido mirando el examen", "Recolectar una jornada nueva que el modelo no vea nunca, y medir sobre ella", "Sí. Es la única corrección real; no se puede arreglar escribiendo"],
-        ["Nadie ha usado el panel", "Sesión de 2 h con 5–8 evaluadores usando el instrumento SUS ya preparado", "Sí"],
-        ["No sabemos si funciona otro día", "La misma jornada nueva de la fila 2 sirve para las dos cosas", "Sí"],
-        ["Faltan 4 escenarios legítimos", "Una campaña F1 más: SSH, SCP/SFTP, backup y actualizaciones", "Sí"],
-    ], [4.4, 7.4, 4.8])
+    par(doc, "Una acción por cada pendiente de la sección 2, con el mismo identificador. Todas "
+             "caben en el laboratorio actual: **ninguna exige equipo ni presupuesto nuevo**. "
+             "**P-2 y P-4 se resuelven con la misma campaña.**")
+    tabla(doc, ["", "Qué se hará", "¿Lo resuelve del todo?", "Cuándo"], [
+        ["**P-1**", "Reentrenar incluyendo la transferencia de 200 Mbit/s como tráfico **normal** y repetir las 29 corridas de validación", "Sí, si el error baja. Si no baja, queda declarado como límite del sistema", "10 oct"],
+        ["**P-2**", "Recolectar una **jornada nueva** que el modelo no vea nunca, y medir sobre ella", "Sí. Es la única corrección real: no se arregla escribiendo", "24 oct"],
+        ["**P-3**", "Sesión de 2 h con 5–8 evaluadores usando el instrumento SUS ya preparado", "Sí", "9 sep"],
+        ["**P-4**", "**La misma jornada nueva de P-2** sirve para las dos cosas", "Sí", "24 oct"],
+        ["**P-5**", "Una campaña F1 más: SSH, SCP/SFTP, backup y actualizaciones", "Sí", "19 sep"],
+    ], [1.5, 7.2, 5.4, 2.0])
     # -------------------------------------------------------- cronograma
     h1(doc, "4 ·", "En qué tiempo: cronograma comprometido")
     par(doc, "*Propuesta del equipo del 2 de septiembre de 2026, pendiente del visto bueno de los "
@@ -226,15 +227,15 @@ def main() -> None:
              "la revista —41 días a la primera decisión, 158 hasta publicar—, un envío el 28 de "
              "septiembre proyecta decisión hacia el 8 de noviembre de 2026 y publicación hacia "
              "marzo de 2027.")
-    tabla(doc, ["Fecha", "Pendiente", "Cómo se aborda", "Responsable", "Estado"], [
-        ["**vie 4 sep 2026**", "Declarar la selección posterior en la tesis", "Párrafo en metodología, enlazado a la *model card*", "Salazar", "PLANIFICADA"],
-        ["**mié 9 sep 2026**", "**Validación con usuarios (SUS)**", "Sesión de 2 h con 5–8 evaluadores; instrumento ya preparado", "Salazar · Sauñe", "PLANIFICADA"],
-        ["**sáb 19 sep 2026**", "Escenarios legítimos faltantes", "Campaña F1: SSH, SCP/SFTP, backup y actualizaciones", "Sauñe", "PLANIFICADA"],
-        ["**mié 23 sep 2026**", "Juicio experto (3 evaluadores)", "Rúbrica de pertinencia, ya con los resultados del SUS a la vista", "Salazar · asesores", "PLANIFICADA"],
-        ["**lun 28 sep 2026**", "**Envío del artículo a IJIES**", "Manuscrito en `IJIES_Format.docx`, 8 a 10 páginas", "Salazar · Sauñe", "PLANIFICADA"],
-        ["**sáb 10 oct 2026**", "**Recalibrar con tráfico pesado y repetir F6**", "Reentrenar con `iperf-tcp 200M` como normalidad; repetir las 29 corridas", "Salazar", "PLANIFICADA"],
-        ["**sáb 24 oct 2026**", "*Holdout* temporal externo", "Campaña completa en fecha distinta, sin reutilizar episodios", "Salazar · Sauñe", "PLANIFICADA"],
-    ], [2.9, 4.0, 5.6, 2.4, 2.3])
+    tabla(doc, ["Fecha", "", "Qué se hace", "Responsable", "Estado"], [
+        ["**vie 4 sep 2026**", "P-2", "Declarar la selección posterior en el documento de tesis (mitiga; la corrección real es el 24 de octubre)", "Salazar", "PLANIFICADA"],
+        ["**mié 9 sep 2026**", "**P-3**", "**Sesión SUS** de 2 h con 5–8 evaluadores", "Salazar · Sauñe", "PLANIFICADA"],
+        ["**sáb 19 sep 2026**", "**P-5**", "Campaña F1: SSH, SCP/SFTP, backup y actualizaciones", "Sauñe", "PLANIFICADA"],
+        ["**mié 23 sep 2026**", "P-3", "Juicio experto con 3 evaluadores, ya con los resultados del SUS a la vista", "Salazar · asesores", "PLANIFICADA"],
+        ["**lun 28 sep 2026**", "—", "**Envío del artículo a IJIES.** Hito, no un pendiente: el artículo no espera a P-1 ni a P-2", "Salazar · Sauñe", "PLANIFICADA"],
+        ["**sáb 10 oct 2026**", "**P-1**", "**Recalibrar** con tráfico pesado como normalidad y repetir las 29 corridas", "Salazar", "PLANIFICADA"],
+        ["**sáb 24 oct 2026**", "**P-2 · P-4**", "**Jornada nueva** en fecha distinta, sin reutilizar episodios. Cierra los dos", "Salazar · Sauñe", "PLANIFICADA"],
+    ], [2.9, 1.9, 6.4, 2.4, 2.3])
     par(doc, "**El SUS va primero porque es el único cero absoluto que queda**: cero en la ficha de "
              "auditoría, cero en el eje de pertinencia y `D-18` en el registro. Cuesta dos horas y "
              "sube la ficha de 82,4 % a 88,2 %. El juicio experto va después a propósito: los "
