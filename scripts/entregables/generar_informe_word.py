@@ -304,86 +304,17 @@ def main() -> int:
 
     # --------------------------------------------- 2. VALIDACIÓN INTERNA ---
     doc.add_paragraph()
-    h1(doc, "Validación interna", "2.")
-    parrafo(doc, "¿Los resultados obtenidos se deben realmente a lo que el estudio dice haber probado?",
-            italic=True, color=DIM)
-
-    h2(doc, "Abordado de manera concreta", OK, "✔  ")
+    h1(doc, "Eje 1 · Confiabilidad", "2.")
+    parrafo(doc, "*¿Repetir el procedimiento produce los mismos resultados?* La sesión pide un "
+                 "método concreto según el tipo de producto. **Dos no aplican aquí y conviene "
+                 "decirlo antes de que se pregunte:**", size=9.5)
     tabla(doc,
-          ["Aspecto", "Evidencia verificable"],
-          [("Sin fuga de datos entre particiones",
-            "Auditoría automática: ningún episodio se reparte entre entrenamiento, validación y prueba"),
-           ("Sin información futura en las variables",
-            "Prueba unitaria: un evento posterior no altera una ventana ya cerrada"),
-           ("Umbral fijado antes de ver la prueba",
-            "Cuantil α = 0,05 solo sobre validación (k = 13, n = 273); el escalador se ajusta solo con entrenamiento"),
-           ("Evaluación en un solo paso",
-            "Sin reentrenar tras ver resultados; registro sellado con hash del calibrador y del repositorio"),
-           ("Detección de una fuga propia",
-            "Un experimento con selección contaminada fue identificado y marcado como “no debe citarse”")],
-          widths=[5.2, 11.3])
-
-    h2(doc, "Abordado parcialmente", AMBER, "◐  ")
-    vineta(doc, "**Análisis de sensibilidad.** Se ejecutó con 10 semillas, ponderación por episodio y "
-                "colapso de duplicados, pero **solo sobre los modelos descartados**. El modelo finalmente "
-                "elegido no recibió ninguna prueba de estabilidad.")
-
-    h2(doc, "No abordado", DANGER, "✘  ")
-    vineta(doc, "**Selección del modelo sin contaminar la prueba.** El modelo se eligió después de observar "
-                "su desempeño en el conjunto de prueba. El registro del proyecto documenta que ese modelo "
-                "estaba designado como “comparador” y que la política prohibía promoverlo por ganar una "
-                f"métrica posterior. En consecuencia, el **{det:.1f} %** de detección es el máximo entre "
-                "**7 candidatos** evaluados sobre los mismos datos, sin conjunto reservado que permita una "
-                "estimación sin sesgo optimista.")
-    vineta(doc, "**Pruebas de significancia estadística.** Ejecutadas: McNemar exacto por pares con "
-                "corrección de Holm-Bonferroni sobre las 21 comparaciones. Las **seis del OCSVM son "
-                "significativas sin excepción**; en cambio **ninguna diferencia de falso positivo lo es**, "
-                "así que afirmar que un modelo comete menos falsos positivos que otro no está respaldado.")
-
-    # --------------------------------------------- 3. VALIDACIÓN EXTERNA ---
-    h1(doc, "Validación externa", "3.")
-    parrafo(doc, "¿Los resultados se generalizan a otros contextos, poblaciones o condiciones de uso?",
-            italic=True, color=DIM)
-
-    h2(doc, "Abordado de manera concreta", OK, "✔  ")
-    vineta(doc, "**Se midió el sistema completo en operación real**, no solo el modelo en laboratorio: "
-                "2 pases de 29 corridas más 2 pruebas de aislamiento, con motor y bloqueo activos.")
-    vineta(doc, "**Ataques genuinos** desde una máquina atacante real en 6 familias distintas, no simulados "
-                "por inyección de datos.")
-    vineta(doc, "**Se declaró la procedencia heterogénea** de los datos de ataque: 161 ventanas reales y "
-                f"18 heredadas, reportadas por separado (**{kali:.1f} %** frente a **83,3 %**).")
-
-    h2(doc, "Resultado que refuta la generalización", DANGER, "✘  ")
-    parrafo(doc, "Es el hallazgo más importante del informe y se reporta aunque sea desfavorable:")
-    tabla(doc,
-          ["Condición de medición", "Falsos positivos", "IC 95 %"],
-          [("Laboratorio (conjunto de prueba)", (f"{fpr:.2f} %  (13/276)", F_OK), "2,8 % – 7,9 %"),
-           ("Operación real · pase 1", ("25,81 %  (16/62)", F_DANGER), "16,6 % – 37,9 %"),
-           ("Operación real · pase 2", ("22,97 %  (17/74)", F_DANGER), "14,9 % – 33,7 %")],
-          widths=[6.5, 5.0, 5.0])
-    doc.add_paragraph()
-    figura(doc, "C1-fpr-offline-vs-operativo.png",
-           "Figura 1. Intervalos de Wilson descriptivos; las ventanas comparten episodio e historia, por lo que el gráfico no prueba por sí solo una diferencia inferencial.")
-
-    caja(doc, "Evidencia adicional en aislamiento",
-         "Se reprodujo **sin contaminación entre pruebas**: una transferencia legítima de 200 Mbit/s generó una "
-         "ventana que cruzó el umbral y **bloqueó a un cliente legítimo durante 120 segundos**. Otra ventana de "
-         "la misma transferencia se permitió por apenas **0,0014 puntos** de score, lo que indica que el tráfico "
-         "legítimo intenso cae dentro del margen de decisión del modelo.",
-         color_borde="B91C1C", fill="FBE3E1")
-
-    doc.add_paragraph()
-    h2(doc, "No abordado", DANGER, "✘  ")
-    vineta(doc, "**Partición por sesiones independientes.** La división se hizo por índice de repetición, "
-                "por lo que los **44 perfiles** de tráfico aparecen en las tres particiones: se mide "
-                "repetibilidad del escenario, no generalización a tráfico no visto.")
-    vineta(doc, "**Jornada de validación temporal externa.** No existe un conjunto capturado en fecha distinta "
-                "y reservado sin participar en entrenamiento ni calibración.")
-    vineta(doc, "**Diversidad de escenarios.** Faltan seis escenarios legítimos previstos (SSH, SCP/SFTP, SMB, "
-                "respaldo, streaming y actualizaciones) y no hay captura multi-sistema-operativo.")
-
-    # ------------------------------------------------- 4. CONFIABILIDAD ----
-    h1(doc, "Confiabilidad", "4.")
+          ["Prueba", "Qué mide", "Por qué no aplica aquí"],
+          [("**Alfa de Cronbach**", "Consistencia interna entre los ítems de un instrumento",
+            "El producto es un sistema que decide y bloquea: **no tiene ítems de escala** que correlacionar. Se calculará sobre el SUS, que sí tiene 10 ítems"),
+           ("**Kappa de Cohen**", "Acuerdo entre dos evaluadores más allá del azar",
+            "**No hay jueces humanos etiquetando**: las etiquetas vienen del diseño experimental, se sabe qué máquina generó cada tráfico")],
+          widths=[3.4, 4.6, 8.5])
     parrafo(doc, "¿Repetir el procedimiento produce los mismos resultados?", italic=True, color=DIM)
 
     h2(doc, "Abordado de manera concreta", OK, "✔  ")
@@ -428,7 +359,172 @@ def main() -> int:
 
     # --------------------------------- 5. QUÉ FALTA Y CÓMO SE ABORDARÁ -----
     doc.add_paragraph()
-    h1(doc, "Qué falta y cómo se abordará con el tiempo disponible", "5.")
+    # ----------------------------------- 3. EJE 2 · REPLICABILIDAD -------
+    h1(doc, "Eje 2 · Replicabilidad", "3.")
+    parrafo(doc, "*¿Otro equipo, con datos nuevos y el mismo método, llegaría a lo mismo?* "
+                 "La sesión pide prácticas de **ciencia abierta**: principios FAIR, repositorio "
+                 "público, datos con DOI citable, entorno con versiones exactas y preregistro.",
+             size=9.5)
+
+    h2(doc, "Reproducibilidad no es replicabilidad", INK, "→  ")
+    tabla(doc,
+          ["", "Definición de la sesión", "¿Se cumple?"],
+          [("**Reproducibilidad**", "Mismos datos y mismo código → mismos resultados",
+            "**Sí.** Al reevaluar el modelo congelado salieron exactamente las mismas cifras: 13/276 y 158/179"),
+           ("**Replicabilidad**", "**Datos nuevos**, mismo método → hallazgos consistentes",
+            "**No.** No existe ninguna captura posterior e independiente")],
+          widths=[3.4, 6.0, 7.1])
+    parrafo(doc, "Decirlo así evita la afirmación más común e injustificada en trabajos de este "
+                 "tipo: «nuestros resultados son replicables».", size=9.2, italic=True)
+
+    h2(doc, "Checklist de replicabilidad de la sesión", OK, "✔  ")
+    tabla(doc,
+          ["Punto del checklist", "Estado", "Evidencia"],
+          [("Datos disponibles públicamente", "Cumple",
+            "Dataset, manifiesto y 7 modelos publicados, con `docs/dataset/SHA256SUMS` (13 archivos)"),
+           ("Código disponible y documentado", "Cumple",
+            "Repositorio público con historial completo; MIT para código y CC BY 4.0 para datos"),
+           ("Entorno con versiones exactas", "Cumple",
+            "`requirements-model.txt`; el manifiesto registra `scikit-learn 1.9.0`"),
+           ("Semillas fijadas y reportadas", "Cumple",
+            "`random_state` explícito; 10 ajustes repetidos dan el mismo hash"),
+           ("Instrucciones paso a paso", "Cumple",
+            "El datasheet documenta descarga, verificación de hashes y regeneración")],
+          widths=[4.6, 2.3, 9.6])
+
+    h2(doc, "No abordado", DANGER, "✘  ")
+    vineta(doc, "**DOI citable de los datos.** No hay depósito en Zenodo, Figshare ni OSF: el "
+                "repositorio es público pero **sin identificador persistente**.")
+    vineta(doc, "**Preregistro del plan de análisis.** No se publicaron hipótesis, métricas ni "
+                "umbrales antes de ver los resultados. Está directamente relacionado con la "
+                "selección posterior del modelo.")
+    vineta(doc, "**Replicación con datos nuevos.** Es la carencia principal de este eje.")
+
+    # ----------------------------------- 4. EJE 3 · PERTINENCIA ----------
+    h1(doc, "Eje 3 · Pertinencia", "4.")
+    parrafo(doc, "*¿La solución resuelve el problema real, para las personas que la usarán?* "
+                 "La sesión pide validación con usuarios y *stakeholders* reales: pruebas de "
+                 "usabilidad, modelos de aceptación (**TAM**, **UTAUT**), **SUS** y "
+                 "**trazabilidad de requisitos**.", size=9.5)
+    parrafo(doc, "**Es el único eje de este informe sin ninguna medición.** Se declara así, sin "
+                 "matizarlo.", size=9.5)
+    tabla(doc,
+          ["Instrumento que pide la sesión", "Estado", "Detalle"],
+          [("Pruebas de usabilidad con usuarios reales", "No aplicado",
+            "Nadie fuera del equipo ha operado el panel"),
+           ("**SUS**", "**Preparado, sin aplicar**",
+            "Instrumento de 10 ítems y guion listos en `08-validacion-usuarios/`; el archivo de respuestas tiene **0 filas**"),
+           ("TAM / TAM2 / UTAUT", "No aplicado", "No se aplicó ningún modelo de aceptación"),
+           ("Entrevistas o grupos focales", "No aplicado", "No se realizaron"),
+           ("**Trazabilidad de requisitos**", "Parcial",
+            "La matriz existe como plan, pero **no está cerrada**: hay filas sin prueba asociada")],
+          widths=[5.0, 3.0, 8.5])
+    parrafo(doc, "En palabras de la sesión: «una solución puede ser excelente en código y "
+                 "arquitectura, y aun así ser irrelevante si no encaja con la necesidad real». "
+                 "**Este proyecto ha demostrado lo primero y no ha medido lo segundo.** Cerrarlo "
+                 "cuesta dos horas: una sesión con 5–8 evaluadores usando el instrumento ya "
+                 "preparado.", size=9.2, italic=True)
+
+    h1(doc, "Validez interna", "5.1")
+    parrafo(doc, "¿Los resultados obtenidos se deben realmente a lo que el estudio dice haber probado?",
+            italic=True, color=DIM)
+
+    h2(doc, "Abordado de manera concreta", OK, "✔  ")
+    tabla(doc,
+          ["Aspecto", "Evidencia verificable"],
+          [("Sin fuga de datos entre particiones",
+            "Auditoría automática: ningún episodio se reparte entre entrenamiento, validación y prueba"),
+           ("Sin información futura en las variables",
+            "Prueba unitaria: un evento posterior no altera una ventana ya cerrada"),
+           ("Umbral fijado antes de ver la prueba",
+            "Cuantil α = 0,05 solo sobre validación (k = 13, n = 273); el escalador se ajusta solo con entrenamiento"),
+           ("Evaluación en un solo paso",
+            "Sin reentrenar tras ver resultados; registro sellado con hash del calibrador y del repositorio"),
+           ("Detección de una fuga propia",
+            "Un experimento con selección contaminada fue identificado y marcado como “no debe citarse”")],
+          widths=[5.2, 11.3])
+
+    h2(doc, "Abordado parcialmente", AMBER, "◐  ")
+    vineta(doc, "**Análisis de sensibilidad.** Se ejecutó con 10 semillas, ponderación por episodio y "
+                "colapso de duplicados, pero **solo sobre los modelos descartados**. El modelo finalmente "
+                "elegido no recibió ninguna prueba de estabilidad.")
+
+    h2(doc, "No abordado", DANGER, "✘  ")
+    vineta(doc, "**Selección del modelo sin contaminar la prueba.** El modelo se eligió después de observar "
+                "su desempeño en el conjunto de prueba. El registro del proyecto documenta que ese modelo "
+                "estaba designado como “comparador” y que la política prohibía promoverlo por ganar una "
+                f"métrica posterior. En consecuencia, el **{det:.1f} %** de detección es el máximo entre "
+                "**7 candidatos** evaluados sobre los mismos datos, sin conjunto reservado que permita una "
+                "estimación sin sesgo optimista.")
+    vineta(doc, "**Pruebas de significancia estadística.** Ejecutadas: McNemar exacto por pares con "
+                "corrección de Holm-Bonferroni sobre las 21 comparaciones. Las **seis del OCSVM son "
+                "significativas sin excepción**; en cambio **ninguna diferencia de falso positivo lo es**, "
+                "así que afirmar que un modelo comete menos falsos positivos que otro no está respaldado.")
+
+    # --------------------------------------------- 3. VALIDACIÓN EXTERNA ---
+    h1(doc, "Validez externa", "5.2")
+    parrafo(doc, "¿Los resultados se generalizan a otros contextos, poblaciones o condiciones de uso?",
+            italic=True, color=DIM)
+
+    h2(doc, "Abordado de manera concreta", OK, "✔  ")
+    vineta(doc, "**Se midió el sistema completo en operación real**, no solo el modelo en laboratorio: "
+                "2 pases de 29 corridas más 2 pruebas de aislamiento, con motor y bloqueo activos.")
+    vineta(doc, "**Ataques genuinos** desde una máquina atacante real en 6 familias distintas, no simulados "
+                "por inyección de datos.")
+    vineta(doc, "**Se declaró la procedencia heterogénea** de los datos de ataque: 161 ventanas reales y "
+                f"18 heredadas, reportadas por separado (**{kali:.1f} %** frente a **83,3 %**).")
+
+    h2(doc, "Resultado que refuta la generalización", DANGER, "✘  ")
+    parrafo(doc, "Es el hallazgo más importante del informe y se reporta aunque sea desfavorable:")
+    tabla(doc,
+          ["Condición de medición", "Falsos positivos", "IC 95 %"],
+          [("Laboratorio (conjunto de prueba)", (f"{fpr:.2f} %  (13/276)", F_OK), "2,8 % – 7,9 %"),
+           ("Operación real · pase 1", ("25,81 %  (16/62)", F_DANGER), "16,6 % – 37,9 %"),
+           ("Operación real · pase 2", ("22,97 %  (17/74)", F_DANGER), "14,9 % – 33,7 %")],
+          widths=[6.5, 5.0, 5.0])
+    doc.add_paragraph()
+    figura(doc, "C1-fpr-offline-vs-operativo.png",
+           "Figura 1. Intervalos de Wilson descriptivos; las ventanas comparten episodio e historia, por lo que el gráfico no prueba por sí solo una diferencia inferencial.")
+
+    caja(doc, "Evidencia adicional en aislamiento",
+         "Se reprodujo **sin contaminación entre pruebas**: una transferencia legítima de 200 Mbit/s generó una "
+         "ventana que cruzó el umbral y **bloqueó a un cliente legítimo durante 120 segundos**. Otra ventana de "
+         "la misma transferencia se permitió por apenas **0,0014 puntos** de score, lo que indica que el tráfico "
+         "legítimo intenso cae dentro del margen de decisión del modelo.",
+         color_borde="B91C1C", fill="FBE3E1")
+
+    doc.add_paragraph()
+    h2(doc, "No abordado", DANGER, "✘  ")
+    vineta(doc, "**Partición por sesiones independientes.** La división se hizo por índice de repetición, "
+                "por lo que los **44 perfiles** de tráfico aparecen en las tres particiones: se mide "
+                "repetibilidad del escenario, no generalización a tráfico no visto.")
+    vineta(doc, "**Jornada de validación temporal externa.** No existe un conjunto capturado en fecha distinta "
+                "y reservado sin participar en entrenamiento ni calibración.")
+    vineta(doc, "**Diversidad de escenarios.** Faltan seis escenarios legítimos previstos (SSH, SCP/SFTP, SMB, "
+                "respaldo, streaming y actualizaciones) y no hay captura multi-sistema-operativo.")
+
+    # ------------------------------------------------- 4. CONFIABILIDAD ----
+    # ----------------------------- 6. CHECKLIST INTEGRADOR ---------------
+    h1(doc, "Checklist integrador de la Sesión 02", "6.")
+    parrafo(doc, "Los seis puntos que la sesión pide verificar **antes de reportar resultados**.",
+             size=9.5)
+    tabla(doc,
+          ["Punto", "Estado", "Dónde está"],
+          [("Confiabilidad estadística reportada", "Cumple",
+            "Sección 2: determinismo, test-retest y estabilidad del umbral"),
+           ("Método de validación declarado", "Cumple",
+            "Sección 2: validación cruzada agrupada y bootstrap"),
+           ("Datos y código disponibles", "Cumple", "Sección 3"),
+           ("Entorno, dependencias y semillas", "Cumple", "Sección 3"),
+           ("**Pertinencia validada con usuarios reales**", "**No cumple**",
+            "Sección 4: **el único punto sin evidencia**"),
+           ("Trazabilidad de requisitos verificada", "Parcial", "Sección 4: matriz abierta")],
+          widths=[5.6, 2.6, 8.3])
+    parrafo(doc, "**Cinco de seis cumplidos.** El que falta es el mismo que la ficha de auditoría "
+                 "penaliza y que el plan de validación agenda para el 9 de septiembre.",
+             size=9.2, italic=True)
+
+    h1(doc, "Qué falta y cómo se abordará", "7.")
     parrafo(doc, "Ordenado por relación entre costo y beneficio. **Ninguna acción de los bloques A y B "
                  "requiere capturar datos nuevos.**")
     tabla(doc,
@@ -447,7 +543,7 @@ def main() -> int:
 
     # ------------------------------------------------------ 6. CONCLUSIÓN --
     doc.add_paragraph()
-    h1(doc, "Conclusión", "6.")
+    h1(doc, "Conclusión", "8.")
     parrafo(doc, f"Los resultados sostienen una afirmación **acotada y verdadera**: se demostró la viabilidad de "
                  f"detectar comportamientos anómalos y ejercer control en línea en tiempo real sobre una red real, "
                  f"con capacidad discriminante alta (**ROC-AUC = 0,974**), detección del **{kali:.1f} %** sobre "

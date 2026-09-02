@@ -1,4 +1,4 @@
-# Informe de validación interna, validación externa y confiabilidad de los resultados
+# Informe de validación de resultados: confiabilidad, replicabilidad y pertinencia
 
 **Proyecto:** Detección temprana de comportamientos anómalos en redes de datos mediante modelos predictivos y un mecanismo de control inline
 **Integrantes:** Rubén Mark Salazar Tocas · Uziel Elias Sauñe Fernandez
@@ -16,106 +16,77 @@
 > **Toda cifra coincide con el consolidado.** Si alguna discrepa, manda la fuente
 > primaria que se cita en cada tabla.
 
-> Informe breve solicitado en la sesión del 12 de agosto. El análisis completo, con las 11 figuras y el detalle de cada hallazgo, está en [`01-evaluacion-critica/`](../01-evaluacion-critica/informe-evaluacion-critica.md) del repositorio del proyecto.
-
 ---
 
 ## 1. Resumen del estado
 
-| Criterio | Estado | Síntesis |
+La Sesión 02 organiza la validación en **tres ejes**. Este informe los sigue en ese
+orden y desarrolla cada uno con la evidencia del proyecto.
+
+| Eje de la Sesión 02 | Qué pregunta | Estado |
 |---|---|---|
-| **Validación interna** | Parcial | Controles anti-fuga reales y verificados, pero el modelo final se eligió observando el conjunto de prueba |
-| **Validación externa** | Insuficiente | Medida en operación real y refutada: el error sobre tráfico legítimo pesado es 5 veces mayor que el medido en laboratorio |
-| **Confiabilidad** | Alta | Resultados reproducibles: al repetir la evaluación se obtienen las mismas cifras, con hashes y versionado que lo garantizan |
+| **Confiabilidad** | ¿Repetir el procedimiento da lo mismo? | **Alta.** Determinismo verificado, umbral estable, dos pases equivalentes |
+| **Replicabilidad** | ¿Otro equipo, con datos nuevos, llegaría a lo mismo? | **Parcial.** Hay reproducibilidad completa; **falta replicabilidad** |
+| **Pertinencia** | ¿Resuelve el problema real, para quien lo usará? | **Sin evidencia.** Es el único eje sin ninguna medición |
 
-**Lectura general.** Los resultados **sí sostienen** que el sistema detecta y bloquea ataques reales en tiempo real. **No sostienen todavía** que lo haga sin penalizar tráfico legítimo intenso. La debilidad principal no está en la ingeniería del sistema, sino en el diseño estadístico de la evaluación.
-
----
-
-## 2. Validación interna
-
-*¿Los resultados obtenidos se deben realmente a lo que el estudio dice haber probado?*
-
-> **Qué se pidió evaluar.** El grado en que el diseño garantiza que los resultados observados se deben a la variable estudiada y no a factores ajenos. En un producto de software esto significa verificar tres cosas concretas: que **no exista fuga de datos** (*data leak*), que las **condiciones de prueba estén controladas**, y que la **cantidad de experimentos sea representativa**. Se responde punto por punto a continuación.
-
-### Abordado de manera concreta
-
-| Aspecto | Evidencia verificable |
-|---|---|
-| Sin fuga de datos entre particiones | Auditoría automática: `no_episode_split = true`; ningún episodio se reparte entre entrenamiento, validación y prueba |
-| Sin información futura en las variables | Prueba unitaria: un evento posterior no altera una ventana ya cerrada |
-| Umbral fijado antes de ver los datos de prueba | Cuantil α = 0,05 solo sobre validación (k = 13, n = 273); el escalador se ajusta solo con entrenamiento |
-| Evaluación en un solo paso, sin reentrenar | Registro sellado con hash del calibrador y del repositorio |
-| Detección y corrección de una fuga propia | Un experimento con selección contaminada fue identificado y marcado como *"no debe citarse"* |
-
-### Abordado parcialmente
-
-- **Análisis de sensibilidad.** Se ejecutó con 10 semillas, ponderación por episodio y colapso de duplicados, **pero solo sobre los modelos descartados** (Isolation Forest). El modelo finalmente elegido no recibió ninguna prueba de estabilidad.
-
-### No abordado
-
-- **Selección del modelo sin contaminar la prueba.** El modelo congelado se eligió **después** de observar su desempeño en el conjunto de prueba. El propio registro del proyecto documenta que ese modelo estaba designado como "comparador" y que la política prohibía promoverlo por ganar una métrica posterior. En consecuencia, el 88,3 % de detección es el **máximo entre 7 candidatos evaluados sobre los mismos datos**, sin ningún conjunto reservado que permita una estimación sin sesgo optimista.
-- **Pruebas de significancia estadística.** ✅ **Ejecutadas.** McNemar exacto por pares —la prueba correcta cuando los modelos se evalúan sobre las mismas ventanas— con corrección de Holm-Bonferroni sobre las 21 comparaciones. Las **seis del OCSVM son significativas sin excepción**; en cambio **ninguna diferencia de falso positivo lo es** (p mínimo 0,52), así que afirmar que un modelo comete menos falsos positivos que otro no está respaldado por estos datos.
+**Lectura general.** Los resultados **sí sostienen** que el sistema detecta y bloquea
+ataques reales en tiempo real. **No sostienen todavía** que lo haga sin penalizar
+tráfico legítimo intenso, ni que sea pertinente para usuarios reales.
 
 ---
 
-## 3. Validación externa
-
-*¿Los resultados se generalizan a otros contextos, poblaciones o condiciones de uso?*
-
-> **Qué se pidió evaluar.** Si los resultados se sostienen fuera de las condiciones en que se midieron: *¿el algoritmo rinde igual sobre otro conjunto de datos?, ¿la arquitectura funciona en un entorno de producción real?* Se pidió revisar además si la **muestra es representativa**, si hay **sesgo**, y si existen problemas de **balanceo de datos o sobreajuste**. Este proyecto pudo responderlo de forma directa, porque el sistema no se quedó en laboratorio: se midió desplegado y en operación.
-
-### Abordado de manera concreta
-
-- **Se midió el sistema completo en operación real**, no solo el modelo en laboratorio: 2 pases de 29 corridas más 2 pruebas de aislamiento, con motor y bloqueo activos.
-- **Ataques genuinos** desde una máquina atacante real (Kali) en 6 familias distintas, no simulados por inyección de datos.
-- **Se declaró la procedencia heterogénea** de los datos de ataque: 161 ventanas reales y 18 heredadas de otro mecanismo, reportadas por separado (88,8 % frente a 83,3 %).
-
-### Resultado que refuta la generalización
-
-Es el hallazgo más importante y se reporta aunque sea desfavorable:
-
-| Condición de medición | Falsos positivos | IC 95 % |
-|---|---|---|
-| Laboratorio (conjunto de prueba) | **4,71 %** (13/276) | 2,8 % – 7,9 % |
-| Operación real, pase 1 | **25,81 %** (16/62) | 16,6 % – 37,9 % |
-| Operación real, pase 2 | **22,97 %** (17/74) | 14,9 % – 33,7 % |
-
-La fuente primaria registra las cifras sin redondear: **25,81 % (16/62) en el pase 1** y **22,97 % (17/74) en el pase 2**, con los intervalos indicados arriba (`docs/fase07-validacion-final/02-resultados-f6.md`). El rango aproximado 23–26 % resume ambos pases y no es un promedio.
-
-![Falsos positivos: laboratorio frente a operación real](../graficas/C1-fpr-offline-vs-operativo.png)
-
-Los intervalos de Wilson son **descriptivos** y las ventanas comparten episodio e historia de hasta 60 s; su no solapamiento no prueba por sí solo una diferencia inferencial independiente. Además se reprodujo **en aislamiento**: una transferencia legítima de 200 Mbit/s generó una ventana que cruzó el umbral y **bloqueó a un cliente legítimo durante 120 segundos**. Otra ventana de la misma transferencia se permitió por apenas 0,0014 puntos de score, lo que indica que el tráfico legítimo intenso cae dentro del margen de decisión del modelo.
-
-### No abordado
-
-- **Partición por sesiones independientes.** La división se hizo por índice de repetición (R01–R03 entrenamiento, R04 validación, R05 prueba), por lo que **los 44 perfiles de tráfico aparecen en las tres particiones**. Se mide repetibilidad del escenario, no generalización a tráfico no visto.
-- **Jornada de validación temporal externa.** No existe un conjunto capturado en una fecha distinta y reservado sin participar en entrenamiento ni calibración.
-- **Diversidad de escenarios.** Faltan seis escenarios legítimos previstos (SSH, SCP/SFTP, SMB, respaldo, streaming y actualizaciones) y no hay captura multi-sistema-operativo.
-
----
-
-## 4. Confiabilidad
+## 2. Eje 1 · Confiabilidad
 
 *¿Repetir el procedimiento produce los mismos resultados?*
 
-> **Qué se pidió evaluar.** La consistencia al repetir la medición. Se señalaron varias vías según el tipo de trabajo: **Alfa de Cronbach** cuando hay instrumentos tipo cuestionario, **acuerdo inter-evaluador** cuando hay jueces, y **estabilidad del comportamiento ante entradas similares** cuando se trata de un sistema. También se pidieron técnicas cuantitativas concretas: **intervalos de confianza**, pruebas de significancia (*t*, Wilcoxon) y métricas de modelo como **F1**. Este proyecto corresponde al tercer caso —es un sistema, no un instrumento de percepción—, por lo que la confiabilidad se evidencia por reproducibilidad y estabilidad, no por Alfa.
+> **Qué pide la Sesión 02.** Aplicar un método concreto y verificable: **Alfa de
+> Cronbach** cuando hay instrumentos tipo cuestionario, **Kappa de Cohen** cuando hay
+> jueces clasificando, **test-retest** y **confiabilidad de sistemas** cuando se trata
+> de software, y **validación cruzada** sobre el modelo (diapositivas 14 a 17).
 
-### Abordado de manera concreta
+### 2.1 Por qué Alfa de Cronbach y Kappa de Cohen no aplican
 
-| Aspecto | Evidencia |
+No se omiten: **no corresponden al tipo de producto**, y conviene decirlo antes de
+que se pregunte.
+
+| Prueba | Qué mide | Por qué no aplica aquí |
+|---|---|---|
+| **Alfa de Cronbach** | Consistencia interna entre los ítems de un instrumento | El producto es un sistema que decide y bloquea, **no tiene ítems de escala** que correlacionar. Se calculará sobre el SUS, que sí tiene 10 ítems |
+| **Kappa de Cohen** | Acuerdo entre dos evaluadores más allá del azar | **No hay jueces humanos etiquetando**: las etiquetas vienen del diseño experimental —se sabe qué máquina generó cada tráfico— |
+
+### 2.2 Confiabilidad del sistema: determinismo
+
+Es el equivalente al test-retest para algoritmos, y es la evidencia más fuerte del eje.
+
+| Aspecto | Evidencia verificable |
 |---|---|
-| **Reproducibilidad verificada** | Al reevaluar el modelo congelado se obtuvieron **exactamente** las mismas cifras del registro original (13/276 y 158/179) |
-| Integridad de artefactos | SHA-256 de datos, modelo y programa de calibración; repositorio verificado limpio antes y después |
-| Trazabilidad | 330 registros de cambios, 181 documentos de campañas, 162 revisiones independientes |
-| Estabilidad operativa | Cero caídas de servicio registradas en 58 corridas (55 verificadas), sin pérdida de paquetes en captura |
-| **Determinismo del sistema** | **10 ajustes repetidos** del pipeline elegido produjeron el **mismo SHA-256 y el mismo umbral** (`1.8126087939765134`) |
-| **Estabilidad del umbral** | Remuestreo bootstrap por episodio, **B = 1 000**: coeficiente de variación **4,10 %** (máximo declarado 5 %), banda percentil [1,6496 – 1,8132] |
-| Consistencia entre repeticiones | Los dos pases de validación operativa dieron resultados equivalentes: **25,81 % (16/62)** en el pase 1 y **22,97 % (17/74)** en el pase 2 |
+| **Determinismo del pipeline** | **10 ajustes repetidos** produjeron el **mismo SHA-256** y el mismo umbral, `1.8126087939765134` |
+| **Semillas fijadas y reportadas** | `random_state` explícito en el calibrador (`PRIMARY_SEED`), declarado en el manifiesto |
+| **Integridad de artefactos** | SHA-256 de datos, modelo y calibrador; repositorio verificado limpio antes y después |
+| **Estabilidad operativa** | Cero caídas registradas en 58 corridas (55 con verificación explícita), sin pérdida de paquetes |
 
-### Abordado parcialmente
+### 2.3 Test-retest: dos pases independientes
 
-- **Cuantificación de la incertidumbre.** El trabajo original no calculó ninguna medida de dispersión. **Se incorporan en este informe** intervalos de confianza de Wilson al 95 %, que revelan un problema que las cifras puntuales ocultaban:
+| Pase | Ventanas benignas | Falsos positivos | IC 95 % |
+|---|---:|---|---|
+| Pase 1 | 62 | **25,81 %** (16/62) | 16,6 % – 37,9 % |
+| Pase 2 (*lag-aware*) | 74 | **22,97 %** (17/74) | 14,9 % – 33,7 % |
+
+Los dos pases dan resultados equivalentes: **el sistema es consistente al repetir la
+medición**, aunque el valor sobre el que es consistente sea desfavorable.
+
+### 2.4 Validación cruzada y estabilidad del umbral
+
+| Prueba | Resultado |
+|---|---|
+| **Validación cruzada agrupada por episodio**, 5 pliegues | Detección entre **78,8 % y 89,4 %** según el pliegue; la media (85,5 %) cae dentro del intervalo de la evaluación de un solo paso |
+| **Remuestreo bootstrap del umbral**, B = 1 000 | Coeficiente de variación **4,10 %** (máximo declarado: 5 %); banda percentil 95 % **[1,6496 – 1,8132]** |
+
+### 2.5 Cuantificación de la incertidumbre
+
+El trabajo original no calculó ninguna medida de dispersión. Se incorporaron
+**intervalos de Wilson al 95 %** en toda proporción, y revelan un problema que las
+cifras puntuales ocultaban:
 
 | Cifra reportada | IC 95 % real | Lectura |
 |---|---|---|
@@ -123,43 +94,170 @@ Los intervalos de Wilson son **descriptivos** y las ventanas comparten episodio 
 | 55,2 % en password-spray (16/29) | 37,5 % – 71,6 % | Intervalo muy amplio, conclusión débil |
 | 88,3 % de detección global (158/179) | 82,7 % – 92,2 % | Sólido |
 
-### No abordado
+Las comparaciones entre modelos usan **McNemar exacto** —la prueba correcta cuando se
+evalúan sobre las mismas ventanas— con **corrección de Holm-Bonferroni sobre 21
+comparaciones**. Las seis del OCSVM son significativas; en cambio **ninguna diferencia
+de falso positivo lo es** (p mínimo 0,52).
 
-- **Validación externa del umbral.** La banda de variabilidad se estimó por remuestreo sobre los mismos episodios; **no hay una jornada nueva** que confirme que el umbral sigue siendo válido en otra fecha.
-- **Confiabilidad inter-evaluador.** No aplica al diseño actual, que no emplea jueces ni instrumentos de percepción.
+### No abordado en este eje
 
-> **Corregido el 2 de septiembre de 2026.** Hasta esta revisión este informe
-> declaraba como *no abordado* que «la calibración se ejecutó una sola vez; no
-> hay repeticiones independientes». **Eso dejó de ser cierto** al ejecutarse el
-> análisis de estabilidad: la afirmación se sustituye por la limitación que sí
-> sigue vigente, que es la ausencia de jornada externa.
+- **Validación externa del umbral.** La banda de variabilidad se estimó por remuestreo
+  sobre los mismos episodios; **no hay una jornada nueva** que confirme que el umbral
+  sigue siendo válido en otra fecha.
+
+> **Corregido el 2 de septiembre de 2026.** Hasta esta revisión este informe declaraba
+> como *no abordado* que «la calibración se ejecutó una sola vez; no hay repeticiones
+> independientes». **Eso dejó de ser cierto** al ejecutarse el análisis de estabilidad.
 
 ---
 
-## 4 bis. Equivalencia con los tres ejes de la Sesión 02
+## 3. Eje 2 · Replicabilidad
 
-Este informe se organiza por los criterios de la **Sesión 01** —validez interna,
-externa y confiabilidad—. La **Sesión 02** usa otro vocabulario: confiabilidad,
-replicabilidad y pertinencia. **No son marcos rivales**: cubren lo mismo con
-otro corte. Esta tabla evita que parezca que un documento dice algo distinto del
-otro.
+*¿Otro equipo, con datos nuevos y el mismo método, llegaría a lo mismo?*
 
-| Eje de la Sesión 02 | Dónde está en este informe | Estado |
+> **Qué pide la Sesión 02.** Prácticas de **ciencia abierta**: principios FAIR,
+> repositorio público de código, datos con DOI citable, entorno documentado con
+> versiones exactas y preregistro del plan de análisis (diapositivas 19 a 22).
+
+### 3.1 Reproducibilidad no es replicabilidad
+
+Es la distinción que más se confunde, y este proyecto **tiene la primera y no la
+segunda**:
+
+| | Definición de la sesión | ¿Se cumple? |
 |---|---|---|
-| **Confiabilidad** | Sección 4 completa | **Abordado**: determinismo verificado (10 ajustes, mismo SHA-256), estabilidad del umbral por bootstrap (CV 4,10 %) y dos pases operativos equivalentes |
-| **Reproducibilidad** *(mismos datos y código → mismos resultados)* | Sección 4, «Reproducibilidad verificada» | **Abordado**: al reevaluar el modelo congelado salieron exactamente las mismas cifras. Dataset, manifiesto y 7 modelos publicados con SHA-256 |
-| **Replicabilidad** *(datos **nuevos**, mismo método → hallazgos consistentes)* | Sección 3, validación externa | **No abordado**: no existe jornada nueva. Es la limitación principal de este informe |
-| **Pertinencia** | Sección 5, entre los pendientes | **No abordado**: el instrumento SUS está preparado, sin aplicar |
+| **Reproducibilidad** | Mismos datos y mismo código → mismos resultados | **Sí.** Al reevaluar el modelo congelado salieron **exactamente** las mismas cifras del registro original: 13/276 y 158/179 |
+| **Replicabilidad** | **Datos nuevos**, mismo método → hallazgos consistentes | **No.** No existe ninguna captura posterior e independiente |
 
-> **La distinción que más se confunde** es reproducibilidad frente a
-> replicabilidad. Este proyecto tiene la primera —cualquiera descarga el
-> repositorio y obtiene el mismo resultado— y **no tiene la segunda**, porque
-> eso exige datos nuevos. Decirlo así evita la afirmación más común y más
-> injustificada en trabajos de este tipo: «nuestros resultados son replicables».
+Decirlo así evita la afirmación más común e injustificada en trabajos de este tipo:
+«nuestros resultados son replicables».
+
+### 3.2 Checklist de replicabilidad de la Sesión 02
+
+Los cinco puntos de la diapositiva 22, uno por uno:
+
+| Punto del checklist | Estado | Evidencia |
+|---|---|---|
+| Datos disponibles públicamente | ✅ | Dataset derivado, manifiesto y 7 modelos publicados, con `docs/dataset/SHA256SUMS` (13 archivos) |
+| Código fuente disponible y documentado | ✅ | Repositorio público con historial completo; licencia MIT para código y CC BY 4.0 para datos |
+| Entorno y dependencias con versiones exactas | ✅ | `requirements-model.txt`; el manifiesto registra `scikit-learn 1.9.0` |
+| Semillas fijadas y reportadas | ✅ | `random_state` explícito; 10 ajustes repetidos dan el mismo hash |
+| Instrucciones paso a paso | ✅ | El *datasheet* documenta descarga, verificación de hashes y regeneración |
+
+### No abordado en este eje
+
+- **DOI citable de los datos.** No hay depósito en Zenodo, Figshare ni OSF. El
+  repositorio es público pero **no tiene identificador persistente**.
+- **Preregistro del plan de análisis.** No se publicaron hipótesis, métricas ni
+  umbrales antes de ver los resultados. Esta ausencia está directamente relacionada
+  con la selección posterior del modelo que se declara en la sección 5.
+- **Replicación con datos nuevos.** Es la carencia principal de este eje.
 
 ---
 
-## 5. Qué falta y cómo se abordará con el tiempo disponible
+## 4. Eje 3 · Pertinencia
+
+*¿La solución resuelve el problema real, para las personas que la usarán?*
+
+> **Qué pide la Sesión 02.** Validación con usuarios y *stakeholders* reales: pruebas
+> de usabilidad, entrevistas, modelos de aceptación tecnológica (**TAM**, TAM2,
+> **UTAUT**), métricas como el **System Usability Scale (SUS)** y **trazabilidad de
+> requisitos** (diapositivas 23 a 27).
+
+### Estado: sin evidencia
+
+**Es el único eje del informe sin ninguna medición.** Se declara así, sin matizarlo.
+
+| Instrumento que pide la sesión | Estado | Detalle |
+|---|---|---|
+| Pruebas de usabilidad con usuarios reales | ❌ | Nadie fuera del equipo ha operado el panel |
+| **SUS** | ⏳ **Preparado, sin aplicar** | Instrumento de 10 ítems y guion de observación listos en [`08-validacion-usuarios/`](../08-validacion-usuarios/); el archivo de respuestas tiene **0 filas** |
+| TAM / TAM2 / UTAUT | ❌ | No se aplicó ningún modelo de aceptación |
+| Entrevistas o grupos focales con *stakeholders* | ❌ | No se realizaron |
+| **Trazabilidad de requisitos** | ⏳ Parcial | La matriz existe como plan, pero **no está cerrada**: hay filas sin prueba asociada |
+
+> **Por qué importa, con las palabras de la sesión:** «una solución puede ser excelente
+> en código y arquitectura, y aun así ser irrelevante si no encaja con la necesidad
+> real». Este proyecto ha demostrado lo primero y **no ha medido lo segundo**.
+
+**Coste de cerrarlo: dos horas.** Una sesión con 5–8 evaluadores usando el instrumento
+ya preparado. Es la acción de menor coste y mayor efecto de todo el plan, porque cierra
+a la vez este eje, el criterio correspondiente de la ficha de auditoría y la debilidad
+`D-18` del registro.
+
+---
+
+## 5. Validez interna y externa
+
+Los dos criterios de la **Sesión 01** que sostienen los tres ejes anteriores. El
+tratamiento resumido está en el
+[informe de evaluación crítica](../01-evaluacion-critica/informe-evaluacion-critica.md);
+aquí se detalla la evidencia.
+
+### 5.1 Validez interna
+
+| Aspecto | Evidencia verificable |
+|---|---|
+| Sin fuga de datos entre particiones | Auditoría automática: `no_episode_split = true`; ningún episodio se reparte entre entrenamiento, validación y prueba |
+| Sin información futura en las variables | Prueba unitaria: un evento posterior no altera una ventana ya cerrada |
+| Umbral fijado antes de ver los datos de prueba | Cuantil α = 0,05 solo sobre validación (k = 13, n = 273); el escalador se ajusta solo con entrenamiento |
+| Evaluación en un solo paso, sin reentrenar | Registro sellado con hash del calibrador y del repositorio |
+| **Detección y corrección de una fuga propia** | Un experimento con selección contaminada fue identificado y marcado como *«no debe citarse»* |
+
+**No abordado.** El modelo congelado se eligió **después** de observar su desempeño en
+el conjunto de prueba. El 88,3 % es el **máximo entre 7 candidatos evaluados sobre los
+mismos datos**, sin ningún conjunto reservado que permita una estimación sin sesgo
+optimista. Está declarado en la *model card* antes de cualquier métrica.
+
+### 5.2 Validez externa
+
+Se midió el sistema completo en operación real —2 pases de 29 corridas más 2 pruebas de
+aislamiento, con motor y bloqueo activos— y con ataques genuinos desde una máquina
+atacante real en 6 familias distintas.
+
+**El resultado refuta la generalización**, y se reporta aunque sea desfavorable:
+
+| Condición de medición | Falsos positivos | IC 95 % |
+|---|---|---|
+| Laboratorio (conjunto de prueba) | **4,71 %** (13/276) | 2,8 % – 7,9 % |
+| Operación real, pase 1 | **25,81 %** (16/62) | 16,6 % – 37,9 % |
+| Operación real, pase 2 | **22,97 %** (17/74) | 14,9 % – 33,7 % |
+
+![Falsos positivos: laboratorio frente a operación real](../graficas/C1-fpr-offline-vs-operativo.png)
+
+Los intervalos de Wilson son **descriptivos**: las ventanas comparten episodio e
+historia de hasta 60 s, así que su no solapamiento no prueba por sí solo una diferencia
+inferencial. Además se reprodujo **en aislamiento**: una transferencia legítima de
+200 Mbit/s **bloqueó a un cliente legítimo durante 120 segundos**, y otra ventana de la
+misma transferencia se permitió por apenas 0,0014 puntos de score.
+
+**No abordado.** La división se hizo por índice de repetición, así que **los 44 perfiles
+de tráfico aparecen en las tres particiones**: se mide repetibilidad del escenario, no
+generalización. Faltan además seis escenarios legítimos previstos y no hay captura
+multi-sistema-operativo.
+
+---
+
+## 6. Checklist integrador de la Sesión 02
+
+Los seis puntos de la diapositiva 29, que la sesión pide verificar **antes de reportar
+resultados**:
+
+| Punto | Estado | Dónde está |
+|---|---|---|
+| Confiabilidad estadística reportada | ✅ | Sección 2: determinismo, test-retest y estabilidad del umbral |
+| Método de validación de resultados declarado | ✅ | Sección 2.4: validación cruzada agrupada y bootstrap |
+| Datos y código disponibles | ✅ | Sección 3.2 |
+| Entorno, dependencias y semillas documentadas | ✅ | Sección 3.2 |
+| **Pertinencia validada con usuarios reales** | ❌ | Sección 4: **el único punto sin evidencia** |
+| Trazabilidad de requisitos verificada | ⏳ | Sección 4: matriz abierta |
+
+**Cinco de seis cumplidos.** El que falta es el mismo que la ficha de auditoría penaliza
+y el que el plan de validación agenda para el 9 de septiembre.
+
+---
+
+## 7. Qué falta y cómo se abordará
 
 Ordenado por relación entre costo y beneficio. **Ninguna acción del bloque A ni B requiere capturar datos nuevos.**
 
@@ -180,7 +278,7 @@ Ordenado por relación entre costo y beneficio. **Ninguna acción del bloque A n
 
 ---
 
-## 6. Conclusión
+## 8. Conclusión
 
 Los resultados sostienen una afirmación **acotada y verdadera**: se demostró la viabilidad de detectar comportamientos anómalos y ejercer control en línea en tiempo real sobre una red real, con capacidad discriminante alta (ROC-AUC = 0,974), detección del 88,8 % sobre ataques genuinos y bloqueo en una mediana de 8 segundos.
 
@@ -201,4 +299,7 @@ Y **la limitación principal del sistema sigue abierta**: el falso positivo sobr
 - **Cronbach, L. J. (1951).** Coefficient alpha and the internal structure of tests. *Psychometrika, 16*(3), 297–334. — Referencia del criterio de consistencia interna, no aplicable a este producto por no emplear instrumentos psicométricos (sección 4).
 - **Peng, R. D. (2011).** Reproducible research in computational science. *Science, 334*(6060), 1226–1227. — Distinción entre reproducibilidad y replicabilidad usada en la sección 4.
 - **Kapoor, S., & Narayanan, A. (2023).** Leakage and the reproducibility crisis in machine-learning-based science. *Patterns, 4*(9), 100804. — Tipología de fugas de datos y del sesgo por selección de modelo sobre el conjunto de prueba, aplicada en la sección 2.
+- **Davis, F. D. (1989).** Perceived usefulness, perceived ease of use, and user acceptance of information technology. *MIS Quarterly, 13*(3), 319–340. — Modelo TAM, marco del eje de pertinencia (sección 4).
+- **Landis, J. R., & Koch, G. G. (1977).** The measurement of observer agreement for categorical data. *Biometrics, 33*(1), 159–174. — Escala de interpretación de Kappa, citada en la sección 2.1 para justificar por qué no aplica.
+- **National Academies of Sciences, Engineering, and Medicine (2019).** *Reproducibility and replicability in science.* The National Academies Press. — Distinción entre reproducibilidad y replicabilidad usada en la sección 3.1.
 - **ISO/IEC 25010:2011.** *Systems and software engineering — SQuaRE — System and software quality models.* — Marco de calidad de producto; su correspondencia detallada se desarrolla en la ficha de auditoría del producto.
