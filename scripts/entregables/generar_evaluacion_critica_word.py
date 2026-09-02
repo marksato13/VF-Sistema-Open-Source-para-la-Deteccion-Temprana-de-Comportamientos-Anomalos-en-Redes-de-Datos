@@ -220,13 +220,10 @@ def main() -> None:
     ], [1.5, 7.2, 5.4, 2.0])
     # -------------------------------------------------------- cronograma
     h1(doc, "4 ·", "En qué tiempo: cronograma comprometido")
-    par(doc, "*Propuesta del equipo del 2 de septiembre de 2026, pendiente del visto bueno de los "
-             "asesores.* **La fecha que ordena todo es el 30 de septiembre de 2026:** IJIES sube su "
-             "APC de USD 300 a USD 400 el 1 de octubre y el cargo lo asume la Universidad Peruana "
-             "Unión, así que enviar antes ahorra USD 100 institucionales. Con la mediana medida de "
-             "la revista —41 días a la primera decisión, 158 hasta publicar—, un envío el 28 de "
-             "septiembre proyecta decisión hacia el 8 de noviembre de 2026 y publicación hacia "
-             "marzo de 2027.")
+    par(doc, "*Propuesta del equipo del 2 de septiembre de 2026, pendiente del visto bueno de "
+             "los asesores.* **La fecha que ordena todo es el 30 de septiembre:** IJIES sube su "
+             "APC de USD 300 a 400 el 1 de octubre y lo paga la universidad. Un envío el 28 de "
+             "septiembre proyecta primera decisión hacia el 8 de noviembre.")
     par(doc, "**Dos riesgos declarados.** El envío deja **3 días de margen** antes de que "
              "suba el APC. Y **P-1 y P-2 se cierran después del envío**, con el artículo ya en "
              "revisión: es deliberado, porque el artículo se escribe con el resultado ya "
@@ -244,12 +241,10 @@ def main() -> None:
              "auditoría, cero en el eje de pertinencia y `D-18` en el registro. Cuesta dos horas y "
              "sube la ficha de 82,4 % a 88,2 %. El juicio experto va después a propósito: los "
              "expertos juzgan mejor con los resultados de los usuarios delante.", italic=True)
-    par(doc, "**El artículo no espera a los tres últimos.** La sección de resultados se escribe con "
-             "lo que ya está bloqueado —modelo congelado, evaluación de un solo paso y 58 corridas "
-             "de F6—: ese resultado está completo y no va a cambiar. Si la recalibración se retrasa, "
-             "el artículo sale igual con la limitación declarada, que es como debe salir de todos "
-             "modos. **La fecha de sustentación no la fija el equipo**, pero ningún pendiente de "
-             "esta lista la condiciona más allá del 24 de octubre de 2026.", italic=True)
+    par(doc, "**El artículo no espera a P-1 ni a P-2.** La sección de resultados se escribe "
+             "con lo que ya está bloqueado y no va a cambiar; si algo se retrasa, sale igual con "
+             "la limitación declarada. **Ningún pendiente condiciona la sustentación más allá "
+             "del 24 de octubre.**", italic=True)
 
     # ------------------------------------------------------- limitaciones
     h1(doc, "5 ·", "Amenazas a la validez (*Threats to Validity*)")
@@ -283,6 +278,11 @@ def main() -> None:
     par(doc, "Delimitar esa frontera con medición —y no ocultarla— es el resultado de esta "
              "evaluación. Un hallazgo negativo verificado vale más que una conclusión favorable "
              "sin respaldo.", italic=True, color=DIM)
+    par(doc, "**Cualquiera puede descargarlo y ejecutarlo.** Repositorio público: "
+             "`github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-"
+             "Comportamientos-Anomalos-en-Redes-de-Datos` — con el dataset, los 7 modelos, los "
+             "scripts que generan cada cifra de este informe y el entorno con versiones "
+             "exactas.", size=8.8)
     bloque_enlaces(doc, "Evidencia en el repositorio", [
         ("Informe detallado, con las 11 figuras y la trazabilidad de cada cifra",
          "docs/entregables/01-evaluacion-critica/informe-evaluacion-critica.md"),
