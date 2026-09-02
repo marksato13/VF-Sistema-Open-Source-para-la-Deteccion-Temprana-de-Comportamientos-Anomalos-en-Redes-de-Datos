@@ -372,15 +372,15 @@ y publicación hacia el **5 de marzo de 2027**.
 
 ### Pendientes, responsable y fecha
 
-| # | Pendiente | Cómo se aborda | Responsable | Fecha | Estado |
-|---|---|---|---|---|---|
-| 1 | Declarar la selección posterior en el documento de tesis | Párrafo explícito en metodología, enlazado a la *model card* que ya lo declara | Salazar | **vie 4 sep** | Pendiente |
-| 2 | **Validación con usuarios (SUS)** — `D-18` | Sesión de 2 h con 5–8 evaluadores; instrumento y hoja de cálculo listos en [`08-validacion-usuarios/`](../08-validacion-usuarios/) | Salazar · Sauñe | **mié 9 sep** | **Prioridad 1** |
-| 3 | Juicio experto (3 evaluadores) | Rúbrica de pertinencia sobre el producto desplegado, ya con los resultados del SUS a la vista | Salazar · asesores | **mié 23 sep** | Pendiente |
-| 4 | Escenarios legítimos faltantes — `D7` | Campaña F1 adicional: SSH, SCP/SFTP, backup y actualizaciones | Sauñe | **sáb 19 sep** | Pendiente |
-| — | **Envío del artículo a IJIES** | Manuscrito en `IJIES_Format.docx`, 8 a 10 páginas | Salazar · Sauñe | **lun 28 sep** | **Hito** |
-| 5 | **Recalibrar con tráfico pesado y repetir F6** — `D5` | Reentrenar incluyendo `iperf-tcp 200M` como normalidad y repetir las 29 corridas | Salazar | **sáb 10 oct** | **Debilidad principal** |
-| 6 | *Holdout* temporal externo — `D6` | Campaña completa en fecha distinta, sin reutilizar episodios | Salazar · Sauñe | **sáb 24 oct** | Pendiente |
+| Fecha | Pendiente | Cómo se aborda | Responsable | Estado |
+|---|---|---|---|---|
+| **vie 4 sep 2026** | Declarar la selección posterior en el documento de tesis | Párrafo explícito en metodología, enlazado a la *model card* que ya lo declara | Salazar | PLANIFICADA |
+| **mié 9 sep 2026** | **Validación con usuarios (SUS)** — `D-18` | Sesión de 2 h con 5–8 evaluadores; instrumento y hoja de cálculo listos en [`08-validacion-usuarios/`](../08-validacion-usuarios/) | Salazar · Sauñe | PLANIFICADA · **prioridad 1** |
+| **sáb 19 sep 2026** | Escenarios legítimos faltantes — `D7` | Campaña F1 adicional: SSH, SCP/SFTP, backup y actualizaciones | Sauñe | PLANIFICADA |
+| **mié 23 sep 2026** | Juicio experto (3 evaluadores) | Rúbrica de pertinencia sobre el producto desplegado, ya con los resultados del SUS a la vista | Salazar · asesores | PLANIFICADA |
+| **lun 28 sep 2026** | **Envío del artículo a IJIES** | Manuscrito en `IJIES_Format.docx`, 8 a 10 páginas | Salazar · Sauñe | PLANIFICADA · **hito** |
+| **sáb 10 oct 2026** | **Recalibrar con tráfico pesado y repetir F6** — `D5` | Reentrenar incluyendo `iperf-tcp 200M` como normalidad y repetir las 29 corridas | Salazar | PLANIFICADA · **debilidad principal** |
+| **sáb 24 oct 2026** | *Holdout* temporal externo — `D6` | Campaña completa en fecha distinta, sin reutilizar episodios | Salazar · Sauñe | PLANIFICADA |
 
 ### Por qué el SUS va primero
 

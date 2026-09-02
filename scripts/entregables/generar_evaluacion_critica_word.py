@@ -115,7 +115,7 @@ def main() -> None:
         size=8.2, color=DIM, after=7, align=WD_ALIGN_PARAGRAPH.CENTER)
 
     # ---------------------------------------------------------------- 1
-    h1(doc, "1 ·", "Qué se abordó de manera objetiva")
+    h1(doc, "1 ·", "Lo que está listo: qué se abordó de manera objetiva")
     par(doc, "El producto es un sistema desplegado que detecta comportamiento anómalo y "
              "**bloquea la IP ofensora en el propio router**, validado sobre tráfico real de "
              "laboratorio. Toda cifra procede de artefactos verificables; ninguna se transcribe "
@@ -158,7 +158,7 @@ def main() -> None:
            "el trabajo original nunca lo computó.", ancho=9.6)
 
     # ---------------------------------------------------------------- 2
-    h1(doc, "2 ·", "Qué está faltando")
+    h1(doc, "2 ·", "Lo que NO está listo: qué está faltando")
     par(doc, "Las debilidades se ordenan por gravedad y **todas están medidas**, no supuestas.")
     tabla(doc, ["Debilidad", "Evidencia", "Gravedad"], [
         ["**El falso positivo de laboratorio no se sostiene en operación**", "4,71 % [2,8–7,9] frente a 25,81 % (pase 1, 16/62) y 22,97 % (pase 2, 17/74). Son intervalos descriptivos por ventana: las ventanas comparten episodio e historia. Una transferencia legítima de 200 Mbit/s bloqueó a un cliente real 120 s", "Crítica"],
@@ -173,7 +173,7 @@ def main() -> None:
            "laboratorio no se reproduce en operación real.", ancho=11.0)
 
     # ---------------------------------------------------------------- 3
-    h1(doc, "3 ·", "Cómo se está abordando lo que falta")
+    h1(doc, "3 ·", "Cómo se va a abordar lo que falta")
     par(doc, "**Ya resuelto**, sin capturar datos nuevos ni reentrenar el modelo congelado:")
     tabla(doc, ["Acción ejecutada", "Qué cerró"], [
         ["Intervalos de Wilson en toda proporción y **McNemar con corrección de Holm** sobre 21 comparaciones", "Ausencia de medidas de incertidumbre y de pruebas de significancia"],
@@ -184,21 +184,24 @@ def main() -> None:
         ["**Declaración explícita de la selección posterior** del modelo", "Objeción metodológica principal, ahora declarada"],
         ["**Validación cruzada agrupada y bootstrap por episodio**", "Variación interna del modelo y del umbral; no sustituyen una evaluación externa"],
     ], [8.6, 7.8], fondos=[F_OK] * 7)
-    par(doc, "**La fecha que ordena el cronograma es el 30 de septiembre de 2026:** IJIES sube su "
-             "APC de USD 300 a USD 400 el 1 de octubre, y el cargo lo asume la Universidad Peruana "
-             "Unión. Con la mediana medida de la revista —41 días a la primera decisión, 158 hasta "
-             "publicar—, un envío el 28 de septiembre proyecta decisión hacia el 8 de noviembre de "
-             "2026 y publicación hacia marzo de 2027. Todo lo que alimenta la sección de resultados "
-             "se cierra antes de esa fecha; lo demás va después.")
-    tabla(doc, ["Pendiente", "Cómo se aborda", "Responsable", "Fecha"], [
-        ["Declarar la selección posterior en la tesis", "Párrafo en metodología, enlazado a la *model card*", "Salazar", "**vie 4 sep**"],
-        ["**Validación con usuarios (SUS)**", "Sesión de 2 h con 5–8 evaluadores; instrumento ya preparado", "Salazar · Sauñe", "**mié 9 sep**"],
-        ["Juicio experto (3 evaluadores)", "Rúbrica de pertinencia, ya con los resultados del SUS a la vista", "Salazar · asesores", "**mié 23 sep**"],
-        ["Escenarios legítimos faltantes", "Campaña F1: SSH, SCP/SFTP, backup y actualizaciones", "Sauñe", "**sáb 19 sep**"],
-        ["**Envío del artículo a IJIES**", "Manuscrito en `IJIES_Format.docx`, 8 a 10 páginas", "Salazar · Sauñe", "**lun 28 sep**"],
-        ["**Recalibrar con tráfico pesado y repetir F6**", "Reentrenar con `iperf-tcp 200M` como normalidad; repetir las 29 corridas", "Salazar", "**sáb 10 oct**"],
-        ["*Holdout* temporal externo", "Campaña completa en fecha distinta, sin reutilizar episodios", "Salazar · Sauñe", "**sáb 24 oct**"],
-    ], [4.4, 6.2, 2.9, 2.5])
+    # -------------------------------------------------------- cronograma
+    h1(doc, "4 ·", "En qué tiempo: cronograma comprometido")
+    par(doc, "*Propuesta del equipo del 2 de septiembre de 2026, pendiente del visto bueno de los "
+             "asesores.* **La fecha que ordena todo es el 30 de septiembre de 2026:** IJIES sube su "
+             "APC de USD 300 a USD 400 el 1 de octubre y el cargo lo asume la Universidad Peruana "
+             "Unión, así que enviar antes ahorra USD 100 institucionales. Con la mediana medida de "
+             "la revista —41 días a la primera decisión, 158 hasta publicar—, un envío el 28 de "
+             "septiembre proyecta decisión hacia el 8 de noviembre de 2026 y publicación hacia "
+             "marzo de 2027.")
+    tabla(doc, ["Fecha", "Pendiente", "Cómo se aborda", "Responsable", "Estado"], [
+        ["**vie 4 sep 2026**", "Declarar la selección posterior en la tesis", "Párrafo en metodología, enlazado a la *model card*", "Salazar", "PLANIFICADA"],
+        ["**mié 9 sep 2026**", "**Validación con usuarios (SUS)**", "Sesión de 2 h con 5–8 evaluadores; instrumento ya preparado", "Salazar · Sauñe", "PLANIFICADA"],
+        ["**sáb 19 sep 2026**", "Escenarios legítimos faltantes", "Campaña F1: SSH, SCP/SFTP, backup y actualizaciones", "Sauñe", "PLANIFICADA"],
+        ["**mié 23 sep 2026**", "Juicio experto (3 evaluadores)", "Rúbrica de pertinencia, ya con los resultados del SUS a la vista", "Salazar · asesores", "PLANIFICADA"],
+        ["**lun 28 sep 2026**", "**Envío del artículo a IJIES**", "Manuscrito en `IJIES_Format.docx`, 8 a 10 páginas", "Salazar · Sauñe", "PLANIFICADA"],
+        ["**sáb 10 oct 2026**", "**Recalibrar con tráfico pesado y repetir F6**", "Reentrenar con `iperf-tcp 200M` como normalidad; repetir las 29 corridas", "Salazar", "PLANIFICADA"],
+        ["**sáb 24 oct 2026**", "*Holdout* temporal externo", "Campaña completa en fecha distinta, sin reutilizar episodios", "Salazar · Sauñe", "PLANIFICADA"],
+    ], [2.9, 4.0, 5.6, 2.4, 2.3])
     par(doc, "**El SUS va primero porque es el único cero absoluto que queda**: cero en la ficha de "
              "auditoría, cero en el eje de pertinencia y `D-18` en el registro. Cuesta dos horas y "
              "sube la ficha de 82,4 % a 88,2 %. El juicio experto va después a propósito: los "
@@ -211,7 +214,7 @@ def main() -> None:
              "esta lista la condiciona más allá del 24 de octubre de 2026.", italic=True)
 
     # ------------------------------------------------------- limitaciones
-    h1(doc, "4 ·", "Amenazas a la validez (*Threats to Validity*)")
+    h1(doc, "5 ·", "Amenazas a la validez (*Threats to Validity*)")
     par(doc, "La sesión advierte que esta sección es **obligatoria en las revistas indexadas de "
              "Ingeniería de Software**. Se declara aquí y se trasladará al artículo.", size=8.8)
     tabla(doc, ["Tipo de amenaza", "Amenaza concreta en este trabajo", "Cómo se mitiga o declara"], [
@@ -232,7 +235,7 @@ def main() -> None:
     ], [3.4, 6.6, 7.4])
 
     # ---------------------------------------------------------------- 5
-    h1(doc, "5 ·", "Conclusión")
+    h1(doc, "6 ·", "Conclusión")
     par(doc, "Se demostró con evidencia que el sistema **detecta y bloquea en tiempo real** sobre "
              "una red enrutada, con ROC-AUC de 0,974, detección del 88,8 % sobre ataques genuinos "
              "y bloqueo en una mediana de 8 segundos, sin ninguna caída de servicio registrada.")
