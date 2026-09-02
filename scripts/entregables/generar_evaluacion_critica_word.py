@@ -227,13 +227,10 @@ def main() -> None:
              "la revista —41 días a la primera decisión, 158 hasta publicar—, un envío el 28 de "
              "septiembre proyecta decisión hacia el 8 de noviembre de 2026 y publicación hacia "
              "marzo de 2027.")
-    par(doc, "**Dos riesgos declarados de este cronograma.** Primero, el envío deja solo "
-             "**3 días de margen** antes de que suba el APC: si se retrasa, el sobrecoste de "
-             "USD 100 lo asume la universidad. Segundo, **P-1 y P-2 se cierran después del "
-             "envío** —el 10 y el 24 de octubre— y por tanto mientras el artículo está en "
-             "revisión. Es deliberado: el artículo se escribe con el resultado ya bloqueado, "
-             "que no va a cambiar, y las mejoras posteriores se declaran como trabajo en curso.",
-        size=8.6, italic=True, color=DIM)
+    par(doc, "**Dos riesgos declarados.** El envío deja **3 días de margen** antes de que "
+             "suba el APC. Y **P-1 y P-2 se cierran después del envío**, con el artículo ya en "
+             "revisión: es deliberado, porque el artículo se escribe con el resultado ya "
+             "bloqueado.", size=8.6, italic=True, color=DIM)
     tabla(doc, ["Fecha", "", "Qué se hace", "Responsable", "Estado"], [
         ["**vie 4 sep 2026**", "P-2", "Declarar la selección posterior en el documento de tesis (mitiga; la corrección real es el 24 de octubre)", "Salazar", "PLANIFICADA"],
         ["**mié 9 sep 2026**", "**P-3**", "**Sesión SUS** de 2 h con 5–8 evaluadores", "Salazar · Sauñe", "PLANIFICADA"],
