@@ -8,7 +8,19 @@
 | **Fecha** | 19 de agosto de 2026 |
 | **Estructura** | Parte I: resultados obtenidos · Parte II: evaluación crítica de esos resultados |
 
-> **Entregable de la Sesión 01.** Este documento es el informe de resultados y evaluación crítica solicitado para esa sesión; el plan prospectivo de validación corresponde a la **Sesión 02** y está en [`07-plan-de-validacion/plan-de-validacion-de-resultados.md`](../07-plan-de-validacion/plan-de-validacion-de-resultados.md).
+> **Entregable de la Sesión 01.** Este documento es el **consolidado**: reúne en
+> 2–4 páginas qué está listo, qué no, cómo se aborda y en qué plazo.
+>
+> Los otros dos documentos de la familia, para no confundirlos:
+>
+> | Documento | Qué es | Extensión |
+> |---|---|---|
+> | **Este** | Consolidado de la evaluación crítica | 2–4 pp |
+> | [`02-validacion-y-confiabilidad/`](../02-validacion-y-confiabilidad/informe-validacion-confiabilidad.md) | **El detalle**: validez interna, externa, confiabilidad, y la equivalencia con los tres ejes de la Sesión 02 | ~5 pp |
+> | [`07-plan-de-validacion/`](../07-plan-de-validacion/plan-de-validacion-de-resultados.md) | El plan **prospectivo** de la Sesión 02 | 1–2 pp |
+>
+> **Toda cifra de este informe aparece igual en los otros dos.** Si alguna discrepa,
+> manda la fuente primaria que se cita en cada tabla.
 
 **Trazabilidad.** Todas las cifras salen de artefactos verificables: `artifacts/model/manifest.json`, `artifacts/model/ocsvm_scaled.joblib`, `artifacts/dataset/*.csv` y `results/f6/f6_resultados.jsonl`. Las gráficas y los intervalos de confianza se regeneran con:
 
@@ -263,7 +275,7 @@ Las 10 semillas, la ponderación por episodio y el colapso de duplicados se apli
 | Condición | FPR | IC 95 % |
 |---|---|---|
 | Offline (test) | 4,71 % | 2,8 % – 7,9 % |
-| Operativo F6 pase 1 | 25,8 % | 16,6 % – 37,9 % |
+| Operativo F6 pase 1 | **25,81 %** (16/62) | 16,6 % – 37,9 % |
 | Operativo F6 pase 2 | **22,97 %** (17/74) | 14,9 % – 33,7 % |
 
 Los intervalos se presentan como resumen descriptivo de ventanas correlacionadas; no se interpretan como evidencia inferencial independiente. El contraste se reprodujo en aislamiento — una transferencia legítima de 200 Mbit/s bloqueó a un cliente durante 120 s — y contradice la observación del jurado que motivó todo el esfuerzo del dataset.

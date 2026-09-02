@@ -5,7 +5,16 @@
 **Curso:** Investigación V · **Docente:** Ing. Nemias Saboya Ríos
 **Fecha:** 19 de agosto de 2026
 
-> **Relación con los entregables del curso.** Este documento es un **informe en pasado** sobre validaciones ya ejecutadas; **no es el entregable prospectivo de la Sesión 02**. El entregable de la Sesión 02 es el plan [`plan-de-validacion-de-resultados.md`](../07-plan-de-validacion/plan-de-validacion-de-resultados.md), que especifica métodos, umbrales y cronograma futuros.
+> **Este documento es el detalle, no el entregable.** Desarrolla en profundidad lo
+> que el [informe de evaluación crítica](../01-evaluacion-critica/informe-evaluacion-critica.md)
+> —el consolidado de 2–4 páginas— solo puede resumir. Es un informe **en pasado**
+> sobre validaciones ya ejecutadas.
+>
+> **No es el entregable prospectivo de la Sesión 02**, que es el plan
+> [`plan-de-validacion-de-resultados.md`](../07-plan-de-validacion/plan-de-validacion-de-resultados.md).
+>
+> **Toda cifra coincide con el consolidado.** Si alguna discrepa, manda la fuente
+> primaria que se cita en cada tabla.
 
 > Informe breve solicitado en la sesión del 12 de agosto. El análisis completo, con las 11 figuras y el detalle de cada hallazgo, está en [`01-evaluacion-critica/`](../01-evaluacion-critica/informe-evaluacion-critica.md) del repositorio del proyecto.
 
@@ -69,7 +78,7 @@ Es el hallazgo más importante y se reporta aunque sea desfavorable:
 | Condición de medición | Falsos positivos | IC 95 % |
 |---|---|---|
 | Laboratorio (conjunto de prueba) | **4,71 %** (13/276) | 2,8 % – 7,9 % |
-| Operación real, pase 1 | **25,8 %** (16/62) | 16,6 % – 37,9 % |
+| Operación real, pase 1 | **25,81 %** (16/62) | 16,6 % – 37,9 % |
 | Operación real, pase 2 | **22,97 %** (17/74) | 14,9 % – 33,7 % |
 
 La fuente primaria registra las cifras sin redondear: **25,81 % (16/62) en el pase 1** y **22,97 % (17/74) en el pase 2**, con los intervalos indicados arriba (`docs/fase07-validacion-final/02-resultados-f6.md`). El rango aproximado 23–26 % resume ambos pases y no es un promedio.

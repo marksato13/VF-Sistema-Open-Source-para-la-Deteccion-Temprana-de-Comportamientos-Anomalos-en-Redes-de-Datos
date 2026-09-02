@@ -20,6 +20,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+import re
 from docx.shared import Cm, Pt, RGBColor
 
 import sys
@@ -47,6 +48,25 @@ F_HEAD, F_ZEBRA = "1F4E79", "EEF3FA"
 
 
 # --------------------------------------------------------------- utilidades --
+_MARCAS = re.compile(r"(\*\*.+?\*\*|\*.+?\*|`.+?`)")
+
+
+def _tramos(txt):
+    """Convierte **negrita**, *cursiva* y `codigo` en formato real de Word."""
+    limpio = lambda x: x.replace("**", "").replace("*", "").replace("`", "")
+    for t in _MARCAS.split(str(txt)):
+        if not t:
+            continue
+        if t.startswith("**") and t.endswith("**") and len(t) > 4:
+            yield limpio(t[2:-2]), True, False, False
+        elif t.startswith("*") and t.endswith("*") and len(t) > 2:
+            yield limpio(t[1:-1]), False, True, False
+        elif t.startswith("`") and t.endswith("`") and len(t) > 2:
+            yield limpio(t[1:-1]), False, False, True
+        else:
+            yield t, False, False, False
+
+
 def shade(cell, hexcolor: str) -> None:
     el = OxmlElement("w:shd")
     el.set(qn("w:val"), "clear")
@@ -59,11 +79,15 @@ def cell_text(cell, text, *, bold=False, color=INK, size=9.5, align=None):
     p = cell.paragraphs[0]
     if align is not None:
         p.alignment = align
-    r = p.add_run(text)
-    r.bold = bold
-    r.font.size = Pt(size)
-    r.font.color.rgb = color
-    r.font.name = "Calibri"
+    for seg, _b, _i, _m in _tramos(text):
+        if not seg:
+            continue
+        r = p.add_run(seg)
+        r.bold = bold or _b
+        r.italic = _i
+        r.font.size = Pt(size)
+        r.font.color.rgb = color
+        r.font.name = "Consolas" if _m else "Calibri"
     return p
 
 
@@ -133,29 +157,32 @@ def parrafo(doc, texto, *, size=10, color=INK, italic=False, space_after=6):
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(space_after)
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    partes = texto.split("**")
-    for i, seg in enumerate(partes):
+    for seg, _b, _i, _m in _tramos(texto):
         if not seg:
             continue
         r = p.add_run(seg)
-        r.bold = i % 2 == 1
-        r.italic = italic
+        r.bold = _b
+        r.italic = italic or _i
         r.font.size = Pt(size)
         r.font.color.rgb = color
+        if _m:
+            r.font.name = "Consolas"
     return p
 
 
 def vineta(doc, texto, color=INK):
     p = doc.add_paragraph(style="List Bullet")
     p.paragraph_format.space_after = Pt(3)
-    partes = texto.split("**")
-    for i, seg in enumerate(partes):
+    for seg, _b, _i, _m in _tramos(texto):
         if not seg:
             continue
         r = p.add_run(seg)
-        r.bold = i % 2 == 1
+        r.bold = _b
+        r.italic = _i
         r.font.size = Pt(10)
         r.font.color.rgb = color
+        if _m:
+            r.font.name = "Consolas"
     return p
 
 
@@ -185,13 +212,16 @@ def caja(doc, titulo, texto, color_borde="1F4E79", fill="F2F6FC"):
     r.font.color.rgb = RGBColor.from_string(color_borde)
     p2 = c.add_paragraph()
     p2.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    for i, seg in enumerate(texto.split("**")):
+    for seg, _b, _i, _m in _tramos(texto):
         if not seg:
             continue
         rr = p2.add_run(seg)
-        rr.bold = i % 2 == 1
+        rr.bold = _b
+        rr.italic = _i
         rr.font.size = Pt(9.5)
         rr.font.color.rgb = INK
+        if _m:
+            rr.font.name = "Consolas"
     return t
 
 
@@ -328,8 +358,8 @@ def main() -> int:
     tabla(doc,
           ["Condición de medición", "Falsos positivos", "IC 95 %"],
           [("Laboratorio (conjunto de prueba)", (f"{fpr:.2f} %  (13/276)", F_OK), "2,8 % – 7,9 %"),
-           ("Operación real · pase 1", ("25,8 %  (16/62)", F_DANGER), "16,6 % – 37,9 %"),
-           ("Operación real · pase 2", ("23,0 %  (17/74)", F_DANGER), "14,9 % – 33,7 %")],
+           ("Operación real · pase 1", ("25,81 %  (16/62)", F_DANGER), "16,6 % – 37,9 %"),
+           ("Operación real · pase 2", ("22,97 %  (17/74)", F_DANGER), "14,9 % – 33,7 %")],
           widths=[6.5, 5.0, 5.0])
     doc.add_paragraph()
     figura(doc, "C1-fpr-offline-vs-operativo.png",
@@ -369,7 +399,11 @@ def main() -> int:
            ("Estabilidad operativa",
             "Cero caídas registradas en 58 corridas (55 verificadas), sin pérdida de paquetes"),
            ("Consistencia entre repeticiones",
-            "Los dos pases de validación operativa dieron resultados equivalentes (25,8 % y 23,0 %)")],
+            "Los dos pases de validación operativa dieron resultados equivalentes: **25,81 %** (16/62) en el pase 1 y **22,97 %** (17/74) en el pase 2"),
+           ("**Determinismo del sistema**",
+            "**10 ajustes repetidos** del pipeline elegido produjeron el **mismo SHA-256** y el mismo umbral (`1.8126087939765134`)"),
+           ("**Estabilidad del umbral**",
+            "Remuestreo bootstrap por episodio, **B = 1 000**: coeficiente de variación **4,10 %** (máximo declarado 5 %), banda percentil [1,6496 – 1,8132]")],
           widths=[5.2, 11.3])
 
     h2(doc, "Abordado parcialmente", AMBER, "◐  ")
@@ -386,8 +420,9 @@ def main() -> int:
           widths=[6.5, 4.5, 5.5])
 
     h2(doc, "No abordado", DANGER, "✘  ")
-    vineta(doc, "**Repetición del experimento de modelado.** La calibración se ejecutó una sola vez; no hay "
-                "repeticiones independientes que permitan estimar la variabilidad del umbral.")
+    vineta(doc, "**Validación externa del umbral.** La banda de variabilidad se estimó por remuestreo "
+                "sobre los mismos episodios; **no hay una jornada nueva** que confirme que el umbral sigue "
+                "siendo válido en otra fecha.")
     vineta(doc, "**Confiabilidad inter-evaluador.** No aplica al diseño actual, que no emplea jueces ni "
                 "instrumentos de percepción.")
 
