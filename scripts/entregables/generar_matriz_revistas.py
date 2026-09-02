@@ -240,15 +240,22 @@ CANDIDATAS = [
         "corto": "IJIES", "editor": "INASS · Japón", "issn": "2185-3118",
         "scopus": "https://www.scopus.com/sourceid/21100199790",
         "control": ("Fuera", "No figura entre las 17 revistas de la lista de control institucional"),
-        "filtro": ("Supera con reserva", "ISSN confirmado, ficha en Scopus, política de revisión y "
-                   "tarifas publicadas, y **publica su tasa de aceptación**, transparencia poco "
-                   "habitual. Fuera de la lista de depredadoras. **La reserva es concreta**: hay que "
-                   "confirmar que su cobertura en Scopus sigue activa, porque TELKOMNIKA, IJECE e "
-                   "IJEECS —revistas del mismo perfil de alto volumen— fueron descontinuadas en 2025"),
+        "filtro": ("Supera", "ISSN confirmado, política de revisión y tarifas publicadas, y "
+                   "**publica su tasa de aceptación**, transparencia poco habitual. Fuera de la "
+                   "lista de depredadoras. **Cobertura de Scopus confirmada el 02/09/2026 en la "
+                   "ficha de fuente: «Years currently covered by Scopus: from 2008 to 2026»**, "
+                   "sin aviso de descontinuación. Era la reserva más importante del expediente y "
+                   "queda cerrada"),
         "datos": {
-            "CiteScore 2025": ("3,3 · percentil 62 en General Engineering y 52 en General Computer "
-                               "Science, **Q2 en ambas**", "✔"),
-            "Cuartil SJR": ("pendiente de verificar en Scimago, hoy bloqueado por Cloudflare", "?"),
+            "CiteScore 2025": ("**3,3** (6.034 citas / 1.838 documentos 2022-2025) · puesto "
+                               "**#133 de 351** en General Engineering (percentil 62) y **#116 de "
+                               "241** en General Computer Science (percentil 52): **Q2 en ambas**. "
+                               "⚠ El **CiteScoreTracker 2026 va en 2,8**, por debajo del 3,3 de "
+                               "2025", "✔"),
+            "Cuartil SJR": ("**SJR 2025 = 0,292** y **SNIP 2025 = 0,453**, leídos en la ficha de "
+                            "Scopus el 02/09/2026. El **cuartil** por SJR sigue sin verificar: "
+                            "Scimago exige el ranking por categoría y bloquea el acceso. Los "
+                            "cuartiles Q2 que se citan son **por CiteScore**, no por SJR", "~"),
             "Revisión": ("Publicación unos 2 meses después de la aceptación · **tasa de aceptación "
                          "declarada: 17,9 % en 2025, 17,8 % en 2024, 14,1 % en 2023**", "✔"),
             "Periodicidad": ("**Mensual desde 2025** · **481 · 556 · 542 artículos** en 2024 · 2025 · "
@@ -816,16 +823,19 @@ def main() -> None:
 
     a("\n---\n\n## 8 · Pendientes antes del envío\n\n")
     a("Esta matriz **no debe usarse tal cual el día del envío**. Falta:\n\n")
-    for x in ["**Confirmar que IJIES sigue con cobertura activa en Scopus.** Es la verificación "
-              "más importante de toda la matriz: TELKOMNIKA, IJECE e IJEECS, del mismo perfil de "
-              "alto volumen, fueron descontinuadas en 2025. Se comprueba en su "
-              "[ficha de fuente](https://www.scopus.com/sourceid/21100199790), mirando que "
-              "la cobertura llegue hasta el presente y no tenga aviso de discontinuación.",
+    for x in ["~~Confirmar que IJIES sigue con cobertura activa en Scopus.~~ **Resuelto el "
+              "02/09/2026**: su [ficha de fuente](https://www.scopus.com/sourceid/21100199790) "
+              "declara «Years currently covered by Scopus: **from 2008 to 2026**», sin aviso de "
+              "descontinuación. Era la verificación más importante de la matriz.",
+              "**Vigilar el CiteScoreTracker de IJIES.** El de 2026 va en **2,8** frente al 3,3 "
+              "de 2025. Si cierra por debajo de 3,0 puede perder el Q2 en alguna de sus dos "
+              "categorías, y el criterio de visibilidad pesa el 25 %.",
               "**Resolver el orden de los planes.** Hoy no sigue el puntaje y la rúbrica de la "
               "Sesión 04 lo penaliza. Las dos salidas están en la sección 6.",
-              "**Preguntar quién cubre el APC** —el autor, el asesor, el programa o un "
-              "convenio institucional—. La Sesión 04 (diapositiva 19) lo pide "
-              "explícitamente y en este expediente solo está el monto.",
+              "~~Preguntar quién cubre el APC.~~ **Resuelto: lo cubre la Universidad "
+              "Peruana Unión.** Queda un detalle operativo: IJIES **solo acepta PayPal o "
+              "tarjeta**, no transferencia bancaria, así que conviene confirmar con "
+              "administración por qué vía se paga antes del envío.",
               "**Contrastar el plazo de la revista con la fecha de sustentación.** Los "
               "plazos ya están medidos —IJIES 158 días de mediana, ISI 250—, pero la fecha "
               "límite de titulación no está escrita en ninguna parte del expediente.",
@@ -875,8 +885,8 @@ def main() -> None:
          "**✔ Completado el 02/09/2026.** El h5-index faltaba"),
         ("18", "Tiempo de revisión contrastado con la fecha de titulación",
          "✔ Sección 7, con plazos **medidos**, no declarados"),
-        ("**19**", "APC: monto exacto **y quién lo cubre**",
-         "**~ Falta quién lo cubre.** El monto está verificado en las cuatro"),
+        ("19", "APC: monto exacto **y quién lo cubre**",
+         "✔ Monto verificado en las cuatro · **lo cubre la Universidad Peruana Unión**"),
         ("20", "Alcance temático puntuado con la evidencia de los artículos semilla",
          "✔ 21 artículos mapeados"),
         ("34", "Matriz sobre **todas** las revistas legítimas, no solo cuatro",

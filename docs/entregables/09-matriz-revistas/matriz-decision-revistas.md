@@ -36,7 +36,7 @@ Antes de puntuar hay que saber qué se compara contra cada alcance editorial.
 | **ICS** | Supera | Editorial de trayectoria reconocida y ficha activa en Scopus. Fuera de la lista de revistas depredadoras consultada |
 | **IJACSA** | Supera con reserva | Ficha activa en Scopus e indexación en WoS ESCI, y fuera de la lista de depredadoras consultada. Se registra que su reputación editorial es más discutida que la de las demás candidatas |
 | **CIT** | Supera | ISSN confirmado, ficha activa en Scopus, indexación adicional en Web of Science ESCI, DOAJ, INSPEC, ACM Digital Library y Engineering Village; adhesión declarada a las Core Practices de COPE, revisión por pares en tres fases con cribado antiplagio iThenticate y archivo de números desde 2001. Fuera de la lista de revistas depredadoras consultada |
-| **IJIES** | Supera con reserva | ISSN confirmado, ficha en Scopus, política de revisión y tarifas publicadas, y **publica su tasa de aceptación**, transparencia poco habitual. Fuera de la lista de depredadoras. **La reserva es concreta**: hay que confirmar que su cobertura en Scopus sigue activa, porque TELKOMNIKA, IJECE e IJEECS —revistas del mismo perfil de alto volumen— fueron descontinuadas en 2025 |
+| **IJIES** | Supera | ISSN confirmado, política de revisión y tarifas publicadas, y **publica su tasa de aceptación**, transparencia poco habitual. Fuera de la lista de depredadoras. **Cobertura de Scopus confirmada el 02/09/2026 en la ficha de fuente: «Years currently covered by Scopus: from 2008 to 2026»**, sin aviso de descontinuación. Era la reserva más importante del expediente y queda cerrada |
 | **IJIT** | Supera | Editada por Springer Nature, con ficha activa en Scopus, política editorial pública y archivo mensual. Fuera de la lista de depredadoras. Su respaldo editorial elimina el riesgo de descontinuación que sí tienen las revistas independientes de alto volumen |
 | **ISI** | Supera | ISSN confirmado, ficha activa en Scopus, revisión double-blind declarada, doce números al año con archivo y DOI, y página oficial de APC. Mismo editor que IJSSE, cuyo proceso ya se había verificado. Fuera de la lista de depredadoras |
 
@@ -199,8 +199,8 @@ La Sesión 04 (diapositiva 16) lista cuatro métricas de prestigio: SJR, Factor 
 
 | Dato | Valor | |
 |---|---|:--:|
-| CiteScore 2025 | 3,3 · percentil 62 en General Engineering y 52 en General Computer Science, **Q2 en ambas** | ✔ |
-| Cuartil SJR | pendiente de verificar en Scimago, hoy bloqueado por Cloudflare | ? |
+| CiteScore 2025 | **3,3** (6.034 citas / 1.838 documentos 2022-2025) · puesto **#133 de 351** en General Engineering (percentil 62) y **#116 de 241** en General Computer Science (percentil 52): **Q2 en ambas**. ⚠ El **CiteScoreTracker 2026 va en 2,8**, por debajo del 3,3 de 2025 | ✔ |
+| Cuartil SJR | **SJR 2025 = 0,292** y **SNIP 2025 = 0,453**, leídos en la ficha de Scopus el 02/09/2026. El **cuartil** por SJR sigue sin verificar: Scimago exige el ranking por categoría y bloquea el acceso. Los cuartiles Q2 que se citan son **por CiteScore**, no por SJR | ~ |
 | Revisión | Publicación unos 2 meses después de la aceptación · **tasa de aceptación declarada: 17,9 % en 2025, 17,8 % en 2024, 14,1 % en 2023** | ✔ |
 | Periodicidad | **Mensual desde 2025** · **481 · 556 · 542 artículos** en 2024 · 2025 · 2026, el mayor volumen de las candidatas disponibles | ✔ |
 | APC | **USD 300** · **USD 400 desde el 1 de octubre de 2026** · USD 100 extra si no se usa su plantilla · USD 50 por página a partir de la 10.ª | ✔ |
@@ -488,9 +488,10 @@ La decisión **no se tomó por cuartil**. Si la visibilidad hubiera pesado el 70
 
 Esta matriz **no debe usarse tal cual el día del envío**. Falta:
 
-- **Confirmar que IJIES sigue con cobertura activa en Scopus.** Es la verificación más importante de toda la matriz: TELKOMNIKA, IJECE e IJEECS, del mismo perfil de alto volumen, fueron descontinuadas en 2025. Se comprueba en su [ficha de fuente](https://www.scopus.com/sourceid/21100199790), mirando que la cobertura llegue hasta el presente y no tenga aviso de discontinuación.
+- ~~Confirmar que IJIES sigue con cobertura activa en Scopus.~~ **Resuelto el 02/09/2026**: su [ficha de fuente](https://www.scopus.com/sourceid/21100199790) declara «Years currently covered by Scopus: **from 2008 to 2026**», sin aviso de descontinuación. Era la verificación más importante de la matriz.
+- **Vigilar el CiteScoreTracker de IJIES.** El de 2026 va en **2,8** frente al 3,3 de 2025. Si cierra por debajo de 3,0 puede perder el Q2 en alguna de sus dos categorías, y el criterio de visibilidad pesa el 25 %.
 - **Resolver el orden de los planes.** Hoy no sigue el puntaje y la rúbrica de la Sesión 04 lo penaliza. Las dos salidas están en la sección 6.
-- **Preguntar quién cubre el APC** —el autor, el asesor, el programa o un convenio institucional—. La Sesión 04 (diapositiva 19) lo pide explícitamente y en este expediente solo está el monto.
+- ~~Preguntar quién cubre el APC.~~ **Resuelto: lo cubre la Universidad Peruana Unión.** Queda un detalle operativo: IJIES **solo acepta PayPal o tarjeta**, no transferencia bancaria, así que conviene confirmar con administración por qué vía se paga antes del envío.
 - **Contrastar el plazo de la revista con la fecha de sustentación.** Los plazos ya están medidos —IJIES 158 días de mediana, ISI 250—, pero la fecha límite de titulación no está escrita en ninguna parte del expediente.
 - Verificar el **cuartil SJR** de las cinco candidatas en Scimago. Aquí figura como fuente secundaria: **el percentil de Scopus no es el cuartil SJR**, y confundirlos invalidaría el criterio de visibilidad.
 - Completar en fuente primaria los datos marcados con `?` en ISJ, ICS e IJACSA: CiteScore, tipo y tiempo de revisión, periodicidad y plantilla.
@@ -518,7 +519,7 @@ Verificación punto por punto contra la guía de la sesión. La columna de la iz
 | 15 | Puntaje ponderado final | ✔ En las dos escalas, 0-100 y 0-10 |
 | **16** | Métricas de prestigio: SJR, JCR, **h5-index**, CiteScore | **✔ Completado el 02/09/2026.** El h5-index faltaba |
 | 18 | Tiempo de revisión contrastado con la fecha de titulación | ✔ Sección 7, con plazos **medidos**, no declarados |
-| **19** | APC: monto exacto **y quién lo cubre** | **~ Falta quién lo cubre.** El monto está verificado en las cuatro |
+| 19 | APC: monto exacto **y quién lo cubre** | ✔ Monto verificado en las cuatro · **lo cubre la Universidad Peruana Unión** |
 | 20 | Alcance temático puntuado con la evidencia de los artículos semilla | ✔ 21 artículos mapeados |
 | 34 | Matriz sobre **todas** las revistas legítimas, no solo cuatro | ✔ Las nueve |
 | 24 · 31 · 34 · 35 | Plan A, B y C según el orden de puntajes | ✔ Calculado desde la matriz, no escrito a mano |

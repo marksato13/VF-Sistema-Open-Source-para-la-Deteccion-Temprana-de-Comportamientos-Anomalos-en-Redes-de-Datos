@@ -409,11 +409,14 @@ tasa de aceptación. **No saber no es aprobar.**
 
 En orden de importancia:
 
-1. **¿IJIES sigue con cobertura activa en Scopus?**
-   [Ficha de fuente 21100199790](https://www.scopus.com/sourceid/21100199790).
-   Es la comprobación que decide todo el Plan A, y no pude hacerla desde aquí:
-   Scopus y Scimago bloquean el acceso automatizado. Mira que la cobertura
-   llegue hasta el presente y que no haya aviso de discontinuación.
+1. ~~¿IJIES sigue con cobertura activa en Scopus?~~ **Resuelto el 02/09/2026.**
+   Su [ficha de fuente](https://www.scopus.com/sourceid/21100199790) declara
+   «Years currently covered by Scopus: **from 2008 to 2026**», sin aviso de
+   discontinuación. Era la reserva que decidía todo el Plan A. La consulta
+   añadió además **SJR 2025 = 0,292**, **SNIP = 0,453** y los puestos exactos
+   —#133/351 en General Engineering y #116/241 en General Computer Science—, y
+   dejó una alerta nueva: el **CiteScoreTracker 2026 va en 2,8** frente al 3,3
+   de 2025.
 2. **A la coordinación: estar en la lista de control ¿inhabilita la revista o
    solo la registra?** De esto dependen los Planes C y D enteros. Si solo
    registra, **BEEI compite de frente con IJIES**: mejor acceso abierto
@@ -621,6 +624,9 @@ de ser uno de sus puntos fuertes y pasa a serlo de IJIES**.
 | 01/09/2026 | Acceso de IJIES | Se daba por acceso abierto sin matiz | **Bronce, sin licencia declarada** y fuera de DOAJ: se lee gratis mientras el editor quiera |
 | 01/09/2026 | Selección de revistas | Tres candidatas | **Cuatro, elegidas por el autor**: IJIES, ISI, BEEI e IJSSE. BEEI e IJSSE reingresan pese a estar en la lista de control |
 | 02/09/2026 | Orden de los planes | Fijado a mano: A IJIES · B ISI · C BEEI · D IJSSE | **Calculado desde el puntaje**, como exige la Sesión 04: **A IJIES 87,5 · B BEEI 84,0 · C IJSSE 75,5 · D ISI 69,0**. Mismas revistas, otra posición |
+| 02/09/2026 | Cobertura de IJIES en Scopus | Sin verificar — era la reserva del Plan A | **Activa: «covered by Scopus from 2008 to 2026»**, sin aviso de discontinuación. Añadidos SJR 0,292 y SNIP 0,453 |
+| 02/09/2026 | CiteScore de IJIES | 3,3 (2025) | Sigue en 3,3, pero el **CiteScoreTracker 2026 va en 2,8**: vigilar por si pierde el Q2 |
+| 02/09/2026 | Quién cubre el APC | Sin definir | **La Universidad Peruana Unión** |
 | 02/09/2026 | h5-index | No se había consultado | **Añadido**: BEEI 41 · ISI 23 · CIT 20. **IJIES no figura en Google Scholar Metrics** (tres consultas) |
 | 01/09/2026 | Acceso de IJIT | «No cobra APC» a secas | Cierto, **pero el 90,8 % de sus artículos quedan tras el muro de pago**; abrirlo cuesta USD 3.390. Visibilidad 8→7, total 82,0→**79,5** |
 

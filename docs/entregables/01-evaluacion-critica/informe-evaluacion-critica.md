@@ -322,34 +322,67 @@ Ejecutar D3 no solo cerró un requisito: **modificó lo que este informe puede a
 
 ## 10.4 Cronograma: cuándo se aborda cada pendiente
 
-*Comprometido el 2 de septiembre de 2026.* El docente pide no solo qué falta,
-sino **cómo y en qué plazo**. Esto es lo que queda y cuándo se hace.
+*Propuesta del equipo con fecha del 2 de septiembre de 2026, pendiente del visto
+bueno de los asesores.* El docente pide no solo qué falta, sino **cómo y en qué
+plazo**. Esto es lo que queda y cuándo se hace.
 
-| # | Pendiente | Cómo se aborda | Responsable | Fecha compromiso | Estado |
+### La fecha que ordena todo el cronograma
+
+**El 30 de septiembre de 2026.** IJIES sube su APC de **USD 300 a USD 400 el 1 de
+octubre**, y el cargo lo asume la Universidad Peruana Unión: enviar antes de esa
+fecha ahorra **USD 100 de presupuesto institucional**. Con la mediana medida de
+la revista —41 días hasta la primera decisión y 158 hasta publicar— un envío el
+**28 de septiembre** proyecta primera decisión hacia el **8 de noviembre de 2026**
+y publicación hacia el **5 de marzo de 2027**.
+
+> **De ahí sale el orden del cronograma:** todo lo que alimenta la sección de
+> resultados del artículo se cierra **antes del 28 de septiembre**; lo que la
+> mejora pero no la condiciona va después.
+
+### Pendientes, responsable y fecha
+
+| # | Pendiente | Cómo se aborda | Responsable | Fecha | Estado |
 |---|---|---|---|---|---|
-| 1 | Declarar la selección posterior en el documento de tesis | Párrafo explícito en metodología, con el enlace a la *model card* que ya lo declara | Salazar | **5 sep 2026** | Pendiente |
-| 2 | **Validación con usuarios (SUS)** — `D-18` | Sesión de 2 h con 5–8 evaluadores. Instrumento y hoja de cálculo ya preparados en [`08-validacion-usuarios/`](../08-validacion-usuarios/) | Salazar · Sauñe | **⚠️ por confirmar** | **Bloqueante: depende de conseguir evaluadores** |
-| 3 | Sesión de juicio experto (3 evaluadores) | Rúbrica de pertinencia sobre el producto desplegado | Salazar · asesores | **⚠️ por confirmar** | Depende de agenda de los asesores |
-| 4 | Escenarios legítimos faltantes — `D7` | Campaña F1 adicional: SSH, SCP/SFTP, backup y actualizaciones | Sauñe | **19 sep 2026** | Pendiente |
-| 5 | **Recalibrar con tráfico pesado y repetir F6** — `D5` | Reentrenar incluyendo `iperf-tcp 200M` como normalidad y repetir las 29 corridas | Salazar | **10 oct 2026** | Pendiente · **es la debilidad principal** |
-| 6 | Jornada nueva como *holdout* temporal externo — `D6` | Campaña completa en fecha distinta, sin reutilizar episodios | Salazar · Sauñe | **24 oct 2026** | Pendiente |
+| 1 | Declarar la selección posterior en el documento de tesis | Párrafo explícito en metodología, enlazado a la *model card* que ya lo declara | Salazar | **vie 4 sep** | Pendiente |
+| 2 | **Validación con usuarios (SUS)** — `D-18` | Sesión de 2 h con 5–8 evaluadores; instrumento y hoja de cálculo listos en [`08-validacion-usuarios/`](../08-validacion-usuarios/) | Salazar · Sauñe | **mié 9 sep** | **Prioridad 1** |
+| 3 | Juicio experto (3 evaluadores) | Rúbrica de pertinencia sobre el producto desplegado, ya con los resultados del SUS a la vista | Salazar · asesores | **mié 23 sep** | Pendiente |
+| 4 | Escenarios legítimos faltantes — `D7` | Campaña F1 adicional: SSH, SCP/SFTP, backup y actualizaciones | Sauñe | **sáb 19 sep** | Pendiente |
+| — | **Envío del artículo a IJIES** | Manuscrito en `IJIES_Format.docx`, 8 a 10 páginas | Salazar · Sauñe | **lun 28 sep** | **Hito** |
+| 5 | **Recalibrar con tráfico pesado y repetir F6** — `D5` | Reentrenar incluyendo `iperf-tcp 200M` como normalidad y repetir las 29 corridas | Salazar | **sáb 10 oct** | **Debilidad principal** |
+| 6 | *Holdout* temporal externo — `D6` | Campaña completa en fecha distinta, sin reutilizar episodios | Salazar · Sauñe | **sáb 24 oct** | Pendiente |
 
-### Qué pasa si no llegan las fechas
+### Por qué el SUS va primero
+
+Es **el único cero absoluto** que queda: cero en la ficha de auditoría, cero en
+el eje de pertinencia del plan de validación y `D-18` en el registro de
+debilidades. Cuesta **dos horas** y sube la ficha de **82,4 % a 88,2 %**. Ningún
+otro pendiente tiene esa relación entre esfuerzo y resultado, y es además el
+único que depende de conseguir personas y no de tiempo de laboratorio: por eso
+se agenda lo antes posible, no lo más cómodo.
+
+El juicio experto va **después** del SUS a propósito: los evaluadores expertos
+juzgan mejor teniendo delante lo que dijeron los usuarios.
+
+### Qué pasa si algo no llega
 
 **El artículo no espera a los pendientes 4, 5 y 6.** La sección de resultados se
 escribe con lo que ya está validado y bloqueado —el modelo congelado, la
 evaluación de un solo paso y las 58 corridas de F6— porque **ese resultado ya
-está completo y no va a cambiar**. Los seis pendientes mejoran la evidencia; no
-la sustituyen.
+está completo y no va a cambiar**. Los tres pendientes mejoran la evidencia; no
+la sustituyen. Si el 5 se retrasa, el artículo sale igual con la limitación
+declarada, que es como debe salir de todos modos.
 
-**Lo que sí bloquea:** el pendiente 2. Sin la sesión SUS, el eje de pertinencia
-se queda en cero y la ficha de auditoría no pasa de 82,4 %. Es dos horas de
-trabajo y es lo único del cronograma que depende de conseguir personas, no de
-tiempo de laboratorio.
+**Lo que sí bloquearía la sustentación es el pendiente 2.** Sin la sesión SUS, el
+eje de pertinencia se queda en cero y la ficha de auditoría no pasa de 82,4 %.
 
-> **Las dos fechas marcadas ⚠️ no están puestas todavía a propósito.** Dependen
-> de terceros —evaluadores y asesores— y comprometer un día sin haberlo
-> acordado con ellos sería inventarlo. Se fijan en cuanto haya confirmación.
+### La fecha de sustentación
+
+**No la fija el equipo**, sino el cronograma del programa. Lo que este informe sí
+puede afirmar es que **ningún pendiente de esta lista la condiciona más allá del
+24 de octubre de 2026**, y que el artículo puede enviarse antes de esa fecha sin
+depender de ninguno de ellos. Si la sustentación cae antes de marzo de 2027 —lo
+previsible—, el artículo estará **enviado y en revisión**, no publicado: es la
+situación normal y así debe declararse ante el jurado.
 
 ## 11. Limitaciones de este propio informe
 

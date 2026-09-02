@@ -174,20 +174,24 @@ def main() -> None:
     h1(doc, f"Por qué {pa['corto']} y no las otras")
     tabla(doc, ["Razón", "Evidencia verificada"], [
         ["**Encaje temático**",
-         "**86 artículos desde 2024** cuyo título nombra detección de intrusiones, de "
-         "anomalías o seguridad de redes. Ninguna otra candidata se acerca"],
+         "**86 artículos desde 2024** sobre detección de intrusiones, de anomalías o "
+         "seguridad de redes. Ninguna otra se acerca"],
         ["**Coste más bajo**",
          "APC de **USD 300** —USD 400 desde el 1 de octubre de 2026—, por debajo de los "
          "USD 415 de BEEI y de los USD 850 de IJSSE e ISI"],
         ["**El ciclo más corto**",
-         "Medido sobre cinco de sus artículos: **mediana de 41 días** hasta la primera "
-         "decisión y **158 hasta publicar**. ISI, en la misma medición, tarda 250"],
+         "Medido sobre cinco de sus artículos: **41 días** de mediana a la primera "
+         "decisión y **158 hasta publicar**. ISI tarda 250"],
         ["**Capacidad real**",
-         "**556 artículos en 2025**, mensual desde ese año. Y publica su tasa de "
-         "aceptación —17,9 %—, cosa que ninguna otra candidata hace"],
-        ["**Legitimidad**",
-         "Activa en Scopus con **CiteScore 3,3 y Q2** en dos categorías; fuera de la "
-         "lista de revistas depredadoras"],
+         "**556 artículos en 2025**, mensual. Publica su tasa de aceptación —17,9 %—, "
+         "cosa que ninguna otra hace"],
+        ["**Legitimidad confirmada**",
+         "Ficha de Scopus consultada el 02/09/2026: **«covered by Scopus from 2008 to "
+         "2026»**, CiteScore 3,3, Q2 en dos categorías, SJR 0,292. Fuera de la lista de "
+         "depredadoras"],
+        ["**Coste cubierto**",
+         "El **APC lo asume la Universidad Peruana Unión**; enviando antes del 1 de "
+         "octubre de 2026 son USD 300 en vez de USD 400"],
     ], [3.3, 13.9])
 
     # ------------------------------------------------------------- reservas --
@@ -200,9 +204,10 @@ def main() -> None:
          "**No figura en Google Scholar Metrics** —comprobado con tres consultas—. "
          "BEEI tiene 41, ISI 23"],
         ["**Cesión de copyright**",
-         "Su guía exige transferir los derechos al editor al aceptar el artículo"],
-        ["**Cobertura de Scopus por confirmar**",
-         "TELKOMNIKA, IJECE e IJEECS, del mismo perfil, fueron descontinuadas en 2025"],
+         "Exige transferir los derechos al editor al aceptar"],
+        ["**CiteScore a la baja**",
+         "El CiteScoreTracker 2026 va en **2,8** frente al 3,3 de 2025. Hay que "
+         "vigilarlo: si cierra por debajo de 3,0 puede perder el Q2 en una categoría"],
     ], [4.2, 13.0])
     parrafo(doc,
             "Ninguna invalida la elección: encaje, coste y plazo pesan el 65 % de la "

@@ -38,14 +38,15 @@ son coherentes con la matriz»— y así no puede volver a desalinearse.
 | 15 | Puntaje ponderado | ✅ En 0-100 y en 0-10 |
 | **16** | SJR · JCR · **h5-index** · CiteScore | ✅ h5-index añadido el 02/09/2026 |
 | 18 | Tiempo de revisión vs. cronograma | ✅ Plazos **medidos**, no declarados |
-| **19** | APC: monto **y quién lo cubre** | ⚠️ Falta quién lo cubre |
+| 19 | APC: monto **y quién lo cubre** | ✅ Lo cubre la **Universidad Peruana Unión** |
 | 20 | Alcance puntuado con los artículos semilla | ✅ 21 artículos |
 | 34 | Matriz sobre todas las legítimas | ✅ Las nueve |
 | **24 · 31 · 34 · 35** | Planes según el orden de puntajes | ✅ Calculado desde la matriz |
 | **33 · 34** | Justificación de ½ a 1 página, **aparte** | ✅ Documento propio |
 | 27 | Compartirla con el asesor antes de enviar | ⏳ Pendiente |
 
-**Doce de trece cumplidos y dos con reserva**, ambas dependientes de terceros.
+**Doce de trece cumplidos y uno con reserva**: la confirmación escrita de la
+coordinación, que depende de un tercero.
 
 ## Validación del mapeo
 
@@ -58,9 +59,12 @@ artículos recientes que revisaste son tu mejor base para puntuar este criterio�
 ## Lo que falta antes de enviar
 
 1. **Confirmar por escrito** con la coordinación si la lista de control
-   inhabilita una revista o solo registra lo publicado.
-2. **Verificar en el navegador** que IJIES sigue con cobertura activa en
-   [Scopus](https://www.scopus.com/sourceid/21100199790) — Scopus bloquea el
-   acceso automatizado.
-3. **Definir quién cubre el APC.**
-4. **Compartir la matriz con el asesor** antes del envío.
+   inhabilita una revista o solo registra lo publicado. *Es el único punto que
+   sigue abierto en la matriz.*
+2. **Compartir la matriz con el asesor** antes del envío.
+3. Confirmar con administración **por qué vía se paga el APC**: IJIES solo
+   acepta PayPal o tarjeta, no transferencia bancaria.
+
+**Resueltos el 02/09/2026:** la cobertura de IJIES en Scopus —«covered from 2008
+to 2026», sin aviso de discontinuación— y quién cubre el APC, que es la
+Universidad Peruana Unión.

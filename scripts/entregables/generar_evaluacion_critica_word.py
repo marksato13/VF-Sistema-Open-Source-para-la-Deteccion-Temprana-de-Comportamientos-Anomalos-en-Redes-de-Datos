@@ -157,23 +157,31 @@ def main() -> None:
         ["**Declaración explícita de la selección posterior** del modelo", "Objeción metodológica principal, ahora declarada"],
         ["**Validación cruzada agrupada y bootstrap por episodio**", "Variación interna del modelo y del umbral; no sustituyen una evaluación externa"],
     ], [8.6, 7.8], fondos=[F_OK] * 7)
-    par(doc, "**Pendiente, con fecha comprometida.** El orden responde a coste, no a comodidad:")
+    par(doc, "**La fecha que ordena el cronograma es el 30 de septiembre de 2026:** IJIES sube su "
+             "APC de USD 300 a USD 400 el 1 de octubre, y el cargo lo asume la Universidad Peruana "
+             "Unión. Con la mediana medida de la revista —41 días a la primera decisión, 158 hasta "
+             "publicar—, un envío el 28 de septiembre proyecta decisión hacia el 8 de noviembre de "
+             "2026 y publicación hacia marzo de 2027. Todo lo que alimenta la sección de resultados "
+             "se cierra antes de esa fecha; lo demás va después.")
     tabla(doc, ["Pendiente", "Cómo se aborda", "Responsable", "Fecha"], [
-        ["Declarar la selección posterior en la tesis", "Párrafo en metodología, enlazado a la *model card* que ya lo declara", "Salazar", "**5 sep**"],
-        ["**Validación con usuarios (SUS)**", "Sesión de 2 h con 5–8 evaluadores; instrumento ya preparado", "Salazar · Sauñe", "**por confirmar**"],
-        ["Juicio experto (3 evaluadores)", "Rúbrica de pertinencia sobre el producto desplegado", "Salazar · asesores", "**por confirmar**"],
-        ["Escenarios legítimos faltantes", "Campaña F1: SSH, SCP/SFTP, backup y actualizaciones", "Sauñe", "**19 sep**"],
-        ["**Recalibrar con tráfico pesado y repetir F6**", "Reentrenar con `iperf-tcp 200M` como normalidad; repetir las 29 corridas", "Salazar", "**10 oct**"],
-        ["*Holdout* temporal externo", "Campaña completa en fecha distinta, sin reutilizar episodios", "Salazar · Sauñe", "**24 oct**"],
-    ], [4.6, 6.4, 2.9, 2.5])
+        ["Declarar la selección posterior en la tesis", "Párrafo en metodología, enlazado a la *model card*", "Salazar", "**vie 4 sep**"],
+        ["**Validación con usuarios (SUS)**", "Sesión de 2 h con 5–8 evaluadores; instrumento ya preparado", "Salazar · Sauñe", "**mié 9 sep**"],
+        ["Juicio experto (3 evaluadores)", "Rúbrica de pertinencia, ya con los resultados del SUS a la vista", "Salazar · asesores", "**mié 23 sep**"],
+        ["Escenarios legítimos faltantes", "Campaña F1: SSH, SCP/SFTP, backup y actualizaciones", "Sauñe", "**sáb 19 sep**"],
+        ["**Envío del artículo a IJIES**", "Manuscrito en `IJIES_Format.docx`, 8 a 10 páginas", "Salazar · Sauñe", "**lun 28 sep**"],
+        ["**Recalibrar con tráfico pesado y repetir F6**", "Reentrenar con `iperf-tcp 200M` como normalidad; repetir las 29 corridas", "Salazar", "**sáb 10 oct**"],
+        ["*Holdout* temporal externo", "Campaña completa en fecha distinta, sin reutilizar episodios", "Salazar · Sauñe", "**sáb 24 oct**"],
+    ], [4.4, 6.2, 2.9, 2.5])
+    par(doc, "**El SUS va primero porque es el único cero absoluto que queda**: cero en la ficha de "
+             "auditoría, cero en el eje de pertinencia y `D-18` en el registro. Cuesta dos horas y "
+             "sube la ficha de 82,4 % a 88,2 %. El juicio experto va después a propósito: los "
+             "expertos juzgan mejor con los resultados de los usuarios delante.", italic=True)
     par(doc, "**El artículo no espera a los tres últimos.** La sección de resultados se escribe con "
-             "lo que ya está bloqueado —el modelo congelado, la evaluación de un solo paso y las 58 "
-             "corridas de F6—: ese resultado está completo y no va a cambiar. Los pendientes mejoran "
-             "la evidencia, no la sustituyen.", italic=True)
-    par(doc, "**Lo único bloqueante es el SUS**: sin él, el eje de pertinencia queda en cero y la "
-             "ficha de auditoría no pasa de 82,4 %. Son dos horas, y es lo único que depende de "
-             "conseguir personas y no de tiempo de laboratorio. Las dos fechas «por confirmar» "
-             "dependen de terceros y no se fijan sin haberlas acordado con ellos.", italic=True)
+             "lo que ya está bloqueado —modelo congelado, evaluación de un solo paso y 58 corridas "
+             "de F6—: ese resultado está completo y no va a cambiar. Si la recalibración se retrasa, "
+             "el artículo sale igual con la limitación declarada, que es como debe salir de todos "
+             "modos. **La fecha de sustentación no la fija el equipo**, pero ningún pendiente de "
+             "esta lista la condiciona más allá del 24 de octubre de 2026.", italic=True)
 
     # ---------------------------------------------------------------- 4
     h1(doc, "4 ·", "Conclusión")
