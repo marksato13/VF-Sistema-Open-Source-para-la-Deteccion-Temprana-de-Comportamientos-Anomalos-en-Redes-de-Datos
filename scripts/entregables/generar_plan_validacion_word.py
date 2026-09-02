@@ -139,7 +139,12 @@ def main() -> None:
     parrafo(doc, "El producto es un sistema desplegado que **decide y bloquea tráfico en tiempo "
                  "real**, no un instrumento de medición por escalas. Por eso la confiabilidad se "
                  "valida sobre las decisiones del modelo y el determinismo del sistema: no existen "
-                 "ítems de escala que correlacionar, así que **Alfa de Cronbach no aplica** al producto.")
+                 "ítems de escala que correlacionar ni jueces clasificando, así que **ni el Alfa de "
+                 "Cronbach ni el Kappa de Cohen aplican** al producto: el primero medirá la "
+                 "consistencia interna del instrumento SUS cuando se aplique, y el segundo "
+                 "solo tendría sentido si hubiera etiquetado manual por varios jueces. La "
+                 "replicabilidad se plantea sobre los **principios FAIR** —datos y código "
+                 "localizables, accesibles, interoperables y reutilizables—.")
 
     h1(doc, "1 · Confiabilidad")
     tabla(doc, ["Prueba", "Aplicada a", "Umbral aceptable"], [

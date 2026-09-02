@@ -144,6 +144,33 @@ Criterios aplicados: **validez** (¿las conclusiones se siguen de la evidencia?)
 | Confiabilidad | **Alta** | Hashes, particiones disjuntas por episodio, causalidad probada con test unitario |
 | Evaluación técnica | **Alta** | Funciona, se midió en despliegue real, sus fallos se corrigieron con evidencia |
 
+## 6 bis. Evaluación contra ISO/IEC 25010
+
+La Sesión 01 nombra este estándar en su propósito y lo presenta como **marco de
+referencia obligado** al evaluar sistemas de software. Sus ocho características,
+contrastadas contra la evidencia de este proyecto:
+
+| Característica | Evidencia | Estado |
+|---|---|---|
+| **Adecuación funcional** | Detecta y bloquea: 88,8 % de detección sobre ataques genuinos [83,0 – 92,8] | **Con evidencia** |
+| **Eficiencia de desempeño** | Bloqueo en mediana de 8,0 s (rango 6,1–13,7). Limitación medida: el motor se atrasa hasta 161 s bajo carga sostenida | **Con evidencia, con límite declarado** |
+| **Confiabilidad** | Cero caídas en 58 corridas; determinismo verificado —10 ajustes repetidos dieron el mismo SHA-256— | **Con evidencia** |
+| **Seguridad** | Trazabilidad por SHA-256 de datos, modelos y calibrador; enforcement sin SSH entre VM | **Con evidencia** |
+| **Usabilidad** | Panel desplegado, pero **ningún instrumento aplicado**. Es `D-18` | **Sin evidencia** |
+| **Compatibilidad** | No evaluada: no se probó coexistencia con otros sistemas de detección | **Sin evidencia** |
+| **Mantenibilidad** | Código modular y versionado, con pruebas; **no se midió** con métricas del estándar | **Sin evidencia formal** |
+| **Portabilidad** | Desplegado en una sola configuración de laboratorio | **Sin evidencia** |
+
+**Cuatro de ocho características tienen evidencia; cuatro no.** Declararlo así es
+más defendible que afirmar «calidad validada»: el estándar sirve para saber qué
+se midió y qué no, no para decorar el informe.
+
+> Los otros marcos que nombra el propósito de la sesión se sitúan igual: **SUS**
+> está preparado y pendiente de aplicar (`D-18`); **Delphi** y el juicio experto
+> se contemplan para la validación de pertinencia; **CASP y JBI** son
+> instrumentos de evaluación de literatura clínica y **no aplican** a un producto
+> de ingeniería como este.
+
 ## 7. Lo que está validado con evidencia
 
 | Aspecto | Evidencia |

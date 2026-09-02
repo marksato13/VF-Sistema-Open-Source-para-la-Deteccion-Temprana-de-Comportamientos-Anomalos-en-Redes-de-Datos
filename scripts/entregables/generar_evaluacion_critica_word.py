@@ -116,8 +116,32 @@ def main() -> None:
     par(doc, "El producto es un sistema desplegado que detecta comportamiento anómalo y "
              "**bloquea la IP ofensora en el propio router**, validado sobre tráfico real de "
              "laboratorio. Toda cifra procede de artefactos verificables; ninguna se transcribe "
-             "a mano.")
-    tabla(doc, ["Criterio evaluado", "Resultado obtenido", "Cómo se verificó"], [
+             "a mano. La evaluación se ordena por los **criterios de validez y confiabilidad** "
+             "trabajados en la sesión.")
+    tabla(doc, ["Criterio de la sesión", "Cómo se abordó en este proyecto", "Estado"], [
+        ["**Validez interna**", "Partición **disjunta por episodio** (`no_episode_split=true`); "
+         "umbral fijado solo en validación (α = 0,05); causalidad de las variables probada con "
+         "test unitario. Una **fuga real (*data leakage*) se detectó, corrigió y marcó «no debe "
+         "citarse»**", "Abordada"],
+        ["**Validez externa**", "Validación cruzada de 5 pliegues agrupados por episodio y "
+         "validación operativa en despliegue real (58 corridas)", "**Parcial**: no hay jornada "
+         "externa ni segundo dataset"],
+        ["**Confiabilidad**", "**Del sistema (determinismo)**: 10 ajustes repetidos del pipeline "
+         "produjeron el mismo SHA-256 y el mismo umbral. **Test-retest**: dos pases operativos "
+         "equivalentes. **Estabilidad del umbral**: bootstrap por episodio, CV 4,10 %",
+         "Abordada"],
+        ["**Validez de constructo**", "Diccionario de las 28 variables con fórmula, ventana, "
+         "fuente y denominador, generado desde el extractor congelado", "Abordada"],
+        ["**α de Cronbach / Kappa**", "**No aplican al producto**: no hay ítems de escala que "
+         "correlacionar ni jueces clasificando. Aplicarán al instrumento SUS", "Justificado"],
+    ], [4.0, 9.2, 4.2])
+    par(doc, "**ISO/IEC 25010 — características evaluadas con evidencia:** *adecuación funcional* "
+             "(detecta y bloquea, 88,8 % de detección), *eficiencia de desempeño* (bloqueo en "
+             "mediana de 8,0 s), *confiabilidad* (cero caídas en 58 corridas, determinismo "
+             "verificado) y *seguridad* (trazabilidad por SHA-256). **Sin evidencia todavía**: "
+             "*usabilidad* —el SUS está pendiente—, *compatibilidad*, *mantenibilidad* y "
+             "*portabilidad*.", size=8.8)
+    tabla(doc, ["Resultado medido", "Valor obtenido", "Cómo se verificó"], [
         ["**Capacidad discriminante**", "**ROC-AUC 0,974**", "Re-puntuando el modelo congelado"],
         ["**Detección de ataques genuinos**", "**88,8 %** [83,0 – 92,8]", "Evaluación bloqueada de un solo paso, con intervalo de Wilson"],
         ["**Respuesta en tiempo real**", "Bloqueo en mediana de **8,0 s**; rango 6,1–13,7 s (n = 8)", "58 corridas con el motor activo; 8 bloqueos con tiempo observable"],
@@ -183,8 +207,29 @@ def main() -> None:
              "modos. **La fecha de sustentación no la fija el equipo**, pero ningún pendiente de "
              "esta lista la condiciona más allá del 24 de octubre de 2026.", italic=True)
 
-    # ---------------------------------------------------------------- 4
-    h1(doc, "4 ·", "Conclusión")
+    # ------------------------------------------------------- limitaciones
+    h1(doc, "4 ·", "Amenazas a la validez (*Threats to Validity*)")
+    par(doc, "La sesión advierte que esta sección es **obligatoria en las revistas indexadas de "
+             "Ingeniería de Software**. Se declara aquí y se trasladará al artículo.", size=8.8)
+    tabla(doc, ["Tipo de amenaza", "Amenaza concreta en este trabajo", "Cómo se mitiga o declara"], [
+        ["**Validez interna**", "El modelo se eligió observando el conjunto de prueba: **selección "
+         "posterior**, la misma familia de error que el HARKing", "Declarada en la *model card* "
+         "antes de cualquier métrica. La corrección exige evaluación nueva y reservada"],
+        ["**Validez externa**", "Entorno artificial de laboratorio, un solo dataset y **sin "
+         "jornada de holdout externa**: los 44 perfiles aparecen en las tres particiones",
+         "Se recolecta jornada nueva el 24 de octubre. Hasta entonces **no se afirma "
+         "generalización**"],
+        ["**Validez de conclusión**", "Los intervalos por ventana son **descriptivos**: las "
+         "ventanas de un episodio comparten historia y no son observaciones independientes",
+         "Se reportan como descriptivos, no como prueba inferencial; la comparación entre "
+         "modelos usa McNemar con corrección de Holm"],
+        ["**Validez de constructo**", "*«¿el FPR de laboratorio mide el FPR de operación?»* — "
+         "**la medición dice que no**: 4,71 % frente a 22,97 %", "Se reportan ambos por "
+         "separado y se declara la brecha como el hallazgo principal"],
+    ], [3.4, 6.6, 7.4])
+
+    # ---------------------------------------------------------------- 5
+    h1(doc, "5 ·", "Conclusión")
     par(doc, "Se demostró con evidencia que el sistema **detecta y bloquea en tiempo real** sobre "
              "una red enrutada, con ROC-AUC de 0,974, detección del 88,8 % sobre ataques genuinos "
              "y bloqueo en una mediana de 8 segundos, sin ninguna caída de servicio registrada.")
