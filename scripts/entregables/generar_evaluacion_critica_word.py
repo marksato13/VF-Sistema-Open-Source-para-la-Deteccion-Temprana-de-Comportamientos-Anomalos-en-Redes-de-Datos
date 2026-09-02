@@ -191,7 +191,7 @@ def main() -> None:
         ["**Disponibilidad**", "**Cero caídas registradas**; 55 de 58 corridas con verificación explícita", "Registro de servicios antes y después de cada corrida"],
         ["**Aporte de las variables multicapa**", "De **66,5 % a 88,8 %** de detección, p < 0,001", "Ablación por capas con McNemar exacto"],
         ["**Superioridad del modelo elegido**", "Las **6 comparaciones** del OCSVM son significativas", "McNemar + corrección de Holm sobre 21 pares"],
-        ["**Reproducibilidad**", "Dataset, manifiesto y **los 7 modelos** publicados y verificables", "sha256sum -c · licencias MIT y CC BY 4.0"],
+        ["**Reproducibilidad**", "Dataset, manifiesto y **los 7 modelos** publicados y verificables. **No es replicabilidad**: eso exige datos nuevos y es P-2/P-4", "sha256sum -c · licencias MIT y CC BY 4.0"],
     ], [4.4, 5.4, 7.6])
 
     # ---------------------------------------------------------------- 2
@@ -200,9 +200,9 @@ def main() -> None:
              "aquí.** Las cinco están medidas, no supuestas.")
     tabla(doc, ["", "Qué falta", "Evidencia de que falta", "Gravedad"], [
         ["**P-1**", "**El sistema bloquea tráfico legítimo pesado**", "En laboratorio se equivoca el 4,71 % de las veces; en operación, 25,81 % y 22,97 %. Una transferencia legítima de 200 Mbit/s bloqueó a un cliente real durante 120 s", "Crítica"],
-        ["**P-2**", "**El modelo se eligió mirando el examen final**", "Se compararon 7 candidatos sobre el mismo conjunto de prueba y se escogió el mejor. El 88,8 % es un máximo, no una estimación limpia", "Crítica"],
-        ["**P-3**", "**Nadie ha usado el panel salvo el equipo**", "El instrumento SUS está preparado, pero el archivo de respuestas tiene 0 filas: no se ha aplicado", "Alta"],
-        ["**P-4**", "**No se sabe si funciona en otra jornada**", "Los 44 perfiles aparecen en las tres particiones. Falta una captura nueva que el modelo no haya visto", "Alta"],
+        ["**P-2**", "**El modelo se eligió mirando el examen final** *(replicabilidad)*", "Se compararon 7 candidatos sobre el mismo conjunto de prueba y se escogió el mejor. El 88,8 % es un máximo, no una estimación limpia", "Crítica"],
+        ["**P-3**", "**Nadie ha usado el panel salvo el equipo** *(pertinencia)*", "El instrumento SUS está preparado, pero el archivo de respuestas tiene 0 filas: no se ha aplicado", "Alta"],
+        ["**P-4**", "**No se sabe si funciona en otra jornada** *(replicabilidad)*", "Los 44 perfiles aparecen en las tres particiones. Falta una captura nueva que el modelo no haya visto", "Alta"],
         ["**P-5**", "**Faltan 4 escenarios legítimos del jurado**", "SSH, SCP/SFTP, backup y actualizaciones no están en el dataset", "Media"],
     ], [1.5, 4.6, 8.4, 2.1], fondos=[F_RED, F_RED, F_AMBER, F_AMBER, F_ZEBRA])
 
