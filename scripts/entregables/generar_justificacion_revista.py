@@ -144,7 +144,7 @@ def main() -> None:
     p.paragraph_format.space_after = Pt(7)
     r = p.add_run("Sistema open source para la detección temprana de comportamientos "
                   "anómalos en redes de datos\n"
-                  "Rubén Mark Salazar Tocas · Uziel Elias Sauñe Fernandez")
+                  "Rubén Mark Salazar Tocas · Uziel Elias Sauñe Fernandez\nAsesores: Ing. Nemias Saboya Ríos · Ing. Fernando Manuel Asin Gómez")
     r.font.size = Pt(8.8)
     r.font.color.rgb = DIM
 

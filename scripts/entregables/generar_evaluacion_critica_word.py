@@ -108,7 +108,7 @@ def main() -> None:
     r = p.add_run("INFORME DE EVALUACIÓN CRÍTICA DE RESULTADOS")
     r.font.size = Pt(14.5); r.font.bold = True; r.font.color.rgb = ACCENT
     par(doc, "Sistema open source para la detección temprana de comportamientos anómalos "
-             "en redes de datos\nRubén Mark Salazar Tocas · Uziel Elias Sauñe Fernandez",
+             "en redes de datos\nRubén Mark Salazar Tocas · Uziel Elias Sauñe Fernandez\nAsesores: Ing. Nemias Saboya Ríos · Ing. Fernando Manuel Asin Gómez",
         size=9, color=DIM, after=9, align=WD_ALIGN_PARAGRAPH.CENTER)
 
     # ---------------------------------------------------------------- 1

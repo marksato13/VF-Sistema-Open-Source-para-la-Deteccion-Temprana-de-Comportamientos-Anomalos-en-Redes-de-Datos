@@ -43,7 +43,7 @@ son coherentes con la matriz»— y así no puede volver a desalinearse.
 | 34 | Matriz sobre todas las legítimas | ✅ Las nueve |
 | **24 · 31 · 34 · 35** | Planes según el orden de puntajes | ✅ Calculado desde la matriz |
 | **33 · 34** | Justificación de ½ a 1 página, **aparte** | ✅ Documento propio |
-| 27 | Compartirla con el asesor antes de enviar | ⏳ Pendiente |
+| 27 | Compartirla con los asesores antes de enviar | ⏳ Pendiente |
 
 **Doce de trece cumplidos y uno con reserva**: la confirmación escrita de la
 coordinación, que depende de un tercero.
@@ -61,7 +61,8 @@ artículos recientes que revisaste son tu mejor base para puntuar este criterio�
 1. **Confirmar por escrito** con la coordinación si la lista de control
    inhabilita una revista o solo registra lo publicado. *Es el único punto que
    sigue abierto en la matriz.*
-2. **Compartir la matriz con el asesor** antes del envío.
+2. **Compartir la matriz con los asesores** —Ing. Nemias Saboya Ríos e Ing.
+   Fernando Manuel Asin Gómez— antes del envío.
 3. Confirmar con administración **por qué vía se paga el APC**: IJIES solo
    acepta PayPal o tarjeta, no transferencia bancaria.
 
