@@ -334,7 +334,7 @@ def main():
             nom = s.split(". ", 1)[-1].split("  [errata")[0].strip()
             lit[nom] += 1
             litci[nom.lower()] += 1
-        for f in {familia_de(s) for s in secs if familia_de(s)}:
+        for f in sorted({familia_de(s) for s in secs if familia_de(s)}):
             fam[f] += 1
     total = len(ART)
 
@@ -357,7 +357,7 @@ def main():
     ws.append([])
     cabecera(ws, ["Mismo nombre, ignorando mayúsculas", "Artículos", "% de 21",
                   "Familia funcional"], VERDE)
-    for nom, c in sorted(litci.items(), key=lambda x: -x[1]):
+    for nom, c in sorted(litci.items(), key=lambda x: (-x[1], x[0])):
         if c < 2:
             continue
         ws.append([nom, c, round(100 * c / total, 1), familia_de(nom) or "—"])
@@ -365,7 +365,7 @@ def main():
     fila_fam = ws.max_row + 2
     ws.append([])
     cabecera(ws, ["Familia funcional", "Artículos", "% de 21", ""], AMBAR)
-    for f, c in sorted(fam.items(), key=lambda x: -x[1]):
+    for f, c in sorted(fam.items(), key=lambda x: (-x[1], x[0])):
         ws.append([f, c, round(100 * c / total, 1), ""])
         ws.cell(ws.max_row, 1).font = Font(bold=True, size=9)
     ini_fam = fila_fam + 1
