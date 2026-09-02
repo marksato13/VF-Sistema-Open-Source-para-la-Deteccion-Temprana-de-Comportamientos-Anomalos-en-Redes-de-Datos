@@ -72,7 +72,7 @@ Es el hallazgo más importante y se reporta aunque sea desfavorable:
 
 ![Falsos positivos: laboratorio frente a operación real](../graficas/C1-fpr-offline-vs-operativo.png)
 
-Los intervalos **no se solapan**, de modo que la diferencia no se explica por azar muestral. Además se reprodujo **en aislamiento**: una transferencia legítima de 200 Mbit/s generó una ventana que cruzó el umbral y **bloqueó a un cliente legítimo durante 120 segundos**. Otra ventana de la misma transferencia se permitió por apenas 0,0014 puntos de score, lo que indica que el tráfico legítimo intenso cae dentro del margen de decisión del modelo.
+Los intervalos de Wilson son **descriptivos** y las ventanas comparten episodio e historia de hasta 60 s; su no solapamiento no prueba por sí solo una diferencia inferencial independiente. Además se reprodujo **en aislamiento**: una transferencia legítima de 200 Mbit/s generó una ventana que cruzó el umbral y **bloqueó a un cliente legítimo durante 120 segundos**. Otra ventana de la misma transferencia se permitió por apenas 0,0014 puntos de score, lo que indica que el tráfico legítimo intenso cae dentro del margen de decisión del modelo.
 
 ### No abordado
 

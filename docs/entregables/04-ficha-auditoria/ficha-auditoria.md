@@ -76,14 +76,14 @@ sustentan con 18 ítems sobre 51 puntos.
 |---|---|---|---|
 | 1.1 | **Alfa de Cronbach** (consistencia interna de instrumento) | El producto no emplea cuestionarios ni escalas psicométricas; no hay ítems que correlacionar | **N/A** |
 | 1.2 | **Kappa de Cohen** (acuerdo inter-evaluador) | No se realizó evaluación por jueces ni doble etiquetado independiente. Las etiquetas provienen del diseño experimental (escenario ejecutado), no de criterio humano | **0** |
-| 1.3 | **Validación cruzada** | No se aplicó sobre el modelo congelado. Existe una validación *leave-one-episode-out*, pero solo sobre un pipeline anterior que fue descartado | **1** |
+| 1.3 | **Validación cruzada** | Ejecutada sobre el mismo pipeline `StandardScaler` + OCSVM en 5 pliegues agrupados por episodio normal. La detección varió entre 78,8 % y 89,4 %. Reutiliza las mismas anomalías en cada pliegue y, por tanto, es validación interna, no externa | **3** |
 | 1.4 | **Reproducibilidad de la medición** | Al reevaluar el modelo congelado sobre los mismos conjuntos se obtuvieron **exactamente** las cifras del registro original (13/276 falsos positivos y 158/179 detecciones) | **3** |
-| 1.5 | **Estabilidad entre repeticiones independientes** | Dos pases completos de validación operativa dieron resultados equivalentes (25,8 % y 23,0 % de error). No hay más repeticiones | **2** |
-| 1.6 | **Cuantificación de la incertidumbre** | Intervalos de confianza de Wilson 95 % calculados sobre todas las proporciones. Se incorporaron *a posteriori*, no formaban parte del diseño original | **2** |
+| 1.5 | **Estabilidad interna del umbral** | Bootstrap agrupado por episodio con `B = 1 000`: CV 4,10 % y banda percentil 95 % [1,6496–1,8132]. Los dos pases operativos comparten infraestructura y no se tratan como réplicas independientes | **3** |
+| 1.6 | **Cuantificación de la incertidumbre** | Intervalos de Wilson 95 % para proporciones y McNemar exacto con corrección de Holm sobre 21 comparaciones. Los intervalos por ventana son descriptivos porque las ventanas de un episodio comparten historia | **3** |
 
-**Subtotal confiabilidad: 8 / 15 puntos = 53,3 %** *(1.1 excluido por no aplicar)*
+**Subtotal confiabilidad: 12 / 15 puntos = 80,0 %** *(1.1 excluido por no aplicar)*
 
-**Lectura.** La confiabilidad es alta en lo que respecta a **reproducibilidad técnica** —el resultado se puede volver a obtener exactamente— pero baja en **validación estadística**: falta validación cruzada sobre el modelo elegido y no hay acuerdo inter-evaluador porque el diseño no lo contempla.
+**Lectura.** Hay reproducibilidad técnica, validación cruzada y estabilidad interna del umbral. La evidencia sigue limitada al mismo laboratorio y al mismo conjunto de anomalías; no existe jornada externa. El acuerdo inter-evaluador no aplica al etiquetado experimental y no hubo jueces.
 
 ---
 
@@ -93,18 +93,18 @@ sustentan con 18 ítems sobre 51 puntos.
 
 > **Consigna (paso 4).** *"Identifiquen qué evidencia de replicabilidad ofrece: ¿datos y código disponibles? ¿entorno documentado?"*
 >
-> Las dos preguntas se responden por separado porque **el proyecto está en situación asimétrica**: el código sí está publicado y el entorno sí está documentado con versiones exactas, pero los datos no. Se añaden tres criterios que la replicación real exige y que la pregunta no menciona: determinismo, integridad verificable e instrucciones de reproducción.
+> Las dos preguntas se responden por separado. El código, los datos derivados, los modelos y el entorno están publicados; además se comprueban determinismo, integridad verificable e instrucciones de reproducción.
 
 | # | Criterio | Evidencia concreta en el proyecto | Punt. |
 |---|---|---|---|
-| 2.1 | **Código disponible** | Repositorio público en GitHub con 514 archivos versionados y 340 registros de cambios trazables | **3** |
-| 2.2 | **Datos disponibles** | **Los datasets no están publicados.** El repositorio excluye `artifacts/` en bloque, y esa regla arrastra al dataset y al modelo junto con lo que sí es pesado (60 MB de dependencias y 24 MB de capturas). El dataset ocupa **708 KB** y el modelo **8 KB**: son publicables sin dificultad técnica. Hoy un tercero no puede reproducir el entrenamiento sin solicitarlos | **1** |
+| 2.1 | **Código disponible** | Repositorio público con código versionado e historial trazable | **3** |
+| 2.2 | **Datos disponibles** | Dataset derivado, manifiesto y siete modelos candidatos publicados, con `docs/dataset/SHA256SUMS` y licencias MIT para código y CC BY 4.0 para datos | **3** |
 | 2.3 | **Entorno documentado** | Versiones exactas fijadas (`requirements-model.txt`), script de instalación idempotente y playbooks de Ansible para el despliegue completo | **3** |
-| 2.4 | **Determinismo y semillas** | 10 semillas registradas para el análisis de estabilidad, pero **no cubren el modelo finalmente elegido**. El modelo es determinista dados los datos, aunque esto no se declara como protocolo | **2** |
+| 2.4 | **Determinismo y semillas** | Protocolo documentado y 10 ajustes repetidos del pipeline elegido produjeron el mismo SHA-256 y el mismo umbral | **3** |
 | 2.5 | **Integridad verificable** | SHA-256 de los datos, del modelo y del programa de calibración; commit del repositorio verificado limpio antes y después de la ejecución | **3** |
-| 2.6 | **Instrucciones de reproducción** | Manual de operación y documentación por fases disponibles. El manual de implementación técnica completo está pendiente | **2** |
+| 2.6 | **Instrucciones de reproducción** | El datasheet documenta descarga, verificación de hashes y regeneración; el despliegue cuenta con scripts y playbooks versionados | **3** |
 
-**Subtotal replicabilidad: 14 / 18 puntos = 77,8 %**
+**Subtotal replicabilidad: 18 / 18 puntos = 100 %**
 
 **Lectura.** Es la dimensión **más fuerte** del producto y la que más subió: **18 de 18**. La cadena de integridad (hashes, repositorio limpio, versiones fijadas) es superior a lo habitual, y la publicación del dataset y de los siete modelos con checksums y licencias cerró la única brecha que quedaba. Un tercero puede hoy clonar el repositorio y reproducir el umbral en sus dieciséis dígitos.
 
@@ -116,7 +116,7 @@ sustentan con 18 ítems sobre 51 puntos.
 
 > **Consigna (paso 5).** *"Identifiquen qué evidencia de pertinencia presenta: ¿validación con usuarios reales? ¿trazabilidad de requisitos?"*
 >
-> Las dos preguntas apuntan a cosas distintas y **el proyecto responde muy diferente a cada una**: la trazabilidad existe pero está incompleta, mientras que la validación con usuarios no se realizó en absoluto. Se añaden tres criterios que completan la pertinencia de un producto de ingeniería: si se probó en operación real, si resuelve el problema declarado y si su alcance está delimitado.
+> Las dos preguntas apuntan a cosas distintas y **el proyecto responde muy diferente a cada una**: la trazabilidad está cerrada, mientras que la validación con usuarios no se realizó en absoluto. Se añaden tres criterios que completan la pertinencia de un producto de ingeniería: si se probó en operación real, si resuelve el problema declarado y si su alcance está delimitado.
 
 | # | Criterio | Evidencia concreta en el proyecto | Punt. |
 |---|---|---|---|
@@ -124,10 +124,10 @@ sustentan con 18 ítems sobre 51 puntos.
 | 3.2 | **Evaluación por expertos o jueces** | No se aplicó ningún instrumento de juicio experto (Delphi, SUS u otro) | **0** |
 | 3.3 | **Trazabilidad de requisitos** | **Matriz cerrada**: cada requisito cumplido con evidencia enlazada, cumplido con reserva medida, o declarado pendiente con lo que concretamente falta. Ninguna fila en «Planificado» | **3** |
 | 3.4 | **Validación en entorno de operación real** | El sistema se midió **desplegado y activo**, no solo en laboratorio: 2 pases de 29 corridas con motor y bloqueo funcionando sobre tráfico real | **3** |
-| 3.5 | **Alineación con el problema declarado** | El producto detecta y bloquea las 6 familias de ataque previstas, con métricas medidas por familia | **3** |
+| 3.5 | **Alineación con el problema declarado** | La evaluación offline cubre 9 familias (6 Kali y 3 heredadas) y F6 valida el camino real de detección y bloqueo; las limitaciones por familia se reportan separadamente | **3** |
 | 3.6 | **Declaración de alcance y limitaciones** | Limitaciones medidas, cuantificadas y publicadas, incluido el resultado desfavorable del error operativo (23–26 %) | **3** |
 
-**Subtotal pertinencia: 10 / 18 puntos = 55,6 %**
+**Subtotal pertinencia: 12 / 18 puntos = 66,7 %**
 
 **Lectura.** El producto es **técnicamente pertinente** —resuelve el problema declarado y se probó en operación real— pero carece por completo de **validación con personas**: nadie externo al equipo ha usado ni evaluado el sistema. Para un producto cuya interfaz es un panel operativo destinado a un analista, esa ausencia es significativa.
 
@@ -155,7 +155,7 @@ sustentan con 18 ítems sobre 51 puntos.
 
 Un **82,4 %** describe el estado actual: **sólido como artefacto de ingeniería y ya replicable por un tercero, todavía incompleto en validación humana**.
 
-- Lo que sostiene el puntaje es la **replicabilidad** (94,4 %): datos, modelos, checksums y licencias están publicados; un tercero puede clonar y reproducir el umbral en sus 16 dígitos.
+- Lo que sostiene el puntaje es la **replicabilidad** (100 %): datos, modelos, checksums y licencias están publicados; un tercero puede clonar y reproducir el umbral en sus 16 dígitos.
 - Lo que lo baja es ya una sola cosa: la **validación humana**. La estadística quedó cerrada y la replicabilidad está completa; lo que falta es que alguien externo al equipo use el producto.
 - Ninguna de las dos ausencias invalida los resultados obtenidos; ambas **limitan el alcance de lo que puede afirmarse** a partir de ellos.
 
@@ -205,7 +205,7 @@ La norma de calidad de producto de software permite situar los resultados en un 
 |---|---|---|
 | **Fiabilidad** — madurez, disponibilidad, tolerancia a fallos | **Sí** | Cero caídas de servicio registradas en 58 corridas, 55 con verificación explícita, sin pérdida de paquetes. Tres fallos de producción detectados y corregidos con prueba positiva y negativa |
 | **Eficiencia de desempeño** — comportamiento temporal | **Sí** | Bloqueo en una mediana de 8 s. Límite declarado: bajo carga sostenida el motor acumula retraso |
-| **Adecuación funcional** — completitud y corrección | **Parcial** | Detecta y bloquea las 6 familias previstas (88,8 %), pero la corrección funcional se degrada con tráfico legítimo intenso (error 23–26 %) |
+| **Adecuación funcional** — completitud y corrección | **Parcial** | La evaluación offline cubre 9 familias y F6 confirma el camino de bloqueo, pero la corrección funcional se degrada con tráfico legítimo intenso (error 23–26 %) |
 | **Seguridad** — confidencialidad, integridad, no repudio | **Parcial** | Integridad verificable por SHA-256 y control de acceso por helper de alcance estrecho. **No se evaluó el sistema como objetivo de ataque**: no se probó evasión del detector ni abuso del bloqueo mediante suplantación de IP |
 | **Mantenibilidad** — modularidad, reusabilidad, analizabilidad | **Parcial** | El motor reutiliza el extractor congelado sin duplicar fórmulas; 514 archivos versionados con historial trazable. Sin métricas formales de mantenibilidad |
 | **Usabilidad** | **No** | El panel no se sometió a ninguna evaluación de uso (ver ítems 3.1 y 3.2) |
@@ -218,9 +218,9 @@ La norma de calidad de producto de software permite situar los resultados en un 
 
 ## 7. Conclusión de la auditoría
 
-El producto **está validado como artefacto de ingeniería**: funciona, se midió en operación real y sus resultados se pueden reproducir exactamente. Lo que la auditoría expone no son fallos del sistema, sino **huecos en la evidencia que lo respalda**: falta validación cruzada, faltan los datos publicados y falta que alguien ajeno al equipo lo haya usado.
+El producto **está validado como artefacto de ingeniería**: funciona, se midió en el laboratorio operativo y sus resultados se pueden reproducir exactamente. La validación cruzada interna, los datos y los modelos ya están publicados. La brecha principal que permanece es que nadie ajeno al equipo ha usado o evaluado el sistema; además, falta una evaluación externa en otra jornada o entorno.
 
-La ventaja es que **la mayor parte de esos huecos se cierra en horas**, porque el material ya existe y solo requiere publicarse o ejecutarse. La excepción es la validación con usuarios, que exige planificar una sesión con evaluadores externos.
+La validación con usuarios exige planificar una sesión con evaluadores externos. Una evaluación temporal o de otra red también requiere datos nuevos y un protocolo prospectivo; no puede cerrarse solo con documentación.
 
 ---
 

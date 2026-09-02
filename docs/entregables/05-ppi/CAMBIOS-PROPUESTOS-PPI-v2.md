@@ -316,7 +316,7 @@ Los cambios están ordenados por gravedad: primero afirmaciones falsas o insoste
 | Alta | `A1-curva-roc.png` | Después de los resultados de §2.6.4 |
 | Alta | `C1-fpr-offline-vs-operativo.png` | Inmediatamente después del contraste offline/operativo |
 | Alta | `C3-scores-trafico-pesado.png` | Junto al caso aislado `iperf-tcp 200M` |
-| Alta | `C2-lead-time.png` | Después del resultado de mediana 8,0 s y p95 8,7 s |
+| Alta | `C2-lead-time.png` | Después del resultado de mediana 8,0 s y rango 6,1–13,7 s (`n = 8`; sin p95 por tamaño muestral) |
 | Media | `B2-heatmap-familias.png` | Junto a las debilidades AUTH-FAIL y PASSWORD-SPRAY |
 | Media | `A2-distribucion-scores.png` | Para explicar el solapamiento alrededor de 1,8126 |
 | Media | `A3-matriz-confusion.png` | Como resumen de test benigno frente a anomalías |

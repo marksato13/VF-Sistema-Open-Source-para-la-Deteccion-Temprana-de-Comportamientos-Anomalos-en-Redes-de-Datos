@@ -52,16 +52,17 @@ CONFIABILIDAD = [
     ("1.2", "Kappa de Cohen (acuerdo inter-evaluador)",
      "No se realizó evaluación por jueces ni doble etiquetado independiente; las etiquetas provienen del diseño experimental", 0),
     ("1.3", "Validación cruzada",
-     "Ejecutada, agrupada por episodio en 5 pliegues: la detección media cae dentro del intervalo de "
-     "confianza de la evaluación de un solo paso, así que el resultado no depende de la partición elegida", 3),
+     "Ejecutada sobre el pipeline StandardScaler + OCSVM, agrupada por episodio normal en 5 pliegues: "
+     "la detección varió entre 78,8 % y 89,4 %. Reutiliza las mismas anomalías; es evidencia interna, no externa", 3),
     ("1.4", "Reproducibilidad de la medición",
      "Al reevaluar el modelo se obtuvieron exactamente las cifras originales (13/276 y 158/179)", 3),
     ("1.5", "Estabilidad entre repeticiones",
-     "Dos pases de validación operativa con resultados equivalentes (25,8 % y 23,0 %) y remuestreo del "
-     "umbral con B = 1 000: coeficiente de variación 4,10 %, por debajo del 5 % declarado de antemano", 3),
+     "Bootstrap agrupado por episodio del umbral con B = 1 000: coeficiente de variación 4,10 % y banda "
+     "percentil 95 % [1,6496–1,8132]. Los pases operativos comparten infraestructura y no son réplicas independientes", 3),
     ("1.6", "Cuantificación de la incertidumbre",
      "Intervalos de Wilson 95 % en toda proporción y prueba de significancia entre modelos: McNemar exacto "
-     "con corrección de Holm-Bonferroni sobre las 21 comparaciones por pares", 3),
+     "con corrección de Holm-Bonferroni sobre las 21 comparaciones por pares. Los intervalos por ventana son descriptivos "
+     "porque las ventanas de un episodio comparten historia", 3),
 ]
 REPLICABILIDAD = [
     ("2.1", "Código disponible",
@@ -72,13 +73,13 @@ REPLICABILIDAD = [
     ("2.3", "Entorno documentado",
      "Versiones exactas fijadas, script de instalación idempotente y playbooks de Ansible", 3),
     ("2.4", "Determinismo y semillas",
-     "Protocolo declarado: qué componentes son estocásticos y cuáles no, con verificación de 10 ajustes "
-     "repetidos que producen el mismo SHA-256 y el mismo umbral", 3),
+     "Protocolo documentado y verificación de 10 ajustes repetidos del pipeline elegido que producen el mismo "
+     "SHA-256 y el mismo umbral", 3),
     ("2.5", "Integridad verificable",
      "SHA-256 de datos, modelo y calibrador; repositorio verificado limpio antes y después", 3),
     ("2.6", "Instrucciones de reproducción",
-     "El datasheet documenta el procedimiento exacto de descarga, verificación y regeneración; queda "
-     "pendiente el manual de instalación desde cero", 3),
+     "El datasheet documenta descarga, verificación de hashes y regeneración; el despliegue cuenta con scripts "
+     "y playbooks versionados", 3),
 ]
 PERTINENCIA = [
     ("3.1", "Validación con usuarios reales",
@@ -91,7 +92,8 @@ PERTINENCIA = [
     ("3.4", "Validación en operación real",
      "Sistema medido desplegado y activo: 2 pases de 29 corridas con motor y bloqueo sobre tráfico real", 3),
     ("3.5", "Alineación con el problema",
-     "Detecta y bloquea las 6 familias de ataque previstas, con métricas medidas por familia", 3),
+     "La evaluación offline cubre 9 familias (6 Kali y 3 heredadas) y F6 valida el camino real de detección y bloqueo; "
+     "las limitaciones por familia se reportan separadamente", 3),
     ("3.6", "Alcance y limitaciones declarados",
      "Limitaciones medidas, cuantificadas y publicadas, incluido el error operativo desfavorable (23–26 %)", 3),
 ]
@@ -264,8 +266,8 @@ def main() -> int:
                "¿Los resultados son estables y consistentes al repetir la medición?", CONFIABILIDAD,
                "**Lectura.** La cuantificación de la incertidumbre pasó de parcial a completa: toda proporción "
                "lleva intervalo de Wilson y las comparaciones entre modelos tienen prueba de significancia. "
-               "Lo que sigue faltando es **validación cruzada sobre el modelo elegido**; el acuerdo "
-               "inter-evaluador no aplica porque el diseño no contempla jueces.")
+               "La validación cruzada y la estabilidad del umbral son internas al mismo laboratorio; falta "
+               "una jornada externa. El acuerdo inter-evaluador no aplica porque el diseño no contempla jueces.")
 
     doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
     b = bloque(doc, "2.  Evidencia de REPLICABILIDAD",
@@ -303,10 +305,10 @@ def main() -> int:
     doc.add_paragraph()
     caja(doc, f"Interpretación del {pctT:.1f} %",
          "Describe con precisión el estado del producto: **sólido como artefacto de ingeniería, incompleto como "
-         "evidencia científica**. Lo que sostiene el puntaje es la **replicabilidad** (77,8 %): el trabajo es "
-         "verificable, versionado y auditable. Lo que lo baja son dos ausencias distintas: **validación estadística** "
-         "(sin validación cruzada del modelo elegido) y **validación humana** (ningún usuario o experto externo lo "
-         "evaluó). Ninguna invalida los resultados; ambas **limitan el alcance de lo que puede afirmarse** con ellos.")
+         "evidencia científica**. Lo que sostiene el puntaje es la **replicabilidad** (100 %): el trabajo es "
+               "verificable, versionado y auditable. Lo que lo baja son dos ausencias distintas: **validación estadística** "
+               "externa (la validación disponible es interna) y **validación humana** (ningún usuario o experto externo lo "
+               "evaluó). Ninguna invalida los resultados; ambas **limitan el alcance de lo que puede afirmarse** con ellos.")
 
     # ------------------------------------------------------- ACCIONES -----
     doc.add_paragraph()
@@ -351,7 +353,7 @@ def main() -> int:
            ("Eficiencia de desempeño — comportamiento temporal", ("Sí", F_OK),
             "Bloqueo en una mediana de 8 s. Límite declarado: bajo carga sostenida el motor acumula retraso"),
            ("Adecuación funcional — completitud y corrección", ("Parcial", F_AMBER),
-            "Detecta y bloquea las 6 familias previstas (88,8 %), pero la corrección se degrada con tráfico legítimo intenso (error 23–26 %)"),
+            "La evaluación offline cubre 9 familias y F6 confirma el camino de bloqueo, pero la corrección se degrada con tráfico legítimo intenso (error 23–26 %)"),
            ("Seguridad — confidencialidad, integridad, no repudio", ("Parcial", F_AMBER),
             "Integridad verificable por SHA-256 y acceso por helper de alcance estrecho. NO se evaluó el sistema como objetivo de ataque (evasión, suplantación de IP)"),
            ("Mantenibilidad — modularidad, reusabilidad", ("Parcial", F_AMBER),
@@ -375,11 +377,11 @@ def main() -> int:
     h1(doc, "7.  Conclusión de la auditoría")
     parrafo(doc, "El producto **está validado como artefacto de ingeniería**: funciona, se midió en operación real "
                  "y sus resultados se pueden reproducir exactamente. Lo que la auditoría expone no son fallos del "
-                 "sistema, sino **huecos en la evidencia que lo respalda**: falta validación cruzada, faltan los "
-                 "datos publicados y falta que alguien ajeno al equipo lo haya usado.")
-    parrafo(doc, "La ventaja es que **la mayor parte de esos huecos se cierra en horas**, porque el material ya "
-                 "existe y solo requiere publicarse o ejecutarse. La excepción es la validación con usuarios, que "
-                 "exige planificar una sesión con evaluadores externos.")
+                 "sistema, sino **huecos en la evidencia que lo respalda**: falta una jornada externa y falta que "
+                 "alguien ajeno al equipo lo haya usado.")
+    parrafo(doc, "La validación con usuarios exige planificar una sesión con evaluadores externos. Una evaluación "
+                 "temporal o de otra red también requiere datos nuevos y un protocolo prospectivo; no puede cerrarse "
+                 "solo con documentación.")
 
     # ----------------------------------------------------- REFERENCIAS ----
     doc.add_paragraph()

@@ -48,7 +48,9 @@ volver a leer su fuente.
   evaluación nuevos.
 - Operación: el FPR benigno pesado es 22,97 % en el pase limpio y 25,81 % en el
   pase anterior, no 4,71 %. Una transferencia legítima `iperf-tcp 200M`
-  produjo bloqueo durante 120 s. Lead-time limpio: mediana 8,0 s, p95 8,7 s.
+  produjo bloqueo durante 120 s. Entre 8 bloqueos con tiempo observable, el
+  lead-time limpio tuvo mediana 8,0 s y rango 6,1–13,7 s; no se reporta p95
+  con este tamaño muestral.
 - Disponibilidad: cero caídas registradas en 58 corridas; solo 55 tienen
   verificación explícita de servicios. No afirmar “100 % verificado”.
 - Publicación: los CSV derivados, el manifiesto y los siete archivos candidatos

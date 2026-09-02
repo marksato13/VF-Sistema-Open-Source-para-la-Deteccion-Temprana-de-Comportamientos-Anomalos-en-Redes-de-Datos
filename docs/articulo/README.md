@@ -479,6 +479,8 @@ fila lleva su DOI para repetir la medición.
 Ocho hojas: cómo se hizo · una por revista · plazos reales · patrones
 comparados · qué implica para el nuestro.
 
+> **Mapeo complementario del autor:** [`docs/entregables/10-mapeo-secciones-articulo/`](../entregables/10-mapeo-secciones-articulo/) cubre 15 artículos de IJIES, BEEI e IJSSE e incluye algo que este no tiene: **las secciones finales que IJIES exige** —conflictos de interés, contribución de autores, agradecimientos—. Las dos mediciones **coinciden en la estructura de los cinco artículos de IJIES**, hechas por separado.
+
 ### Lo que la muestra dice sobre cómo escribir el artículo
 
 | Observación | Evidencia | Qué hacer |

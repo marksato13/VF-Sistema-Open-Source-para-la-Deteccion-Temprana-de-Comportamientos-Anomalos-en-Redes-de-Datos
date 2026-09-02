@@ -333,7 +333,7 @@ def main() -> int:
           widths=[6.5, 5.0, 5.0])
     doc.add_paragraph()
     figura(doc, "C1-fpr-offline-vs-operativo.png",
-           "Figura 1. Los intervalos de confianza no se solapan: la diferencia no se explica por azar muestral.")
+           "Figura 1. Intervalos de Wilson descriptivos; las ventanas comparten episodio e historia, por lo que el gráfico no prueba por sí solo una diferencia inferencial.")
 
     caja(doc, "Evidencia adicional en aislamiento",
          "Se reprodujo **sin contaminación entre pruebas**: una transferencia legítima de 200 Mbit/s generó una "

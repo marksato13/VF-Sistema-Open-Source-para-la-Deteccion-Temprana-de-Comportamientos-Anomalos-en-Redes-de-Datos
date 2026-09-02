@@ -33,7 +33,7 @@ Cierra **D-03** y **D-05**. Responde a una sola pregunta: **¿cuánto de lo que 
 
 **Referencia de un solo paso:** detección 88,3 % [82,7 – 92,2] · FPR 4,71 % [2,8 – 7,9].
 
-> **✅ Cumple el umbral declarado.** La detección media de los pliegues (85,5 %) cae **dentro** del intervalo de Wilson de la evaluación de un solo paso [82,7 – 92,2]. El resultado no depende de la partición concreta que se eligió.
+> **✅ Cumple el criterio interno declarado.** La detección media de los pliegues (85,5 %) cae **dentro** del intervalo de Wilson de la evaluación de un solo paso [82,7 – 92,2]. Esto muestra compatibilidad con esa estimación, pero no demuestra invariancia a la partición: los pliegues variaron entre 78,8 % y 89,4 %, reutilizaron el mismo conjunto de anomalías y no sustituyen una evaluación externa.
 
 ---
 

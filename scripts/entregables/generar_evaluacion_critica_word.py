@@ -120,7 +120,7 @@ def main() -> None:
     tabla(doc, ["Criterio evaluado", "Resultado obtenido", "Cómo se verificó"], [
         ["**Capacidad discriminante**", "**ROC-AUC 0,974**", "Re-puntuando el modelo congelado"],
         ["**Detección de ataques genuinos**", "**88,8 %** [83,0 – 92,8]", "Evaluación bloqueada de un solo paso, con intervalo de Wilson"],
-        ["**Respuesta en tiempo real**", "Bloqueo en mediana de **8,0 s** (p95 8,7 s)", "58 corridas con el motor activo"],
+        ["**Respuesta en tiempo real**", "Bloqueo en mediana de **8,0 s**; rango 6,1–13,7 s (n = 8)", "58 corridas con el motor activo; 8 bloqueos con tiempo observable"],
         ["**Disponibilidad**", "**Cero caídas registradas**; 55 de 58 corridas con verificación explícita", "Registro de servicios antes y después de cada corrida"],
         ["**Aporte de las variables multicapa**", "De **66,5 % a 88,8 %** de detección, p < 0,001", "Ablación por capas con McNemar exacto"],
         ["**Superioridad del modelo elegido**", "Las **6 comparaciones** del OCSVM son significativas", "McNemar + corrección de Holm sobre 21 pares"],
@@ -134,11 +134,11 @@ def main() -> None:
     h1(doc, "2 ·", "Qué está faltando")
     par(doc, "Las debilidades se ordenan por gravedad y **todas están medidas**, no supuestas.")
     tabla(doc, ["Debilidad", "Evidencia", "Gravedad"], [
-        ["**El falso positivo de laboratorio no se sostiene en operación**", "4,71 % [2,8–7,9] frente a 22,97 % [14,9–33,7]. **Los intervalos no se solapan.** Una transferencia legítima de 200 Mbit/s bloqueó a un cliente real 120 s", "Crítica"],
+        ["**El falso positivo de laboratorio no se sostiene en operación**", "4,71 % [2,8–7,9] frente a 22,97 % [14,9–33,7]. Son intervalos descriptivos por ventana: las ventanas comparten episodio e historia. Una transferencia legítima de 200 Mbit/s bloqueó a un cliente real 120 s", "Crítica"],
         ["**El modelo se eligió observando el conjunto de prueba**", "El manifiesto designaba otro modelo como conclusión y a este como comparador. El 88,3 % es el máximo sobre 7 candidatos", "Crítica"],
         ["**Ninguna validación con usuarios reales**", "No se midió la experiencia de uso del panel ni se aplicó instrumento alguno", "Alta"],
         ["**La partición mide repetición, no generalización**", "Los 44 perfiles aparecen en las tres particiones; no existe jornada de holdout externa", "Alta"],
-        ["**Sin validación cruzada ni banda para el umbral**", "El umbral 1,8126 se reporta como valor puntual, sin variabilidad", "Media"],
+        ["**Validación interna, no externa**", "Hay 5 pliegues agrupados por episodio normal y bootstrap por episodio (B = 1 000; CV del umbral 4,10 %), pero se reutilizan las mismas anomalías y no existe jornada externa", "Media"],
         ["**Las 8 variables L7 nuevas no aportan detección**", "La ablación las midió: p = 1,000 y **5 falsos positivos adicionales**", "Media"],
     ], [5.0, 9.2, 2.2], fondos=[F_RED, F_RED, F_AMBER, F_AMBER, F_ZEBRA, F_ZEBRA])
     figura(doc, "C1-fpr-offline-vs-operativo.png",
@@ -155,10 +155,11 @@ def main() -> None:
         ["Dataset, manifiesto y **7 modelos publicados** con checksums y licencias", "Imposibilidad de replicar desde un clon"],
         ["*Datasheet*, *model card* y *system card*", "Ausencia de documentación canónica"],
         ["**Declaración explícita de la selección posterior** del modelo", "Objeción metodológica principal, ahora declarada"],
-    ], [8.6, 7.8], fondos=[F_OK] * 6)
+        ["**Validación cruzada agrupada y bootstrap por episodio**", "Variación interna del modelo y del umbral; no sustituyen una evaluación externa"],
+    ], [8.6, 7.8], fondos=[F_OK] * 7)
     par(doc, "**Pendiente, con plazo realista.** El orden responde a coste, no a comodidad:")
     tabla(doc, ["Plazo", "Acción", "Por qué en ese orden"], [
-        ["**Horas**", "Validación cruzada por episodio · banda del umbral por remuestreo · cerrar la matriz de requisitos", "No dependen de nadie más y usan el dataset ya publicado"],
+        ["**Horas**", "Cerrar la matriz de requisitos y revisar la coherencia de todos los entregables derivados", "Usan evidencia ya publicada"],
         ["**Días**", "**Validación con usuarios: SUS con 5–8 evaluadores**", "Es el único cero absoluto que queda; una sesión lo convierte en evidencia"],
         ["**Semanas**", "Recalibrar incluyendo tráfico legítimo pesado y repetir la validación operativa", "Única solución real al falso positivo del 23–26 %. Se declara como límite, no se simula"],
     ], [2.2, 7.4, 6.8])

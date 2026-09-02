@@ -26,6 +26,8 @@ Cliente en silencio 95 s antes (features de 60 s en cero), una sola corrida:
 
 El `iperf` legítimo a 200 Mbit/s (paquetes grandes, alto volumen: hasta 185 001 paquetes/ventana) produjo un **falso positivo genuino en aislamiento**: la ventana de score 1.689 cayó bajo el umbral y el motor **bloqueó al cliente legítimo 120 s**. Los scores del tráfico pesado se apiñan en 1.69–1.99, pegados al umbral 1.8126 — el modelo no separa con margen el tráfico legítimo pesado del anómalo.
 
+> **Límite de trazabilidad.** Los registros crudos de estas dos pruebas de aislamiento —scores por ventana, PCAP, EVE y registro de bloqueo— no están versionados en `results/f6/*.jsonl`. Las cifras de esta sección son evidencia documental conservada, pero no pueden regenerarse ni auditarse independientemente desde los artefactos publicados.
+
 ### Bajo carga concurrente/sucesiva (campaña back-to-back)
 
 Con corridas benignas seguidas (features de 60 s solapándose), el FPR sube por acumulación de estado entre flujos del mismo host:
@@ -55,7 +57,7 @@ Lead-time = segundos desde el inicio del ataque al primer `ALERT`/bloqueo (motor
 | `tcp-syn-rate` | detectado (reps 2–3 contaminadas) | 8.1 s | `ocsvm_scaled` |
 | `dns-entropy` | detectado (reps 2–3 contaminadas) | 8.7 s | `ocsvm_scaled` |
 
-**Lead-time global: mediana 8.0 s, p95 8.7 s, rango 6.1–13.7 s.** Cuando el motor está al día, detecta y bloquea en ~8 s — bueno para un ciclo de 10 s.
+**Lead-time global entre los 8 bloqueos observables: mediana 8.0 s y rango 6.1–13.7 s.** No se reporta p95: con `n = 8`, el cálculo anterior de 8.7 s no correspondía a una definición estándar de percentil y daba una precisión engañosa. Cuando el motor está al día, el valor central observado ronda 8 s.
 
 **`auth_failure_heuristic` confirmado en producción:** `A-password-spray-2` se detectó **puramente** por el heurístico (3 ventanas, sin el modelo), lead 6.1 s. Valida en un ataque real el camino L7 del fix `MOTOR-FP-01`.
 

@@ -200,10 +200,11 @@ def informe(res, det_m, det_s, fpr_m, fpr_s, d03_ok, ref_det, ref_n, ref_lo, ref
       f"[{es(ref_lo)} – {es(ref_hi)}] · FPR {es(ref_fp/ref_nt*100,2)} % "
       f"[{es(ref_fp_lo)} – {es(ref_fp_hi)}].\n")
     if d03_ok:
-        a(f"\n> **✅ Cumple el umbral declarado.** La detección media de los pliegues "
+        a(f"\n> **✅ Cumple el criterio interno declarado.** La detección media de los pliegues "
           f"({es(det_m)} %) cae **dentro** del intervalo de Wilson de la evaluación de un solo "
-          f"paso [{es(ref_lo)} – {es(ref_hi)}]. El resultado no depende de la partición concreta "
-          "que se eligió.\n")
+          f"paso [{es(ref_lo)} – {es(ref_hi)}]. Esto muestra compatibilidad con esa estimación, "
+          "pero no demuestra invariancia a la partición: los pliegues reutilizan el mismo conjunto "
+          "de anomalías y no sustituyen una evaluación externa.\n")
     else:
         a(f"\n> **⚠️ No cumple el umbral declarado.** La detección media de los pliegues "
           f"({es(det_m)} %) cae **fuera** del intervalo de Wilson de la evaluación de un solo "

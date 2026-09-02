@@ -378,7 +378,7 @@ def fig_fpr_operativo(d):
     ax.invert_yaxis(); ax.set_xlabel("Falsos positivos sobre tráfico legítimo (%)")
     ax.set_xlim(0, 58)
     finish(ax, "El falso positivo medido offline no se sostiene en operación",
-           "Intervalos de Wilson 95 %: no se solapan, luego la diferencia no se explica por azar muestral",
+           "Intervalos de Wilson 95 % descriptivos; las ventanas comparten episodio e historia y no permiten por sí solos una inferencia independiente",
            "Fuente: artifacts/model/manifest.json · docs/fase07-validacion-final/02-resultados-f6.md")
     save(fig, "C1-fpr-offline-vs-operativo.png")
 
@@ -426,12 +426,15 @@ def fig_leadtime():
 
 
 def fig_scores_pesado(d):
-    scores = [1.968, 1.814, 1.689, 1.920]      # corrida aislada iperf-tcp 200M (F6)
+    # Valores conservados en la narrativa de F6. Los registros crudos de esta
+    # corrida aislada no están versionados, por lo que la figura no constituye
+    # una reproducción independiente de los scores.
+    scores_documentados = [1.968, 1.814, 1.689, 1.920]
     fig, ax = plt.subplots(figsize=(8.0, 3.3))
     ax.axvspan(1.60, d["thr"], color=DANGER, alpha=0.08)
     ax.axvspan(d["thr"], 2.05, color=OK, alpha=0.08)
     ax.axvline(d["thr"], color=INK, ls="--", lw=2)
-    for s in scores:
+    for s in scores_documentados:
         col = DANGER if s < d["thr"] else OK
         ax.scatter([s], [0], s=290, color=col, zorder=5, edgecolor="white", linewidth=2)
         ax.text(s, 0.16, f"{s:.3f}", ha="center", fontsize=9.4, color=col, fontweight="bold")
@@ -450,7 +453,7 @@ def fig_scores_pesado(d):
     ax.spines["left"].set_visible(False)
     finish(ax, "Tráfico legítimo pesado puntúa dentro del margen del umbral",
            "Transferencia legítima iperf-tcp 200 Mbit/s, corrida aislada · cada punto es una ventana de 10 s",
-           "Fuente: docs/fase07-validacion-final/02-resultados-f6.md")
+           "Fuente documental: docs/fase07-validacion-final/02-resultados-f6.md · datos crudos no versionados")
     save(fig, "C3-scores-trafico-pesado.png")
 
 

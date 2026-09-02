@@ -7,14 +7,14 @@
 
 Modelo final: `ocsvm_scaled` — `OneClassSVM(kernel="rbf", gamma="scale", nu=0.05, cache_size=200)` sobre features estandarizadas (`StandardScaler` ajustado solo con `train`).
 
-**Artefactos oficiales** (fuera de Git, `/srv/ppi-evidence/artifacts/models/pm-multilayer-v2-v1-calibration-7models/`):
+**Artefactos oficiales** (versionados en `artifacts/model/` y conservados también en `/srv/ppi-evidence/artifacts/models/pm-multilayer-v2-v1-calibration-7models/`):
 - `models/ocsvm_scaled.joblib` — pipeline completo (scaler + detector) ya ajustado.
 - `manifest.json` — hiperparámetros, hashes de datos/código/entorno, umbral, resultados de evaluación completos.
 - `SHA256SUMS` — verificado íntegro.
 
 **Umbral operativo:** `score < 1.8126` → alerta (calibrado con `alpha=0.05` sobre las 273 ventanas de `validation`, desigualdad estricta, sin empates en el punto de corte más allá de lo ya reportado en el manifiesto).
 
-**Desempeño medido** (evaluación bloqueada, una sola vez, `test`=276 ventanas benignas nunca vistas + `evaluation_only`=179 ventanas de 6 familias de ataque reales/heredadas):
+**Desempeño medido** (evaluación bloqueada, una sola vez, `test`=276 ventanas benignas nunca vistas + `evaluation_only`=179 ventanas de **9 familias**: 6 de Kali y 3 heredadas):
 - FPR benigno: 4.71% (13/276)
 - Detección global: 88.3% (158/179)
 - Detección Kali real: 88.8% (143/161)

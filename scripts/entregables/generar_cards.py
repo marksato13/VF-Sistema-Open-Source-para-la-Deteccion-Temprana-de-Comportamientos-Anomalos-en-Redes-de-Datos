@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Genera la model card y la system card desde los artefactos.
 
-Model card  <- artifacts/model/manifest.json
+Model card  <- artifacts/model/manifest.json + results/ablacion/validacion-cruzada-estabilidad.json
 System card <- results/f6/*.jsonl y el codigo del motor
 
-Ninguna cifra se transcribe: si el manifiesto o las corridas cambian, las
-tarjetas cambian con ellos.
+Las cifras de las tarjetas se leen de esos artefactos. La prueba adicional de
+aislamiento se conserva como evidencia documental separada porque sus registros
+crudos no estan versionados; la tarjeta lo declara expresamente.
 
     python3 scripts/entregables/generar_cards.py
 """
@@ -20,6 +21,7 @@ MANIFEST = REPO / "artifacts/model/manifest.json"
 # atraso con deteccion. Sirve para disponibilidad, NO para temporizacion.
 F6_LIMPIO = REPO / "results/f6/f6_resultados.jsonl"
 F6_PASE1 = REPO / "results/f6/f6_resultados.pass1-contaminado.jsonl"
+VALIDACION = REPO / "results/ablacion/validacion-cruzada-estabilidad.json"
 OUT_M = REPO / "docs/dataset/MODEL_CARD_OCSVM.md"
 OUT_S = REPO / "docs/dataset/SYSTEM_CARD_MOTOR.md"
 FECHA = "26 de agosto de 2026"
@@ -52,7 +54,7 @@ def wilson(exitos: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return ((c - r) / d * 100, (c + r) / d * 100)
 
 
-def model_card(d: dict) -> str:
+def model_card(d: dict, validacion: dict) -> str:
     o = d["evaluation"]["ocsvm_scaled"]
     an, te = o["anomalies"], o["test"]
     L: list[str] = []
@@ -173,8 +175,15 @@ def model_card(d: dict) -> str:
     for i, s in enumerate([
         "**Selección posterior sobre el conjunto de prueba** (sección 3). Es la limitación principal.",
         f"**El falso positivo de {te['fpr']*100:.2f} % no se sostiene en operación**: F6 midió 23–26 % sobre tráfico legítimo pesado. Ver system card.",
-        "**Sin validación cruzada** sobre este modelo; la que existe es de un pipeline descartado.",
-        "**Sin análisis de estabilidad** del OCSVM: las diez semillas registradas cubren Isolation Forest, no el modelo elegido. El umbral 1,8126 se reporta sin banda de variabilidad.",
+        (f"**Validación interna, no externa.** Se ejecutaron {validacion['k_pliegues']} pliegues "
+         "agrupados por episodio normal sobre el mismo pipeline OCSVM, pero las mismas anomalías "
+         "se reutilizan en todos los pliegues. No mide generalización a otra red o fecha."),
+        (f"**Estabilidad interna del umbral medida.** El bootstrap por episodio "
+         f"(`B = {validacion['b_bootstrap']}`) dio CV "
+         f"{es(validacion['estabilidad_umbral']['cv_pct'], 2)} % y banda percentil "
+         f"[{es(validacion['estabilidad_umbral']['ic_percentil_95'][0], 4)} – "
+         f"{es(validacion['estabilidad_umbral']['ic_percentil_95'][1], 4)}]. "
+         "No sustituye una validación externa."),
         "**Ajustado sin ponderación** pese a que 5 de 132 episodios concentran el 31,7 % de las filas de entrenamiento, y los cinco son transferencias lentas de 1 GB.",
         "**La significancia entre modelos ya está medida**: las 6 comparaciones del OCSVM son significativas tras Holm, pero **ninguna diferencia de falso positivo lo es**. Ver [`08-significancia-entre-modelos.md`](../fase04-modelado/08-significancia-entre-modelos.md).",
         "**La ablación por capas ya está ejecutada** y matiza este contrato: la expansión multicapa es significativa (p < 0,001), pero las 8 variables L7 nuevas **no aportan detección medible y cuestan 5 falsos positivos**. Ver [`07-ablacion-multicapa.md`](../fase04-modelado/07-ablacion-multicapa.md).",
@@ -275,9 +284,8 @@ def system_card(limpio: list[dict], pase1: list[dict]) -> str:
       "disponibilidad, donde esa contaminación no aplica.\n\n")
     a("### Lo que funciona\n\n| | |\n|---|---|\n")
     if lt:
-        p95 = lt[max(0, int(len(lt) * 0.95) - 1)]
         a(f"| **Tiempo hasta el bloqueo** (ataques) | mediana **{es(statistics.median(lt))} s** · "
-          f"p95 {es(p95)} s · rango {es(min(lt))}–{es(max(lt))} s |\n")
+          f"rango {es(min(lt))}–{es(max(lt))} s · `n = {len(lt)}` bloqueos observables |\n")
     a(f"| **Caídas de servicio registradas** | **{caidas}** en {len(rows)} corridas |\n")
     a(f"| Corridas con servicios verificados | {estables}/{len(rows)} |\n")
     a("\n> **Precisión sobre la disponibilidad.** No se registró **ninguna** caída de "
@@ -289,9 +297,10 @@ def system_card(limpio: list[dict], pase1: list[dict]) -> str:
     a(f"> **{ba} de {bw} ventanas de tráfico legítimo se marcaron como anómalas: "
       f"{es(ba/bw*100, 2)} %.**\n")
     lo, hi = wilson(ba, bw)
-    a(f"\nIntervalo de Wilson al 95 %: **[{es(lo)} – {es(hi)}]**. El falso positivo medido "
-      "en evaluación bloqueada fue **4,71 %** [2,8 – 7,9]. **Los intervalos no se solapan**: "
-      "no es ruido de muestreo, es una diferencia real.\n\n")
+    a(f"\nIntervalo de Wilson descriptivo al 95 %: **[{es(lo)} – {es(hi)}]**. El falso positivo "
+      "medido en evaluación bloqueada fue **4,71 %** [2,8 – 7,9]. Las ventanas están "
+      "agrupadas por corrida y comparten historia de hasta 60 s; por eso el no solapamiento "
+      "de estos intervalos por ventana **no demuestra por sí solo** una diferencia inferencial.\n\n")
     a(f"De las {len(ben)} corridas benignas del pase 2, "
       f"**{sum(1 for r in ben if r.get('blocked'))} terminaron bloqueando al cliente "
       "legítimo.**\n\n")
@@ -300,12 +309,17 @@ def system_card(limpio: list[dict], pase1: list[dict]) -> str:
       "comportamiento buscado, no un falso positivo. Incluirlas subiría la cifra sin que "
       "signifique lo mismo.\n\n")
     lo1, hi1 = wilson(ba1, bw1)
-    a(f"El pase 1, medido de forma independiente, dio **{es(ba1/bw1*100, 2)} %** "
-      f"[{es(lo1)} – {es(hi1)}] sobre {bw1} ventanas. **Las dos mediciones coinciden entre "
-      "sí y ninguna se acerca al 4,71 % de laboratorio.**\n\n")
-    a("Se reprodujo **en aislamiento**, sin otro tráfico compitiendo: una transferencia "
+    a(f"El pase 1, medido por separado pero contaminado por atraso, dio "
+      f"**{es(ba1/bw1*100, 2)} %** [{es(lo1)} – {es(hi1)}] sobre {bw1} ventanas. "
+      "Ambos pases comparten infraestructura y no son réplicas estadísticamente independientes.\n\n")
+    a("La documentación de F6 describe una reproducción **en aislamiento**, sin otro tráfico "
+      "compitiendo: una transferencia "
       "`iperf-tcp` legítima de 200 Mbit/s puntuó **1,689** frente al umbral 1,8126 y cortó "
       "al cliente durante 120 s. Otra ventana pasó por **0,0014**.\n\n")
+    a("> **Límite de trazabilidad.** Los scores, PCAP y registro de bloqueo de esa prueba "
+      "aislada no están versionados en `results/f6/*.jsonl`; estas cifras proceden de "
+      "`docs/fase07-validacion-final/02-resultados-f6.md` y no pueden regenerarse desde "
+      "los artefactos publicados.\n\n")
     a("**Causa.** El tráfico legítimo de alto volumen produce puntuaciones apiñadas justo "
       "en el margen del umbral. No es un fallo de implementación: es el umbral, calibrado "
       "sobre un conjunto donde ese tráfico estaba subrepresentado.\n\n")
@@ -347,9 +361,10 @@ def system_card(limpio: list[dict], pase1: list[dict]) -> str:
 
 def main() -> None:
     d = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    validacion = json.loads(VALIDACION.read_text(encoding="utf-8"))
     carga = lambda f: [json.loads(l) for l in f.read_text(encoding="utf-8").splitlines() if l.strip()]
     limpio, pase1 = carga(F6_LIMPIO), carga(F6_PASE1)
-    OUT_M.write_text(model_card(d), encoding="utf-8")
+    OUT_M.write_text(model_card(d, validacion), encoding="utf-8")
     OUT_S.write_text(system_card(limpio, pase1), encoding="utf-8")
     print(f"Generado: {OUT_M.relative_to(REPO)}")
     print(f"Generado: {OUT_S.relative_to(REPO)}  "

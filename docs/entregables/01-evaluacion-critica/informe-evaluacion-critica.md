@@ -173,7 +173,7 @@ y asigna a `ocsvm_scaled` el rol `sensitivity_or_comparator`. **El modelo congel
 
 > **🟡 Parcialmente atendida.** La declaración ya está incorporada en la [model card](../../dataset/MODEL_CARD_OCSVM.md) —sección 3, antes de cualquier métrica— y en el PPI v2. Lo que sigue abierto es la corrección de fondo: un protocolo nuevo con evaluación reservada.
 >
-> **Matiz reforzado con estadística:** la superioridad sobre Isolation Forest no solo tiene intervalos que no se solapan; las **seis comparaciones por pares del OCSVM contra los otros modelos son significativas** con McNemar exacto tras corrección de Holm. Ver [`08-significancia-entre-modelos.md`](../../fase04-modelado/08-significancia-entre-modelos.md).
+> **Matiz reforzado con estadística:** las **seis comparaciones por pares del OCSVM contra los otros modelos son significativas** con McNemar exacto tras corrección de Holm. Los intervalos de Wilson por ventanas se reportan como descriptivos porque las ventanas comparten episodios e historia; no se usan como prueba independiente de diferencia. Ver [`08-significancia-entre-modelos.md`](../../fase04-modelado/08-significancia-entre-modelos.md).
 
 **D2 · No se calculó ninguna medida de incertidumbre.** *(severidad alta)*
 No había intervalos de confianza, errores estándar ni pruebas de significancia. Los de este informe son un aporte propio, y revelan lo que las cifras puntuales ocultaban:
@@ -229,7 +229,7 @@ Las 10 semillas, la ponderación por episodio y el colapso de duplicados se apli
 | Operativo F6 pase 1 | 25,8 % | 16,6 % – 37,9 % |
 | Operativo F6 pase 2 | 23,0 % | 14,9 % – 33,7 % |
 
-**Los intervalos no se solapan**: no se explica por azar. Y no es artefacto de campaña — se reprodujo en aislamiento. Contradice la observación del jurado que motivó todo el esfuerzo del dataset.
+Los intervalos se presentan como resumen descriptivo de ventanas correlacionadas; no se interpretan como evidencia inferencial independiente. El contraste se reprodujo en aislamiento — una transferencia legítima de 200 Mbit/s bloqueó a un cliente durante 120 s — y contradice la observación del jurado que motivó todo el esfuerzo del dataset.
 → *Solución:* recalibrar incluyendo tráfico pesado (1-2 semanas). Mientras tanto, **declararlo**: un FPR medido y admitido es más defendible que uno refutado por la evidencia propia.
 
 **D6 · La división es por índice de repetición, no por sesión independiente.** *(severidad alta)*

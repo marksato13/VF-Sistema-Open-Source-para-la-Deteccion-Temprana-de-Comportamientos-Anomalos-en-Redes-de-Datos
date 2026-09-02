@@ -10,6 +10,8 @@
 
 **Naturaleza del documento:** auditoría técnica y metodológica; separa hechos verificados, inferencias y recomendaciones.
 
+> **Snapshot histórico.** Este informe conserva el estado observado en los cortes indicados arriba. Después de ese corte se publicaron los CSV/modelos, el diccionario científico, la ablación y el estudio de validación cruzada/estabilidad. Por ello, las secciones que los presentan como pendientes o fuera de Git son historia de la brecha, **no el estado vigente**. Para el estado actual prevalecen `docs/dataset/SHA256SUMS`, `results/ablacion/*.json` y los documentos de `docs/dataset/`.
+
 ---
 
 ## 1. Propósito y alcance

@@ -75,7 +75,7 @@ Dos pases con el motor activo, **58 corridas** en total.
 
 | | |
 |---|---|
-| **Tiempo hasta el bloqueo** (ataques) | mediana **8,0 s** · p95 8,7 s · rango 6,1–13,7 s |
+| **Tiempo hasta el bloqueo** (ataques) | mediana **8,0 s** · rango 6,1–13,7 s · `n = 8` bloqueos observables |
 | **Caídas de servicio registradas** | **0** en 58 corridas |
 | Corridas con servicios verificados | 55/58 |
 
@@ -85,15 +85,17 @@ Dos pases con el motor activo, **58 corridas** en total.
 
 > **17 de 74 ventanas de tráfico legítimo se marcaron como anómalas: 22,97 %.**
 
-Intervalo de Wilson al 95 %: **[14,9 – 33,7]**. El falso positivo medido en evaluación bloqueada fue **4,71 %** [2,8 – 7,9]. **Los intervalos no se solapan**: no es ruido de muestreo, es una diferencia real.
+Intervalo de Wilson descriptivo al 95 %: **[14,9 – 33,7]**. El falso positivo medido en evaluación bloqueada fue **4,71 %** [2,8 – 7,9]. Las ventanas están agrupadas por corrida y comparten historia de hasta 60 s; por eso el no solapamiento de estos intervalos por ventana **no demuestra por sí solo** una diferencia inferencial.
 
 De las 12 corridas benignas del pase 2, **5 terminaron bloqueando al cliente legítimo.**
 
 > Quedan fuera de este cálculo las 2 corridas `H*`, que prueban a propósito la **frontera del heurístico de autenticación**: ahí la alerta es el comportamiento buscado, no un falso positivo. Incluirlas subiría la cifra sin que signifique lo mismo.
 
-El pase 1, medido de forma independiente, dio **25,81 %** [16,6 – 37,9] sobre 62 ventanas. **Las dos mediciones coinciden entre sí y ninguna se acerca al 4,71 % de laboratorio.**
+El pase 1, medido por separado pero contaminado por atraso, dio **25,81 %** [16,6 – 37,9] sobre 62 ventanas. Ambos pases comparten infraestructura y no son réplicas estadísticamente independientes.
 
-Se reprodujo **en aislamiento**, sin otro tráfico compitiendo: una transferencia `iperf-tcp` legítima de 200 Mbit/s puntuó **1,689** frente al umbral 1,8126 y cortó al cliente durante 120 s. Otra ventana pasó por **0,0014**.
+La documentación de F6 describe una reproducción **en aislamiento**, sin otro tráfico compitiendo: una transferencia `iperf-tcp` legítima de 200 Mbit/s puntuó **1,689** frente al umbral 1,8126 y cortó al cliente durante 120 s. Otra ventana pasó por **0,0014**.
+
+> **Límite de trazabilidad.** Los scores, PCAP y registro de bloqueo de esa prueba aislada no están versionados en `results/f6/*.jsonl`; estas cifras proceden de `docs/fase07-validacion-final/02-resultados-f6.md` y no pueden regenerarse desde los artefactos publicados.
 
 **Causa.** El tráfico legítimo de alto volumen produce puntuaciones apiñadas justo en el margen del umbral. No es un fallo de implementación: es el umbral, calibrado sobre un conjunto donde ese tráfico estaba subrepresentado.
 

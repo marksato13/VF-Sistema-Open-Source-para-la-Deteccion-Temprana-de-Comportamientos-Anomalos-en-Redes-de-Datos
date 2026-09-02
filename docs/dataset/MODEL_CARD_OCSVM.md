@@ -115,8 +115,8 @@ Los siete objetos ajustados se publican en `artifacts/model/candidates/`, verifi
 |---|---|
 | 1 | **Selección posterior sobre el conjunto de prueba** (sección 3). Es la limitación principal. |
 | 2 | **El falso positivo de 4.71 % no se sostiene en operación**: F6 midió 23–26 % sobre tráfico legítimo pesado. Ver system card. |
-| 3 | **Sin validación cruzada** sobre este modelo; la que existe es de un pipeline descartado. |
-| 4 | **Sin análisis de estabilidad** del OCSVM: las diez semillas registradas cubren Isolation Forest, no el modelo elegido. El umbral 1,8126 se reporta sin banda de variabilidad. |
+| 3 | **Validación interna, no externa.** Se ejecutaron 5 pliegues agrupados por episodio normal sobre el mismo pipeline OCSVM, pero las mismas anomalías se reutilizan en todos los pliegues. No mide generalización a otra red o fecha. |
+| 4 | **Estabilidad interna del umbral medida.** El bootstrap por episodio (`B = 1000`) dio CV 4,10 % y banda percentil [1,6496 – 1,8132]. No sustituye una validación externa. |
 | 5 | **Ajustado sin ponderación** pese a que 5 de 132 episodios concentran el 31,7 % de las filas de entrenamiento, y los cinco son transferencias lentas de 1 GB. |
 | 6 | **La significancia entre modelos ya está medida**: las 6 comparaciones del OCSVM son significativas tras Holm, pero **ninguna diferencia de falso positivo lo es**. Ver [`08-significancia-entre-modelos.md`](../fase04-modelado/08-significancia-entre-modelos.md). |
 | 7 | **La ablación por capas ya está ejecutada** y matiza este contrato: la expansión multicapa es significativa (p < 0,001), pero las 8 variables L7 nuevas **no aportan detección medible y cuestan 5 falsos positivos**. Ver [`07-ablacion-multicapa.md`](../fase04-modelado/07-ablacion-multicapa.md). |
