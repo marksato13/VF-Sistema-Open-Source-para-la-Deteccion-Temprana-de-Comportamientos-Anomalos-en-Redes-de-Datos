@@ -120,6 +120,21 @@ en la fuente primaria que allí se indica.
 
 Claude debe trabajar como revisor técnico adversarial y segundo ingeniero. Codex actúa principalmente como implementador y operador del laboratorio. El objetivo no es que ambos produzcan respuestas similares, sino utilizar revisión cruzada para encontrar errores antes de las pruebas y la defensa ante el jurado.
 
+## Coordinación entre agentes: `.agent/`
+
+El traspaso entre Claude y Codex se hace por archivos versionados, no por
+memoria de sesión. **Ninguna sesión interactiva se comparte automáticamente.**
+
+| Archivo | Quién lo escribe | Qué contiene |
+|---|---|---|
+| [`.agent/TASK-ACTUAL.md`](.agent/TASK-ACTUAL.md) | Usuario o Claude | Tarea ejecutable, alcance y criterios de aceptación |
+| [`.agent/REGLAS-Y-LIMITES.md`](.agent/REGLAS-Y-LIMITES.md) | Estable | Prohibiciones y trampas conocidas del repositorio |
+| [`.agent/ESTADO.md`](.agent/ESTADO.md) | El agente que termina | Tarea activa y a quién le toca |
+| [`docs/revisiones-claude/HANDOFF-CLAUDE.md`](docs/revisiones-claude/HANDOFF-CLAUDE.md) | **Claude** | Hallazgos con evidencia, decisiones y riesgos |
+| `.agent/RESULTADO-ULTIMA-EJECUCION.md` | **Codex** | Qué hizo, con salida literal de comandos |
+
+**Ningún agente commitea.** El commit lo autoriza el usuario tras revisar.
+
 ## Lectura obligatoria antes de opinar o modificar
 
 Al comenzar una sesión:
