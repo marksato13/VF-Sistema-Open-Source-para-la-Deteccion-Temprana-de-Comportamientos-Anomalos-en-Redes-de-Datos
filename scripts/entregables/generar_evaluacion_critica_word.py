@@ -150,21 +150,26 @@ def main() -> None:
              "a mano. La evaluación se ordena por los **criterios de validez y confiabilidad** "
              "trabajados en la sesión.")
     tabla(doc, ["Criterio de la sesión", "Cómo se abordó en este proyecto", "Estado"], [
-        ["**Validez interna**", "Partición **disjunta por episodio** (`no_episode_split=true`); "
-         "umbral fijado solo en validación (α = 0,05); causalidad de las variables probada con "
-         "test unitario. Una **fuga real (*data leakage*) se detectó, corrigió y marcó «no debe "
-         "citarse»**", "Abordada"],
-        ["**Validez externa**", "Validación cruzada de 5 pliegues agrupados por episodio y "
-         "validación operativa en despliegue real (58 corridas)", "**Parcial**: no hay jornada "
-         "externa ni segundo dataset"],
-        ["**Confiabilidad**", "**Del sistema (determinismo)**: 10 ajustes repetidos del pipeline "
-         "produjeron el mismo SHA-256 y el mismo umbral. **Test-retest**: dos pases operativos "
-         "equivalentes. **Estabilidad del umbral**: bootstrap por episodio, CV 4,10 %",
+        ["**Validez interna**\n*¿El resultado se debe a lo que decimos, o algo lo contamina?*",
+         "**Nuestros datos** se reparten por corrida completa, no al azar: así el modelo no "
+         "puede reconocer la corrida en vez del ataque. Detectamos una fuga real y la "
+         "corregimos.", "Abordada"],
+        ["**Validez externa**\n*¿Funcionaría fuera de nuestro laboratorio?*",
+         "**Nuestro modelo** se probó con validación cruzada de 5 pliegues y 58 corridas en la "
+         "red real. Falta una jornada nueva: hasta tenerla **no afirmamos** que funcione en "
+         "otra red.", "Parcial"],
+        ["**Confiabilidad**\n*Si repetimos la medición, ¿da lo mismo?*",
+         "**Nuestro sistema es determinista**: 10 ajustes repetidos dieron el mismo modelo y el "
+         "mismo umbral. Dos pases completos de validación dieron resultados equivalentes.",
          "Abordada"],
-        ["**Validez de constructo**", "Diccionario de las 28 variables con fórmula, ventana, "
-         "fuente y denominador, generado desde el extractor congelado", "Abordada"],
-        ["**α de Cronbach / Kappa**", "**No aplican al producto**: no hay ítems de escala que "
-         "correlacionar ni jueces clasificando. Aplicarán al instrumento SUS", "Justificado"],
+        ["**Validez de constructo**\n*Lo que medimos, ¿mide lo que decimos?*",
+         "**Nuestras 28 variables** están definidas una por una con su fórmula, ventana y "
+         "fuente, generadas desde el código que corre. Ninguna se describe de memoria.",
+         "Abordada"],
+        ["**α de Cronbach / Kappa**\n*¿Por qué no las usamos?*",
+         "**Nuestro producto no es un cuestionario** ni tiene jueces clasificando, así que "
+         "ninguna de las dos aplica. El Alfa se calculará sobre el SUS, que sí tiene 10 ítems.",
+         "Justificado"],
     ], [4.0, 9.2, 4.2])
     par(doc, "**ISO/IEC 25010 — características evaluadas con evidencia:** *adecuación funcional* "
              "(detecta y bloquea, 88,8 % de detección), *eficiencia de desempeño* (bloqueo en "
