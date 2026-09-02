@@ -148,6 +148,12 @@ Criterios aplicados: **validez** (¿las conclusiones se siguen de la evidencia?)
 | Confiabilidad | **Alta** | Hashes, particiones disjuntas por episodio, causalidad probada con test unitario |
 | Evaluación técnica | **Alta** | Funciona, se midió en despliegue real, sus fallos se corrigieron con evidencia |
 
+> **Reproducibilidad no es replicabilidad.** Este proyecto tiene la primera
+> —cualquiera descarga el repositorio y obtiene el mismo resultado— y **no tiene
+> la segunda**, que exige datos nuevos. Es la limitación `D6` y se cierra con la
+> jornada del 24 de octubre. El desglose por los tres ejes de la Sesión 02 está
+> en [`02-validacion-y-confiabilidad/`](../02-validacion-y-confiabilidad/informe-validacion-confiabilidad.md).
+
 ## 6 bis. Evaluación contra ISO/IEC 25010
 
 La Sesión 01 nombra este estándar en su propósito y lo presenta como **marco de
@@ -258,7 +264,7 @@ Las 10 semillas, la ponderación por episodio y el colapso de duplicados se apli
 |---|---|---|
 | Offline (test) | 4,71 % | 2,8 % – 7,9 % |
 | Operativo F6 pase 1 | 25,8 % | 16,6 % – 37,9 % |
-| Operativo F6 pase 2 | 23,0 % | 14,9 % – 33,7 % |
+| Operativo F6 pase 2 | **22,97 %** (17/74) | 14,9 % – 33,7 % |
 
 Los intervalos se presentan como resumen descriptivo de ventanas correlacionadas; no se interpretan como evidencia inferencial independiente. El contraste se reprodujo en aislamiento — una transferencia legítima de 200 Mbit/s bloqueó a un cliente durante 120 s — y contradice la observación del jurado que motivó todo el esfuerzo del dataset.
 → *Solución:* recalibrar incluyendo tráfico pesado (1-2 semanas). Mientras tanto, **declararlo**: un FPR medido y admitido es más defendible que uno refutado por la evidencia propia.

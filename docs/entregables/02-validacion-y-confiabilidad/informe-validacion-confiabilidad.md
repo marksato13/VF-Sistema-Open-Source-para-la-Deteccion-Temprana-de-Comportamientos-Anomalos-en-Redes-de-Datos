@@ -70,7 +70,7 @@ Es el hallazgo más importante y se reporta aunque sea desfavorable:
 |---|---|---|
 | Laboratorio (conjunto de prueba) | **4,71 %** (13/276) | 2,8 % – 7,9 % |
 | Operación real, pase 1 | **25,8 %** (16/62) | 16,6 % – 37,9 % |
-| Operación real, pase 2 | **23,0 %** (17/74) | 14,9 % – 33,7 % |
+| Operación real, pase 2 | **22,97 %** (17/74) | 14,9 % – 33,7 % |
 
 La fuente primaria registra las cifras sin redondear: **25,81 % (16/62) en el pase 1** y **22,97 % (17/74) en el pase 2**, con los intervalos indicados arriba (`docs/fase07-validacion-final/02-resultados-f6.md`). El rango aproximado 23–26 % resume ambos pases y no es un promedio.
 
@@ -100,7 +100,9 @@ Los intervalos de Wilson son **descriptivos** y las ventanas comparten episodio 
 | Integridad de artefactos | SHA-256 de datos, modelo y programa de calibración; repositorio verificado limpio antes y después |
 | Trazabilidad | 330 registros de cambios, 181 documentos de campañas, 162 revisiones independientes |
 | Estabilidad operativa | Cero caídas de servicio registradas en 58 corridas (55 verificadas), sin pérdida de paquetes en captura |
-| Consistencia entre repeticiones | Los dos pases de validación operativa dieron resultados equivalentes (25,8 % y 23,0 %) |
+| **Determinismo del sistema** | **10 ajustes repetidos** del pipeline elegido produjeron el **mismo SHA-256 y el mismo umbral** (`1.8126087939765134`) |
+| **Estabilidad del umbral** | Remuestreo bootstrap por episodio, **B = 1 000**: coeficiente de variación **4,10 %** (máximo declarado 5 %), banda percentil [1,6496 – 1,8132] |
+| Consistencia entre repeticiones | Los dos pases de validación operativa dieron resultados equivalentes: **25,81 % (16/62)** en el pase 1 y **22,97 % (17/74)** en el pase 2 |
 
 ### Abordado parcialmente
 
@@ -114,8 +116,37 @@ Los intervalos de Wilson son **descriptivos** y las ventanas comparten episodio 
 
 ### No abordado
 
-- **Repetición del experimento de modelado.** La calibración se ejecutó una sola vez; no hay repeticiones independientes que permitan estimar la variabilidad del umbral.
+- **Validación externa del umbral.** La banda de variabilidad se estimó por remuestreo sobre los mismos episodios; **no hay una jornada nueva** que confirme que el umbral sigue siendo válido en otra fecha.
 - **Confiabilidad inter-evaluador.** No aplica al diseño actual, que no emplea jueces ni instrumentos de percepción.
+
+> **Corregido el 2 de septiembre de 2026.** Hasta esta revisión este informe
+> declaraba como *no abordado* que «la calibración se ejecutó una sola vez; no
+> hay repeticiones independientes». **Eso dejó de ser cierto** al ejecutarse el
+> análisis de estabilidad: la afirmación se sustituye por la limitación que sí
+> sigue vigente, que es la ausencia de jornada externa.
+
+---
+
+## 4 bis. Equivalencia con los tres ejes de la Sesión 02
+
+Este informe se organiza por los criterios de la **Sesión 01** —validez interna,
+externa y confiabilidad—. La **Sesión 02** usa otro vocabulario: confiabilidad,
+replicabilidad y pertinencia. **No son marcos rivales**: cubren lo mismo con
+otro corte. Esta tabla evita que parezca que un documento dice algo distinto del
+otro.
+
+| Eje de la Sesión 02 | Dónde está en este informe | Estado |
+|---|---|---|
+| **Confiabilidad** | Sección 4 completa | **Abordado**: determinismo verificado (10 ajustes, mismo SHA-256), estabilidad del umbral por bootstrap (CV 4,10 %) y dos pases operativos equivalentes |
+| **Reproducibilidad** *(mismos datos y código → mismos resultados)* | Sección 4, «Reproducibilidad verificada» | **Abordado**: al reevaluar el modelo congelado salieron exactamente las mismas cifras. Dataset, manifiesto y 7 modelos publicados con SHA-256 |
+| **Replicabilidad** *(datos **nuevos**, mismo método → hallazgos consistentes)* | Sección 3, validación externa | **No abordado**: no existe jornada nueva. Es la limitación principal de este informe |
+| **Pertinencia** | Sección 5, entre los pendientes | **No abordado**: el instrumento SUS está preparado, sin aplicar |
+
+> **La distinción que más se confunde** es reproducibilidad frente a
+> replicabilidad. Este proyecto tiene la primera —cualquiera descarga el
+> repositorio y obtiene el mismo resultado— y **no tiene la segunda**, porque
+> eso exige datos nuevos. Decirlo así evita la afirmación más común y más
+> injustificada en trabajos de este tipo: «nuestros resultados son replicables».
 
 ---
 
