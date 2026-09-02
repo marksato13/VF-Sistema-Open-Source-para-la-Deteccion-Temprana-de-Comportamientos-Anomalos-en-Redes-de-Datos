@@ -8,6 +8,8 @@
 | **Fecha** | 19 de agosto de 2026 |
 | **Estructura** | Parte I: resultados obtenidos · Parte II: evaluación crítica de esos resultados |
 
+> **Entregable de la Sesión 01.** Este documento es el informe de resultados y evaluación crítica solicitado para esa sesión; el plan prospectivo de validación corresponde a la **Sesión 02** y está en [`07-plan-de-validacion/plan-de-validacion-de-resultados.md`](../07-plan-de-validacion/plan-de-validacion-de-resultados.md).
+
 **Trazabilidad.** Todas las cifras salen de artefactos verificables: `artifacts/model/manifest.json`, `artifacts/model/ocsvm_scaled.joblib`, `artifacts/dataset/*.csv` y `results/f6/f6_resultados.jsonl`. Las gráficas y los intervalos de confianza se regeneran con:
 
 ```bash
@@ -15,6 +17,8 @@
 ```
 
 **Verificación de integridad.** Al re-puntuar los conjuntos con el modelo congelado, este informe reproduce **exactamente** las métricas del manifiesto (13/276 falsos positivos y 158/179 detecciones), lo que confirma de forma independiente que el modelo publicado reproduce sus propios resultados.
+
+> **FPR operativo (fuente primaria: [`02-resultados-f6.md`](../../fase07-validacion-final/02-resultados-f6.md)).** El pase 1 registró **25,81 % (16/62)**, IC 95 % [16,6–37,9]; el pase 2 (lag-aware) registró **22,97 % (17/74)**, IC 95 % [14,9–33,7]. El rango entre ambos pases es **22,97–25,81 %**; no se trata de un promedio.
 
 ---
 ---
@@ -294,7 +298,7 @@ De los 14 escenarios normales exigidos faltan **SSH, SCP/SFTP, SMB, respaldo, st
 Detección del 88,8 % [83,0–92,8] sobre ataques genuinos, ROC-AUC 0,974, bloqueo en mediana de 8 s y sin caídas de servicio registradas.
 
 **Componente 2 — Sin penalizar el tráfico legítimo: NO DEMOSTRADO.**
-23–26 % de FPR operativo y un falso positivo reproducido en aislamiento. El sistema **no es apto para operación desatendida** en redes con transferencias pesadas legítimas.
+El FPR operativo fue **25,81 % (16/62) en el pase 1** y **22,97 % (17/74) en el pase 2**; el rango aproximado 23–26 % resume ambos pases. Además, un falso positivo se reprodujo en aislamiento. El sistema **no es apto para operación desatendida** en redes con transferencias pesadas legítimas.
 
 **Veredicto.** El proyecto cumple su objetivo **como demostración de viabilidad técnica**, no como sistema de producción. Esa distinción no debilita la tesis si se declara, porque el criterio de finalización adoptado no fue *"demostrar que el sistema siempre acierta"* sino *"delimitar con evidencia qué detecta, bajo qué condiciones funciona y qué limitaciones conserva"*.
 
@@ -424,7 +428,7 @@ El proyecto entrega un sistema real, desplegado, instrumentado y medido, con tra
 
 Corregidas, la tesis sostiene con solidez una afirmación acotada y verdadera:
 
-> Se demostró la viabilidad de detectar comportamientos anómalos y ejercer control inline en tiempo real sobre una red real, con ROC-AUC de 0,974, detección del 88,8 % [83,0 – 92,8] sobre ataques genuinos y bloqueo en una mediana de 8 segundos; y se delimitó con evidencia la condición bajo la cual el sistema todavía no es apto para operación desatendida: el tráfico legítimo de alto volumen, donde el falso positivo operativo alcanza 23–26 %.
+> Se demostró la viabilidad de detectar comportamientos anómalos y ejercer control inline en tiempo real sobre una red real, con ROC-AUC de 0,974, detección del 88,8 % [83,0 – 92,8] sobre ataques genuinos y bloqueo en una mediana de 8 segundos; y se delimitó con evidencia la condición bajo la cual el sistema todavía no es apto para operación desatendida: el tráfico legítimo de alto volumen, donde el FPR operativo fue 25,81 % (16/62) en el pase 1 y 22,97 % (17/74) en el pase 2.
 
 ---
 

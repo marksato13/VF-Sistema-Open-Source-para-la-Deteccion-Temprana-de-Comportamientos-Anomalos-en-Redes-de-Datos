@@ -9,7 +9,7 @@ la vez, y una sola sesión de dos horas los cierra los tres:
 | Dónde puntúa cero | Qué pasa a valer |
 |---|---|
 | Ficha del docente, criterio 6 | 0 / 3 → **2 o 3** |
-| Eje de pertinencia del [plan de validación](../07-plan-de-validacion/plan-de-validacion.md) | sin evidencia → **medido** |
+| Eje de pertinencia del [plan de validación](../07-plan-de-validacion/plan-de-validacion-de-resultados.md) | sin evidencia → **medido** |
 | `D-18` del [plan de mejora](../06-plan-de-mejora/01-registro-debilidades.md) | abierto → **cerrado** |
 
 ## Por qué SUS y no una encuesta propia

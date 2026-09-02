@@ -136,6 +136,8 @@ def main() -> None:
     r.font.size = Pt(9)
     r.font.color.rgb = DIM
 
+    parrafo(doc, "**Entregable de la Sesión 02.** Plan prospectivo; el informe de validaciones ya ejecutadas es `02-validacion-y-confiabilidad/`.", size=8.2, color=DIM)
+
     parrafo(doc, "El producto es un sistema desplegado que **decide y bloquea tráfico en tiempo "
                  "real**, no un instrumento de medición por escalas. Por eso la confiabilidad se "
                  "valida sobre las decisiones del modelo y el determinismo del sistema: no existen "
@@ -199,21 +201,22 @@ def main() -> None:
             size=8.3, italic=True, color=DIM)
 
     h1(doc, "Cronograma")
-    tabla(doc, ["Sem.", "Eje", "Actividad", "Producto verificable"], [
-        ["1", "Confiabilidad", "Validación cruzada por episodio y bootstrap del umbral", "Media y desviación por pliegue; banda del umbral"],
-        ["1", "Replicabilidad", "Declarar semillas y determinismo", "Sección en el protocolo de modelado"],
-        ["2", "Pertinencia", "Diseñar instrumento y guion de tareas; reclutar evaluadores", "Instrumento SUS y guion de sesión"],
-        ["2", "Replicabilidad", "Depósito en Zenodo", "DOI citable"],
-        ["3", "Pertinencia", "Ejecutar sesiones de usabilidad y entrevistas", "Puntaje SUS, tiempos y tasa de éxito"],
-        ["3", "Pertinencia", "Cerrar la matriz de trazabilidad", "Matriz sin filas abiertas"],
-        ["4", "Los tres", "Integrar la validación al artículo y a la tesis", "Sección de validación y limitaciones"],
-    ], [1.3, 2.8, 6.6, 6.7])
+    parrafo(doc, "Cronograma prospectivo al 19 de agosto de 2026: todas las actividades están **PLANIFICADAS**. Sus resultados se registran en el informe de validación, no aquí.", size=8.3, color=DIM)
+    tabla(doc, ["Sem.", "Eje", "Actividad", "Producto verificable", "Estado"], [
+        ["1", "Confiabilidad", "Validación cruzada por episodio y bootstrap del umbral", "Media y desviación por pliegue; banda del umbral", "PLANIFICADA"],
+        ["1", "Replicabilidad", "Declarar semillas y determinismo", "Sección en el protocolo de modelado", "PLANIFICADA"],
+        ["2", "Pertinencia", "Diseñar instrumento y guion de tareas; reclutar evaluadores", "Instrumento SUS y guion de sesión", "PLANIFICADA"],
+        ["2", "Replicabilidad", "Depósito en Zenodo", "DOI citable", "PLANIFICADA"],
+        ["3", "Pertinencia", "Ejecutar sesiones de usabilidad y entrevistas", "Puntaje SUS, tiempos y tasa de éxito", "PLANIFICADA"],
+        ["3", "Pertinencia", "Cerrar la matriz de trazabilidad", "Matriz sin filas abiertas", "PLANIFICADA"],
+        ["4", "Los tres", "Integrar la validación al artículo y a la tesis", "Sección de validación y limitaciones", "PLANIFICADA"],
+    ], [1.0, 2.3, 5.8, 5.4, 2.0])
     parrafo(doc, "El orden responde a dependencias: confiabilidad va primero porque no necesita a "
                  "nadie más; pertinencia ocupa dos semanas porque depende de coordinar personas.",
             size=8.3, italic=True, color=DIM)
 
     h1(doc, "Fuera del alcance de este plan")
-    parrafo(doc, "El **falso positivo operativo de 23–26 %** sobre tráfico legítimo pesado exige "
+    parrafo(doc, "El **falso positivo operativo** sobre tráfico legítimo pesado fue 25,81 % (16/62) en el pase 1 y 22,97 % (17/74) en el pase 2; el rango aproximado 23–26 % resume ambos pases. Exige "
                  "recalibrar con ese tráfico como normalidad y repetir la validación: semanas. La "
                  "**selección posterior del modelo** exige un protocolo nuevo con evaluación "
                  "reservada. Ambas se declaran como límite, no se simulan.")
@@ -221,7 +224,7 @@ def main() -> None:
 
     bloque_enlaces(doc, "Evidencia en el repositorio", [
         ("Plan detallado, con la justificación de cada umbral",
-         "docs/entregables/07-plan-de-validacion/plan-de-validacion.md"),
+         "docs/entregables/07-plan-de-validacion/plan-de-validacion-de-resultados.md"),
         ("Instrumento SUS, guion de observación y script de cálculo",
          "docs/entregables/08-validacion-usuarios/README.md"),
         ("Checksums de los artefactos publicados",

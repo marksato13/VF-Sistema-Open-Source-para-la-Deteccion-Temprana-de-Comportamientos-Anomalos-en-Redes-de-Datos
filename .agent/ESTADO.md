@@ -5,8 +5,8 @@
 | | |
 |---|---|
 | **Tarea activa** | `PPI-DOCS-001` — ver [`TASK-ACTUAL.md`](TASK-ACTUAL.md) |
-| **Estado** | `READY` — auditoría hecha, implementación pendiente |
-| **Siguiente agente** | **Codex** |
+| **Estado** | `COMPLETO` — implementado por Codex, revisado y corregido por Claude |
+| **Siguiente agente** | **El usuario**: revisar el diff y autorizar el commit |
 | **Rama** | `main`, sincronizada con `origin` |
 
 ## Dónde está cada cosa

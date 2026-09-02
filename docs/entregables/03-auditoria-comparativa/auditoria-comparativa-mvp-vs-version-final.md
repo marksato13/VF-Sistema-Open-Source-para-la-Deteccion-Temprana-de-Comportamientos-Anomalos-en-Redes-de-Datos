@@ -255,7 +255,7 @@ Por tanto:
 - puede tener sesgo optimista por selección post hoc entre siete alternativas;
 - debe validarse en un conjunto temporal externo jamás usado para escoger modelo, hiperparámetros ni umbral.
 
-Esta limitación también se reconoce en el [informe de evaluación crítica](01-informe-evaluacion-critica.md).
+Esta limitación también se reconoce en el [informe de evaluación crítica](../01-evaluacion-critica/informe-evaluacion-critica.md).
 
 ### 6.6 Comparación válida e inválida con el MVP
 
@@ -641,8 +641,8 @@ Por tanto, la versión final es claramente más sólida que el MVP, pero su esta
 ## 15. Fuentes internas principales
 
 - [Requisitos y observaciones del jurado](../../requisitos-jurado/README.md)
-- [Informe extenso de resultados y evaluación crítica](01-informe-evaluacion-critica.md)
-- [Informe de validación y confiabilidad](02-informe-validacion-confiabilidad.md)
+- [Informe extenso de resultados y evaluación crítica](../01-evaluacion-critica/informe-evaluacion-critica.md)
+- [Informe de validación y confiabilidad](../02-validacion-y-confiabilidad/informe-validacion-confiabilidad.md)
 - [Diccionario multicapa G5](../../fase02-features-multicapa/01-diccionario-multicapa-G5.md)
 - [Cierre del dataset normal v2](../../fase03-dataset/167-cierre-normales-v2-y-consolidacion.md)
 - [Auditoría de calidad del dataset](../../fase03-dataset/171-auditoria-calidad-dataset-v2.md)

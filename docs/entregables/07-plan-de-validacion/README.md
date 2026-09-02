@@ -1,7 +1,7 @@
 # Plan de validación de resultados
 
 > **Estado: redactado.** El entregable es
-> [`plan-de-validacion.md`](plan-de-validacion.md) y su versión presentable
+> [`plan-de-validacion-de-resultados.md`](plan-de-validacion-de-resultados.md) y su versión presentable
 > [`Plan-de-validacion-de-resultados.docx`](Plan-de-validacion-de-resultados.docx)
 > (~2 páginas, dentro del límite pedido). Este README documenta **qué pide el
 > docente**, para poder auditar el entregable contra la consigna.

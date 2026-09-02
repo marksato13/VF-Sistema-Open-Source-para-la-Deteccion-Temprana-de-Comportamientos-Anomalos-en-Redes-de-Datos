@@ -110,6 +110,9 @@ def main() -> None:
     par(doc, "Sistema open source para la detección temprana de comportamientos anómalos "
              "en redes de datos\nRubén Mark Salazar Tocas · Uziel Elias Sauñe Fernandez\nAsesores: Ing. Nemias Saboya Ríos · Ing. Fernando Manuel Asin Gómez",
         size=9, color=DIM, after=9, align=WD_ALIGN_PARAGRAPH.CENTER)
+    par(doc, "**Entregable de la Sesión 01.** Este documento es el informe de resultados y evaluación crítica; "
+             "el plan prospectivo de la Sesión 02 está en `07-plan-de-validacion/plan-de-validacion-de-resultados.md`.",
+        size=8.2, color=DIM, after=7, align=WD_ALIGN_PARAGRAPH.CENTER)
 
     # ---------------------------------------------------------------- 1
     h1(doc, "1 ·", "Qué se abordó de manera objetiva")
@@ -158,7 +161,7 @@ def main() -> None:
     h1(doc, "2 ·", "Qué está faltando")
     par(doc, "Las debilidades se ordenan por gravedad y **todas están medidas**, no supuestas.")
     tabla(doc, ["Debilidad", "Evidencia", "Gravedad"], [
-        ["**El falso positivo de laboratorio no se sostiene en operación**", "4,71 % [2,8–7,9] frente a 22,97 % [14,9–33,7]. Son intervalos descriptivos por ventana: las ventanas comparten episodio e historia. Una transferencia legítima de 200 Mbit/s bloqueó a un cliente real 120 s", "Crítica"],
+        ["**El falso positivo de laboratorio no se sostiene en operación**", "4,71 % [2,8–7,9] frente a 25,81 % (pase 1, 16/62) y 22,97 % (pase 2, 17/74). Son intervalos descriptivos por ventana: las ventanas comparten episodio e historia. Una transferencia legítima de 200 Mbit/s bloqueó a un cliente real 120 s", "Crítica"],
         ["**El modelo se eligió observando el conjunto de prueba**", "El manifiesto designaba otro modelo como conclusión y a este como comparador. El 88,3 % es el máximo sobre 7 candidatos", "Crítica"],
         ["**Ninguna validación con usuarios reales**", "No se midió la experiencia de uso del panel ni se aplicó instrumento alguno", "Alta"],
         ["**La partición mide repetición, no generalización**", "Los 44 perfiles aparecen en las tres particiones; no existe jornada de holdout externa", "Alta"],
@@ -224,7 +227,7 @@ def main() -> None:
          "Se reportan como descriptivos, no como prueba inferencial; la comparación entre "
          "modelos usa McNemar con corrección de Holm"],
         ["**Validez de constructo**", "*«¿el FPR de laboratorio mide el FPR de operación?»* — "
-         "**la medición dice que no**: 4,71 % frente a 22,97 %", "Se reportan ambos por "
+         "**la medición dice que no**: 4,71 % frente a 25,81 % (pase 1) y 22,97 % (pase 2)", "Se reportan ambos por "
          "separado y se declara la brecha como el hallazgo principal"],
     ], [3.4, 6.6, 7.4])
 

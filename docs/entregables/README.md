@@ -66,7 +66,7 @@ docs/entregables/
 ├── 05-ppi/                          documento del PPI (pendiente de actualizar)
 ├── 06-plan-de-mejora/               debilidades, mitigaciones y checklist
 ├── 07-plan-de-validacion/
-│   ├── plan-de-validacion.md
+│   ├── plan-de-validacion-de-resultados.md
 │   └── Plan-de-validacion-de-resultados.docx
 ├── 08-validacion-usuarios/          instrumento SUS, guion y plantilla
 └── 09-matriz-revistas/

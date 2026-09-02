@@ -4,6 +4,8 @@
 **Autores:** Rubén Mark Salazar Tocas · Uziel Elias Sauñe Fernandez
 **Curso:** Investigación V · Sesión 02 · EP Ingeniería de Sistemas, UPeU
 
+> **Entregable de la Sesión 02.** Este documento es el plan prospectivo de validación de resultados solicitado en esa sesión; el informe en pasado de validaciones ya ejecutadas corresponde al documento [`02-validacion-y-confiabilidad`](../02-validacion-y-confiabilidad/informe-validacion-confiabilidad.md).
+
 El producto es un sistema desplegado que **decide y bloquea tráfico en tiempo real**, no un instrumento de medición por escalas. Por eso la confiabilidad se valida sobre las decisiones del modelo y el determinismo del sistema: no existen ítems de escala que correlacionar, así que **Alfa de Cronbach no aplica** al producto.
 
 ## 1 · Confiabilidad
@@ -47,20 +49,22 @@ Es el **único eje sin evidencia** a la fecha.
 
 ## Cronograma
 
-| Sem. | Eje | Actividad | Producto verificable |
-|:---:|---|---|---|
-| **1** | Confiabilidad | Validación cruzada por episodio y bootstrap del umbral | Media y desviación por pliegue; banda del umbral |
-| **1** | Replicabilidad | Declarar semillas y determinismo | Sección en el protocolo de modelado |
-| **2** | Pertinencia | Diseñar instrumento y guion de tareas; reclutar evaluadores | Instrumento SUS y guion de sesión |
-| **2** | Replicabilidad | Depósito en Zenodo | DOI citable |
-| **3** | Pertinencia | Ejecutar sesiones de usabilidad y entrevistas | Puntaje SUS, tiempos y tasa de éxito |
-| **3** | Pertinencia | Cerrar la matriz de trazabilidad | Matriz sin filas abiertas |
-| **4** | Los tres | Integrar la validación al artículo y a la tesis | Sección de validación y limitaciones |
+El cronograma es prospectivo y conserva el estado previsto al redactarse el plan (19 de agosto de 2026). Las actividades se marcan explícitamente como **PLANIFICADAS**; los resultados obtenidos posteriormente deben registrarse en el informe de validación, no reescribirse como si hubieran sido previstos.
+
+| Sem. | Eje | Actividad | Producto verificable | Estado |
+|:---:|---|---|---|---|
+| **1** | Confiabilidad | Validación cruzada por episodio y bootstrap del umbral | Media y desviación por pliegue; banda del umbral | **PLANIFICADA** |
+| **1** | Replicabilidad | Declarar semillas y determinismo | Sección en el protocolo de modelado | **PLANIFICADA** |
+| **2** | Pertinencia | Diseñar instrumento y guion de tareas; reclutar evaluadores | Instrumento SUS y guion de sesión | **PLANIFICADA** |
+| **2** | Replicabilidad | Depósito en Zenodo | DOI citable | **PLANIFICADA** |
+| **3** | Pertinencia | Ejecutar sesiones de usabilidad y entrevistas | Puntaje SUS, tiempos y tasa de éxito | **PLANIFICADA** |
+| **3** | Pertinencia | Cerrar la matriz de trazabilidad | Matriz sin filas abiertas | **PLANIFICADA** |
+| **4** | Los tres | Integrar la validación al artículo y a la tesis | Sección de validación y limitaciones | **PLANIFICADA** |
 
 El orden responde a dependencias: confiabilidad va primero porque no necesita a nadie más; pertinencia ocupa dos semanas porque depende de coordinar personas.
 
 ## Fuera del alcance de este plan
 
-El **falso positivo operativo de 23–26 %** sobre tráfico legítimo pesado exige recalibrar con ese tráfico como normalidad y repetir la validación: semanas. La **selección posterior del modelo** exige un protocolo nuevo con evaluación reservada. Ambas se declaran como límite, no se simulan.
+El **falso positivo operativo —25,81 % en el pase 1 y 22,97 % en el pase 2, unos 23–26 %—** sobre tráfico legítimo pesado exige recalibrar con ese tráfico como normalidad y repetir la validación: semanas. La **selección posterior del modelo** exige un protocolo nuevo con evaluación reservada. Ambas se declaran como límite, no se simulan.
 
 > ✔ = ya ejecutado y publicado.

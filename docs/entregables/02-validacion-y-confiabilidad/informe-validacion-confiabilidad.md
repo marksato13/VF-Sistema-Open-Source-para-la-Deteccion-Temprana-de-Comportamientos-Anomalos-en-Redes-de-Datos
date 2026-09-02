@@ -5,6 +5,8 @@
 **Curso:** Investigación V · **Docente:** Ing. Nemias Saboya Ríos
 **Fecha:** 19 de agosto de 2026
 
+> **Relación con los entregables del curso.** Este documento es un **informe en pasado** sobre validaciones ya ejecutadas; **no es el entregable prospectivo de la Sesión 02**. El entregable de la Sesión 02 es el plan [`plan-de-validacion-de-resultados.md`](../07-plan-de-validacion/plan-de-validacion-de-resultados.md), que especifica métodos, umbrales y cronograma futuros.
+
 > Informe breve solicitado en la sesión del 12 de agosto. El análisis completo, con las 11 figuras y el detalle de cada hallazgo, está en [`01-evaluacion-critica/`](../01-evaluacion-critica/informe-evaluacion-critica.md) del repositorio del proyecto.
 
 ---
@@ -69,6 +71,8 @@ Es el hallazgo más importante y se reporta aunque sea desfavorable:
 | Laboratorio (conjunto de prueba) | **4,71 %** (13/276) | 2,8 % – 7,9 % |
 | Operación real, pase 1 | **25,8 %** (16/62) | 16,6 % – 37,9 % |
 | Operación real, pase 2 | **23,0 %** (17/74) | 14,9 % – 33,7 % |
+
+La fuente primaria registra las cifras sin redondear: **25,81 % (16/62) en el pase 1** y **22,97 % (17/74) en el pase 2**, con los intervalos indicados arriba (`docs/fase07-validacion-final/02-resultados-f6.md`). El rango aproximado 23–26 % resume ambos pases y no es un promedio.
 
 ![Falsos positivos: laboratorio frente a operación real](../graficas/C1-fpr-offline-vs-operativo.png)
 
