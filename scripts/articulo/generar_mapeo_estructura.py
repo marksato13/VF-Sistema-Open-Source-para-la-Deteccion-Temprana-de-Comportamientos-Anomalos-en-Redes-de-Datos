@@ -12,6 +12,8 @@ autores y la estructura final que se deriva de las dos fuentes.
 from collections import Counter
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.cell.rich_text import CellRichText, TextBlock
+from openpyxl.cell.text import InlineFont
 from openpyxl.chart import BarChart, Reference
 from openpyxl.utils import get_column_letter
 
@@ -256,6 +258,31 @@ ESTRUCTURA = [
 ]
 
 
+def rico(txt):
+    """Convierte los marcadores **negrita** en texto enriquecido real de Excel.
+
+    openpyxl no interpreta Markdown: si se escribe «**21**» en una celda, el
+    lector ve los asteriscos. Esta función parte el texto por `**` y marca en
+    negrita los tramos impares.
+    """
+    if not isinstance(txt, str) or "**" not in txt:
+        return txt
+    tramos = txt.split("**")
+    if len(tramos) % 2 == 0:            # marcadores impares: se quitan y ya
+        return txt.replace("**", "")
+    bloques = []
+    for i, tramo in enumerate(tramos):
+        if not tramo:
+            continue
+        bloques.append(TextBlock(InlineFont(b=True), tramo) if i % 2 else tramo)
+    return CellRichText(*bloques) if bloques else ""
+
+
+def poner(ws, fila):
+    """Añade una fila convirtiendo el Markdown de negrita de cada celda."""
+    ws.append([rico(c) for c in fila])
+
+
 def estilar(ws, ancho):
     for i, a in enumerate(ancho, 1):
         ws.column_dimensions[get_column_letter(i)].width = a
@@ -266,7 +293,7 @@ def estilar(ws, ancho):
 
 
 def titulo(ws, txt, ncol, color=AZUL):
-    ws.append([txt] + [""] * (ncol - 1))
+    ws.append([rico(txt)] + [""] * (ncol - 1))
     ws.merge_cells(start_row=ws.max_row, start_column=1, end_row=ws.max_row,
                    end_column=ncol)
     c = ws.cell(ws.max_row, 1)
@@ -276,7 +303,7 @@ def titulo(ws, txt, ncol, color=AZUL):
 
 
 def nota(ws, txt, ncol, alto=32):
-    ws.append([txt] + [""] * (ncol - 1))
+    ws.append([rico(txt)] + [""] * (ncol - 1))
     ws.merge_cells(start_row=ws.max_row, start_column=1, end_row=ws.max_row,
                    end_column=ncol)
     ws.cell(ws.max_row, 1).font = Font(italic=True, size=9)
@@ -316,7 +343,7 @@ def main():
                  [f"Sección {i+1}" for i in range(maxs)] +
                  ["Otras secciones (tras las referencias)"])
     for rev, n, tit, doi, pub, pags, refs, secs, fin in ART:
-        ws.append([rev, n, tit, doi, pub, pags, refs] + secs +
+        poner(ws, [rev, n, tit, doi, pub, pags, refs] + secs +
                   [""] * (maxs - len(secs)) + [" · ".join(fin)])
         ws.cell(ws.max_row, 1).fill = PatternFill(
             "solid", fgColor=VERDE if rev == "IJIES" else GRIS)
@@ -351,7 +378,7 @@ def main():
                   "Familia funcional"])
     for nom, c in sorted(lit.items(), key=lambda x: (-x[1], x[0])):
         f = familia_de(nom) or "—"
-        ws.append([nom, c, round(100 * c / total, 1), f])
+        poner(ws, [nom, c, round(100 * c / total, 1), f])
         if c >= total * 0.5:
             ws.cell(ws.max_row, 2).font = Font(bold=True, size=9)
     ws.append([])
@@ -360,17 +387,17 @@ def main():
     for nom, c in sorted(litci.items(), key=lambda x: (-x[1], x[0])):
         if c < 2:
             continue
-        ws.append([nom, c, round(100 * c / total, 1), familia_de(nom) or "—"])
+        poner(ws, [nom, c, round(100 * c / total, 1), familia_de(nom) or "—"])
         ws.cell(ws.max_row, 1).font = Font(bold=True, size=9)
     fila_fam = ws.max_row + 2
     ws.append([])
     cabecera(ws, ["Familia funcional", "Artículos", "% de 21", ""], AMBAR)
     for f, c in sorted(fam.items(), key=lambda x: (-x[1], x[0])):
-        ws.append([f, c, round(100 * c / total, 1), ""])
+        poner(ws, [f, c, round(100 * c / total, 1), ""])
         ws.cell(ws.max_row, 1).font = Font(bold=True, size=9)
     ini_fam = fila_fam + 1
     ws.append([])
-    ws.append([f"Nombres literales distintos: {len(lit)}", "",
+    poner(ws, [f"Nombres literales distintos: {len(lit)}", "",
                f"Familias funcionales: {len(fam)}", ""])
     ws.cell(ws.max_row, 1).font = Font(bold=True, size=9)
     ws.cell(ws.max_row, 3).font = Font(bold=True, size=9)
@@ -424,7 +451,7 @@ def main():
       "**No nombra ni una sola sección del cuerpo**",
       "No hay imposición desde la norma"),
     ]:
-        ws.append([c, m, l])
+        poner(ws, [c, m, l])
         ws.cell(ws.max_row, 1).font = Font(bold=True, size=9)
     ws.append([])
     titulo(ws, "VEREDICTO: estructura FLEXIBLE en el cuerpo, RÍGIDA en el cierre", 3,
@@ -447,7 +474,7 @@ def main():
              "Las citas entre comillas son literales.", 3)
     cabecera(ws, ["Aspecto", "Lo que dice la guía, textual", "Qué implica para nosotros"])
     for a, b, c in GUIA:
-        ws.append([a, b, c])
+        poner(ws, [a, b, c])
         ws.cell(ws.max_row, 1).font = Font(bold=True, size=9)
     ws.append([])
     nota(ws, "CONCLUSIÓN DEL ANÁLISIS · La guía de IJIES regula el formato, el pago, la "
@@ -467,7 +494,7 @@ def main():
     cabecera(ws, ["N°", "Sección", "Frecuencia en el mapeo",
                   "Respaldo de las dos fuentes", "Qué va dentro"])
     for n, s, fr, j, q in ESTRUCTURA:
-        ws.append([n, s, fr, j, q])
+        poner(ws, [n, s, fr, j, q])
         ws.cell(ws.max_row, 2).font = Font(bold=True, size=10)
         ws.cell(ws.max_row, 2).fill = PatternFill("solid", fgColor=VERDE)
     ws.append([])
@@ -479,7 +506,7 @@ def main():
              "declaración de IA la exige la guía aunque todavía no aparezca en los "
              "artículos de 2024.", 5, 62)
     ws.append([])
-    ws.append(["Extensión objetivo: 10 páginas — mínimo 8 exigido por la guía, y desde "
+    poner(ws, ["Extensión objetivo: 10 páginas — mínimo 8 exigido por la guía, y desde "
                "la 11.ª cuesta USD 50 por página.", "", "", "", ""])
     ws.merge_cells(start_row=ws.max_row, start_column=1, end_row=ws.max_row, end_column=5)
     ws.cell(ws.max_row, 1).font = Font(bold=True, size=10)
@@ -518,7 +545,7 @@ def main():
       "análisis crítico está en la hoja 4, con citas literales"),
      ("Reproducible", "scripts/articulo/generar_mapeo_estructura.py"),
     ]:
-        ws.append([a, b])
+        poner(ws, [a, b])
         ws.cell(ws.max_row, 1).font = Font(bold=True, size=9)
     estilar(ws, [26, 104])
     wb.move_sheet("0. COMO SE HIZO", offset=-5)
