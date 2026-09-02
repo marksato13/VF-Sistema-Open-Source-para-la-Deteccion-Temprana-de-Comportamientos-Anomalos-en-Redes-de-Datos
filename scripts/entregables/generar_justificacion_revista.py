@@ -17,6 +17,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+import re
 from docx.shared import Cm, Pt, RGBColor
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -33,6 +34,29 @@ DIM = RGBColor(0x5B, 0x6B, 0x8C)
 ACCENT = RGBColor(0x1F, 0x4E, 0x79)
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 F_HEAD, F_ZEBRA, F_OK = "1F4E79", "EEF3FA", "E0F3E6"
+
+
+_MARCAS = re.compile(r"(\*\*.+?\*\*|\*.+?\*|`.+?`)")
+
+
+def _tramos(txt):
+    """Parte el texto en (contenido, negrita, cursiva, monoespaciado).
+
+    Los helpers solo entendian **negrita**; *cursiva* y `codigo` se escribian
+    tal cual y el lector veia los asteriscos y las comillas.
+    """
+    for t in _MARCAS.split(str(txt)):
+        if not t:
+            continue
+        limpio = lambda x: x.replace("**", "").replace("*", "").replace("`", "")
+        if t.startswith("**") and t.endswith("**") and len(t) > 4:
+            yield limpio(t[2:-2]), True, False, False
+        elif t.startswith("*") and t.endswith("*") and len(t) > 2:
+            yield limpio(t[1:-1]), False, True, False
+        elif t.startswith("`") and t.endswith("`") and len(t) > 2:
+            yield limpio(t[1:-1]), False, False, True
+        else:
+            yield t, False, False, False
 
 
 def shade(cell, hexcolor: str) -> None:
@@ -57,12 +81,14 @@ def parrafo(doc, txt, size=9.2, italic=False, color=INK, after=4):
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(after)
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    for i, tramo in enumerate(txt.split("**")):
+    for tramo, _b, _i, _m in _tramos(txt):
         r = p.add_run(tramo)
         r.font.size = Pt(size)
         r.font.color.rgb = color
         r.font.italic = italic
-        r.font.bold = i % 2 == 1
+        r.font.bold = _b
+        r.font.italic = r.font.italic or _i
+        r.font.name = "Consolas" if _m else r.font.name
     return p
 
 
@@ -87,10 +113,12 @@ def tabla(doc, cabeceras, filas, anchos, destacar=0):
             cell.text = ""
             p = cell.paragraphs[0]
             p.paragraph_format.space_after = Pt(1)
-            for k, tramo in enumerate(str(txt).split("**")):
+            for tramo, _b, _i, _m in _tramos(txt):
                 r = p.add_run(tramo)
                 r.font.size = Pt(8.0)
-                r.font.bold = k % 2 == 1
+                r.font.bold = _b
+                r.font.italic = r.font.italic or _i
+                r.font.name = "Consolas" if _m else r.font.name
                 r.font.color.rgb = INK
             if i < destacar:
                 shade(cell, F_OK)

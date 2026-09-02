@@ -14,6 +14,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+import re
 from docx.shared import Cm, Pt, RGBColor
 
 import sys
@@ -30,6 +31,29 @@ ACCENT, WHITE = RGBColor(0x1F, 0x4E, 0x79), RGBColor(0xFF, 0xFF, 0xFF)
 F_HEAD, F_ZEBRA, F_OK, F_AMBER, F_RED = "1F4E79", "EEF3FA", "E0F3E6", "FDECD2", "FBE3E1"
 
 
+_MARCAS = re.compile(r"(\*\*.+?\*\*|\*.+?\*|`.+?`)")
+
+
+def _tramos(txt):
+    """Parte el texto en (contenido, negrita, cursiva, monoespaciado).
+
+    Los helpers solo entendian **negrita**; *cursiva* y `codigo` se escribian
+    tal cual y el lector veia los asteriscos y las comillas.
+    """
+    for t in _MARCAS.split(str(txt)):
+        if not t:
+            continue
+        limpio = lambda x: x.replace("**", "").replace("*", "").replace("`", "")
+        if t.startswith("**") and t.endswith("**") and len(t) > 4:
+            yield limpio(t[2:-2]), True, False, False
+        elif t.startswith("*") and t.endswith("*") and len(t) > 2:
+            yield limpio(t[1:-1]), False, True, False
+        elif t.startswith("`") and t.endswith("`") and len(t) > 2:
+            yield limpio(t[1:-1]), False, False, True
+        else:
+            yield t, False, False, False
+
+
 def shade(cell, hx):
     el = OxmlElement("w:shd"); el.set(qn("w:val"), "clear"); el.set(qn("w:fill"), hx)
     cell._tc.get_or_add_tcPr().append(el)
@@ -38,7 +62,7 @@ def shade(cell, hx):
 def h1(doc, n, txt):
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(11); p.paragraph_format.space_after = Pt(4)
-    r = p.add_run(f"{n}  {txt}")
+    r = p.add_run(f"{n}  {_MARCAS.sub(lambda m: m.group(0).strip("*`"), txt)}")
     r.font.size = Pt(12.5); r.font.bold = True; r.font.color.rgb = ACCENT
     return p
 
@@ -46,10 +70,12 @@ def h1(doc, n, txt):
 def par(doc, txt, size=9.2, italic=False, color=INK, after=5, align=WD_ALIGN_PARAGRAPH.JUSTIFY):
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(after); p.alignment = align
-    for i, t in enumerate(txt.split("**")):
+    for t, _b, _i, _m in _tramos(txt):
         r = p.add_run(t)
         r.font.size = Pt(size); r.font.color.rgb = color
-        r.font.italic = italic; r.font.bold = i % 2 == 1
+        r.font.italic = italic; r.font.bold = _b
+        r.font.italic = r.font.italic or _i
+        r.font.name = "Consolas" if _m else r.font.name
     return p
 
 
@@ -66,9 +92,11 @@ def tabla(doc, cab, filas, anchos, fondos=None):
         for c, txt in enumerate(fila):
             cell = row.cells[c]; cell.width = Cm(anchos[c]); cell.text = ""
             p = cell.paragraphs[0]; p.paragraph_format.space_after = Pt(1)
-            for k, tr in enumerate(str(txt).split("**")):
+            for tr, _b, _i, _m in _tramos(txt):
                 r = p.add_run(tr)
-                r.font.size = Pt(8.2); r.font.bold = k % 2 == 1; r.font.color.rgb = INK
+                r.font.size = Pt(8.2); r.font.bold = _b
+                r.font.italic = r.font.italic or _i
+                r.font.name = "Consolas" if _m else r.font.name; r.font.color.rgb = INK
             if fondos and fondos[i]:
                 shade(cell, fondos[i])
             elif i % 2 == 0:
@@ -144,6 +172,13 @@ def main() -> None:
              "verificado) y *seguridad* (trazabilidad por SHA-256). **Sin evidencia todavía**: "
              "*usabilidad* —el SUS está pendiente—, *compatibilidad*, *mantenibilidad* y "
              "*portabilidad*.", size=8.8)
+    par(doc, "**Ya resuelto en agosto**, sin capturar datos nuevos ni reentrenar: intervalos de "
+             "Wilson en toda proporción y McNemar con corrección de Holm; ablación por capas y "
+             "comparación de 14 contra 28 variables; diccionario de las 28 variables; dataset, "
+             "manifiesto y 7 modelos publicados con sus checksums; datasheet, model card y system "
+             "card; declaración de la selección posterior; validación cruzada y bootstrap.",
+        size=8.8)
+    par(doc, "**Resultados medidos:**", size=9.2)
     tabla(doc, ["Resultado medido", "Valor obtenido", "Cómo se verificó"], [
         ["**Capacidad discriminante**", "**ROC-AUC 0,974**", "Re-puntuando el modelo congelado"],
         ["**Detección de ataques genuinos**", "**88,8 %** [83,0 – 92,8]", "Evaluación bloqueada de un solo paso, con intervalo de Wilson"],
@@ -153,37 +188,30 @@ def main() -> None:
         ["**Superioridad del modelo elegido**", "Las **6 comparaciones** del OCSVM son significativas", "McNemar + corrección de Holm sobre 21 pares"],
         ["**Reproducibilidad**", "Dataset, manifiesto y **los 7 modelos** publicados y verificables", "sha256sum -c · licencias MIT y CC BY 4.0"],
     ], [4.4, 5.4, 7.6])
-    figura(doc, "A1-curva-roc.png",
-           "Figura 1. Curva ROC del modelo congelado. El AUC de 0,974 se calculó en esta evaluación: "
-           "el trabajo original nunca lo computó.", ancho=9.6)
 
     # ---------------------------------------------------------------- 2
-    h1(doc, "2 ·", "Lo que NO está listo: qué está faltando")
-    par(doc, "Las debilidades se ordenan por gravedad y **todas están medidas**, no supuestas.")
-    tabla(doc, ["Debilidad", "Evidencia", "Gravedad"], [
-        ["**El falso positivo de laboratorio no se sostiene en operación**", "4,71 % [2,8–7,9] frente a 25,81 % (pase 1, 16/62) y 22,97 % (pase 2, 17/74). Son intervalos descriptivos por ventana: las ventanas comparten episodio e historia. Una transferencia legítima de 200 Mbit/s bloqueó a un cliente real 120 s", "Crítica"],
-        ["**El modelo se eligió observando el conjunto de prueba**", "El manifiesto designaba otro modelo como conclusión y a este como comparador. El 88,3 % es el máximo sobre 7 candidatos", "Crítica"],
-        ["**Ninguna validación con usuarios reales**", "No se midió la experiencia de uso del panel ni se aplicó instrumento alguno", "Alta"],
-        ["**La partición mide repetición, no generalización**", "Los 44 perfiles aparecen en las tres particiones; no existe jornada de holdout externa", "Alta"],
-        ["**Validación interna, no externa**", "Hay 5 pliegues agrupados por episodio normal y bootstrap por episodio (B = 1 000; CV del umbral 4,10 %), pero se reutilizan las mismas anomalías y no existe jornada externa", "Media"],
-        ["**Las 8 variables L7 nuevas no aportan detección**", "La ablación las midió: p = 1,000 y **5 falsos positivos adicionales**", "Media"],
-    ], [5.0, 9.2, 2.2], fondos=[F_RED, F_RED, F_AMBER, F_AMBER, F_ZEBRA, F_ZEBRA])
-    figura(doc, "C1-fpr-offline-vs-operativo.png",
-           "Figura 2. El hallazgo más importante: el error sobre tráfico legítimo medido en "
-           "laboratorio no se reproduce en operación real.", ancho=11.0)
+    h1(doc, "2 ·", "Lo que NO está listo")
+    par(doc, "Solo lo que sigue abierto hoy. **Lo ya resuelto está en la sección 1 y no se repite "
+             "aquí.** Las cinco están medidas, no supuestas.")
+    tabla(doc, ["Qué falta", "Evidencia de que falta", "Gravedad"], [
+        ["**El sistema bloquea tráfico legítimo pesado**", "En laboratorio se equivoca el 4,71 % de las veces; en operación, 25,81 % y 22,97 %. Una transferencia legítima de 200 Mbit/s bloqueó a un cliente real durante 120 s", "Crítica"],
+        ["**El modelo se eligió mirando el examen final**", "Se compararon 7 candidatos sobre el mismo conjunto de prueba y se escogió el mejor. El 88,8 % es un máximo, no una estimación limpia", "Crítica"],
+        ["**Nadie ha usado el panel salvo el equipo**", "El instrumento SUS está preparado, pero el archivo de respuestas tiene 0 filas: no se ha aplicado", "Alta"],
+        ["**No se sabe si funciona en otra jornada**", "Los 44 perfiles aparecen en las tres particiones. Falta una captura nueva que el modelo no haya visto", "Alta"],
+        ["**Faltan 4 escenarios legítimos del jurado**", "SSH, SCP/SFTP, backup y actualizaciones no están en el dataset", "Media"],
+    ], [5.2, 9.0, 2.2], fondos=[F_RED, F_RED, F_AMBER, F_AMBER, F_ZEBRA])
 
     # ---------------------------------------------------------------- 3
-    h1(doc, "3 ·", "Cómo se va a abordar lo que falta")
-    par(doc, "**Ya resuelto**, sin capturar datos nuevos ni reentrenar el modelo congelado:")
-    tabla(doc, ["Acción ejecutada", "Qué cerró"], [
-        ["Intervalos de Wilson en toda proporción y **McNemar con corrección de Holm** sobre 21 comparaciones", "Ausencia de medidas de incertidumbre y de pruebas de significancia"],
-        ["**Ablación por capas y comparación 14 vs 28**, con la configuración completa reproduciendo el modelo congelado bit a bit", "Requisito explícito del jurado, antes sin ejecutar"],
-        ["**Diccionario científico de las 28 variables**, generado desde el extractor congelado", "Requisito explícito del jurado"],
-        ["Dataset, manifiesto y **7 modelos publicados** con checksums y licencias", "Imposibilidad de replicar desde un clon"],
-        ["*Datasheet*, *model card* y *system card*", "Ausencia de documentación canónica"],
-        ["**Declaración explícita de la selección posterior** del modelo", "Objeción metodológica principal, ahora declarada"],
-        ["**Validación cruzada agrupada y bootstrap por episodio**", "Variación interna del modelo y del umbral; no sustituyen una evaluación externa"],
-    ], [8.6, 7.8], fondos=[F_OK] * 7)
+    h1(doc, "3 ·", "Cómo se va a abordar")
+    par(doc, "Una acción por cada fila de la sección 2, en el mismo orden. Todas caben en el "
+             "laboratorio actual: **ninguna exige equipo ni presupuesto nuevo**.")
+    tabla(doc, ["Qué falta", "Qué se hará", "¿Lo resuelve del todo?"], [
+        ["Bloquea tráfico legítimo pesado", "Reentrenar incluyendo la transferencia de 200 Mbit/s como tráfico **normal** y repetir las 29 corridas de validación", "Sí, si el error baja. Si no baja, queda declarado como límite del sistema"],
+        ["Modelo elegido mirando el examen", "Recolectar una jornada nueva que el modelo no vea nunca, y medir sobre ella", "Sí. Es la única corrección real; no se puede arreglar escribiendo"],
+        ["Nadie ha usado el panel", "Sesión de 2 h con 5–8 evaluadores usando el instrumento SUS ya preparado", "Sí"],
+        ["No sabemos si funciona otro día", "La misma jornada nueva de la fila 2 sirve para las dos cosas", "Sí"],
+        ["Faltan 4 escenarios legítimos", "Una campaña F1 más: SSH, SCP/SFTP, backup y actualizaciones", "Sí"],
+    ], [4.4, 7.4, 4.8])
     # -------------------------------------------------------- cronograma
     h1(doc, "4 ·", "En qué tiempo: cronograma comprometido")
     par(doc, "*Propuesta del equipo del 2 de septiembre de 2026, pendiente del visto bueno de los "
