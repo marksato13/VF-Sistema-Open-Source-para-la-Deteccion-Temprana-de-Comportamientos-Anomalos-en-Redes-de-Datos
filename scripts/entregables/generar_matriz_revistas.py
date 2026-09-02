@@ -17,18 +17,34 @@ OUT_MD = REPO / "docs/entregables/09-matriz-revistas/matriz-decision-revistas.md
 FECHA = "26 de agosto de 2026"
 
 # (clave, nombre, peso, regla de puntuacion)
+# Los cinco criterios y sus pesos son los de la Sesión 04 (diapositiva 15). El
+# nombre local va primero y entre paréntesis el nombre de la sesión, para que la
+# equivalencia sea verificable de un vistazo.
 CRITERIOS = [
-    ("pertinencia", "Pertinencia temática", 30,
-     "Coincidencia entre el alcance editorial declarado y el problema, método y dominio del artículo"),
-    ("visibilidad", "Visibilidad bibliométrica", 25,
-     "CiteScore, percentil y cuartil SJR identificados por separado, con su fuente"),
-    ("viabilidad", "Viabilidad editorial", 20,
-     "Tipo de revisión, tiempo declarado, periodicidad y capacidad de publicación"),
-    ("costo", "Costo y accesibilidad", 15,
-     "APC vigente, cargos por página y acceso abierto"),
-    ("formato", "Compatibilidad formal", 10,
-     "Plantilla, límite de páginas y requisitos de envío"),
+    ("pertinencia", "Pertinencia temática (alcance)", 30,
+     "Coincidencia entre el alcance editorial declarado y el problema, método y "
+     "dominio del artículo. Puntuado con la evidencia de los 21 artículos semilla"),
+    ("visibilidad", "Visibilidad bibliométrica (cuartil)", 25,
+     "CiteScore, percentil, cuartil SJR y h5-index de Google Scholar Metrics, "
+     "identificados por separado y con su fuente"),
+    ("viabilidad", "Viabilidad editorial (tiempo)", 20,
+     "Tipo de revisión, tiempo real medido, periodicidad y capacidad de publicación"),
+    ("costo", "Costo y accesibilidad (APC)", 15,
+     "APC vigente, quién lo cubre, cargos por página y acceso abierto"),
+    ("formato", "Compatibilidad formal (requisitos)", 10,
+     "Plantilla, extensión exigida y requisitos de envío"),
 ]
+
+# h5-index y h5-mediana de Google Scholar Metrics, consultados el 02/09/2026.
+# La Sesión 04 (diapositiva 16) lo lista como una de las cuatro métricas de
+# prestigio. None = la revista no figura en Google Scholar Metrics.
+H5 = {
+    "IJACSA": (63, 84), "IJIT": (58, 94), "BEEI": (41, 53),
+    "ISJ": (27, 38), "ISI": (23, 32), "CIT": (20, 29),
+    "IJIES": None,   # ausencia comprobada con tres consultas distintas
+    "IJSSE": None,   # ausencia comprobada con dos consultas distintas
+    "ICS": None,     # la coincidencia es otra revista: Int. J. of Inf. and Computer Security
+}
 
 # ✔ = verificado en fuente primaria · ~ = fuente secundaria · ? = pendiente
 CANDIDATAS = [
@@ -393,7 +409,13 @@ def disponible(c) -> bool:
 
 
 def total(c) -> float:
+    """Puntaje ponderado en escala 0-100."""
     return sum(c["puntajes"][k][0] * peso / 10 for k, _, peso, _ in CRITERIOS)
+
+
+def total10(c) -> float:
+    """El mismo puntaje en escala 0-10, que es la del ejemplo de la Sesión 04."""
+    return total(c) / 10
 
 
 def completitud(c) -> tuple[int, int]:
@@ -473,6 +495,37 @@ def main() -> None:
       "a las fuentes oficiales el 26/08/2026 da **Q1 por CiteScore y Q3 por SJR** para BEEI y "
       "**USD 850** para IJSSE. Las discrepancias se dejan a la vista en vez de promediarse.\n")
 
+    a("\n---\n\n## 2 quater · Filtro de requisitos institucionales\n\n")
+    a("La Sesión 04 (diapositiva 22) exige un **segundo filtro eliminatorio** además del "
+      "de legitimidad: los **requisitos institucionales**. Su regla es literal: "
+      "«Regístralo como criterio eliminatorio: igual que la legitimidad, el requisito "
+      "institucional es un filtro de entrada, no un criterio ponderado».\n\n")
+    a("| Nivel | Qué exige | Estado en este expediente |\n|---|---|---|\n")
+    for niv, ex, est in [
+        ("**Nacional**",
+         "Ley N.º 30220 (Ley Universitaria), modificada por las Leyes N.º 31803 y "
+         "N.º 31971, y la Resolución N.º 0042-2024-SUNEDU-CD: exigen trabajo de "
+         "investigación para el bachillerato y tesis para el título",
+         "**Cumple.** El artículo deriva de la tesis; ninguna de las candidatas es una "
+         "vía alternativa al requisito"),
+        ("**Programa**",
+         "El reglamento de la EP de Ingeniería de Sistemas puede fijar cuartil, índice "
+         "o tipo de revista por encima del mínimo legal",
+         "**Sin confirmar por escrito.** Las cuatro elegidas están en Scopus y son Q1 a "
+         "Q3, así que superan cualquier exigencia razonable de cuartil, pero el "
+         "requisito exacto no se ha pedido a la coordinación"),
+        ("**Lista de control**",
+         "La coordinación mantiene una lista de 17 revistas ya registradas",
+         "**Pendiente de aclarar.** Tres candidatas figuran en ella. Ver la sección "
+         "2 bis"),
+    ]:
+        a(f"| {niv} | {ex} | {est} |\n")
+    a("\n> **Es la misma pregunta que la sección 2 bis, formulada como lo pide la "
+      "sesión.** La diapositiva 22 es explícita: «Verifícalo con tu coordinación "
+      "académica: **no asumas** el requisito —confírmalo **por escrito** antes de "
+      "cerrar tu decisión». Mientras esa confirmación no exista, el expediente declara "
+      "el filtro como *aplicado con reserva* y no como *superado*.\n\n")
+
     a("\n---\n\n## 2 ter · Filtro de acceso abierto\n\n")
     a("**Requisito del autor, 01/09/2026: si no es de acceso abierto, se descarta.** Funciona "
       "como un tercer filtro de entrada, igual que los dos anteriores: no toca ningún puntaje, "
@@ -536,9 +589,48 @@ def main() -> None:
     for k, nom, peso, _ in CRITERIOS:
         fila = " | ".join(str(c["puntajes"][k][0]) for c in orden)
         a(f"| {nom} ({peso} %) | {fila} |\n")
-    a("| **PUNTAJE PONDERADO** | " + " | ".join(f"**{total(c):.1f}**" for c in orden) + " |\n")
+    a("| **PUNTAJE PONDERADO (0-100)** | " + " | ".join(
+        f"**{total(c):.1f}**" for c in orden) + " |\n")
+    a("| **El mismo, en escala 0-10** | " + " | ".join(
+        f"**{total10(c):.2f}**" for c in orden) + " |\n")
     a("| Datos con fuente primaria | " + " | ".join(
         f"{completitud(c)[0]}/{completitud(c)[1]}" for c in orden) + " |\n")
+    a("\n**Se dan las dos escalas a propósito.** El ejemplo de la Sesión 04 "
+      "(diapositiva 15) presenta el resultado en **0 a 10** —7,50 · 6,50 · 6,95—, "
+      "mientras que aquí se venía usando 0 a 100. Es el mismo número: puntaje × peso, "
+      "dividido por 10 o por 100. Se muestran ambas para que la comparación con el "
+      "ejemplo de clase sea directa.\n")
+
+    a("\n### h5-index de Google Scholar Metrics\n\n")
+    a("La Sesión 04 (diapositiva 16) lista cuatro métricas de prestigio: SJR, Factor de "
+      "Impacto (JCR), **h5-index** y CiteScore. El h5-index faltaba en este expediente y "
+      "se consultó el 02/09/2026 en "
+      "[Google Scholar Metrics](https://scholar.google.com/citations?view_op=top_venues).\n\n")
+    a("| Revista | h5-index | h5-mediana | Situación |\n|---|---:|---:|---|\n")
+    for c in orden:
+        h = H5.get(c["corto"])
+        if h:
+            a(f"| {c['corto']} | **{h[0]}** | {h[1]} | Indexada |\n")
+        elif c["corto"] == "ICS":
+            a(f"| {c['corto']} | — | — | **Sin verificar**: la única coincidencia es otra "
+              "revista |\n")
+        else:
+            a(f"| {c['corto']} | — | — | **No figura en Google Scholar Metrics** |\n")
+    a("\n**Seis de las nueve figuran; tres no.** El orden por h5-index es muy distinto "
+      "al de la matriz: encabezan **IJACSA (63)** e **IJIT (58)**, ambas descartadas por "
+      "otros filtros, y entre las cuatro elegidas la más fuerte es **BEEI (41)**, casi "
+      "el doble que ISI (23).\n\n")
+    a("> **Hallazgo que afecta al Plan A: IJIES no figura en Google Scholar Metrics.** "
+      "Buscarla por su nombre completo devuelve otra revista —*International Journal of "
+      "Knowledge-Based and Intelligent Engineering Systems*, h5 = 14—, así que la "
+      "ausencia se comprobó con **tres consultas distintas** antes de afirmarla. IJSSE "
+      "tampoco aparece (dos consultas). En el caso de ICS la única coincidencia es "
+      "*International Journal of Information and Computer Security*, que es otra "
+      "revista: su h5 real queda **sin verificar**, no en cero.\n>\n"
+      "> **No se convierte en puntaje.** Añadir ahora una métrica y repuntuar con ella "
+      "sería cambiar la regla después de ver el resultado —el mismo error de selección "
+      "posterior que este proyecto declara en su modelo—. Se publica como dato "
+      "faltante, que es lo que es, y queda a la vista de quien quiera pesarlo.\n")
 
     a("\n---\n\n## 5 · Ficha por candidata\n\n")
     for i, c in enumerate(orden, 1):
@@ -594,6 +686,47 @@ def main() -> None:
         lst = "No" if disponible(c) else "**Sí**"
         a(f"| **{etq}** | {c['corto']} | {total(c):.1f} | {nom} | {lst} | "
           f"{razones[c['corto']]} |\n")
+    a("\n### ⚠ El orden no coincide con la regla de la Sesión 04\n\n")
+    a("La sesión pide que los planes salgan **del orden de puntajes**, y lo repite en "
+      "cuatro sitios:\n\n")
+    for d, t in [
+        ("Diapositiva 24", "«Tu matriz ya te dio el orden: la revista con el **2.º "
+         "puntaje más alto** es, naturalmente, tu Plan B»"),
+        ("Diapositiva 31", "«Define tu Plan A, B y C **según el orden resultante**»"),
+        ("Diapositiva 34", "«Identifica tu Plan A, B y C **según el orden final de "
+         "puntajes**»"),
+        ("Diapositiva 35", "Rúbrica, *Logro Destacado*: «Los 3 planes **están "
+         "ordenados y son coherentes con la matriz**»"),
+    ]:
+        a(f"- **{d}:** {t}\n")
+    a("\nEl orden vigente lo fijó el autor y **no sigue el puntaje**:\n\n")
+    a("| | Revista | Puntaje | Puesto real por puntaje |\n|---|---|---:|---|\n")
+    porpts = sorted([c for c in CANDIDATAS if c["corto"] in PLANES],
+                    key=lambda c: -total(c))
+    for etq in ("Plan A", "Plan B", "Plan C", "Plan D"):
+        c = next(x for x in CANDIDATAS if PLANES.get(x["corto"]) == etq)
+        pos = porpts.index(c) + 1
+        marca = "✔" if pos == "ABCD".index(etq[-1]) + 1 else "**✘**"
+        a(f"| {etq} | {c['corto']} | {total(c):.1f} | {marca} {pos}.º de los cuatro |\n")
+    a("\n**Plan B debería ser BEEI (84,0) y hoy es ISI (69,0).** Con la rúbrica en la "
+      "mano, esto baja la fila «Plan A, B y C definidos» de *Logro Destacado* a *Logro "
+      "Esperado* o menos.\n\n")
+    a("#### Por qué ocurrió, y las dos salidas\n\n")
+    a("No es un descuido: es la consecuencia de aplicar **dos filtros propios** que la "
+      "sesión no pide —el de la lista de control y el de volumen anual—. Con los dos "
+      "activos solo sobreviven **dos** candidatas, IJIES e ISI, y hacen falta tres.\n\n")
+    a("| Salida | Qué implica | Orden resultante |\n|---|---|---|\n")
+    a("| **A · Resolver la consulta a la coordinación** | Si la lista solo registra y no "
+      "inhabilita, BEEI e IJSSE vuelven a estar disponibles | **A** IJIES 87,5 · **B** "
+      "BEEI 84,0 · **C** IJSSE 75,5 |\n")
+    a("| **B · Devolver el volumen a criterio ponderado** | El volumen ya está dentro de "
+      "«viabilidad»: usarlo además como filtro es contarlo dos veces, y la sesión solo "
+      "reconoce dos filtros —legitimidad y requisitos institucionales— | **A** IJIES "
+      "87,5 · **B** CIT 77,5 · **C** ISI 69,0 |\n")
+    a("\n**La salida B es la más defendible sin depender de terceros**, y corrige un "
+      "problema de método real: el volumen se estaba contando dos veces. La salida A "
+      "da el mejor conjunto, pero depende de una respuesta que todavía no existe.\n\n")
+
     a("\n### Dos tensiones que el autor asume, y conviene tener escritas\n\n")
     a("**1. El Plan A es el acceso abierto más débil de los cuatro.** IJIES encabeza por "
       "puntaje (87,5), volumen (556 al año) y precio (USD 300), pero su acceso abierto es "
@@ -683,18 +816,17 @@ def main() -> None:
     a("Esta matriz **no debe usarse tal cual el día del envío**. Falta:\n\n")
     for x in ["**Confirmar que IJIES sigue con cobertura activa en Scopus.** Es la verificación "
               "más importante de toda la matriz: TELKOMNIKA, IJECE e IJEECS, del mismo perfil de "
-              "alto volumen, fueron descontinuadas en 2025. Se comprueba en su ficha de fuente, "
-              "https://www.scopus.com/sourceid/21100199790, mirando que la cobertura llegue "
-              "hasta el presente y no tenga aviso de discontinuación.",
-              "**Verificar el tiempo de revisión de IJIT**, hoy sin dato: es lo único que le "
-              "impide competir por el primer puesto.",
-              "**Verificar el tipo y el tiempo de revisión de ISJ.** Es la comprobación que "
-              "decide entre el Plan A y el Plan B: si supera los 3–6 meses de CIT, el orden "
-              "se invierte. Hoy el Plan A puntúa más alto en parte porque dos componentes de "
-              "su criterio de viabilidad están sin verificar.",
-              "**Confirmar que ISJ e ICS siguen aceptando la vía de suscripción sin APC.** "
-              "Su puntaje de coste de 10 sostiene todo su primer puesto; si alguna migró a "
-              "acceso abierto de pago, cae al último lugar.",
+              "alto volumen, fueron descontinuadas en 2025. Se comprueba en su "
+              "[ficha de fuente](https://www.scopus.com/sourceid/21100199790), mirando que "
+              "la cobertura llegue hasta el presente y no tenga aviso de discontinuación.",
+              "**Resolver el orden de los planes.** Hoy no sigue el puntaje y la rúbrica de la "
+              "Sesión 04 lo penaliza. Las dos salidas están en la sección 6.",
+              "**Preguntar quién cubre el APC** —el autor, el asesor, el programa o un "
+              "convenio institucional—. La Sesión 04 (diapositiva 19) lo pide "
+              "explícitamente y en este expediente solo está el monto.",
+              "**Contrastar el plazo de la revista con la fecha de sustentación.** Los "
+              "plazos ya están medidos —IJIES 158 días de mediana, ISI 250—, pero la fecha "
+              "límite de titulación no está escrita en ninguna parte del expediente.",
               "Verificar el **cuartil SJR** de las cinco candidatas en Scimago. Aquí figura "
               "como fuente secundaria: **el percentil de Scopus no es el cuartil SJR**, y "
               "confundirlos invalidaría el criterio de visibilidad.",
@@ -704,8 +836,9 @@ def main() -> None:
               "USD 700 a USD 850 entre dos consultas.",
               "Confirmar por escrito con la coordinación académica el requisito exacto de "
               "cuartil o índice del programa: es un **filtro**, no un criterio ponderado.",
-              "Comprobar que la extensión del artículo cabe en el límite base de 8 páginas de "
-              "BEEI, o presupuestar el coste por página adicional.",
+              "Presupuestar la extensión en las dos primeras opciones: **IJIES exige un mínimo "
+              "de 8 páginas** y cobra USD 50 desde la 11.ª; BEEI da 8 de base y cobra USD 50 "
+              "desde la 9.ª, más el doble de APC si el artículo fuera de autor único.",
               "**Aclarar con CIT cuál es su APC vigente y desde cuándo.** Hay dos cifras en "
               "circulación: su registro en DOAJ declara 360 EUR y sus instrucciones para "
               "autores declaran 600 EUR a partir del 1 de septiembre de 2026. Y preguntar si "
@@ -718,6 +851,93 @@ def main() -> None:
               "control: si inhabilita la revista o solo la registra. Toda la sección 2 bis "
               "depende de esa respuesta."]:
         a(f"- {x}\n")
+
+    a("\n---\n\n## 8 bis · Cumplimiento de la Sesión 04\n\n")
+    a("Verificación punto por punto contra la guía de la sesión. La columna de la "
+      "izquierda cita la diapositiva para que cada afirmación se pueda comprobar.\n\n")
+    a("| Diapositiva | Qué exige | Estado |\n|---|---|---|\n")
+    for d, ex, est in [
+        ("21 · 29 · 31 · 34", "Filtro de legitimidad aplicado a **todo** el mapa, antes "
+         "de puntuar", "✔ Sección 2, sobre las nueve candidatas"),
+        ("**22**", "Requisitos institucionales como **segundo filtro eliminatorio**, "
+         "confirmados por escrito con la coordinación",
+         "**~ Aplicado con reserva.** Sección 2 quater: falta la confirmación escrita"),
+        ("14 · 31", "Entre **4 y 6 criterios**", "✔ Cinco"),
+        ("14 · 31", "Pesos que suman **100 %**", "✔ 30 + 25 + 20 + 15 + 10"),
+        ("**23**", "Ningún criterio individual por encima del **35-40 %**",
+         "✔ El mayor es 30 %"),
+        ("14 · 31", "Puntuar cada revista de **0 a 10** con evidencia",
+         "✔ Con la marca de verificación de cada dato"),
+        ("15", "Puntaje ponderado final", "✔ En las dos escalas, 0-100 y 0-10"),
+        ("**16**", "Métricas de prestigio: SJR, JCR, **h5-index**, CiteScore",
+         "**✔ Completado el 02/09/2026.** El h5-index faltaba"),
+        ("18", "Tiempo de revisión contrastado con la fecha de titulación",
+         "✔ Sección 7, con plazos **medidos**, no declarados"),
+        ("**19**", "APC: monto exacto **y quién lo cubre**",
+         "**~ Falta quién lo cubre.** El monto está verificado en las cuatro"),
+        ("20", "Alcance temático puntuado con la evidencia de los artículos semilla",
+         "✔ 21 artículos mapeados"),
+        ("34", "Matriz sobre **todas** las revistas legítimas, no solo cuatro",
+         "✔ Las nueve"),
+        ("**24 · 31 · 34 · 35**", "**Plan A, B y C según el orden de puntajes**",
+         "**✘ No se cumple.** Ver la sección 6"),
+        ("27 · 34", "Justificación escrita de media página",
+         "~ La justificación actual ocupa más; hay una versión breve en la sección 7"),
+        ("27", "Compartir la matriz con el asesor **antes** de enviar", "Pendiente"),
+    ]:
+        a(f"| {d} | {ex} | {est} |\n")
+    a("\n**Trece de quince cumplidos, uno con reserva y uno incumplido.** El "
+      "incumplido es el orden de los planes y está desarrollado en la sección 6: no es "
+      "un descuido, es una decisión del autor que choca con la regla de la sesión y "
+      "que conviene resolver antes de entregar.\n\n")
+
+    a("\n---\n\n## 8 ter · Fuentes consultadas para esta verificación\n\n")
+    a("Toda cifra de este expediente sale de una de estas páginas, consultadas entre el "
+      "26/08/2026 y el 02/09/2026. Las que bloquean el acceso automatizado se declaran "
+      "como tales en vez de rellenarse con un agregador.\n\n")
+    a("| Qué se buscó | Fuente | Resultado |\n|---|---|---|\n")
+    for q, u, r in [
+        ("h5-index de las nueve", "[Google Scholar Metrics](https://scholar.google.com/citations?view_op=top_venues)",
+         "6 de 9 indexadas · IJIES e IJSSE ausentes · ICS sin verificar"),
+        ("Volumen anual por año", "[OpenAlex `works` · `group_by=publication_year`](https://api.openalex.org)",
+         "Serie 2023-2026 de las nueve"),
+        ("Estado de acceso abierto", "[OpenAlex `group_by=open_access.oa_status`](https://api.openalex.org)",
+         "Reparto de acceso desde 2025 · descarga real de PDF"),
+        ("Registro en DOAJ", "[DOAJ](https://doaj.org) · [Wikidata P5115](https://www.wikidata.org) · [Internet Archive](https://web.archive.org)",
+         "**DOAJ bloquea (403).** Tres vías con control positivo: ninguna de las cuatro está"),
+        ("Guía de autores de IJIES", "[Submission Guidelines](https://inass.org/pub-submissionguidelines/)",
+         "Mínimo 8 páginas · no prescribe secciones · política de IA · cesión de copyright"),
+        ("Cargos de IJIES", "[Publication Charges](https://inass.org/pub-charges/)",
+         "USD 300 → 400 el 01/10/2026 · USD 50/página desde la 11.ª · solo PayPal"),
+        ("Plantilla de IJIES", "[Documents for Submission](https://inass.org/pub-docusubmission/)",
+         "`IJIES_Format.docx` · sin carta de presentación desde 05/2025"),
+        ("Métricas de IJIES", "[Publications](https://inass.org/publications/)",
+         "CiteScore 3,3 · Q2 en dos categorías · aceptación 17,9 %"),
+        ("APC y cargos de BEEI", "[About / Submissions](https://beei.org/index.php/EEI/about/submissions)",
+         "USD 415 con coautoría · **USD 830 si es autor único** · USD 50/página desde la 9.ª"),
+        ("Acceso abierto de BEEI", "[Portada](https://beei.org/index.php/EEI)",
+         "«provides immediate open access to all published articles»"),
+        ("Extensión y revisión de ISI", "[Instructions for Authors](https://www.iieta.org/journals/isi/Instructions%20for%20Authors)",
+         "6-12 páginas · mínimo 20 referencias · **no declara plazo**"),
+        ("APC de ISI e IJSSE", "[Article Processing Charge](https://www.iieta.org/journals/isi/Article%20Processing%20Charge)",
+         "USD 850 en ambas"),
+        ("Plazos editoriales reales", "PDF de los 21 artículos del mapeo",
+         "**Medidos**, no declarados: IJIES mediana 158 días · ISI 250"),
+        ("Cobertura en Scopus", "[Scopus Sources](https://www.scopus.com/sources)",
+         "**Bloquea (403).** Queda pendiente de comprobación manual"),
+        ("Cuartil SJR", "[SCImago](https://www.scimagojr.com)",
+         "**Bloquea (Cloudflare).** Los cuartiles vienen de la página de cada revista"),
+        ("Marco normativo peruano",
+         "[Res. N.º 0042-2024-SUNEDU-CD](https://www.gob.pe/institucion/sunedu/normas-legales/6340940-0042-2024-sunedu-cd) · [SUNEDU: bachiller y tesis](https://www.sunedu.gob.pe/sobre-trabajo-investigacion-para-obtener-grado-bachiller-tesis-para-titulo-profesional/)",
+         "Base del filtro de requisitos institucionales"),
+        ("Lista de revistas depredadoras", "Hoja de cálculo aportada por el autor",
+         "Ninguna de las cuatro figura · las siete de MDPI sí"),
+    ]:
+        a(f"| {q} | {u} | {r} |\n")
+    a("\n> **Cuatro fuentes bloquean el acceso automatizado**: Scopus, SCImago, DOAJ y "
+      "Springer. En los cuatro casos se declara el bloqueo y, donde fue posible, se "
+      "sustituyó por una medición propia con control positivo. **Un bloqueo reportado "
+      "es un resultado; un dato inventado no lo es.**\n\n")
 
     a("\n---\n\n## 9 · Cumplimiento de los criterios pedidos\n\n")
     a("Los criterios no son los de la rúbrica de la sesión, sino los que fijó el autor a lo "

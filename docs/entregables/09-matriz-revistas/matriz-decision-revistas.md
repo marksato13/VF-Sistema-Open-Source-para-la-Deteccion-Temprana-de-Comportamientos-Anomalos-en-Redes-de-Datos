@@ -79,6 +79,21 @@ La coordinación mantiene una **lista de control de artículos** con 17 revistas
 
 ---
 
+## 2 quater · Filtro de requisitos institucionales
+
+La Sesión 04 (diapositiva 22) exige un **segundo filtro eliminatorio** además del de legitimidad: los **requisitos institucionales**. Su regla es literal: «Regístralo como criterio eliminatorio: igual que la legitimidad, el requisito institucional es un filtro de entrada, no un criterio ponderado».
+
+| Nivel | Qué exige | Estado en este expediente |
+|---|---|---|
+| **Nacional** | Ley N.º 30220 (Ley Universitaria), modificada por las Leyes N.º 31803 y N.º 31971, y la Resolución N.º 0042-2024-SUNEDU-CD: exigen trabajo de investigación para el bachillerato y tesis para el título | **Cumple.** El artículo deriva de la tesis; ninguna de las candidatas es una vía alternativa al requisito |
+| **Programa** | El reglamento de la EP de Ingeniería de Sistemas puede fijar cuartil, índice o tipo de revista por encima del mínimo legal | **Sin confirmar por escrito.** Las cuatro elegidas están en Scopus y son Q1 a Q3, así que superan cualquier exigencia razonable de cuartil, pero el requisito exacto no se ha pedido a la coordinación |
+| **Lista de control** | La coordinación mantiene una lista de 17 revistas ya registradas | **Pendiente de aclarar.** Tres candidatas figuran en ella. Ver la sección 2 bis |
+
+> **Es la misma pregunta que la sección 2 bis, formulada como lo pide la sesión.** La diapositiva 22 es explícita: «Verifícalo con tu coordinación académica: **no asumas** el requisito —confírmalo **por escrito** antes de cerrar tu decisión». Mientras esa confirmación no exista, el expediente declara el filtro como *aplicado con reserva* y no como *superado*.
+
+
+---
+
 ## 2 ter · Filtro de acceso abierto
 
 **Requisito del autor, 01/09/2026: si no es de acceso abierto, se descarta.** Funciona como un tercer filtro de entrada, igual que los dos anteriores: no toca ningún puntaje, decide quién sigue en carrera.
@@ -124,11 +139,11 @@ Las tres vías coinciden y el control se detecta en las tres. **Ninguna de las c
 
 | Criterio | Peso | Regla de puntuación |
 |---|---:|---|
-| Pertinencia temática | 30 % | Coincidencia entre el alcance editorial declarado y el problema, método y dominio del artículo |
-| Visibilidad bibliométrica | 25 % | CiteScore, percentil y cuartil SJR identificados por separado, con su fuente |
-| Viabilidad editorial | 20 % | Tipo de revisión, tiempo declarado, periodicidad y capacidad de publicación |
-| Costo y accesibilidad | 15 % | APC vigente, cargos por página y acceso abierto |
-| Compatibilidad formal | 10 % | Plantilla, límite de páginas y requisitos de envío |
+| Pertinencia temática (alcance) | 30 % | Coincidencia entre el alcance editorial declarado y el problema, método y dominio del artículo. Puntuado con la evidencia de los 21 artículos semilla |
+| Visibilidad bibliométrica (cuartil) | 25 % | CiteScore, percentil, cuartil SJR y h5-index de Google Scholar Metrics, identificados por separado y con su fuente |
+| Viabilidad editorial (tiempo) | 20 % | Tipo de revisión, tiempo real medido, periodicidad y capacidad de publicación |
+| Costo y accesibilidad (APC) | 15 % | APC vigente, quién lo cubre, cargos por página y acceso abierto |
+| Compatibilidad formal (requisitos) | 10 % | Plantilla, extensión exigida y requisitos de envío |
 | **Total** | **100 %** | |
 
 **Fórmula:** `aporte = puntaje × peso / 10`, con puntajes de 0 a 10 y total sobre 100.
@@ -141,13 +156,38 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 | Criterio (peso) | IJIES | BEEI | ISJ | IJIT | CIT | IJSSE | ICS | IJACSA | ISI |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Pertinencia temática (30 %) | 9 | 9 | 9 | 8 | 9 | 9 | 6 | 6 | 7 |
-| Visibilidad bibliométrica (25 %) | 8 | 8 | 8 | 7 | 9 | 6 | 9 | 8 | 7 |
-| Viabilidad editorial (20 %) | 10 | 9 | 6 | 8 | 5 | 9 | 6 | 10 | 8 |
-| Costo y accesibilidad (15 %) | 9 | 8 | 10 | 10 | 6 | 5 | 10 | 3 | 5 |
-| Compatibilidad formal (10 %) | 7 | 7 | 7 | 7 | 9 | 8 | 6 | 7 | 7 |
-| **PUNTAJE PONDERADO** | **87.5** | **84.0** | **81.0** | **79.5** | **77.5** | **75.5** | **73.5** | **69.5** | **69.0** |
+| Pertinencia temática (alcance) (30 %) | 9 | 9 | 9 | 8 | 9 | 9 | 6 | 6 | 7 |
+| Visibilidad bibliométrica (cuartil) (25 %) | 8 | 8 | 8 | 7 | 9 | 6 | 9 | 8 | 7 |
+| Viabilidad editorial (tiempo) (20 %) | 10 | 9 | 6 | 8 | 5 | 9 | 6 | 10 | 8 |
+| Costo y accesibilidad (APC) (15 %) | 9 | 8 | 10 | 10 | 6 | 5 | 10 | 3 | 5 |
+| Compatibilidad formal (requisitos) (10 %) | 7 | 7 | 7 | 7 | 9 | 8 | 6 | 7 | 7 |
+| **PUNTAJE PONDERADO (0-100)** | **87.5** | **84.0** | **81.0** | **79.5** | **77.5** | **75.5** | **73.5** | **69.5** | **69.0** |
+| **El mismo, en escala 0-10** | **8.75** | **8.40** | **8.10** | **7.95** | **7.75** | **7.55** | **7.35** | **6.95** | **6.90** |
 | Datos con fuente primaria | 5/6 | 5/6 | 0/6 | 0/6 | 6/6 | 5/6 | 0/6 | 0/6 | 5/6 |
+
+**Se dan las dos escalas a propósito.** El ejemplo de la Sesión 04 (diapositiva 15) presenta el resultado en **0 a 10** —7,50 · 6,50 · 6,95—, mientras que aquí se venía usando 0 a 100. Es el mismo número: puntaje × peso, dividido por 10 o por 100. Se muestran ambas para que la comparación con el ejemplo de clase sea directa.
+
+### h5-index de Google Scholar Metrics
+
+La Sesión 04 (diapositiva 16) lista cuatro métricas de prestigio: SJR, Factor de Impacto (JCR), **h5-index** y CiteScore. El h5-index faltaba en este expediente y se consultó el 02/09/2026 en [Google Scholar Metrics](https://scholar.google.com/citations?view_op=top_venues).
+
+| Revista | h5-index | h5-mediana | Situación |
+|---|---:|---:|---|
+| IJIES | — | — | **No figura en Google Scholar Metrics** |
+| BEEI | **41** | 53 | Indexada |
+| ISJ | **27** | 38 | Indexada |
+| IJIT | **58** | 94 | Indexada |
+| CIT | **20** | 29 | Indexada |
+| IJSSE | — | — | **No figura en Google Scholar Metrics** |
+| ICS | — | — | **Sin verificar**: la única coincidencia es otra revista |
+| IJACSA | **63** | 84 | Indexada |
+| ISI | **23** | 32 | Indexada |
+
+**Seis de las nueve figuran; tres no.** El orden por h5-index es muy distinto al de la matriz: encabezan **IJACSA (63)** e **IJIT (58)**, ambas descartadas por otros filtros, y entre las cuatro elegidas la más fuerte es **BEEI (41)**, casi el doble que ISI (23).
+
+> **Hallazgo que afecta al Plan A: IJIES no figura en Google Scholar Metrics.** Buscarla por su nombre completo devuelve otra revista —*International Journal of Knowledge-Based and Intelligent Engineering Systems*, h5 = 14—, así que la ausencia se comprobó con **tres consultas distintas** antes de afirmarla. IJSSE tampoco aparece (dos consultas). En el caso de ICS la única coincidencia es *International Journal of Information and Computer Security*, que es otra revista: su h5 real queda **sin verificar**, no en cero.
+>
+> **No se convierte en puntaje.** Añadir ahora una métrica y repuntuar con ella sería cambiar la regla después de ver el resultado —el mismo error de selección posterior que este proyecto declara en su modelo—. Se publica como dato faltante, que es lo que es, y queda a la vista de quien quiera pesarlo.
 
 ---
 
@@ -168,11 +208,11 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 | Criterio | Puntaje | Justificación |
 |---|:--:|---|
-| Pertinencia temática | **9** | Su alcance nombra ingeniería de redes y computación inteligente, pero lo que decide es su producción: **86 artículos desde 2024 con «intrusion detection», «anomaly detection» o «network security» en el título**. Ninguna otra candidata se acerca a ese volumen temático |
-| Visibilidad bibliométrica | **8** | CiteScore 3,3 y Q2 en sus dos categorías. Por debajo del 4,2 de BEEI y CIT, pero con cuartil verificado en la propia revista |
-| Viabilidad editorial | **10** | Mensual, con el mayor volumen de las candidatas de acceso abierto —556 al año, frente a 377 de BEEI— y publicación unos 2 meses después de aceptar. **Y publica su tasa de aceptación**, que ninguna otra hace: 17,9 % |
-| Costo y accesibilidad | **9** | USD 300 hoy y USD 400 desde octubre: el más bajo de todas las candidatas que cobran, por debajo incluso de los USD 415 de BEEI |
-| Compatibilidad formal | **7** | Plantilla propia obligatoria y **límite de 10 páginas**: la mitad que CIT. Este artículo pagaría páginas adicionales |
+| Pertinencia temática (alcance) | **9** | Su alcance nombra ingeniería de redes y computación inteligente, pero lo que decide es su producción: **86 artículos desde 2024 con «intrusion detection», «anomaly detection» o «network security» en el título**. Ninguna otra candidata se acerca a ese volumen temático |
+| Visibilidad bibliométrica (cuartil) | **8** | CiteScore 3,3 y Q2 en sus dos categorías. Por debajo del 4,2 de BEEI y CIT, pero con cuartil verificado en la propia revista |
+| Viabilidad editorial (tiempo) | **10** | Mensual, con el mayor volumen de las candidatas de acceso abierto —556 al año, frente a 377 de BEEI— y publicación unos 2 meses después de aceptar. **Y publica su tasa de aceptación**, que ninguna otra hace: 17,9 % |
+| Costo y accesibilidad (APC) | **9** | USD 300 hoy y USD 400 desde octubre: el más bajo de todas las candidatas que cobran, por debajo incluso de los USD 415 de BEEI |
+| Compatibilidad formal (requisitos) | **7** | Plantilla propia obligatoria y **límite de 10 páginas**: la mitad que CIT. Este artículo pagaría páginas adicionales |
 
 ### 2. Bulletin of Electrical Engineering and Informatics (BEEI) — 84.0 puntos
 
@@ -189,11 +229,11 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 | Criterio | Puntaje | Justificación |
 |---|:--:|---|
-| Pertinencia temática | **9** | Su alcance declara explícitamente redes de comunicaciones, seguridad de redes, aprendizaje automático y ciberseguridad: los cuatro ejes del artículo |
-| Visibilidad bibliométrica | **8** | CiteScore 4,2 y percentil 65, el más alto de las candidatas verificadas |
-| Viabilidad editorial | **9** | Bimestral con 76 artículos por número y ciclo declarado de 8 a 12 semanas. Su volumen anual (377) es menor que el de IJIES (556) |
-| Costo y accesibilidad | **8** | USD 415 con coautoría —USD 830 si fuera autor único—, por encima de los USD 300 de IJIES y por debajo de los USD 850 de ISI e IJSSE |
-| Compatibilidad formal | **7** | Plantilla disponible, pero el límite base de 8 páginas obliga a comprimir o a pagar por página adicional |
+| Pertinencia temática (alcance) | **9** | Su alcance declara explícitamente redes de comunicaciones, seguridad de redes, aprendizaje automático y ciberseguridad: los cuatro ejes del artículo |
+| Visibilidad bibliométrica (cuartil) | **8** | CiteScore 4,2 y percentil 65, el más alto de las candidatas verificadas |
+| Viabilidad editorial (tiempo) | **9** | Bimestral con 76 artículos por número y ciclo declarado de 8 a 12 semanas. Su volumen anual (377) es menor que el de IJIES (556) |
+| Costo y accesibilidad (APC) | **8** | USD 415 con coautoría —USD 830 si fuera autor único—, por encima de los USD 300 de IJIES y por debajo de los USD 850 de ISI e IJSSE |
+| Compatibilidad formal (requisitos) | **7** | Plantilla disponible, pero el límite base de 8 páginas obliga a comprimir o a pagar por página adicional |
 
 ### 3. Information Security Journal: A Global Perspective — 81.0 puntos
 
@@ -210,11 +250,11 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 | Criterio | Puntaje | Justificación |
 |---|:--:|---|
-| Pertinencia temática | **9** | Su alcance nombra seguridad de redes y control de acceso; publica trabajos sobre ataques SSH y denegación de servicio HTTP, las mismas familias del corpus |
-| Visibilidad bibliométrica | **8** | Mejor cuartil Q2 y h-index 33, el más alto tras Emerald |
-| Viabilidad editorial | **6** | **Corregido**: la cifra anterior de 21 artículos al año era falsa. El índice de dblp da 35–38, capacidad equivalente a la de CIT, repartida en 6 números al año en vez de 4. Baja de 10 porque el tipo y el tiempo de revisión siguen sin verificar: dos de los cuatro componentes del criterio |
-| Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción. El acceso abierto opcional cuesta USD 3.390, pero nadie está obligado a tomarlo |
-| Compatibilidad formal | **7** | Editorial mayor con formato estándar; requisitos concretos sin verificar |
+| Pertinencia temática (alcance) | **9** | Su alcance nombra seguridad de redes y control de acceso; publica trabajos sobre ataques SSH y denegación de servicio HTTP, las mismas familias del corpus |
+| Visibilidad bibliométrica (cuartil) | **8** | Mejor cuartil Q2 y h-index 33, el más alto tras Emerald |
+| Viabilidad editorial (tiempo) | **6** | **Corregido**: la cifra anterior de 21 artículos al año era falsa. El índice de dblp da 35–38, capacidad equivalente a la de CIT, repartida en 6 números al año en vez de 4. Baja de 10 porque el tipo y el tiempo de revisión siguen sin verificar: dos de los cuatro componentes del criterio |
+| Costo y accesibilidad (APC) | **10** | Sin APC obligatorio por la vía de suscripción. El acceso abierto opcional cuesta USD 3.390, pero nadie está obligado a tomarlo |
+| Compatibilidad formal (requisitos) | **7** | Editorial mayor con formato estándar; requisitos concretos sin verificar |
 
 ### 4. International Journal of Information Technology (IJIT) — 79.5 puntos
 
@@ -231,11 +271,11 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 | Criterio | Puntaje | Justificación |
 |---|:--:|---|
-| Pertinencia temática | **8** | Alcance amplio de tecnologías de la información, menos específico que IJIES, pero con **50 artículos desde 2024** cuyo título nombra detección de intrusiones, de anomalías o seguridad de redes |
-| Visibilidad bibliométrica | **7** | Q2 por SJR y respaldo de Springer Nature, pero CiteScore 2,6 está por debajo de IJIES y **el 90,8 % de sus artículos quedan tras el muro de pago**: la vía gratuita reduce el alcance real del trabajo |
-| Viabilidad editorial | **8** | Mensual y con el mayor volumen absoluto de las nueve —unos 640 artículos al año—, pero **su tiempo de revisión está sin verificar**: no se le puntúa 10 por un dato que no se conoce |
-| Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción. El acceso abierto opcional cuesta USD 3.390, pero nadie está obligado a tomarlo |
-| Compatibilidad formal | **7** | Formato estándar de Springer; requisitos concretos sin verificar |
+| Pertinencia temática (alcance) | **8** | Alcance amplio de tecnologías de la información, menos específico que IJIES, pero con **50 artículos desde 2024** cuyo título nombra detección de intrusiones, de anomalías o seguridad de redes |
+| Visibilidad bibliométrica (cuartil) | **7** | Q2 por SJR y respaldo de Springer Nature, pero CiteScore 2,6 está por debajo de IJIES y **el 90,8 % de sus artículos quedan tras el muro de pago**: la vía gratuita reduce el alcance real del trabajo |
+| Viabilidad editorial (tiempo) | **8** | Mensual y con el mayor volumen absoluto de las nueve —unos 640 artículos al año—, pero **su tiempo de revisión está sin verificar**: no se le puntúa 10 por un dato que no se conoce |
+| Costo y accesibilidad (APC) | **10** | Sin APC obligatorio por la vía de suscripción. El acceso abierto opcional cuesta USD 3.390, pero nadie está obligado a tomarlo |
+| Compatibilidad formal (requisitos) | **7** | Formato estándar de Springer; requisitos concretos sin verificar |
 
 ### 5. Cybernetics and Information Technologies (CIT) — 77.5 puntos
 
@@ -252,11 +292,11 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 | Criterio | Puntaje | Justificación |
 |---|:--:|---|
-| Pertinencia temática | **9** | Su alcance declara tecnologías de comunicación entre computadoras, aprendizaje profundo y automático, y reconocimiento de patrones. Lo decisivo no es el alcance sino lo que publica: entre 2024 y 2026 sacó detección de intrusiones con IA explicable, detección de intrusiones con redes convolucionales, detección de DDoS entre conjuntos de datos y una arquitectura de **detección y mitigación** de DDoS, que es el análogo más cercano al control inline de este proyecto entre todas las candidatas |
-| Visibilidad bibliométrica | **9** | Única candidata con cuartil **Q2 verificado en fuente primaria** y, a la vez, factor de impacto en Web of Science. CiteScore 4,2, igual al de BEEI, pero con SJR 0,456 frente al Q3 de BEEI |
-| Viabilidad editorial | **5** | El punto débil: 3–6 meses hasta la primera decisión, el plazo más largo del conjunto. Su capacidad, en cambio, es estable y comparable a la de ISJ e ICS: 46, 43 y 42 artículos en 2023, 2024 y 2025, contados sobre los PDF de cada número |
-| Costo y accesibilidad | **6** | 600 EUR desde septiembre de 2026, por debajo de los USD 850 de IJSSE pero por encima de los USD 415 de BEEI |
-| Compatibilidad formal | **9** | Límite de 20 páginas, frente a las 8 de BEEI: el artículo cabe entero sin pagar por página adicional. Plantilla oficial y envío por correo |
+| Pertinencia temática (alcance) | **9** | Su alcance declara tecnologías de comunicación entre computadoras, aprendizaje profundo y automático, y reconocimiento de patrones. Lo decisivo no es el alcance sino lo que publica: entre 2024 y 2026 sacó detección de intrusiones con IA explicable, detección de intrusiones con redes convolucionales, detección de DDoS entre conjuntos de datos y una arquitectura de **detección y mitigación** de DDoS, que es el análogo más cercano al control inline de este proyecto entre todas las candidatas |
+| Visibilidad bibliométrica (cuartil) | **9** | Única candidata con cuartil **Q2 verificado en fuente primaria** y, a la vez, factor de impacto en Web of Science. CiteScore 4,2, igual al de BEEI, pero con SJR 0,456 frente al Q3 de BEEI |
+| Viabilidad editorial (tiempo) | **5** | El punto débil: 3–6 meses hasta la primera decisión, el plazo más largo del conjunto. Su capacidad, en cambio, es estable y comparable a la de ISJ e ICS: 46, 43 y 42 artículos en 2023, 2024 y 2025, contados sobre los PDF de cada número |
+| Costo y accesibilidad (APC) | **6** | 600 EUR desde septiembre de 2026, por debajo de los USD 850 de IJSSE pero por encima de los USD 415 de BEEI |
+| Compatibilidad formal (requisitos) | **9** | Límite de 20 páginas, frente a las 8 de BEEI: el artículo cabe entero sin pagar por página adicional. Plantilla oficial y envío por correo |
 
 ### 6. International Journal of Safety and Security Engineering (IJSSE) — 75.5 puntos
 
@@ -273,11 +313,11 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 | Criterio | Puntaje | Justificación |
 |---|:--:|---|
-| Pertinencia temática | **9** | Declara seguridad informática, evaluación de amenazas, ciberseguridad y protección de infraestructura crítica; publica de forma habitual detección de intrusiones con aprendizaje automático |
-| Visibilidad bibliométrica | **6** | CiteScore 2,8 y percentil 60: por debajo de BEEI en ambos indicadores |
-| Viabilidad editorial | **9** | Doce números al año y revisión double-blind de unos dos meses |
-| Costo y accesibilidad | **5** | USD 850, el doble que BEEI |
-| Compatibilidad formal | **8** | Plantilla disponible y sin límite estrecho de páginas declarado |
+| Pertinencia temática (alcance) | **9** | Declara seguridad informática, evaluación de amenazas, ciberseguridad y protección de infraestructura crítica; publica de forma habitual detección de intrusiones con aprendizaje automático |
+| Visibilidad bibliométrica (cuartil) | **6** | CiteScore 2,8 y percentil 60: por debajo de BEEI en ambos indicadores |
+| Viabilidad editorial (tiempo) | **9** | Doce números al año y revisión double-blind de unos dos meses |
+| Costo y accesibilidad (APC) | **5** | USD 850, el doble que BEEI |
+| Compatibilidad formal (requisitos) | **8** | Plantilla disponible y sin límite estrecho de páginas declarado |
 
 ### 7. Information and Computer Security — 73.5 puntos
 
@@ -294,11 +334,11 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 | Criterio | Puntaje | Justificación |
 |---|:--:|---|
-| Pertinencia temática | **6** | Cubre la categoría de redes, pero su centro editorial se inclina a factores humanos, concienciación y cumplimiento de políticas: un artículo puramente técnico corre riesgo de quedar fuera de foco |
-| Visibilidad bibliométrica | **9** | h-index 60, el más alto de todas las candidatas |
-| Viabilidad editorial | **6** | Capacidad creciente y la mayor de las tres disponibles —34, 38 y 42 artículos en 2023, 2024 y 2025—, pero el tipo y el tiempo de revisión siguen sin verificar |
-| Costo y accesibilidad | **10** | Sin APC obligatorio por la vía de suscripción. El acceso abierto opcional cuesta USD 3.390, pero nadie está obligado a tomarlo |
-| Compatibilidad formal | **6** | Requisitos sin verificar |
+| Pertinencia temática (alcance) | **6** | Cubre la categoría de redes, pero su centro editorial se inclina a factores humanos, concienciación y cumplimiento de políticas: un artículo puramente técnico corre riesgo de quedar fuera de foco |
+| Visibilidad bibliométrica (cuartil) | **9** | h-index 60, el más alto de todas las candidatas |
+| Viabilidad editorial (tiempo) | **6** | Capacidad creciente y la mayor de las tres disponibles —34, 38 y 42 artículos en 2023, 2024 y 2025—, pero el tipo y el tiempo de revisión siguen sin verificar |
+| Costo y accesibilidad (APC) | **10** | Sin APC obligatorio por la vía de suscripción. El acceso abierto opcional cuesta USD 3.390, pero nadie está obligado a tomarlo |
+| Compatibilidad formal (requisitos) | **6** | Requisitos sin verificar |
 
 ### 8. International Journal of Advanced Computer Science and Applications (IJACSA) — 69.5 puntos
 
@@ -315,11 +355,11 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 | Criterio | Puntaje | Justificación |
 |---|:--:|---|
-| Pertinencia temática | **6** | Declara cubrir «todas las ramas de las ciencias de la computación»: alcance amplio y por tanto menos específico que las tres primeras |
-| Visibilidad bibliométrica | **8** | CiteScore 3,4 y doble indexación en Scopus y WoS ESCI |
-| Viabilidad editorial | **10** | Mensual y con decisión declarada en unas tres semanas: la más rápida |
-| Costo y accesibilidad | **3** | GBP 800, el más alto de todas las candidatas |
-| Compatibilidad formal | **7** | Plantilla propia obligatoria, que exige reformatear |
+| Pertinencia temática (alcance) | **6** | Declara cubrir «todas las ramas de las ciencias de la computación»: alcance amplio y por tanto menos específico que las tres primeras |
+| Visibilidad bibliométrica (cuartil) | **8** | CiteScore 3,4 y doble indexación en Scopus y WoS ESCI |
+| Viabilidad editorial (tiempo) | **10** | Mensual y con decisión declarada en unas tres semanas: la más rápida |
+| Costo y accesibilidad (APC) | **3** | GBP 800, el más alto de todas las candidatas |
+| Compatibilidad formal (requisitos) | **7** | Plantilla propia obligatoria, que exige reformatear |
 
 ### 9. Ingénierie des Systèmes d'Information (ISI) — 69.0 puntos
 
@@ -336,11 +376,11 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 
 | Criterio | Puntaje | Justificación |
 |---|:--:|---|
-| Pertinencia temática | **7** | Su alcance declarado nombra minería de datos, aprendizaje automático y detección de fallos, pero **no** seguridad de redes. Lo que sí hace es publicarla: **11 artículos desde 2024** con detección de intrusiones en el título. Se puntúa por lo que publica, no por cómo se describe — el mismo criterio aplicado a las demás |
-| Visibilidad bibliométrica | **7** | CiteScore 2,6 y SJR 0,236. Por debajo de IJIES (3,3) y CIT (4,2), pero con **el cuartil verificado en la propia revista** |
-| Viabilidad editorial | **8** | Doce números al año y 305 artículos en 2025: capacidad amplia. No llega a 9 porque **no declara plazo de revisión**, y a un dato desconocido no se le da la nota máxima |
-| Costo y accesibilidad | **5** | USD 850, casi el triple que IJIES |
-| Compatibilidad formal | **7** | **Extensión preferida de 6 a 12 páginas**, más estrecha de lo que se había registrado y menos de la mitad que CIT. El mínimo de 20 referencias no es obstáculo para este artículo |
+| Pertinencia temática (alcance) | **7** | Su alcance declarado nombra minería de datos, aprendizaje automático y detección de fallos, pero **no** seguridad de redes. Lo que sí hace es publicarla: **11 artículos desde 2024** con detección de intrusiones en el título. Se puntúa por lo que publica, no por cómo se describe — el mismo criterio aplicado a las demás |
+| Visibilidad bibliométrica (cuartil) | **7** | CiteScore 2,6 y SJR 0,236. Por debajo de IJIES (3,3) y CIT (4,2), pero con **el cuartil verificado en la propia revista** |
+| Viabilidad editorial (tiempo) | **8** | Doce números al año y 305 artículos en 2025: capacidad amplia. No llega a 9 porque **no declara plazo de revisión**, y a un dato desconocido no se le da la nota máxima |
+| Costo y accesibilidad (APC) | **5** | USD 850, casi el triple que IJIES |
+| Compatibilidad formal (requisitos) | **7** | **Extensión preferida de 6 a 12 páginas**, más estrecha de lo que se había registrado y menos de la mitad que CIT. El mínimo de 20 referencias no es obstáculo para este artículo |
 
 > `✔` verificado en fuente primaria · `~` fuente secundaria · `?` pendiente
 
@@ -356,6 +396,38 @@ Ningún criterio supera el 30 %, por debajo del techo del 35–40 % recomendado.
 | **Plan B** | ISI | 69.0 | Híbrido | No | El único **Q3** verificado, con 305 artículos al año, licencia **CC BY** y PDF de descarga libre comprobada. En contra: APC de USD 850, extensión de 6 a 12 páginas y **ningún plazo de revisión declarado**. |
 | **Plan C** | BEEI | 84.0 | Diamante | **Sí** | **El acceso abierto más sólido de los cuatro** —diamante, CC BY-SA, cero artículos cerrados y declaración explícita en su portada— con el segundo mejor puntaje absoluto (84,0) y 377 artículos en 2025. Su única objeción es administrativa: **figura en la lista de control**. |
 | **Plan D** | IJSSE | 75.5 | Híbrido | **Sí** | Encaje temático idéntico al de BEEI y ciclo editorial rápido, con licencia CC BY. Pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC de USD 850 duplica al de BEEI. También **figura en la lista de control**. |
+
+### ⚠ El orden no coincide con la regla de la Sesión 04
+
+La sesión pide que los planes salgan **del orden de puntajes**, y lo repite en cuatro sitios:
+
+- **Diapositiva 24:** «Tu matriz ya te dio el orden: la revista con el **2.º puntaje más alto** es, naturalmente, tu Plan B»
+- **Diapositiva 31:** «Define tu Plan A, B y C **según el orden resultante**»
+- **Diapositiva 34:** «Identifica tu Plan A, B y C **según el orden final de puntajes**»
+- **Diapositiva 35:** Rúbrica, *Logro Destacado*: «Los 3 planes **están ordenados y son coherentes con la matriz**»
+
+El orden vigente lo fijó el autor y **no sigue el puntaje**:
+
+| | Revista | Puntaje | Puesto real por puntaje |
+|---|---|---:|---|
+| Plan A | IJIES | 87.5 | ✔ 1.º de los cuatro |
+| Plan B | ISI | 69.0 | **✘** 4.º de los cuatro |
+| Plan C | BEEI | 84.0 | **✘** 2.º de los cuatro |
+| Plan D | IJSSE | 75.5 | **✘** 3.º de los cuatro |
+
+**Plan B debería ser BEEI (84,0) y hoy es ISI (69,0).** Con la rúbrica en la mano, esto baja la fila «Plan A, B y C definidos» de *Logro Destacado* a *Logro Esperado* o menos.
+
+#### Por qué ocurrió, y las dos salidas
+
+No es un descuido: es la consecuencia de aplicar **dos filtros propios** que la sesión no pide —el de la lista de control y el de volumen anual—. Con los dos activos solo sobreviven **dos** candidatas, IJIES e ISI, y hacen falta tres.
+
+| Salida | Qué implica | Orden resultante |
+|---|---|---|
+| **A · Resolver la consulta a la coordinación** | Si la lista solo registra y no inhabilita, BEEI e IJSSE vuelven a estar disponibles | **A** IJIES 87,5 · **B** BEEI 84,0 · **C** IJSSE 75,5 |
+| **B · Devolver el volumen a criterio ponderado** | El volumen ya está dentro de «viabilidad»: usarlo además como filtro es contarlo dos veces, y la sesión solo reconoce dos filtros —legitimidad y requisitos institucionales— | **A** IJIES 87,5 · **B** CIT 77,5 · **C** ISI 69,0 |
+
+**La salida B es la más defendible sin depender de terceros**, y corrige un problema de método real: el volumen se estaba contando dos veces. La salida A da el mejor conjunto, pero depende de una respuesta que todavía no existe.
+
 
 ### Dos tensiones que el autor asume, y conviene tener escritas
 
@@ -427,18 +499,74 @@ La decisión **no se tomó por cuartil**. Si la visibilidad hubiera pesado el 70
 
 Esta matriz **no debe usarse tal cual el día del envío**. Falta:
 
-- **Confirmar que IJIES sigue con cobertura activa en Scopus.** Es la verificación más importante de toda la matriz: TELKOMNIKA, IJECE e IJEECS, del mismo perfil de alto volumen, fueron descontinuadas en 2025. Se comprueba en su ficha de fuente, https://www.scopus.com/sourceid/21100199790, mirando que la cobertura llegue hasta el presente y no tenga aviso de discontinuación.
-- **Verificar el tiempo de revisión de IJIT**, hoy sin dato: es lo único que le impide competir por el primer puesto.
-- **Verificar el tipo y el tiempo de revisión de ISJ.** Es la comprobación que decide entre el Plan A y el Plan B: si supera los 3–6 meses de CIT, el orden se invierte. Hoy el Plan A puntúa más alto en parte porque dos componentes de su criterio de viabilidad están sin verificar.
-- **Confirmar que ISJ e ICS siguen aceptando la vía de suscripción sin APC.** Su puntaje de coste de 10 sostiene todo su primer puesto; si alguna migró a acceso abierto de pago, cae al último lugar.
+- **Confirmar que IJIES sigue con cobertura activa en Scopus.** Es la verificación más importante de toda la matriz: TELKOMNIKA, IJECE e IJEECS, del mismo perfil de alto volumen, fueron descontinuadas en 2025. Se comprueba en su [ficha de fuente](https://www.scopus.com/sourceid/21100199790), mirando que la cobertura llegue hasta el presente y no tenga aviso de discontinuación.
+- **Resolver el orden de los planes.** Hoy no sigue el puntaje y la rúbrica de la Sesión 04 lo penaliza. Las dos salidas están en la sección 6.
+- **Preguntar quién cubre el APC** —el autor, el asesor, el programa o un convenio institucional—. La Sesión 04 (diapositiva 19) lo pide explícitamente y en este expediente solo está el monto.
+- **Contrastar el plazo de la revista con la fecha de sustentación.** Los plazos ya están medidos —IJIES 158 días de mediana, ISI 250—, pero la fecha límite de titulación no está escrita en ninguna parte del expediente.
 - Verificar el **cuartil SJR** de las cinco candidatas en Scimago. Aquí figura como fuente secundaria: **el percentil de Scopus no es el cuartil SJR**, y confundirlos invalidaría el criterio de visibilidad.
 - Completar en fuente primaria los datos marcados con `?` en ISJ, ICS e IJACSA: CiteScore, tipo y tiempo de revisión, periodicidad y plantilla.
 - Reverificar el APC de las cinco: cambia sin aviso. El de IJSSE ya pasó de USD 700 a USD 850 entre dos consultas.
 - Confirmar por escrito con la coordinación académica el requisito exacto de cuartil o índice del programa: es un **filtro**, no un criterio ponderado.
-- Comprobar que la extensión del artículo cabe en el límite base de 8 páginas de BEEI, o presupuestar el coste por página adicional.
+- Presupuestar la extensión en las dos primeras opciones: **IJIES exige un mínimo de 8 páginas** y cobra USD 50 desde la 11.ª; BEEI da 8 de base y cobra USD 50 desde la 9.ª, más el doble de APC si el artículo fuera de autor único.
 - **Aclarar con CIT cuál es su APC vigente y desde cuándo.** Hay dos cifras en circulación: su registro en DOAJ declara 360 EUR y sus instrucciones para autores declaran 600 EUR a partir del 1 de septiembre de 2026. Y preguntar si aplica por fecha de envío o por fecha de aceptación: La política dice «600 EUR a partir del 1 de septiembre de 2026» sin precisar el disparador; con una revisión de 3 a 6 meses, un envío de hoy se acepta después de esa fecha en cualquier escenario.
 - Pasar el manuscrito por un detector de texto generado por IA antes de enviarlo a CIT: por encima del 20 % la revista rechaza **sin derecho a revisión**.
 - Confirmar con la coordinación qué significa exactamente estar en la lista de control: si inhabilita la revista o solo la registra. Toda la sección 2 bis depende de esa respuesta.
+
+---
+
+## 8 bis · Cumplimiento de la Sesión 04
+
+Verificación punto por punto contra la guía de la sesión. La columna de la izquierda cita la diapositiva para que cada afirmación se pueda comprobar.
+
+| Diapositiva | Qué exige | Estado |
+|---|---|---|
+| 21 · 29 · 31 · 34 | Filtro de legitimidad aplicado a **todo** el mapa, antes de puntuar | ✔ Sección 2, sobre las nueve candidatas |
+| **22** | Requisitos institucionales como **segundo filtro eliminatorio**, confirmados por escrito con la coordinación | **~ Aplicado con reserva.** Sección 2 quater: falta la confirmación escrita |
+| 14 · 31 | Entre **4 y 6 criterios** | ✔ Cinco |
+| 14 · 31 | Pesos que suman **100 %** | ✔ 30 + 25 + 20 + 15 + 10 |
+| **23** | Ningún criterio individual por encima del **35-40 %** | ✔ El mayor es 30 % |
+| 14 · 31 | Puntuar cada revista de **0 a 10** con evidencia | ✔ Con la marca de verificación de cada dato |
+| 15 | Puntaje ponderado final | ✔ En las dos escalas, 0-100 y 0-10 |
+| **16** | Métricas de prestigio: SJR, JCR, **h5-index**, CiteScore | **✔ Completado el 02/09/2026.** El h5-index faltaba |
+| 18 | Tiempo de revisión contrastado con la fecha de titulación | ✔ Sección 7, con plazos **medidos**, no declarados |
+| **19** | APC: monto exacto **y quién lo cubre** | **~ Falta quién lo cubre.** El monto está verificado en las cuatro |
+| 20 | Alcance temático puntuado con la evidencia de los artículos semilla | ✔ 21 artículos mapeados |
+| 34 | Matriz sobre **todas** las revistas legítimas, no solo cuatro | ✔ Las nueve |
+| **24 · 31 · 34 · 35** | **Plan A, B y C según el orden de puntajes** | **✘ No se cumple.** Ver la sección 6 |
+| 27 · 34 | Justificación escrita de media página | ~ La justificación actual ocupa más; hay una versión breve en la sección 7 |
+| 27 | Compartir la matriz con el asesor **antes** de enviar | Pendiente |
+
+**Trece de quince cumplidos, uno con reserva y uno incumplido.** El incumplido es el orden de los planes y está desarrollado en la sección 6: no es un descuido, es una decisión del autor que choca con la regla de la sesión y que conviene resolver antes de entregar.
+
+
+---
+
+## 8 ter · Fuentes consultadas para esta verificación
+
+Toda cifra de este expediente sale de una de estas páginas, consultadas entre el 26/08/2026 y el 02/09/2026. Las que bloquean el acceso automatizado se declaran como tales en vez de rellenarse con un agregador.
+
+| Qué se buscó | Fuente | Resultado |
+|---|---|---|
+| h5-index de las nueve | [Google Scholar Metrics](https://scholar.google.com/citations?view_op=top_venues) | 6 de 9 indexadas · IJIES e IJSSE ausentes · ICS sin verificar |
+| Volumen anual por año | [OpenAlex `works` · `group_by=publication_year`](https://api.openalex.org) | Serie 2023-2026 de las nueve |
+| Estado de acceso abierto | [OpenAlex `group_by=open_access.oa_status`](https://api.openalex.org) | Reparto de acceso desde 2025 · descarga real de PDF |
+| Registro en DOAJ | [DOAJ](https://doaj.org) · [Wikidata P5115](https://www.wikidata.org) · [Internet Archive](https://web.archive.org) | **DOAJ bloquea (403).** Tres vías con control positivo: ninguna de las cuatro está |
+| Guía de autores de IJIES | [Submission Guidelines](https://inass.org/pub-submissionguidelines/) | Mínimo 8 páginas · no prescribe secciones · política de IA · cesión de copyright |
+| Cargos de IJIES | [Publication Charges](https://inass.org/pub-charges/) | USD 300 → 400 el 01/10/2026 · USD 50/página desde la 11.ª · solo PayPal |
+| Plantilla de IJIES | [Documents for Submission](https://inass.org/pub-docusubmission/) | `IJIES_Format.docx` · sin carta de presentación desde 05/2025 |
+| Métricas de IJIES | [Publications](https://inass.org/publications/) | CiteScore 3,3 · Q2 en dos categorías · aceptación 17,9 % |
+| APC y cargos de BEEI | [About / Submissions](https://beei.org/index.php/EEI/about/submissions) | USD 415 con coautoría · **USD 830 si es autor único** · USD 50/página desde la 9.ª |
+| Acceso abierto de BEEI | [Portada](https://beei.org/index.php/EEI) | «provides immediate open access to all published articles» |
+| Extensión y revisión de ISI | [Instructions for Authors](https://www.iieta.org/journals/isi/Instructions%20for%20Authors) | 6-12 páginas · mínimo 20 referencias · **no declara plazo** |
+| APC de ISI e IJSSE | [Article Processing Charge](https://www.iieta.org/journals/isi/Article%20Processing%20Charge) | USD 850 en ambas |
+| Plazos editoriales reales | PDF de los 21 artículos del mapeo | **Medidos**, no declarados: IJIES mediana 158 días · ISI 250 |
+| Cobertura en Scopus | [Scopus Sources](https://www.scopus.com/sources) | **Bloquea (403).** Queda pendiente de comprobación manual |
+| Cuartil SJR | [SCImago](https://www.scimagojr.com) | **Bloquea (Cloudflare).** Los cuartiles vienen de la página de cada revista |
+| Marco normativo peruano | [Res. N.º 0042-2024-SUNEDU-CD](https://www.gob.pe/institucion/sunedu/normas-legales/6340940-0042-2024-sunedu-cd) · [SUNEDU: bachiller y tesis](https://www.sunedu.gob.pe/sobre-trabajo-investigacion-para-obtener-grado-bachiller-tesis-para-titulo-profesional/) | Base del filtro de requisitos institucionales |
+| Lista de revistas depredadoras | Hoja de cálculo aportada por el autor | Ninguna de las cuatro figura · las siete de MDPI sí |
+
+> **Cuatro fuentes bloquean el acceso automatizado**: Scopus, SCImago, DOAJ y Springer. En los cuatro casos se declara el bloqueo y, donde fue posible, se sustituyó por una medición propia con control positivo. **Un bloqueo reportado es un resultado; un dato inventado no lo es.**
+
 
 ---
 
