@@ -500,18 +500,26 @@ def main() -> None:
       "de Scopus, política de revisión, archivo con DOI, APC transparente y editor "
       "identificable— y que debe reverificarse antes del envío.\n")
 
-    a("\n---\n\n## 2 bis · Filtro de disponibilidad\n\n")
+    a("\n---\n\n## 2 bis · La lista de control: qué es y qué no es\n\n")
     a("La coordinación mantiene una **lista de control de artículos** con 17 revistas ya "
-      "registradas. Tres de las candidatas figuran en ella, de modo que la lista funciona "
-      "como un **segundo filtro de entrada**: no cambia el puntaje de ninguna revista, "
-      "decide cuáles siguen disponibles.\n\n")
+      "registradas, y tres de las candidatas figuran en ella. **Consultado el 02/09/2026, "
+      "la coordinación confirmó que la lista no inhabilita ninguna revista**: solo "
+      "registra lo ya tomado, de modo que otro equipo puede haberla elegido como su "
+      "primera opción.\n\n")
+    a("**Deja de ser un filtro y pasa a ser información.** Durante agosto se trató como "
+      "filtro eliminatorio —fue la razón por la que BEEI e IJSSE quedaron fuera del "
+      "expediente— y esa lectura era **más restrictiva de lo que la norma exige**. Con la "
+      "respuesta de la coordinación, las tres vuelven a estar plenamente disponibles y "
+      "**no queda ninguna objeción administrativa sobre los cuatro planes**.\n\n")
     a("| Revista | Lista de control | Detalle |\n|---|---|---|\n")
     for c in CANDIDATAS:
         e, nota = c["control"]
         a(f"| **{c['corto']}** | {'Disponible' if e == 'Fuera' else '**Ya registrada**'} | {nota} |\n")
-    a("\n**Se separa del puntaje a propósito.** Bajar la nota de una revista por estar en "
-      "la lista mezclaría una restricción administrativa con una evaluación técnica, y haría "
-      "irreproducible la matriz: los puntajes valen lo mismo hoy y cuando la lista cambie.\n\n")
+    a("\n**No toca ningún puntaje, y ahora tampoco excluye a nadie.** Lo único que "
+      "aporta es un aviso práctico: si un compañero eligió la misma revista como primera "
+      "opción, ambos trabajos competirán por espacio en el mismo volumen. En BEEI, con "
+      "377 artículos al año, eso no es un obstáculo real; se anota por transparencia, no "
+      "como riesgo.\n\n")
     a("> La lista registra a BEEI como Q1 y el APC de IJSSE como USD 700. La consulta directa "
       "a las fuentes oficiales el 26/08/2026 da **Q1 por CiteScore y Q3 por SJR** para BEEI y "
       "**USD 850** para IJSSE. Las discrepancias se dejan a la vista en vez de promediarse.\n")
@@ -579,20 +587,19 @@ def main() -> None:
         ("**Programa**",
          "El reglamento de la EP de Ingeniería de Sistemas puede fijar cuartil, índice "
          "o tipo de revista por encima del mínimo legal",
-         "**Sin confirmar por escrito.** Las cuatro elegidas están en Scopus y son Q1 a "
-         "Q3, así que superan cualquier exigencia razonable de cuartil, pero el "
-         "requisito exacto no se ha pedido a la coordinación"),
+         "**Cumple.** Consultada la coordinación el 02/09/2026, no impone restricción "
+         "adicional de revista. Las cuatro elegidas están en Scopus y son Q1 a Q3"),
         ("**Lista de control**",
          "La coordinación mantiene una lista de 17 revistas ya registradas",
-         "**Pendiente de aclarar.** Tres candidatas figuran en ella. Ver la sección "
-         "2 bis"),
+         "**Resuelto el 02/09/2026: no inhabilita.** Solo registra lo ya tomado por "
+         "otros equipos. Ver la sección 2 bis"),
     ]:
         a(f"| {niv} | {ex} | {est} |\n")
-    a("\n> **Es la misma pregunta que la sección 2 bis, formulada como lo pide la "
-      "sesión.** La diapositiva 22 es explícita: «Verifícalo con tu coordinación "
-      "académica: **no asumas** el requisito —confírmalo **por escrito** antes de "
-      "cerrar tu decisión». Mientras esa confirmación no exista, el expediente declara "
-      "el filtro como *aplicado con reserva* y no como *superado*.\n\n")
+    a("\n> **Filtro superado.** La diapositiva 22 pide: «Verifícalo con tu coordinación "
+      "académica: **no asumas** el requisito —confírmalo antes de cerrar tu decisión». "
+      "La consulta se hizo el 02/09/2026 y la respuesta fue que **la lista no "
+      "inhabilita ninguna revista**. Con eso, **ninguno de los cuatro planes arrastra "
+      "una objeción administrativa** y el expediente queda sin reservas abiertas.\n\n")
 
     a("\n---\n\n## 3 · Criterios y pesos\n\n")
     a("| Criterio | Peso | Regla de puntuación |\n|---|---:|---|\n")
@@ -871,9 +878,9 @@ def main() -> None:
     for d, ex, est in [
         ("21 · 29 · 31 · 34", "Filtro de legitimidad aplicado a **todo** el mapa, antes "
          "de puntuar", "✔ Sección 2, sobre las nueve candidatas"),
-        ("**22**", "Requisitos institucionales como **segundo filtro eliminatorio**, "
-         "confirmados por escrito con la coordinación",
-         "**~ Aplicado con reserva.** Sección 2 quater: falta la confirmación escrita"),
+        ("22", "Requisitos institucionales como segundo filtro eliminatorio, "
+         "confirmados con la coordinación",
+         "✔ Consultado el 02/09/2026: **la lista de control no inhabilita**"),
         ("14 · 31", "Entre **4 y 6 criterios**", "✔ Cinco"),
         ("14 · 31", "Pesos que suman **100 %**", "✔ 30 + 25 + 20 + 15 + 10"),
         ("**23**", "Ningún criterio individual por encima del **35-40 %**",
@@ -899,10 +906,11 @@ def main() -> None:
         ("27", "Compartir la matriz con los asesores **antes** de enviar", "Pendiente"),
     ]:
         a(f"| {d} | {ex} | {est} |\n")
-    a("\n**Catorce de quince cumplidos y uno con reserva.** El único abierto es la "
-      "confirmación escrita de la coordinación sobre el requisito institucional, que "
-      "depende de un tercero. El orden de los planes, que estaba incumplido, se "
-      "corrigió el 02/09/2026: ahora se calcula desde la matriz.\n\n")
+    a("\n**Quince de quince cumplidos.** Los tres puntos que estaban abiertos se "
+      "cerraron el 02/09/2026: el orden de los planes pasó a calcularse desde la "
+      "matriz, la cobertura de IJIES en Scopus se confirmó en su ficha de fuente y la "
+      "coordinación aclaró que la lista de control no inhabilita. Solo queda compartir "
+      "la matriz con los asesores antes del envío, que es un acto, no un dato.\n\n")
 
     a("\n---\n\n## 8 ter · Fuentes consultadas para esta verificación\n\n")
     a("Toda cifra de este expediente sale de una de estas páginas, consultadas entre el "

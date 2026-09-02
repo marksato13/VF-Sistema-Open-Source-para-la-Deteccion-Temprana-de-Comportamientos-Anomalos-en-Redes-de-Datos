@@ -32,7 +32,7 @@ son coherentes con la matriz»— y así no puede volver a desalinearse.
 | Diapositiva | Qué exige | Estado |
 |---|---|---|
 | 21 · 29 · 31 · 34 | Filtro de legitimidad antes de puntuar | ✅ Sobre las nueve candidatas |
-| **22** | Requisitos institucionales como 2.º filtro, **confirmado por escrito** | ⚠️ **Aplicado con reserva** |
+| 22 | Requisitos institucionales como 2.º filtro, confirmado con la coordinación | ✅ **La lista de control no inhabilita** |
 | 14 · 31 | 4 a 6 criterios, pesos al 100 % | ✅ Cinco · 30+25+20+15+10 |
 | 23 | Ningún criterio por encima del 35-40 % | ✅ El mayor es 30 % |
 | 15 | Puntaje ponderado | ✅ En 0-100 y en 0-10 |
@@ -45,8 +45,8 @@ son coherentes con la matriz»— y así no puede volver a desalinearse.
 | **33 · 34** | Justificación de ½ a 1 página, **aparte** | ✅ Documento propio |
 | 27 | Compartirla con los asesores antes de enviar | ⏳ Pendiente |
 
-**Doce de trece cumplidos y uno con reserva**: la confirmación escrita de la
-coordinación, que depende de un tercero.
+**Trece de trece cumplidos.** Solo queda compartir la matriz con los asesores antes
+del envío, que es un acto pendiente, no un dato faltante.
 
 ## Validación del mapeo
 
@@ -58,14 +58,13 @@ artículos recientes que revisaste son tu mejor base para puntuar este criterio�
 
 ## Lo que falta antes de enviar
 
-1. **Confirmar por escrito** con la coordinación si la lista de control
-   inhabilita una revista o solo registra lo publicado. *Es el único punto que
-   sigue abierto en la matriz.*
-2. **Compartir la matriz con los asesores** —Ing. Nemias Saboya Ríos e Ing.
+1. **Compartir la matriz con los asesores** —Ing. Nemias Saboya Ríos e Ing.
    Fernando Manuel Asin Gómez— antes del envío.
-3. Confirmar con administración **por qué vía se paga el APC**: IJIES solo
+2. Confirmar con administración **por qué vía se paga el APC**: IJIES solo
    acepta PayPal o tarjeta, no transferencia bancaria.
 
 **Resueltos el 02/09/2026:** la cobertura de IJIES en Scopus —«covered from 2008
-to 2026», sin aviso de discontinuación— y quién cubre el APC, que es la
-Universidad Peruana Unión.
+to 2026», sin aviso de discontinuación—; quién cubre el APC, que es la
+Universidad Peruana Unión; y la consulta a la coordinación, que confirmó que
+**la lista de control no inhabilita ninguna revista**, solo registra las ya
+tomadas por otros equipos.

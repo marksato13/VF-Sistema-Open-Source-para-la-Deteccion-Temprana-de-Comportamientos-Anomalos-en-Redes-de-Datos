@@ -48,10 +48,11 @@ ISJ (88,1 %) e ICS (78,2 %). Las tres eran gratuitas para el autor por la vía d
 suscripción; lo que ese ahorro costaba era que casi nadie pudiera leer el
 artículo.
 
-**Aviso sobre los Planes B y C:** BEEI e IJSSE **sí figuran en la lista de
-control de la coordinación** — era la razón por la que estaban excluidas. Antes
-de enviar a cualquiera de las dos hay que preguntar si la lista inhabilita la
-revista o solo registra lo ya publicado.
+**Sobre la lista de control:** BEEI e IJSSE figuran en ella, y esa fue la razón
+por la que estuvieron excluidas durante agosto. **Consultada la coordinación el
+02/09/2026, la lista no inhabilita ninguna revista**: solo registra las ya
+tomadas por otros equipos. Las dos vuelven a estar plenamente disponibles y
+**ninguno de los cuatro planes arrastra objeción administrativa**.
 
 Ninguna de las cuatro figura en la lista de revistas depredadoras.
 
@@ -72,7 +73,7 @@ alternativa: no supera el filtro de entrada.
 | Tema afín a ciberseguridad o redes | ✔ | ✔ | ✔ | ✔ |
 | **Fácil de publicar** | ✘ | ? | ? | ? |
 | Fuera de la lista de depredadoras | ✔ | ✔ | ✔ | ✔ |
-| Fuera de tu lista de control | ✔ | **✘** | **✘** | ✔ |
+| Fuera de tu lista de control | ✔ | ~ | ~ | ✔ |
 | Publica muchos artículos al año | ✔ | ✔ | ✔ | ✔ |
 | **Acceso abierto** | ~ | ✔ | ✔ | ✔ |
 | **Registrada en DOAJ** | ✘ | ✘ | ✘ | ✘ |
@@ -87,8 +88,8 @@ alternativa: no supera el filtro de entrada.
 | Revista | Lo que le falta |
 |---|---|
 | **IJIES** (A) | Confirmar que sigue en Scopus; su acceso abierto es **bronce sin licencia** —se lee gratis mientras el editor quiera— y **no aparece en Google Scholar Metrics** |
-| **BEEI** (B) | Solo una cosa, y es administrativa: **figura en tu lista de control**. En todo lo demás es la más sólida de las cuatro, y la única con h5-index alto (41) |
-| **IJSSE** (C) | **Figura en tu lista de control**, pierde en visibilidad frente a BEEI (CiteScore 2,8 contra 4,2) con un APC del doble, y tampoco está en Scholar Metrics |
+| **BEEI** (B) | **Nada bloqueante.** Figura en la lista de control, pero eso ya no inhabilita: solo avisa de que otro equipo pudo tomarla. Es la más sólida de las cuatro y la única con h5-index alto (41) |
+| **IJSSE** (C) | Pierde en visibilidad frente a BEEI (CiteScore 2,8 contra 4,2) con un APC del doble, y tampoco está en Scholar Metrics. Figurar en la lista de control ya no la penaliza |
 | **ISI** (D) | El APC más alto (USD 850), la menor producción temática, **6–12 páginas** de extensión y **el peor plazo medido**: 250 días de mediana hasta publicar |
 
 **Dos criterios no se pueden cerrar con ninguna.**
@@ -109,8 +110,8 @@ editorial.
 | Revista | 2023 | 2024 | 2025 | 2026 | Estado |
 |---|---:|---:|---:|---:|---|
 | **IJIES** | 389 | 481 | **556** | 542 | **Plan A** |
-| **BEEI** | 415 | 453 | **377** | 305 | **Plan B** — en tu lista de control |
-| **IJSSE** | 129 | 187 | **253** | 147 | **Plan C** — en tu lista de control |
+| **BEEI** | 415 | 453 | **377** | 305 | **Plan B** |
+| **IJSSE** | 129 | 187 | **253** | 147 | **Plan C** |
 | **ISI** | 188 | 235 | **305** | 216 | **Plan D** |
 | IJACSA | 1 447 | 1 539 | 1 347 | 707 | En tu lista de control |
 | IJIT | — | 661 | 640 | — | Descartada: 90,8 % cerrado |
@@ -177,9 +178,8 @@ administrativo.**
 | APC | USD 415 | [cargos](https://beei.org/index.php/EEI/about) |
 | Periodicidad | Bimestral · **377 artículos en 2025** (415 en 2023, 453 en 2024) | medición OpenAlex |
 
-**El único obstáculo: está en tu lista de control.** Si la coordinación confirma
-que la lista solo registra lo ya publicado y no inhabilita la revista, BEEI se
-queda como Plan B sin reservas. Compite de frente con IJIES: **mejor acceso abierto y mejor CiteScore (4,2
+**Sin obstáculos: la coordinación confirmó que la lista de control no
+inhabilita.** BEEI queda como Plan B sin reservas, y compite de frente con IJIES: **mejor acceso abierto y mejor CiteScore (4,2
 frente a 3,3)**, pero **menos volumen (377 frente a 556)** y un APC que cuesta
 USD 115 más.
 
@@ -417,12 +417,10 @@ En orden de importancia:
    —#133/351 en General Engineering y #116/241 en General Computer Science—, y
    dejó una alerta nueva: el **CiteScoreTracker 2026 va en 2,8** frente al 3,3
    de 2025.
-2. **A la coordinación: estar en la lista de control ¿inhabilita la revista o
-   solo la registra?** De esto dependen los Planes C y D enteros. Si solo
-   registra, **BEEI compite de frente con IJIES**: mejor acceso abierto
-   (diamante con CC BY-SA frente a bronce sin licencia) y mejor CiteScore (4,2
-   frente a 3,3), pero **menos volumen** —377 al año frente a 556— y USD 115 más
-   de APC.
+2. ~~A la coordinación: ¿la lista de control inhabilita o solo registra?~~
+   **Resuelto el 02/09/2026: solo registra.** No inhabilita ninguna revista; lo
+   único que señala es que otro equipo pudo tomarla como primera opción. BEEI e
+   IJSSE quedan plenamente disponibles como Planes B y C.
 3. ~~¿Alguna de las cuatro está en DOAJ?~~ **Resuelto el 01/09/2026: ninguna.**
    Comprobado por tres vías independientes con control positivo. Si el jurado
    pregunta por DOAJ, la respuesta hay que tenerla preparada.
@@ -626,6 +624,7 @@ de ser uno de sus puntos fuertes y pasa a serlo de IJIES**.
 | 02/09/2026 | Orden de los planes | Fijado a mano: A IJIES · B ISI · C BEEI · D IJSSE | **Calculado desde el puntaje**, como exige la Sesión 04: **A IJIES 87,5 · B BEEI 84,0 · C IJSSE 75,5 · D ISI 69,0**. Mismas revistas, otra posición |
 | 02/09/2026 | Cobertura de IJIES en Scopus | Sin verificar — era la reserva del Plan A | **Activa: «covered by Scopus from 2008 to 2026»**, sin aviso de discontinuación. Añadidos SJR 0,292 y SNIP 0,453 |
 | 02/09/2026 | CiteScore de IJIES | 3,3 (2025) | Sigue en 3,3, pero el **CiteScoreTracker 2026 va en 2,8**: vigilar por si pierde el Q2 |
+| 02/09/2026 | Lista de control de la coordinación | Tratada como **filtro eliminatorio** desde el 26/08 | **No inhabilita: solo registra** lo ya tomado por otros equipos. La lectura anterior era más restrictiva que la norma. BEEI e IJSSE quedan disponibles sin reservas |
 | 02/09/2026 | Quién cubre el APC | Sin definir | **La Universidad Peruana Unión** |
 | 02/09/2026 | h5-index | No se había consultado | **Añadido**: BEEI 41 · ISI 23 · CIT 20. **IJIES no figura en Google Scholar Metrics** (tres consultas) |
 | 01/09/2026 | Acceso de IJIT | «No cobra APC» a secas | Cierto, **pero el 90,8 % de sus artículos quedan tras el muro de pago**; abrirlo cuesta USD 3.390. Visibilidad 8→7, total 82,0→**79,5** |

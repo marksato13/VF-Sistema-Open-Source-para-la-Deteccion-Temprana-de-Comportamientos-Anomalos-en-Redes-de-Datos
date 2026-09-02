@@ -223,9 +223,10 @@ def main() -> None:
             f"({total(orden[2]):.1f}), sin envío simultáneo. La adaptación es de "
             f"formato: la estructura del mapeo de 21 artículos sirve para las cuatro.")
     parrafo(doc,
-            "**Verificación abierta:** confirmar por escrito con la coordinación si la "
-            "lista de control inhabilita una revista o solo registra lo publicado. De "
-            "eso depende que los Planes B y C sigan disponibles.", size=8.8, color=DIM)
+            "**Sin objeciones administrativas pendientes.** La coordinación confirmó el "
+            "2 de septiembre de 2026 que su lista de control **no inhabilita ninguna "
+            "revista**: solo registra las ya tomadas por otros equipos. Los cuatro "
+            "planes están plenamente disponibles.", size=8.8, color=DIM)
 
     rematar(doc,
             "Justificación de la revista objetivo",
