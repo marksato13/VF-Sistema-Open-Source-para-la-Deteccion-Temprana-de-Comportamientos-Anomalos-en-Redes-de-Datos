@@ -86,6 +86,23 @@ agregada de F6 (`results/f6/*.jsonl`, pequeña) sí se versiona.
 su evidencia y costo/riesgo de mejora (sin implementar ninguna sin
 calibración/evaluación nueva): `docs/07-mejoras-futuras/01-debilidades-y-mejoras.md`.
 
+**Publicación del artículo: revista elegida y estructura definida.** Los tres
+entregables del curso Investigación V están cerrados en `docs/entregables/`:
+el informe de evaluación crítica con cronograma fechado (`01-`), la matriz de
+decisión de 9 revistas más la justificación de una página (`09-`) y el mapeo de
+21 artículos del que sale la estructura final del artículo (`10-`).
+
+**Revista objetivo: IJIES** (INASS, Japón) — Q2 por CiteScore 3,3, APC USD 300
+que cubre la universidad, cobertura de Scopus confirmada de 2008 a 2026. Planes
+de respaldo por orden de puntaje: BEEI 84,0 · IJSSE 75,5 · ISI 69,0. Puntos
+débiles declarados: su acceso abierto es **bronce sin licencia**, no figura en
+DOAJ ni en Google Scholar Metrics, y su CiteScoreTracker 2026 va en 2,8 frente
+al 3,3 de 2025. La estructura del artículo quedó fijada en diez secciones,
+justificada por el mapeo y por la guía de autores, que **no prescribe ninguna**.
+Todo verificable en `docs/entregables/09-matriz-revistas/` y
+`docs/entregables/10-mapeo-secciones-articulo/`; el material de apoyo para
+redactar está en `docs/articulo/`.
+
 Este repositorio documenta y construye la versión final de un sistema open source para la detección temprana de comportamientos anómalos en redes de datos. Es un proyecto ingenieril desplegado en un laboratorio virtualizado sobre VMware ESXi.
 
 Repositorio oficial:

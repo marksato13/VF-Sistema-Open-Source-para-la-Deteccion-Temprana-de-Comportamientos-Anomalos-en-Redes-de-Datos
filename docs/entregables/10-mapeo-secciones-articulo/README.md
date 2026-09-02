@@ -67,10 +67,17 @@ Lo que **sí** es obligatorio:
    artículos** revisados, todos de 2024 a 2026. Hay que escribirla igual.
 2. **El mínimo de 8 páginas** no se deduce de los artículos: se lee en la guía.
 
-## Antecedente
+## Cuál de los tres archivos es cuál
 
-La versión previa del autor
-([`Mapeo-secciones-articulos-semilla.xlsx`](Mapeo-secciones-articulos-semilla.xlsx),
-15 artículos) se conserva. Este archivo la amplía a 21, añade ISI, corrige el
+En el repositorio hay tres hojas de cálculo de mapeo. **Solo la primera es el
+entregable**; las otras dos se conservan porque documentan cómo se llegó a ella.
+
+| Archivo | Qué es | Artículos |
+|---|---|---:|
+| **[`Mapeo-estructura-articulo.xlsx`](Mapeo-estructura-articulo.xlsx)** | **← EL ENTREGABLE.** Mapeo, frecuencias, veredicto, análisis de la guía y estructura final | **21** |
+| [`Mapeo-secciones-articulos-semilla.xlsx`](Mapeo-secciones-articulos-semilla.xlsx) | Versión previa del autor. Se conserva como antecedente | 15 |
+| [`../../articulo/mapeo-secciones-revistas.xlsx`](../../articulo/mapeo-secciones-revistas.xlsx) | Material de **apoyo para redactar**, no de entrega: cuenta párrafos, citas y figuras por sección, y mide los plazos editoriales reales | 19 |
+
+El entregable amplía la versión del autor a 21 artículos, añade ISI, corrige el
 recuento de frecuencias y agrega las tres hojas que faltaban: veredicto,
 análisis de la guía y estructura final.

@@ -9,7 +9,7 @@ APLICA) y un **entregable autónomo** (momento CREA). Solo el segundo se sube.
 
 | Sesión | Entregable autónomo | Formato exigido | Carpeta | Estado |
 |---|---|---|---|---|
-| **01** · Criterios y técnicas para la evaluación de resultados | Informe de evaluación crítica | PDF **2–4 pp** | [`01-evaluacion-critica/`](01-evaluacion-critica/) | ✅ **Listo** (~3 pp) |
+| **01** · Criterios y técnicas para la evaluación de resultados | Informe de evaluación crítica | PDF **2–4 pp** | [`01-evaluacion-critica/`](01-evaluacion-critica/) | ✅ **Listo** (~2,6 pp) — incluye el cronograma fechado |
 | **02** · Métodos de validación: confiabilidad, replicabilidad y pertinencia | **Plan de validación de resultados** | PDF **1–2 pp** | [`07-plan-de-validacion/`](07-plan-de-validacion/) | ✅ **Listo** (~2 pp) |
 | **03** · Estrategias para identificar y mapear revistas científicas | Mapa de revistas | — | [`09-matriz-revistas/`](09-matriz-revistas/) | ⚠️ Absorbido en la matriz de la Sesión 04 |
 | **04** · Selección de la revista objetivo | **Matriz de decisión + justificación** | Matriz completa + justificación **de 1 página, aparte** | [`09-matriz-revistas/`](09-matriz-revistas/) | ✅ **Listo** — matriz de 9 candidatas + `Justificacion-revista-objetivo.docx` (~1 p) |

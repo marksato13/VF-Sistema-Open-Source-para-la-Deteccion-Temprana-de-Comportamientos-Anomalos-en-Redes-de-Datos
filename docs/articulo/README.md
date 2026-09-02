@@ -475,6 +475,12 @@ peor caso de ISI llega a **315 días**.
 [`mapeo-secciones-revistas.xlsx`](mapeo-secciones-revistas.xlsx) · generado por
 [`scripts/articulo/generar_mapeo_secciones.py`](../../scripts/articulo/generar_mapeo_secciones.py)
 
+> **Este archivo no es el entregable del curso.** Es material de apoyo para
+> redactar: mide párrafos, citas, figuras y tablas de cada sección, y los plazos
+> editoriales reales. El entregable es
+> [`docs/entregables/10-mapeo-secciones-articulo/Mapeo-estructura-articulo.xlsx`](../entregables/10-mapeo-secciones-articulo/Mapeo-estructura-articulo.xlsx),
+> con 21 artículos y la estructura final.
+
 **19 artículos afines**, medidos sobre el PDF completo de cada uno: 5 de IJIES,
 4 de ISI, 5 de BEEI y 5 de IJSSE. Las cifras no están escritas a mano — se
 extrajo el texto con `pdftotext`, se localizaron los encabezados numerados y se
