@@ -157,12 +157,23 @@ def main() -> None:
         ["**Declaración explícita de la selección posterior** del modelo", "Objeción metodológica principal, ahora declarada"],
         ["**Validación cruzada agrupada y bootstrap por episodio**", "Variación interna del modelo y del umbral; no sustituyen una evaluación externa"],
     ], [8.6, 7.8], fondos=[F_OK] * 7)
-    par(doc, "**Pendiente, con plazo realista.** El orden responde a coste, no a comodidad:")
-    tabla(doc, ["Plazo", "Acción", "Por qué en ese orden"], [
-        ["**Horas**", "Cerrar la matriz de requisitos y revisar la coherencia de todos los entregables derivados", "Usan evidencia ya publicada"],
-        ["**Días**", "**Validación con usuarios: SUS con 5–8 evaluadores**", "Es el único cero absoluto que queda; una sesión lo convierte en evidencia"],
-        ["**Semanas**", "Recalibrar incluyendo tráfico legítimo pesado y repetir la validación operativa", "Única solución real al falso positivo del 23–26 %. Se declara como límite, no se simula"],
-    ], [2.2, 7.4, 6.8])
+    par(doc, "**Pendiente, con fecha comprometida.** El orden responde a coste, no a comodidad:")
+    tabla(doc, ["Pendiente", "Cómo se aborda", "Responsable", "Fecha"], [
+        ["Declarar la selección posterior en la tesis", "Párrafo en metodología, enlazado a la *model card* que ya lo declara", "Salazar", "**5 sep**"],
+        ["**Validación con usuarios (SUS)**", "Sesión de 2 h con 5–8 evaluadores; instrumento ya preparado", "Salazar · Sauñe", "**por confirmar**"],
+        ["Juicio experto (3 evaluadores)", "Rúbrica de pertinencia sobre el producto desplegado", "Salazar · asesores", "**por confirmar**"],
+        ["Escenarios legítimos faltantes", "Campaña F1: SSH, SCP/SFTP, backup y actualizaciones", "Sauñe", "**19 sep**"],
+        ["**Recalibrar con tráfico pesado y repetir F6**", "Reentrenar con `iperf-tcp 200M` como normalidad; repetir las 29 corridas", "Salazar", "**10 oct**"],
+        ["*Holdout* temporal externo", "Campaña completa en fecha distinta, sin reutilizar episodios", "Salazar · Sauñe", "**24 oct**"],
+    ], [4.6, 6.4, 2.9, 2.5])
+    par(doc, "**El artículo no espera a los tres últimos.** La sección de resultados se escribe con "
+             "lo que ya está bloqueado —el modelo congelado, la evaluación de un solo paso y las 58 "
+             "corridas de F6—: ese resultado está completo y no va a cambiar. Los pendientes mejoran "
+             "la evidencia, no la sustituyen.", italic=True)
+    par(doc, "**Lo único bloqueante es el SUS**: sin él, el eje de pertinencia queda en cero y la "
+             "ficha de auditoría no pasa de 82,4 %. Son dos horas, y es lo único que depende de "
+             "conseguir personas y no de tiempo de laboratorio. Las dos fechas «por confirmar» "
+             "dependen de terceros y no se fijan sin haberlas acordado con ellos.", italic=True)
 
     # ---------------------------------------------------------------- 4
     h1(doc, "4 ·", "Conclusión")

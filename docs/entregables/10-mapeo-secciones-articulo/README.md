@@ -1,59 +1,76 @@
-# Mapeo de secciones de los artículos semilla
+# Mapeo de artículos y estructura final del artículo
 
-**Entregable del curso.** Estructura sección por sección de **15 artículos
-afines** publicados en las revistas objetivo, para escribir el nuestro con la
-forma que esas revistas aceptan y no con una plantilla genérica.
+**Entregable 3 del curso.** De aquí sale la estructura definitiva con la que se
+redacta el artículo científico.
 
 | | |
 |---|---|
-| **Archivo** | [`Mapeo-secciones-articulos-semilla.xlsx`](Mapeo-secciones-articulos-semilla.xlsx) |
-| **Autor** | Rubén Mark Salazar Tocas |
+| **Entregable** | [`Mapeo-estructura-articulo.xlsx`](Mapeo-estructura-articulo.xlsx) |
+| **Generado por** | [`scripts/articulo/generar_mapeo_estructura.py`](../../../scripts/articulo/generar_mapeo_estructura.py) |
+| **Equipo** | Rubén Mark Salazar Tocas · Uziel Elias Sauñe Fernandez |
 | **Fecha** | 2 de septiembre de 2026 |
-| **Alcance** | 15 artículos · 1 hoja · mapeo + tabla de frecuencia de secciones |
 
-## Qué contiene
+## Cómo cumple lo pedido
 
-| Bloque | Contenido |
+| Requisito de la consigna | Cómo se cumple |
 |---|---|
-| **Artículos semilla** | 5 de **IJIES** (Plan A), con su DOI y su estructura completa **incluida la sección final**: conflicts of interest, author contributions, acknowledgments y references |
-| **Artículos adicionales** | 5 de **BEEI** (Plan C) y 5 de **IJSSE** (Plan D) |
-| **Tabla de frecuencia** | Cuántas veces aparece cada nombre de sección en el conjunto, con su porcentaje |
+| **Mínimo 12 documentos** | **21 artículos** |
+| **≈6 artículos semilla de la revista principal** | **7 de IJIES** (Opción 1) |
+| ≈6 de otras revistas | **14**: 4 de ISI, 5 de BEEI y 5 de IJSSE |
+| **Nombres de sección tal cual aparecen** | Transcritos del **PDF completo**, sin normalizar ni traducir. Las erratas del original se conservan y se señalan |
+| **«Otras secciones» detalladas** | Columna propia, y enunciadas con paréntesis en la hoja 5 |
+| **Estadística de frecuencias** | Hoja 2, con tres lecturas y un gráfico de barras |
+| **¿Rígido o flexible?** | Hoja 3, con ocho criterios medidos y un veredicto |
+| **Análisis crítico de la guía de autores** | Hoja 4, con **13 aspectos y citas literales** |
+| **Estructura final justificada por las dos fuentes** | Hoja 5 |
 
-## Lo que se lee de un vistazo
+## Las seis hojas
 
-- **Los 15 artículos abren con «Introduction»**. Sin excepción.
-- **Los 15 cierran con «Conclusion» o «Conclusions»** — 14 con ese nombre exacto
-  y 1 como «Conclusion with future work».
-- **«Related work» aparece en 10 de 15** y es el nombre dominante del estado del
-  arte; las alternativas (*Literature review*, *Literature survey*, *Materials*,
-  *Background*) aparecen una o dos veces cada una.
-- **El cuerpo tiene entre 4 y 7 secciones numeradas.**
+| Hoja | Contenido |
+|---|---|
+| **0. Cómo se hizo** | Método, criterio de selección y por qué se leyó el PDF y no la ficha del DOI |
+| **1. Mapeo** | Los 21 artículos con DOI, páginas, referencias, secciones y secciones finales |
+| **2. Frecuencias** | Nombre literal · nombre sin distinguir mayúsculas · familia funcional |
+| **3. Rígido o flexible** | Ocho criterios y el veredicto |
+| **4. Guía de autores** | Análisis crítico de IJIES con citas textuales |
+| **5. Estructura final** | Las 10 secciones del artículo, cada una con su respaldo |
 
-## Verificación cruzada
+## El veredicto
 
-Los cinco artículos de IJIES se midieron **de forma independiente** sobre el PDF
-completo en [`docs/articulo/mapeo-secciones-revistas.xlsx`](../../articulo/mapeo-secciones-revistas.xlsx).
-**Las dos mediciones coinciden en la estructura de los cinco**, incluido el caso
-atípico del artículo 4, que tiene siete secciones numeradas frente a las cinco
-de los otros cuatro.
+> **Estructura FLEXIBLE en el cuerpo, RÍGIDA en el cierre.**
 
-Este archivo aporta algo que la otra medición no tiene: **las secciones finales
-que IJIES exige** —conflictos de interés, contribución de autores,
-agradecimientos— y que hay que escribir aunque no formen parte del argumento.
+IJIES **no nombra ni una sola sección** en su guía de autores, y sus artículos
+usan **59 nombres literales distintos** para las secciones del cuerpo — cinco
+solo para el estado del arte y dieciséis para la metodología. Podemos elegir
+los nuestros.
 
-## Limitaciones declaradas
+Lo que **sí** es obligatorio:
 
-1. **No cubre ISI (Plan B).** El expediente tiene cuatro revistas objetivo; aquí
-   hay tres. Los cuatro artículos de ISI están en el mapeo de `docs/articulo/`.
-2. **La tabla de frecuencia no cuenta las secciones finales.** Conflicts of
-   interest (3), author contributions (4) y acknowledgments (3) aparecen en el
-   mapeo pero no tienen fila propia: son **10 apariciones sin tabular**.
-3. **«References» figura con 10 y en el mapeo aparece 5 veces** — solo se
-   registró en los cinco artículos de IJIES.
-4. **La familia de resultados está repartida.** «Result» (2) y «Result and
-   Discussion» (3) suman 5, pero contando las variantes de nombre el bloque de
-   resultados aparece **9 veces**. Unificar los nombres antes de sacar el
-   porcentaje evitaría subestimarlo.
+- **Abrir con «Introduction»** — 21 de 21.
+- **Cerrar con «Conclusion»** — 21 de 21.
+- **Conflicts of Interest y Author Contributions** — 7 de 7 en IJIES.
 
-> Ninguna de las cuatro afecta al mapeo artículo por artículo, que es la parte
-> que se usa para escribir. Afectan solo a la tabla de frecuencia del final.
+## La estructura que sale de aquí
+
+1. Introduction · 2. Related work · 3. Proposed methodology ·
+4. Results and discussion · 5. Conclusion · 6. Conflicts of Interest ·
+7. Author Contributions · 8. Declaración de uso de IA · 9. Acknowledgments ·
+10. References
+
+**Extensión objetivo: 10 páginas.** La guía exige un **mínimo de 8** y cobra
+**USD 50 por página desde la 11.ª**.
+
+## Dos hallazgos de la guía que no salen del mapeo
+
+1. **La declaración de uso de IA es obligatoria** — *«Transparency regarding
+   substantial AI use is required»* — y **no aparece en ninguno de los 21
+   artículos** revisados, todos de 2024 a 2026. Hay que escribirla igual.
+2. **El mínimo de 8 páginas** no se deduce de los artículos: se lee en la guía.
+
+## Antecedente
+
+La versión previa del autor
+([`Mapeo-secciones-articulos-semilla.xlsx`](Mapeo-secciones-articulos-semilla.xlsx),
+15 artículos) se conserva. Este archivo la amplía a 21, añade ISI, corrige el
+recuento de frecuencias y agrega las tres hojas que faltaban: veredicto,
+análisis de la guía y estructura final.

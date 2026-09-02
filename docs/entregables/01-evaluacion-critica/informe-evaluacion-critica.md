@@ -320,6 +320,37 @@ Ejecutar D3 no solo cerró un requisito: **modificó lo que este informe puede a
 
 **D5 sigue siendo la debilidad principal del sistema** y no se resuelve escribiendo: exige recalibrar con tráfico legítimo pesado como normalidad y repetir la validación operativa.
 
+## 10.4 Cronograma: cuándo se aborda cada pendiente
+
+*Comprometido el 2 de septiembre de 2026.* El docente pide no solo qué falta,
+sino **cómo y en qué plazo**. Esto es lo que queda y cuándo se hace.
+
+| # | Pendiente | Cómo se aborda | Responsable | Fecha compromiso | Estado |
+|---|---|---|---|---|---|
+| 1 | Declarar la selección posterior en el documento de tesis | Párrafo explícito en metodología, con el enlace a la *model card* que ya lo declara | Salazar | **5 sep 2026** | Pendiente |
+| 2 | **Validación con usuarios (SUS)** — `D-18` | Sesión de 2 h con 5–8 evaluadores. Instrumento y hoja de cálculo ya preparados en [`08-validacion-usuarios/`](../08-validacion-usuarios/) | Salazar · Sauñe | **⚠️ por confirmar** | **Bloqueante: depende de conseguir evaluadores** |
+| 3 | Sesión de juicio experto (3 evaluadores) | Rúbrica de pertinencia sobre el producto desplegado | Salazar · asesores | **⚠️ por confirmar** | Depende de agenda de los asesores |
+| 4 | Escenarios legítimos faltantes — `D7` | Campaña F1 adicional: SSH, SCP/SFTP, backup y actualizaciones | Sauñe | **19 sep 2026** | Pendiente |
+| 5 | **Recalibrar con tráfico pesado y repetir F6** — `D5` | Reentrenar incluyendo `iperf-tcp 200M` como normalidad y repetir las 29 corridas | Salazar | **10 oct 2026** | Pendiente · **es la debilidad principal** |
+| 6 | Jornada nueva como *holdout* temporal externo — `D6` | Campaña completa en fecha distinta, sin reutilizar episodios | Salazar · Sauñe | **24 oct 2026** | Pendiente |
+
+### Qué pasa si no llegan las fechas
+
+**El artículo no espera a los pendientes 4, 5 y 6.** La sección de resultados se
+escribe con lo que ya está validado y bloqueado —el modelo congelado, la
+evaluación de un solo paso y las 58 corridas de F6— porque **ese resultado ya
+está completo y no va a cambiar**. Los seis pendientes mejoran la evidencia; no
+la sustituyen.
+
+**Lo que sí bloquea:** el pendiente 2. Sin la sesión SUS, el eje de pertinencia
+se queda en cero y la ficha de auditoría no pasa de 82,4 %. Es dos horas de
+trabajo y es lo único del cronograma que depende de conseguir personas, no de
+tiempo de laboratorio.
+
+> **Las dos fechas marcadas ⚠️ no están puestas todavía a propósito.** Dependen
+> de terceros —evaluadores y asesores— y comprometer un día sin haberlo
+> acordado con ellos sería inventarlo. Se fijan en cuanto haya confirmación.
+
 ## 11. Limitaciones de este propio informe
 
 - No se auditó el código del extractor línea por línea; la confianza en las 28 features descansa en los tests unitarios existentes.
