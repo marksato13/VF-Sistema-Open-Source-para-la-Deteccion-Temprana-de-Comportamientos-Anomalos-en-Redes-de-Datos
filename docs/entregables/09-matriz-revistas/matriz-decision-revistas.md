@@ -79,21 +79,6 @@ La coordinación mantiene una **lista de control de artículos** con 17 revistas
 
 ---
 
-## 2 quater · Filtro de requisitos institucionales
-
-La Sesión 04 (diapositiva 22) exige un **segundo filtro eliminatorio** además del de legitimidad: los **requisitos institucionales**. Su regla es literal: «Regístralo como criterio eliminatorio: igual que la legitimidad, el requisito institucional es un filtro de entrada, no un criterio ponderado».
-
-| Nivel | Qué exige | Estado en este expediente |
-|---|---|---|
-| **Nacional** | Ley N.º 30220 (Ley Universitaria), modificada por las Leyes N.º 31803 y N.º 31971, y la Resolución N.º 0042-2024-SUNEDU-CD: exigen trabajo de investigación para el bachillerato y tesis para el título | **Cumple.** El artículo deriva de la tesis; ninguna de las candidatas es una vía alternativa al requisito |
-| **Programa** | El reglamento de la EP de Ingeniería de Sistemas puede fijar cuartil, índice o tipo de revista por encima del mínimo legal | **Sin confirmar por escrito.** Las cuatro elegidas están en Scopus y son Q1 a Q3, así que superan cualquier exigencia razonable de cuartil, pero el requisito exacto no se ha pedido a la coordinación |
-| **Lista de control** | La coordinación mantiene una lista de 17 revistas ya registradas | **Pendiente de aclarar.** Tres candidatas figuran en ella. Ver la sección 2 bis |
-
-> **Es la misma pregunta que la sección 2 bis, formulada como lo pide la sesión.** La diapositiva 22 es explícita: «Verifícalo con tu coordinación académica: **no asumas** el requisito —confírmalo **por escrito** antes de cerrar tu decisión». Mientras esa confirmación no exista, el expediente declara el filtro como *aplicado con reserva* y no como *superado*.
-
-
----
-
 ## 2 ter · Filtro de acceso abierto
 
 **Requisito del autor, 01/09/2026: si no es de acceso abierto, se descarta.** Funciona como un tercer filtro de entrada, igual que los dos anteriores: no toca ningún puntaje, decide quién sigue en carrera.
@@ -131,6 +116,21 @@ DOAJ bloquea el acceso automatizado (Cloudflare, HTTP 403 en API, `/toc/` y bús
 | IJSSE | false | ausente | no |
 
 Las tres vías coinciden y el control se detecta en las tres. **Ninguna de las cuatro elegidas figura en DOAJ.** No las descalifica —todas están en Scopus, con editor identificable y política de revisión pública— pero les quita una garantía externa. Ninguna menciona DOAJ en su propio sitio.
+
+
+---
+
+## 2 quater · Filtro de requisitos institucionales
+
+La Sesión 04 (diapositiva 22) exige un **segundo filtro eliminatorio** además del de legitimidad: los **requisitos institucionales**. Su regla es literal: «Regístralo como criterio eliminatorio: igual que la legitimidad, el requisito institucional es un filtro de entrada, no un criterio ponderado».
+
+| Nivel | Qué exige | Estado en este expediente |
+|---|---|---|
+| **Nacional** | Ley N.º 30220 (Ley Universitaria), modificada por las Leyes N.º 31803 y N.º 31971, y la Resolución N.º 0042-2024-SUNEDU-CD: exigen trabajo de investigación para el bachillerato y tesis para el título | **Cumple.** El artículo deriva de la tesis; ninguna de las candidatas es una vía alternativa al requisito |
+| **Programa** | El reglamento de la EP de Ingeniería de Sistemas puede fijar cuartil, índice o tipo de revista por encima del mínimo legal | **Sin confirmar por escrito.** Las cuatro elegidas están en Scopus y son Q1 a Q3, así que superan cualquier exigencia razonable de cuartil, pero el requisito exacto no se ha pedido a la coordinación |
+| **Lista de control** | La coordinación mantiene una lista de 17 revistas ya registradas | **Pendiente de aclarar.** Tres candidatas figuran en ella. Ver la sección 2 bis |
+
+> **Es la misma pregunta que la sección 2 bis, formulada como lo pide la sesión.** La diapositiva 22 es explícita: «Verifícalo con tu coordinación académica: **no asumas** el requisito —confírmalo **por escrito** antes de cerrar tu decisión». Mientras esa confirmación no exista, el expediente declara el filtro como *aplicado con reserva* y no como *superado*.
 
 
 ---
@@ -393,40 +393,29 @@ La Sesión 04 (diapositiva 16) lista cuatro métricas de prestigio: SJR, Factor 
 | | Revista | Puntaje | Acceso | En la lista de control | Por qué en esa posición |
 |---|---|---:|---|---|---|
 | **Plan A** | IJIES | 87.5 | **Bronce** | No | **El mayor volumen del conjunto abierto** —556 al año en 2025, frente a los 377 de BEEI— con el APC más bajo (USD 300) y publicación 2 meses después de aceptar. Dos reservas: hay que confirmar que sigue activa en Scopus, y su acceso abierto es **bronce sin licencia**, el más débil de los cuatro planes. |
-| **Plan B** | ISI | 69.0 | Híbrido | No | El único **Q3** verificado, con 305 artículos al año, licencia **CC BY** y PDF de descarga libre comprobada. En contra: APC de USD 850, extensión de 6 a 12 páginas y **ningún plazo de revisión declarado**. |
-| **Plan C** | BEEI | 84.0 | Diamante | **Sí** | **El acceso abierto más sólido de los cuatro** —diamante, CC BY-SA, cero artículos cerrados y declaración explícita en su portada— con el segundo mejor puntaje absoluto (84,0) y 377 artículos en 2025. Su única objeción es administrativa: **figura en la lista de control**. |
-| **Plan D** | IJSSE | 75.5 | Híbrido | **Sí** | Encaje temático idéntico al de BEEI y ciclo editorial rápido, con licencia CC BY. Pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC de USD 850 duplica al de BEEI. También **figura en la lista de control**. |
+| **Plan B** | BEEI | 84.0 | Diamante | **Sí** | **El acceso abierto más sólido de los cuatro** —diamante, CC BY-SA, cero artículos cerrados y declaración explícita en su portada— con el segundo mejor puntaje absoluto (84,0) y 377 artículos en 2025. Su única objeción es administrativa: **figura en la lista de control**. |
+| **Plan C** | IJSSE | 75.5 | Híbrido | **Sí** | Encaje temático idéntico al de BEEI y ciclo editorial rápido, con licencia CC BY. Pierde en visibilidad (CiteScore 2,8 frente a 4,2) y su APC de USD 850 duplica al de BEEI. También **figura en la lista de control**. |
+| **Plan D** | ISI | 69.0 | Híbrido | No | El único **Q3** verificado, con 305 artículos al año, licencia **CC BY** y PDF de descarga libre comprobada. En contra: APC de USD 850, extensión de 6 a 12 páginas y **ningún plazo de revisión declarado**. |
 
-### ⚠ El orden no coincide con la regla de la Sesión 04
+### El orden sale del puntaje, no de la preferencia
 
-La sesión pide que los planes salgan **del orden de puntajes**, y lo repite en cuatro sitios:
+La Sesión 04 lo exige en cuatro sitios, y por eso el orden se calcula en vez de escribirse a mano:
 
 - **Diapositiva 24:** «Tu matriz ya te dio el orden: la revista con el **2.º puntaje más alto** es, naturalmente, tu Plan B»
 - **Diapositiva 31:** «Define tu Plan A, B y C **según el orden resultante**»
 - **Diapositiva 34:** «Identifica tu Plan A, B y C **según el orden final de puntajes**»
 - **Diapositiva 35:** Rúbrica, *Logro Destacado*: «Los 3 planes **están ordenados y son coherentes con la matriz**»
 
-El orden vigente lo fijó el autor y **no sigue el puntaje**:
-
-| | Revista | Puntaje | Puesto real por puntaje |
+| | Revista | Puntaje | ¿Coincide con el puesto por puntaje? |
 |---|---|---:|---|
-| Plan A | IJIES | 87.5 | ✔ 1.º de los cuatro |
-| Plan B | ISI | 69.0 | **✘** 4.º de los cuatro |
-| Plan C | BEEI | 84.0 | **✘** 2.º de los cuatro |
-| Plan D | IJSSE | 75.5 | **✘** 3.º de los cuatro |
+| **Plan A** | IJIES | 87.5 | ✔ 1.º |
+| **Plan B** | BEEI | 84.0 | ✔ 2.º |
+| **Plan C** | IJSSE | 75.5 | ✔ 3.º |
+| **Plan D** | ISI | 69.0 | ✔ 4.º |
 
-**Plan B debería ser BEEI (84,0) y hoy es ISI (69,0).** Con la rúbrica en la mano, esto baja la fila «Plan A, B y C definidos» de *Logro Destacado* a *Logro Esperado* o menos.
-
-#### Por qué ocurrió, y las dos salidas
-
-No es un descuido: es la consecuencia de aplicar **dos filtros propios** que la sesión no pide —el de la lista de control y el de volumen anual—. Con los dos activos solo sobreviven **dos** candidatas, IJIES e ISI, y hacen falta tres.
-
-| Salida | Qué implica | Orden resultante |
-|---|---|---|
-| **A · Resolver la consulta a la coordinación** | Si la lista solo registra y no inhabilita, BEEI e IJSSE vuelven a estar disponibles | **A** IJIES 87,5 · **B** BEEI 84,0 · **C** IJSSE 75,5 |
-| **B · Devolver el volumen a criterio ponderado** | El volumen ya está dentro de «viabilidad»: usarlo además como filtro es contarlo dos veces, y la sesión solo reconoce dos filtros —legitimidad y requisitos institucionales— | **A** IJIES 87,5 · **B** CIT 77,5 · **C** ISI 69,0 |
-
-**La salida B es la más defendible sin depender de terceros**, y corrige un problema de método real: el volumen se estaba contando dos veces. La salida A da el mejor conjunto, pero depende de una respuesta que todavía no existe.
+> **Corregido el 02/09/2026.** Hasta esa fecha el orden lo fijaba el autor y no seguía el puntaje: el Plan B era ISI (69,0) cuando el segundo puntaje era BEEI (84,0). La rúbrica penaliza eso —«los 3 planes están ordenados y son coherentes con la matriz» es la condición de *Logro Destacado*—, así que el orden pasó a calcularse desde la matriz.
+>
+> **Las cuatro revistas siguen siendo las que eligió el autor.** Lo único que cambió es su posición. La lista está en `ELEGIDAS` dentro del generador y el orden se deriva de ella: si se añade o se quita una candidata, el orden se recalcula solo y no puede volver a desalinearse.
 
 
 ### Dos tensiones que el autor asume, y conviene tener escritas
@@ -442,7 +431,7 @@ No es un descuido: es la consecuencia de aplicar **dos filtros propios** que la 
 
 ## 7 · Justificación
 
-**IJIES encabeza con 87.5 puntos sobre 100**, la puntuación más alta de las nueve candidatas, por delante de BEEI (84.0). Con los tres filtros de entrada aplicados —legitimidad, lista de control y acceso abierto—, es además la única de las cuatro elegidas que no arrastra ninguna objeción administrativa.
+**IJIES encabeza con 87.5 puntos sobre 100**, la puntuación más alta de las nueve candidatas, por delante de IJSSE (75.5). Con los tres filtros de entrada aplicados —legitimidad, lista de control y acceso abierto—, es además la única de las cuatro elegidas que no arrastra ninguna objeción administrativa.
 
 ### Volumen anual, contado en la misma fuente para todas
 
@@ -532,11 +521,11 @@ Verificación punto por punto contra la guía de la sesión. La columna de la iz
 | **19** | APC: monto exacto **y quién lo cubre** | **~ Falta quién lo cubre.** El monto está verificado en las cuatro |
 | 20 | Alcance temático puntuado con la evidencia de los artículos semilla | ✔ 21 artículos mapeados |
 | 34 | Matriz sobre **todas** las revistas legítimas, no solo cuatro | ✔ Las nueve |
-| **24 · 31 · 34 · 35** | **Plan A, B y C según el orden de puntajes** | **✘ No se cumple.** Ver la sección 6 |
-| 27 · 34 | Justificación escrita de media página | ~ La justificación actual ocupa más; hay una versión breve en la sección 7 |
+| 24 · 31 · 34 · 35 | Plan A, B y C según el orden de puntajes | ✔ Calculado desde la matriz, no escrito a mano |
+| **33 · 34** | Justificación escrita de **media página a una página**, aparte de la matriz | ✔ Documento propio: `Justificacion-revista-objetivo.docx` |
 | 27 | Compartir la matriz con el asesor **antes** de enviar | Pendiente |
 
-**Trece de quince cumplidos, uno con reserva y uno incumplido.** El incumplido es el orden de los planes y está desarrollado en la sección 6: no es un descuido, es una decisión del autor que choca con la regla de la sesión y que conviene resolver antes de entregar.
+**Catorce de quince cumplidos y uno con reserva.** El único abierto es la confirmación escrita de la coordinación sobre el requisito institucional, que depende de un tercero. El orden de los planes, que estaba incumplido, se corrigió el 02/09/2026: ahora se calcula desde la matriz.
 
 
 ---

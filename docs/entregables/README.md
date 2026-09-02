@@ -12,7 +12,7 @@ APLICA) y un **entregable autónomo** (momento CREA). Solo el segundo se sube.
 | **01** · Criterios y técnicas para la evaluación de resultados | Informe de evaluación crítica | PDF **2–4 pp** | [`01-evaluacion-critica/`](01-evaluacion-critica/) | ✅ **Listo** (~3 pp) |
 | **02** · Métodos de validación: confiabilidad, replicabilidad y pertinencia | **Plan de validación de resultados** | PDF **1–2 pp** | [`07-plan-de-validacion/`](07-plan-de-validacion/) | ✅ **Listo** (~2 pp) |
 | **03** · Estrategias para identificar y mapear revistas científicas | Mapa de revistas | — | [`09-matriz-revistas/`](09-matriz-revistas/) | ⚠️ Absorbido en la matriz de la Sesión 04 |
-| **04** · Selección de la revista objetivo | **Matriz de decisión + justificación** | PDF, justificación de ½–1 p | [`09-matriz-revistas/`](09-matriz-revistas/) | ✅ **Listo** (~2,6 pp) |
+| **04** · Selección de la revista objetivo | **Matriz de decisión + justificación** | Matriz completa + justificación **de 1 página, aparte** | [`09-matriz-revistas/`](09-matriz-revistas/) | ✅ **Listo** — matriz de 9 candidatas + `Justificacion-revista-objetivo.docx` (~1 p) |
 | **05** · Estructura del artículo científico | **Mapeo de artículos + estructura final** | `.xlsx` | [`10-mapeo-secciones-articulo/`](10-mapeo-secciones-articulo/) | ✅ **Listo** — 21 artículos, 7 semilla, análisis de la guía y estructura final |
 
 Además, el taller en clase de la Sesión 02 usa una **ficha de auditoría de 6
@@ -39,7 +39,7 @@ inicio sin retirar el análisis extenso.
 | [`diagramas/`](diagramas/) | Diagramas editables (draw.io) | — | Fuentes editables con iconos, para el PPI y los demás entregables |
 | [`06-plan-de-mejora/`](06-plan-de-mejora/) | Plan de mejora del producto | **Listo** | Registro único de las debilidades abiertas con evidencia, impacto, esfuerzo y mitigación, más el checklist de ejecución |
 | [`10-mapeo-secciones-articulo/`](10-mapeo-secciones-articulo/) | Mapeo de artículos y estructura final del artículo | **Listo** · *entregable del curso* | **Sesión 05.** 21 artículos (7 semilla de IJIES), nombres de sección transcritos del PDF, frecuencias, veredicto **flexible en el cuerpo / rígido en el cierre**, análisis crítico de la guía de autores con citas literales y las **10 secciones definitivas** del artículo |
-| [`09-matriz-revistas/`](09-matriz-revistas/) | Matriz de decisión de revistas | **Listo** · *entregable del curso* | **Sesión 04.** Cinco candidatas con filtro de legitimidad aplicado antes de puntuar, criterios ponderados y Plan A/B/C. Cada celda con su fuente y estado de verificación |
+| [`09-matriz-revistas/`](09-matriz-revistas/) | Matriz de decisión + justificación de la revista | **Listo** · *entregable del curso* | **Sesión 04.** Cinco candidatas con filtro de legitimidad aplicado antes de puntuar, criterios ponderados y Plan A/B/C. Cada celda con su fuente y estado de verificación |
 | [`08-validacion-usuarios/`](08-validacion-usuarios/) | Validación con usuarios (SUS) | **Instrumento listo, sin aplicar** | Cuestionario, guion de observación, plantilla de captura y script de cálculo. Cierra a la vez el criterio 6 de la ficha, el eje de pertinencia del plan y `D-18` |
 | [`07-plan-de-validacion/`](07-plan-de-validacion/) | Plan de validación de resultados | **Listo** · *entregable del curso* | **Sesión 02.** Plan prospectivo de 1–2 páginas con método y umbral por cada eje —confiabilidad, replicabilidad, pertinencia— y cronograma |
 | — | Manual de implementación técnica | Pendiente | |

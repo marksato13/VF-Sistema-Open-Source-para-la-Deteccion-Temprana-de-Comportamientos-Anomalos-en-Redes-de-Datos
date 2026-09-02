@@ -390,8 +390,17 @@ ACCESO = {
                "**El 78,2 % de sus artículos está tras el muro de pago**"),
 }
 
-# Planes fijados por el autor el 01/09/2026, no derivados del puntaje.
-PLANES = {"IJIES": "Plan A", "ISI": "Plan B", "BEEI": "Plan C", "IJSSE": "Plan D"}
+# Las cuatro revistas las eligió el autor el 01/09/2026. El ORDEN, en cambio, sale
+# del puntaje ponderado, como exige la Sesión 04 (diapositivas 24, 31, 34 y 35).
+# Cambiar aquí solo altera el orden, nunca qué revistas entran.
+ELEGIDAS = ["IJIES", "ISI", "BEEI", "IJSSE"]
+
+
+def planes() -> dict:
+    """Plan A, B, C y D por orden de puntaje entre las revistas elegidas."""
+    orden = sorted((c for c in CANDIDATAS if c["corto"] in ELEGIDAS),
+                   key=lambda c: -total(c))
+    return {c["corto"]: f"Plan {chr(65 + i)}" for i, c in enumerate(orden)}
 
 
 def abierta(c) -> bool:
@@ -418,12 +427,17 @@ def total10(c) -> float:
     return total(c) / 10
 
 
+PLANES: dict = {}  # se rellena en main() y en generar_word(), tras definir total()
+
+
 def completitud(c) -> tuple[int, int]:
     marcas = [m for _, m in c["datos"].values()]
     return marcas.count("✔"), len(marcas)
 
 
 def main() -> None:
+    global PLANES
+    PLANES = planes()
     orden = sorted(CANDIDATAS, key=total, reverse=True)
     L, a = [], lambda s: L.append(s)
 
@@ -495,37 +509,6 @@ def main() -> None:
       "a las fuentes oficiales el 26/08/2026 da **Q1 por CiteScore y Q3 por SJR** para BEEI y "
       "**USD 850** para IJSSE. Las discrepancias se dejan a la vista en vez de promediarse.\n")
 
-    a("\n---\n\n## 2 quater · Filtro de requisitos institucionales\n\n")
-    a("La Sesión 04 (diapositiva 22) exige un **segundo filtro eliminatorio** además del "
-      "de legitimidad: los **requisitos institucionales**. Su regla es literal: "
-      "«Regístralo como criterio eliminatorio: igual que la legitimidad, el requisito "
-      "institucional es un filtro de entrada, no un criterio ponderado».\n\n")
-    a("| Nivel | Qué exige | Estado en este expediente |\n|---|---|---|\n")
-    for niv, ex, est in [
-        ("**Nacional**",
-         "Ley N.º 30220 (Ley Universitaria), modificada por las Leyes N.º 31803 y "
-         "N.º 31971, y la Resolución N.º 0042-2024-SUNEDU-CD: exigen trabajo de "
-         "investigación para el bachillerato y tesis para el título",
-         "**Cumple.** El artículo deriva de la tesis; ninguna de las candidatas es una "
-         "vía alternativa al requisito"),
-        ("**Programa**",
-         "El reglamento de la EP de Ingeniería de Sistemas puede fijar cuartil, índice "
-         "o tipo de revista por encima del mínimo legal",
-         "**Sin confirmar por escrito.** Las cuatro elegidas están en Scopus y son Q1 a "
-         "Q3, así que superan cualquier exigencia razonable de cuartil, pero el "
-         "requisito exacto no se ha pedido a la coordinación"),
-        ("**Lista de control**",
-         "La coordinación mantiene una lista de 17 revistas ya registradas",
-         "**Pendiente de aclarar.** Tres candidatas figuran en ella. Ver la sección "
-         "2 bis"),
-    ]:
-        a(f"| {niv} | {ex} | {est} |\n")
-    a("\n> **Es la misma pregunta que la sección 2 bis, formulada como lo pide la "
-      "sesión.** La diapositiva 22 es explícita: «Verifícalo con tu coordinación "
-      "académica: **no asumas** el requisito —confírmalo **por escrito** antes de "
-      "cerrar tu decisión». Mientras esa confirmación no exista, el expediente declara "
-      "el filtro como *aplicado con reserva* y no como *superado*.\n\n")
-
     a("\n---\n\n## 2 ter · Filtro de acceso abierto\n\n")
     a("**Requisito del autor, 01/09/2026: si no es de acceso abierto, se descarta.** Funciona "
       "como un tercer filtro de entrada, igual que los dos anteriores: no toca ningún puntaje, "
@@ -572,6 +555,37 @@ def main() -> None:
       "elegidas figura en DOAJ.** No las descalifica —todas están en Scopus, con editor "
       "identificable y política de revisión pública— pero les quita una garantía externa. "
       "Ninguna menciona DOAJ en su propio sitio.\n\n")
+
+    a("\n---\n\n## 2 quater · Filtro de requisitos institucionales\n\n")
+    a("La Sesión 04 (diapositiva 22) exige un **segundo filtro eliminatorio** además del "
+      "de legitimidad: los **requisitos institucionales**. Su regla es literal: "
+      "«Regístralo como criterio eliminatorio: igual que la legitimidad, el requisito "
+      "institucional es un filtro de entrada, no un criterio ponderado».\n\n")
+    a("| Nivel | Qué exige | Estado en este expediente |\n|---|---|---|\n")
+    for niv, ex, est in [
+        ("**Nacional**",
+         "Ley N.º 30220 (Ley Universitaria), modificada por las Leyes N.º 31803 y "
+         "N.º 31971, y la Resolución N.º 0042-2024-SUNEDU-CD: exigen trabajo de "
+         "investigación para el bachillerato y tesis para el título",
+         "**Cumple.** El artículo deriva de la tesis; ninguna de las candidatas es una "
+         "vía alternativa al requisito"),
+        ("**Programa**",
+         "El reglamento de la EP de Ingeniería de Sistemas puede fijar cuartil, índice "
+         "o tipo de revista por encima del mínimo legal",
+         "**Sin confirmar por escrito.** Las cuatro elegidas están en Scopus y son Q1 a "
+         "Q3, así que superan cualquier exigencia razonable de cuartil, pero el "
+         "requisito exacto no se ha pedido a la coordinación"),
+        ("**Lista de control**",
+         "La coordinación mantiene una lista de 17 revistas ya registradas",
+         "**Pendiente de aclarar.** Tres candidatas figuran en ella. Ver la sección "
+         "2 bis"),
+    ]:
+        a(f"| {niv} | {ex} | {est} |\n")
+    a("\n> **Es la misma pregunta que la sección 2 bis, formulada como lo pide la "
+      "sesión.** La diapositiva 22 es explícita: «Verifícalo con tu coordinación "
+      "académica: **no asumas** el requisito —confírmalo **por escrito** antes de "
+      "cerrar tu decisión». Mientras esa confirmación no exista, el expediente declara "
+      "el filtro como *aplicado con reserva* y no como *superado*.\n\n")
 
     a("\n---\n\n## 3 · Criterios y pesos\n\n")
     a("| Criterio | Peso | Regla de puntuación |\n|---|---:|---|\n")
@@ -686,9 +700,9 @@ def main() -> None:
         lst = "No" if disponible(c) else "**Sí**"
         a(f"| **{etq}** | {c['corto']} | {total(c):.1f} | {nom} | {lst} | "
           f"{razones[c['corto']]} |\n")
-    a("\n### ⚠ El orden no coincide con la regla de la Sesión 04\n\n")
-    a("La sesión pide que los planes salgan **del orden de puntajes**, y lo repite en "
-      "cuatro sitios:\n\n")
+    a("\n### El orden sale del puntaje, no de la preferencia\n\n")
+    a("La Sesión 04 lo exige en cuatro sitios, y por eso el orden se calcula en vez de "
+      "escribirse a mano:\n\n")
     for d, t in [
         ("Diapositiva 24", "«Tu matriz ya te dio el orden: la revista con el **2.º "
          "puntaje más alto** es, naturalmente, tu Plan B»"),
@@ -699,33 +713,21 @@ def main() -> None:
          "ordenados y son coherentes con la matriz**»"),
     ]:
         a(f"- **{d}:** {t}\n")
-    a("\nEl orden vigente lo fijó el autor y **no sigue el puntaje**:\n\n")
-    a("| | Revista | Puntaje | Puesto real por puntaje |\n|---|---|---:|---|\n")
-    porpts = sorted([c for c in CANDIDATAS if c["corto"] in PLANES],
+    a("\n| | Revista | Puntaje | ¿Coincide con el puesto por puntaje? |\n"
+      "|---|---|---:|---|\n")
+    porpts = sorted((c for c in CANDIDATAS if c["corto"] in ELEGIDAS),
                     key=lambda c: -total(c))
-    for etq in ("Plan A", "Plan B", "Plan C", "Plan D"):
-        c = next(x for x in CANDIDATAS if PLANES.get(x["corto"]) == etq)
-        pos = porpts.index(c) + 1
-        marca = "✔" if pos == "ABCD".index(etq[-1]) + 1 else "**✘**"
-        a(f"| {etq} | {c['corto']} | {total(c):.1f} | {marca} {pos}.º de los cuatro |\n")
-    a("\n**Plan B debería ser BEEI (84,0) y hoy es ISI (69,0).** Con la rúbrica en la "
-      "mano, esto baja la fila «Plan A, B y C definidos» de *Logro Destacado* a *Logro "
-      "Esperado* o menos.\n\n")
-    a("#### Por qué ocurrió, y las dos salidas\n\n")
-    a("No es un descuido: es la consecuencia de aplicar **dos filtros propios** que la "
-      "sesión no pide —el de la lista de control y el de volumen anual—. Con los dos "
-      "activos solo sobreviven **dos** candidatas, IJIES e ISI, y hacen falta tres.\n\n")
-    a("| Salida | Qué implica | Orden resultante |\n|---|---|---|\n")
-    a("| **A · Resolver la consulta a la coordinación** | Si la lista solo registra y no "
-      "inhabilita, BEEI e IJSSE vuelven a estar disponibles | **A** IJIES 87,5 · **B** "
-      "BEEI 84,0 · **C** IJSSE 75,5 |\n")
-    a("| **B · Devolver el volumen a criterio ponderado** | El volumen ya está dentro de "
-      "«viabilidad»: usarlo además como filtro es contarlo dos veces, y la sesión solo "
-      "reconoce dos filtros —legitimidad y requisitos institucionales— | **A** IJIES "
-      "87,5 · **B** CIT 77,5 · **C** ISI 69,0 |\n")
-    a("\n**La salida B es la más defendible sin depender de terceros**, y corrige un "
-      "problema de método real: el volumen se estaba contando dos veces. La salida A "
-      "da el mejor conjunto, pero depende de una respuesta que todavía no existe.\n\n")
+    for i, c in enumerate(porpts):
+        a(f"| **Plan {chr(65+i)}** | {c['corto']} | {total(c):.1f} | ✔ {i+1}.º |\n")
+    a("\n> **Corregido el 02/09/2026.** Hasta esa fecha el orden lo fijaba el autor y "
+      "no seguía el puntaje: el Plan B era ISI (69,0) cuando el segundo puntaje era "
+      "BEEI (84,0). La rúbrica penaliza eso —«los 3 planes están ordenados y son "
+      "coherentes con la matriz» es la condición de *Logro Destacado*—, así que el "
+      "orden pasó a calcularse desde la matriz.\n>\n"
+      "> **Las cuatro revistas siguen siendo las que eligió el autor.** Lo único que "
+      "cambió es su posición. La lista está en `ELEGIDAS` dentro del generador y el "
+      "orden se deriva de ella: si se añade o se quita una candidata, el orden se "
+      "recalcula solo y no puede volver a desalinearse.\n\n")
 
     a("\n### Dos tensiones que el autor asume, y conviene tener escritas\n\n")
     a("**1. El Plan A es el acceso abierto más débil de los cuatro.** IJIES encabeza por "
@@ -879,17 +881,18 @@ def main() -> None:
          "✔ 21 artículos mapeados"),
         ("34", "Matriz sobre **todas** las revistas legítimas, no solo cuatro",
          "✔ Las nueve"),
-        ("**24 · 31 · 34 · 35**", "**Plan A, B y C según el orden de puntajes**",
-         "**✘ No se cumple.** Ver la sección 6"),
-        ("27 · 34", "Justificación escrita de media página",
-         "~ La justificación actual ocupa más; hay una versión breve en la sección 7"),
+        ("24 · 31 · 34 · 35", "Plan A, B y C según el orden de puntajes",
+         "✔ Calculado desde la matriz, no escrito a mano"),
+        ("**33 · 34**", "Justificación escrita de **media página a una página**, "
+         "aparte de la matriz",
+         "✔ Documento propio: `Justificacion-revista-objetivo.docx`"),
         ("27", "Compartir la matriz con el asesor **antes** de enviar", "Pendiente"),
     ]:
         a(f"| {d} | {ex} | {est} |\n")
-    a("\n**Trece de quince cumplidos, uno con reserva y uno incumplido.** El "
-      "incumplido es el orden de los planes y está desarrollado en la sección 6: no es "
-      "un descuido, es una decisión del autor que choca con la regla de la sesión y "
-      "que conviene resolver antes de entregar.\n\n")
+    a("\n**Catorce de quince cumplidos y uno con reserva.** El único abierto es la "
+      "confirmación escrita de la coordinación sobre el requisito institucional, que "
+      "depende de un tercero. El orden de los planes, que estaba incumplido, se "
+      "corrigió el 02/09/2026: ahora se calcula desde la matriz.\n\n")
 
     a("\n---\n\n## 8 ter · Fuentes consultadas para esta verificación\n\n")
     a("Toda cifra de este expediente sale de una de estas páginas, consultadas entre el "
@@ -1022,6 +1025,8 @@ def main() -> None:
 
 # ================================================================= WORD =====
 def generar_word() -> None:
+    global PLANES
+    PLANES = planes()
     """Version PRECISA para el docente: matriz + justificacion, ~3 paginas."""
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent))
