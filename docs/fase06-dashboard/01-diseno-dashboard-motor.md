@@ -56,7 +56,7 @@ fusionan para no complicar ninguno de los dos.
    `anomalies.detection_rate`, `anomalies.kali_real_detection_rate`,
    desglose por familia de ataque). Nada se recalcula ni se vuelve a
    evaluar; es el mismo número congelado que ya está documentado en
-   `08-modelo-final-congelado-ocsvm.md`.
+   `../fase04-modelado/06-modelo-final-congelado-ocsvm.md`.
 
 ## Endpoints
 
@@ -79,7 +79,7 @@ fusionan para no complicar ninguno de los dos.
 
 ## Instalación (manual de despliegue)
 
-Requiere haber desplegado ya el motor (`09-diseno-motor-tiempo-real.md`).
+Requiere haber desplegado ya el motor (`../fase05-motor-tiempo-real/01-diseno-motor-tiempo-real.md`).
 No requiere acceso root nuevo salvo para el paso 1 (instalar la unidad
 systemd una única vez):
 
@@ -138,7 +138,7 @@ registro correcto en orden cronológico inverso. Los tres servicios
 (`ppi-motor`, `ppi-motor-capture`, `suricata`) y las métricas del modelo
 (umbral `1.8126`, FPR `4.71%`, detección `88.3%`/`88.9%` Kali-real)
 coincidieron exactamente con los valores ya documentados en
-`08-modelo-final-congelado-ocsvm.md`, confirmando que se leen del
+`../fase04-modelado/06-modelo-final-congelado-ocsvm.md`, confirmando que se leen del
 `manifest.json` real y no están hardcodeados.
 
 Bug encontrado y corregido **antes** de desplegar (durante el smoke test

@@ -22,7 +22,7 @@ Modelo final: `ocsvm_scaled` — `OneClassSVM(kernel="rbf", gamma="scale", nu=0.
 
 ## Por qué OCSVM y no Isolation Forest
 
-Ver `07-resultado-calibracion-multilayer-v2-v1.md` para el comparativo completo de 7 modelos. Resumen: Isolation Forest tiene un punto ciego real y medido (0% de detección en `ANOM-KALI-SYN-RATE-50` y `ANOM-KALI-UDP-PROBE-50`, 71 ventanas), que OCSVM sí resuelve (84% y 100% respectivamente). Elección hecha por desempeño empírico medido en una única evaluación bloqueada, según instrucción explícita del usuario — no es la conclusión por defecto del protocolo heredado (`PM-F1-v1` mantenía IF fijo por diseño; aquí se decidió explícitamente lo contrario, con evidencia).
+Ver `05-resultado-calibracion-multilayer-v2-v1.md` para el comparativo completo de 7 modelos. Resumen: Isolation Forest tiene un punto ciego real y medido (0% de detección en `ANOM-KALI-SYN-RATE-50` y `ANOM-KALI-UDP-PROBE-50`, 71 ventanas), que OCSVM sí resuelve (84% y 100% respectivamente). Elección hecha por desempeño empírico medido en una única evaluación bloqueada, según instrucción explícita del usuario — no es la conclusión por defecto del protocolo heredado (`PM-F1-v1` mantenía IF fijo por diseño; aquí se decidió explícitamente lo contrario, con evidencia).
 
 ## Qué significa "congelado"
 
@@ -32,4 +32,4 @@ Ver `07-resultado-calibracion-multilayer-v2-v1.md` para el comparativo completo 
 
 ## Siguiente paso
 
-Motor de decisión en tiempo real (VM02), reusando directamente `scripts/features/extract_multilayer_v2.py` para evitar la duplicación manual de lógica que tuvo el MVP anterior. Ver hoja de ruta completa en `06-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md`.
+Motor de decisión en tiempo real (VM02), reusando directamente `scripts/features/extract_multilayer_v2.py` para evitar la duplicación manual de lógica que tuvo el MVP anterior. Ver hoja de ruta completa en `04-protocolo-modelado-multilayer-v2-y-hoja-de-ruta.md`.

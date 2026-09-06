@@ -39,7 +39,7 @@ La política evita dos extremos no defendibles: inflar silenciosamente episodios
 
 ## Uso de particiones
 
-- `train` R01–R03 ajusta transformaciones, modelos y parámetros conforme a `../F4-modelado/03-protocolo-modelado-F1-v2.md`.
+- `train` R01–R03 ajusta transformaciones, modelos y parámetros conforme a `../fase04-modelado/01-protocolo-modelado-F1-v2.md`.
 - La contradicción histórica G5↔G6 quedó resuelta antes de ejecutar R04: ajustar el modelo y calibrar la frontera operativa son operaciones separadas. R04 normal completa calibra una vez el cuantil inferior predeclarado; no selecciona features, modelo ni hiperparámetros. G5 fue corregido para apuntar al mismo contrato.
 - `test` R05 se evalúa una sola vez después de congelar todas las decisiones. No se usa para elegir features, modelos, parámetros, pesos ni umbrales.
 - La revisión de integridad de R04/R05 no autoriza explorar resultados del modelo fuera del protocolo.
@@ -48,6 +48,6 @@ No se encontró en el contrato F1-v2 un umbral heredado reproducible que pueda r
 
 ## Gate antes de ejecutar R04
 
-El preflight de `F1N-DNS-VALID-10-R04` puede verificarse de forma independiente. `03-protocolo-modelado-F1-v2.md` ya define candidatos, preprocesamiento, semillas, rejilla unitaria, regla de umbral, métricas, sensibilidad por episodio, resolución G5↔G6 y congelamiento previo a R05. La revisión adversarial cerró sus dos bloqueos en `../04-revisiones-claude/2026-08-04-protocolo-modelado-F1-v2.md`. Publicado el commit y verificados requisitos/escaneo, sólo queda repetir el preflight fresco para levantar el gate operativo.
+El preflight de `F1N-DNS-VALID-10-R04` puede verificarse de forma independiente. `../fase04-modelado/01-protocolo-modelado-F1-v2.md` ya define candidatos, preprocesamiento, semillas, rejilla unitaria, regla de umbral, métricas, sensibilidad por episodio, resolución G5↔G6 y congelamiento previo a R05. La revisión adversarial cerró sus dos bloqueos en `../revisiones-claude/2026-08-04-protocolo-modelado-F1-v2.md`. Publicado el commit y verificados requisitos/escaneo, sólo queda repetir el preflight fresco para levantar el gate operativo.
 
 Hasta entonces no se ejecuta R04, no se construye el dataset incompleto y no se declara desempeño.

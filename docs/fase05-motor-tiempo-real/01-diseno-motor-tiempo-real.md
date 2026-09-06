@@ -58,7 +58,7 @@ Acceso root temporal para este segundo despliegue (mismo patrón: llave SSH a `s
 
 - **EVE continuo:** Suricata en VM02 ya corre `service_state=active` de forma permanente (58.5M paquetes procesados, cero drops), generando `/var/log/suricata/eve.json` sin interrupción. El motor puede hacer `tail -f` de este archivo tal cual, ahora mismo, sin cambios de infraestructura.
 - **Reutilización del extractor:** revisé `scripts/features/extract_multilayer_v2.py` a fondo. Está bien factorizado — `attribute_packets()`, `load_app_observations()` y `build_rows()` son funciones puras e importables, no código enterrado dentro de un script de línea de comandos. El motor puede **importar y llamar exactamente estas funciones**, alimentándolas con un buffer continuo (últimos ~60-120s) en vez de un PCAP/EVE de campaña completa, sin reescribir ni una fórmula. Esto evita el error del MVP anterior (duplicación manual de la lógica de features entre entrenamiento y motor, con riesgo real de que se desincronicen).
-- **Modelo congelado:** `ocsvm_scaled.joblib` ya está listo para cargar y puntuar (`08-modelo-final-congelado-ocsvm.md`).
+- **Modelo congelado:** `ocsvm_scaled.joblib` ya está listo para cargar y puntuar (`../fase04-modelado/06-modelo-final-congelado-ocsvm.md`).
 
 ## El bloqueo real: no existe captura de paquetes continua
 
