@@ -9,7 +9,7 @@
 Cierra el requisito del jurado de «diccionario, fórmulas, unidades y ventanas»
 para las variables 15–28, que hasta ahora solo existían en el código.
 El de las 14 primeras se mantiene en
-[`01-diccionario-multicapa-G5.md`](01-diccionario-multicapa-G5.md).
+`01-diccionario-multicapa-G5.md` (versión G5 de 14 variables, en `VF-PPI-TESIS-ORQUESTACION/investigacion/fase02-features-multicapa/`).
 
 ## Unidad de observación
 - Una fila por **IP iniciadora** y cierre de ventana `T`, emitida cada **10 s**.

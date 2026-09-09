@@ -46,3 +46,20 @@ agent-skills/
 .claude/
 AGENTS.md
 .mcp.json
+
+# ── documentación del proceso de investigación ────────────────────────
+# Vive en VF-PPI-TESIS-ORQUESTACION/investigacion/. Este repositorio es el
+# producto: qué es, cómo se levanta y cómo se usa. Lo demás es el registro de
+# cómo se investigó, y ese es otro trabajo.
+docs/fase00-infraestructura/
+docs/fase01-diseno-experimental/
+docs/fase02-features-multicapa/
+docs/fase03-dataset/
+docs/fase04-modelado/
+docs/fase05-motor-tiempo-real/
+docs/fase06-dashboard/
+docs/fase07-validacion-final/
+docs/07-mejoras-futuras/
+docs/requisitos-jurado/
+docs/agent-context/
+CLAUDE.md

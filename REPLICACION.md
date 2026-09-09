@@ -19,7 +19,7 @@ alguien que no tiene acceso a nuestro laboratorio.
 git clone <este repositorio> && cd <carpeta>
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements-model.txt
-cd docs/dataset && sha256sum -c SHA256SUMS
+sha256sum -c docs/dataset/SHA256SUMS   # desde la raíz
 ```
 
 Si un solo hash no cuadra, **pare**: los artefactos no son los publicados y
@@ -37,9 +37,10 @@ hipervisor. Sin él puede leer la configuración, no ejecutarla.
 contienen tráfico del laboratorio sin sanear. Lo que sí se publica es el
 **dataset derivado**, que es lo que alimenta al modelo.
 
-**Las campañas.** Se documentan una a una en `docs/fase03-dataset/` —182
-documentos con manifiesto, contadores y hashes— pero volver a ejecutarlas
-exige el laboratorio.
+**Las campañas.** Cada una está documentada con su manifiesto, contadores y
+hashes, pero ese registro —182 documentos— vive en el repositorio de la
+investigación, no aquí: `VF-PPI-TESIS-ORQUESTACION/investigacion/`. Este
+repositorio es el producto. Y volver a ejecutarlas exige el laboratorio.
 
 Esto no es una laguna: es la diferencia entre **reproducibilidad** —mismos
 datos y mismo código dan el mismo resultado, y eso sí se puede comprobar— y
@@ -64,6 +65,10 @@ anillo de PCAP completo en cada ciclo.
 **Una de las 28 variables no es observable.**
 `tls_handshake_failure_ratio_60s` es constante en todo el dataset. Las otras
 27 tienen variación.
+
+El registro completo de cómo se investigó —diseño experimental, campañas,
+modelado y validación— está en `VF-PPI-TESIS-ORQUESTACION/investigacion/`.
+Aquí queda el producto y lo necesario para ejecutarlo y verificarlo.
 
 Y una consideración de método: el modelo se eligió por desempeño empírico
 medido sobre una evaluación bloqueada de un solo paso. El manifiesto registra
@@ -95,10 +100,10 @@ validación** (`alpha = 0,05`, `k = 13`), nunca con prueba.
 | Datasheet del dataset | `docs/dataset/DATASHEET_MULTILAYER_V2.md` |
 | Model card | `docs/dataset/MODEL_CARD_OCSVM.md` |
 | System card del motor | `docs/dataset/SYSTEM_CARD_MOTOR.md` |
-| Diccionario de las 28 variables | `docs/fase02-features-multicapa/03-diccionario-multicapa-v2.md` |
+| Diccionario de las 28 variables | `docs/dataset/DICCIONARIO_VARIABLES.md` |
 | Modelo congelado y su manifiesto | `artifacts/model/` |
-| Validación operacional | `docs/fase07-validacion-final/02-resultados-f6.md` |
-| Limitaciones abiertas | `docs/07-mejoras-futuras/01-debilidades-y-mejoras.md` |
+| Validación operacional | `results/f6/f6_resultados.jsonl` y `docs/dataset/SYSTEM_CARD_MOTOR.md` |
+| Limitaciones abiertas | `docs/dataset/SYSTEM_CARD_MOTOR.md` y el apartado de este documento |
 
 ---
 
