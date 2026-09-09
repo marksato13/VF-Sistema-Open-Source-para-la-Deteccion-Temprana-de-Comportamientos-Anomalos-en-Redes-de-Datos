@@ -1,0 +1,20 @@
+{
+  "title": "Sistema open source para la detección temprana de comportamientos anómalos en redes de datos",
+  "upload_type": "software",
+  "license": "MIT",
+  "access_right": "open",
+  "language": "spa",
+  "creators": [
+    {"name": "Salazar Tocas, Rubén Mark", "affiliation": "Universidad Peruana Unión"},
+    {"name": "Sauñe Fernandez, Uziel Elias", "affiliation": "Universidad Peruana Unión"}
+  ],
+  "contributors": [
+    {"name": "Saboya Ríos, Nemias", "type": "Supervisor", "affiliation": "Universidad Peruana Unión"},
+    {"name": "Asin Gómez, Fernando Manuel", "type": "Supervisor", "affiliation": "Universidad Peruana Unión"}
+  ],
+  "keywords": [
+    "intrusion detection", "anomaly detection", "unsupervised learning",
+    "One-Class SVM", "network security", "Suricata", "nftables", "open science"
+  ],
+  "description": "Detección de anomalías de red con aprendizaje no supervisado y control en línea. Extrae 28 variables de capas 3, 4 y 7 por ventana temporal, puntúa con un One-Class SVM congelado y bloquea la IP ofensora con nftables en el propio router, con expiración nativa de 120 s. Incluye laboratorio reproducible, dataset con datasheet, modelo con model card, motor con system card y validación operacional sobre 58 corridas. Las limitaciones medidas se declaran: el FPR benigno de 4,71 % en laboratorio no se sostiene en operación, donde se midió 25,81 % y 22,97 %."
+}

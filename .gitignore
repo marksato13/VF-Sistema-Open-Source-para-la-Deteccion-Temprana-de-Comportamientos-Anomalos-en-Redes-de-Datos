@@ -28,3 +28,21 @@ artifacts/model/*
 # Biblioteca personal exportada de Mendeley: material del autor, no del proyecto
 docs/entregables/05-ppi/biblioteca.bib
 docs/entregables/05-ppi/biblioteca.ris
+
+# ── material de tesis y orquestación ──────────────────────────────────
+# Vive en VF-PPI-TESIS-ORQUESTACION. Este repositorio es solo el producto:
+# código, artefactos, configuración y la documentación técnica que sostiene
+# la replicabilidad. Los archivos siguen en disco; simplemente no se versionan
+# aquí para no tener dos copias que se desincronicen.
+docs/entregables/
+docs/articulo/
+docs/revisiones-claude/
+docs/auditorias/
+mcp-servers/
+.agent/
+.agents/
+agent-skills/
+.codex/
+.claude/
+AGENTS.md
+.mcp.json
