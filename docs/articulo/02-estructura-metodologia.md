@@ -50,11 +50,24 @@ el estilo de la revista y no esconder lo que este trabajo tiene de distinto.
 | | Sección | Qué entra | De dónde sale |
 |---|---|---|---|
 | 3.1 | **Testbed and traffic generation** | 5 VM, 3 redes, generación controlada y captura | `fase00-infraestructura/`, `fase01-diseno-experimental/` |
-| 3.2 | Dataset construction and labeling | 220 episodios, 1.373 ventanas, partición disjunta por episodio | `fase03-dataset/`, `dataset/DATASHEET_MULTILAYER_V2.md` |
-| 3.3 | Multi-layer feature extraction | Las 28 variables L3/L4/L7, 27 observables | `fase02-features-multicapa/03-diccionario-multicapa-v2.md` |
+| 3.2 | Multi-layer feature extraction | Las 28 variables L3/L4/L7, 27 observables | `fase02-features-multicapa/03-diccionario-multicapa-v2.md` |
+| 3.3 | Dataset construction and labeling | 220 episodios, 1.373 ventanas, partición disjunta por episodio | `fase03-dataset/`, `dataset/DATASHEET_MULTILAYER_V2.md` |
 | 3.4 | **Detection model and threshold calibration** | OCSVM `ν=0.05`, umbral `1,8126`, `α=0.05`, `k=13` | `fase04-modelado/06-modelo-final-congelado-ocsvm.md` |
 | 3.5 | **Real-time engine and inline enforcement** | Motor, nftables, expiración de 120 s | `fase05-motor-tiempo-real/01-diseno-motor-tiempo-real.md` |
 | 3.6 | Evaluation protocol | 58 corridas, dos pases, aislamiento | `fase07-validacion-final/02-resultados-f6.md` |
+
+### El orden invierte el de los cinco artículos, y hay razón
+
+En los cinco de IJIES, el dataset va **antes** que las variables: sus autores
+descargan NSL-KDD o UNSW-NB15 y luego seleccionan características sobre él.
+
+Aquí es al revés. El extractor congelado convierte los paquetes en vectores, y
+**esos vectores son las filas del dataset** —43 columnas: `episode_id`,
+`partition`, `label`, más las 28 variables—. No hay dataset antes de extraer.
+Es también el orden de las fases del propio proyecto: F03 variables, F04
+dataset.
+
+Copiar el orden de ellos describiría un pipeline que no es el de este trabajo.
 
 ### Las tres decisiones que hay detrás
 
@@ -68,8 +81,38 @@ separado del modelo que lo produce.
 único que **no tiene ninguno de los cinco artículos de IJIES**. Fusionarlo
 para parecerse a ellos escondería la aportación.
 
-Si hubiera que bajar a cinco, se fusionan 3.1 y 3.2 en «Testbed and dataset
-construction». **No se baja de cinco, y 3.5 no se toca.**
+Si hubiera que bajar a cinco, se fusionan 3.2 y 3.3 en «Feature extraction and
+dataset construction». **No se baja de cinco, y 3.5 no se toca.**
+
+---
+
+## Esto NO son las fases del proyecto
+
+Se confunden con facilidad y conviene tenerlo claro antes de la defensa:
+
+| | Qué es | Para quién |
+|---|---|---|
+| `F00`–`F09` | Fases del **trabajo**, con criterios de entrada, salida y evidencia | Uso interno del equipo |
+| `3.1`–`3.6` | Subsecciones del **artículo** | El revisor de IJIES |
+
+Diez fases de trabajo se narran en seis subsecciones. No se pierde nada:
+
+| Subsección del artículo | Fases que la alimentan |
+|---|---|
+| 3.1 Testbed and traffic generation | `F01` infraestructura + `F02` diseño experimental |
+| 3.2 Multi-layer feature extraction | `F03` contrato de variables |
+| 3.3 Dataset construction and labeling | `F04` dataset |
+| 3.4 Detection model and threshold calibration | `F05` modelado |
+| 3.5 Real-time engine and inline enforcement | `F06` motor + `F07` dashboard |
+| 3.6 Evaluation protocol | `F08` validación operacional |
+
+`F00` gobernanza y `F09` tesis y publicación **no tienen subsección**, y es
+correcto: la primera es organización interna y la segunda **es** el artículo.
+
+Las fases no se reducen a seis. Cada una tiene criterios de entrada y salida
+distintos, y agruparlas perdería la trazabilidad. Lo que sí cabe agrupar es la
+**defensa**, en seis bloques: infraestructura, datos, modelo, sistema,
+validación y publicación.
 
 ---
 
