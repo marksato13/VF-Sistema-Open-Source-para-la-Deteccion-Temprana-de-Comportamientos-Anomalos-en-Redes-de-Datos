@@ -641,3 +641,12 @@ como acceso abierto diamante sin cargo, y la propia revista publica un APC que
 entra en vigor en seis días. **CiteScore, percentil Scopus y cuartil SJR son
 tres indicadores distintos** y presentarlos como equivalentes es un error de
 método.
+
+## Estructura de la sección 3
+
+[`02-estructura-metodologia.md`](02-estructura-metodologia.md) fija las **seis
+subsecciones** de «Proposed methodology», decididas analizando los cinco
+artículos semilla de IJIES —descargados y leídos, no citados de memoria—.
+**Ninguno de los cinco cita un marco metodológico**: en esta revista la
+metodología es el pipeline en orden de ejecución. Incluye los DOI, qué entra en
+cada subsección y de qué documento del repositorio sale.
