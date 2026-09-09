@@ -414,11 +414,22 @@ def main() -> int:
             "Nadie fuera del equipo ha operado el panel"),
            ("**SUS**", "**Preparado, sin aplicar**",
             "Instrumento de 10 ítems y guion listos en `08-validacion-usuarios/`; el archivo de respuestas tiene **0 filas**"),
-           ("TAM / TAM2 / UTAUT", "No aplicado", "No se aplicó ningún modelo de aceptación"),
+           # El asesor observó que el TAM falta y que debe medirse sobre los propios
+           # evaluadores: este sistema no tiene usuarios previos, así que no hay
+           # aceptación anterior contra la que comparar.
+           ("**TAM** — utilidad percibida", "**Instrumento en preparación**",
+            "Seis ítems de utilidad percibida y facilidad de uso, para aplicar **en la misma sesión que el SUS**. Mide algo distinto: el SUS pregunta si es fácil de usar, el TAM si sirve para algo"),
+           ("UTAUT", "No aplicado", "Fuera de alcance: exige comparar con un sistema previo, y aquí no lo hay"),
            ("Entrevistas o grupos focales", "No aplicado", "No se realizaron"),
            ("**Trazabilidad de requisitos**", "Parcial",
             "La matriz existe como plan, pero **no está cerrada**: hay filas sin prueba asociada")],
           widths=[5.0, 3.0, 8.5])
+    parrafo(doc, "**Observación del asesor, incorporada.** El TAM no puede plantearse como "
+                 "aceptación de un sistema previo, porque este no tiene usuarios anteriores: "
+                 "se mide sobre los propios evaluadores de la sesión. Y la sesión se hace "
+                 "**con el sistema ya cerrado** —después de recalibrar—, no antes: evaluar "
+                 "una versión con debilidades abiertas mediría algo que no es lo que se "
+                 "defiende.", size=9.5)
     parrafo(doc, "En palabras de la sesión: «una solución puede ser excelente en código y "
                  "arquitectura, y aun así ser irrelevante si no encaja con la necesidad real». "
                  "**Este proyecto ha demostrado lo primero y no ha medido lo segundo.** Cerrarlo "

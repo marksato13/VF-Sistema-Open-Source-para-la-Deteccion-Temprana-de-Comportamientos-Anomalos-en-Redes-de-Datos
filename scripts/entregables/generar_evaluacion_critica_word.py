@@ -215,7 +215,7 @@ def main() -> None:
              "caben en el laboratorio actual: **ninguna exige equipo ni presupuesto nuevo**. "
              "**P-2 y P-4 se resuelven con la misma campaña.**")
     tabla(doc, ["", "Qué se hará", "¿Lo resuelve del todo?", "Cuándo"], [
-        ["**P-1**", "Reentrenar incluyendo la transferencia de 200 Mbit/s como tráfico **normal** y repetir las 29 corridas de validación", "Sí, si el error baja. Si no baja, queda declarado como límite del sistema", "10 oct"],
+        ["**P-1**", "Reentrenar incluyendo la transferencia de 200 Mbit/s como tráfico **normal** y repetir las 29 corridas de validación", "Sí, si el error baja. Si no baja, queda declarado como límite del sistema", "26 sep"],
         ["**P-2**", "Recolectar una **jornada nueva** que el modelo no vea nunca, y medir sobre ella", "Sí. Es la única corrección real: no se arregla escribiendo", "24 oct"],
         ["**P-3**", "Sesión de 2 h con 5–8 evaluadores usando el instrumento SUS ya preparado", "Sí", "9 sep"],
         ["**P-4**", "**La misma jornada nueva de P-2** sirve para las dos cosas", "Sí", "24 oct"],
@@ -234,15 +234,18 @@ def main() -> None:
              "revisión: es deliberado, porque el artículo se escribe con el resultado ya "
              "bloqueado.", size=8.6, italic=True, color=DIM)
     tabla(doc, ["Fecha", "", "Qué se hace", "Responsable", "Estado"], [
+        # Reordenado tras la observación del asesor: el sistema se cierra ANTES de
+        # traer evaluadores. Evaluar un sistema con debilidades abiertas mide una
+        # versión que no es la que se defiende.
         ["**vie 4 sep 2026**", "P-2", "Declarar la selección posterior en el documento de tesis (mitiga; la corrección real es el 24 de octubre)", "Salazar", "PLANIFICADA"],
-        ["**mié 9 sep 2026**", "**P-3**", "**Sesión SUS** de 2 h con 5–8 evaluadores", "Salazar · Sauñe", "PLANIFICADA"],
-        ["**sáb 19 sep 2026**", "**P-5**", "Campaña F1: SSH, SCP/SFTP, backup y actualizaciones", "Sauñe", "PLANIFICADA"],
-        ["**mié 23 sep 2026**", "+P-3", "Juicio experto con 3 evaluadores. **Refuerza P-3, no lo cierra**: lo cierra el SUS del 9 de septiembre", "Salazar · asesores", "PLANIFICADA"],
+        ["**sáb 19 sep 2026**", "**P-5**", "Campaña F1: SSH, SCP/SFTP, respaldo y actualizaciones", "Sauñe", "PLANIFICADA"],
+        ["**mié 23 sep 2026**", "+P-3", "Juicio experto con 3 evaluadores. **Refuerza P-3, no lo cierra**: lo cierra la sesión del 27 de septiembre", "Salazar · asesores", "PLANIFICADA"],
+        ["**sáb 26 sep 2026**", "**P-1**", "**Recalibrar** con tráfico pesado como normalidad y repetir las 29 corridas. **Cierra la debilidad mayor antes de evaluar con usuarios**", "Salazar", "PLANIFICADA"],
+        ["**dom 27 sep 2026**", "**P-3**", "**Sesión de usabilidad y aceptación**: SUS más **TAM** (utilidad percibida) con 5–8 evaluadores, sobre el sistema ya cerrado", "Salazar · Sauñe", "PLANIFICADA"],
         ["**lun 28 sep 2026**", "—", "**Envío del artículo a IJIES.** Hito, no un pendiente: el artículo no espera a P-1 ni a P-2", "Salazar · Sauñe", "PLANIFICADA"],
-        ["**sáb 10 oct 2026**", "**P-1**", "**Recalibrar** con tráfico pesado como normalidad y repetir las 29 corridas", "Salazar", "PLANIFICADA"],
         ["**sáb 24 oct 2026**", "**P-2 · P-4**", "**Jornada nueva** en fecha distinta, sin reutilizar episodios. Cierra los dos", "Salazar · Sauñe", "PLANIFICADA"],
     ], [2.9, 1.9, 6.4, 2.4, 2.3])
-    par(doc, "**El SUS va primero porque es el único cero absoluto que queda**: cero en la ficha de "
+    par(doc, "**El sistema se cierra antes de evaluarlo con usuarios.** Es la observación del asesor y reordena todo: recalibrar el 26 y evaluar el 27, no al revés. Traer evaluadores a un sistema con debilidades abiertas mide una versión que no es la que se defiende. La sesión sigue siendo urgente porque es **el único cero absoluto que queda**: cero en la ficha de "
              "auditoría, cero en el eje de pertinencia y `D-18` en el registro. Cuesta dos horas y "
              "sube la ficha de 82,4 % a 88,2 %. El juicio experto va después a propósito: los "
              "expertos juzgan mejor con los resultados de los usuarios delante.", italic=True)
