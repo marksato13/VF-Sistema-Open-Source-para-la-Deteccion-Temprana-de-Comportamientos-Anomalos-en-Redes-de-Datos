@@ -7,6 +7,17 @@ mediante `nftables` en el propio router del laboratorio.
 Proyecto de investigación · Universidad Peruana Unión · Facultad de Ingeniería
 y Arquitectura · E.P. de Ingeniería de Sistemas.
 
+## Replicar y citar
+
+| | |
+|---|---|
+| **Cómo replicarlo** | [`REPLICACION.md`](REPLICACION.md) — qué se reproduce, qué no y por qué |
+| **Cómo citarlo** | [`CITATION.cff`](CITATION.cff) — GitHub ofrece la cita ya formateada |
+| **DOI** | [`docs/dataset/DOI-ZENODO.md`](docs/dataset/DOI-ZENODO.md) — tres pasos para obtenerlo |
+
+El material de tesis y la orquestación de agentes viven en un repositorio
+aparte: `VF-PPI-TESIS-ORQUESTACION`.
+
 ## Qué hay aquí
 
 | | |

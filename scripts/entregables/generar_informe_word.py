@@ -445,9 +445,17 @@ def main() -> int:
           widths=[5.2, 11.3])
 
     h2(doc, "Abordado parcialmente", AMBER, "◐  ")
-    vineta(doc, "**Análisis de sensibilidad.** Se ejecutó con 10 semillas, ponderación por episodio y "
-                "colapso de duplicados, pero **solo sobre los modelos descartados**. El modelo finalmente "
-                "elegido no recibió ninguna prueba de estabilidad.")
+    # N-02: la redacción anterior decía que el modelo elegido «no recibió ninguna
+    # prueba de estabilidad», y la sección 2 de este mismo documento reporta el
+    # bootstrap del umbral con sus resultados. Era cierto solo de manifest.stability,
+    # que cubre los cuatro Isolation Forest y no ocsvm_scaled; pero omitía la prueba
+    # que sí existe y se autoinfligía una debilidad ya resuelta.
+    vineta(doc, "**Análisis de sensibilidad por semillas.** El barrido de 10 semillas con ponderación "
+                "por episodio y colapso de duplicados cubre **solo los cuatro Isolation Forest**; "
+                "`manifest.stability` no incluye `ocsvm_scaled`. La estabilidad del modelo elegido se "
+                "midió por otra vía —validación cruzada agrupada por episodio y bootstrap del umbral, "
+                "sección 2—, de modo que la carencia es la del barrido de semillas, no la de la "
+                "estabilidad en general.")
 
     h2(doc, "No abordado", DANGER, "✘  ")
     vineta(doc, "**Selección del modelo sin contaminar la prueba.** El modelo se eligió después de observar "
@@ -531,7 +539,10 @@ def main() -> int:
           ["Estado", "Acción", "Corrige", "Tiempo"],
           [(("hecho", F_OK), "Declarada la selección posterior del modelo; intervalos de confianza en toda proporción; error operativo reportado junto al de laboratorio; diccionario de las 28 variables publicado", "Interna · Confiabilidad · Externa", ("—", F_OK)),
            (("hecho", F_OK), "Ablación por capas y comparación 14 vs. 28, y prueba de significancia entre modelos (McNemar con corrección de Holm)", "Constructo · Interna", ("—", F_OK)),
-           (("pendiente", F_AMBER), "Validación cruzada por episodio y banda del umbral por remuestreo", "Validez interna", ("Horas", F_AMBER)),
+           # N-05: figuraba como «pendiente» pese a que la sección 2 la reporta ejecutada
+           # con resultados (CV 4,10 %, banda [1,6496 – 1,8132]) y la sección 6 la da por
+           # cumplida. Tres estados distintos para el mismo trabajo, ya hecho.
+           (("hecho", F_OK), "Validación cruzada agrupada por episodio y banda del umbral por remuestreo (CV 4,10 %)", "Validez interna", ("—", F_OK)),
            (("pendiente", F_AMBER), "Validación con usuarios: prueba de usabilidad con 5–8 evaluadores", "Pertinencia", ("Días", F_AMBER)),
            (("futuro", F_DANGER), "Jornada nueva como holdout temporal y recalibración con tráfico legítimo intenso", "Validez externa", ("Semanas", F_DANGER))],
           widths=[2.0, 8.4, 3.2, 2.4])

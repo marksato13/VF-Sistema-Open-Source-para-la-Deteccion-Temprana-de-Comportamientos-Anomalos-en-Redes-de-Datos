@@ -203,7 +203,10 @@ def main() -> None:
         ["**P-2**", "**El modelo se eligió mirando el examen final** *(replicabilidad)*", "Se compararon 7 candidatos sobre el mismo conjunto de prueba y se escogió el mejor. El 88,8 % es un máximo, no una estimación limpia", "Crítica"],
         ["**P-3**", "**Nadie ha usado el panel salvo el equipo** *(pertinencia)*", "El instrumento SUS está preparado, pero el archivo de respuestas tiene 0 filas: no se ha aplicado", "Alta"],
         ["**P-4**", "**No se sabe si funciona en otra jornada** *(replicabilidad)*", "Los 44 perfiles aparecen en las tres particiones. Falta una captura nueva que el modelo no haya visto", "Alta"],
-        ["**P-5**", "**Faltan 4 escenarios legítimos del jurado**", "SSH, SCP/SFTP, backup y actualizaciones no están en el dataset", "Media"],
+        # N-04: decía «4 escenarios» donde el registro de debilidades (D-10), el .md de
+        # este informe y el informe 02 dicen SEIS. Encoger una debilidad abierta que el
+        # jurado ya señaló es lo peor que se puede llevar a la defensa.
+        ["**P-5**", "**Faltan 6 escenarios legítimos del jurado**", "SSH, SCP/SFTP, SMB, respaldo, streaming y actualizaciones no están en el dataset, y no hay captura multi-SO", "Media"],
     ], [1.5, 4.6, 8.4, 2.1], fondos=[F_RED, F_RED, F_AMBER, F_AMBER, F_ZEBRA])
 
     # ---------------------------------------------------------------- 3
@@ -216,7 +219,9 @@ def main() -> None:
         ["**P-2**", "Recolectar una **jornada nueva** que el modelo no vea nunca, y medir sobre ella", "Sí. Es la única corrección real: no se arregla escribiendo", "24 oct"],
         ["**P-3**", "Sesión de 2 h con 5–8 evaluadores usando el instrumento SUS ya preparado", "Sí", "9 sep"],
         ["**P-4**", "**La misma jornada nueva de P-2** sirve para las dos cosas", "Sí", "24 oct"],
-        ["**P-5**", "Una campaña F1 más: SSH, SCP/SFTP, backup y actualizaciones", "Sí", "19 sep"],
+        # N-04: la campaña cubre cuatro de los seis. SMB, streaming y la captura
+        # multi-SO quedan fuera, así que la columna no puede decir «Sí».
+        ["**P-5**", "Una campaña F1 más: SSH, SCP/SFTP, respaldo y actualizaciones", "Parcial — quedan fuera SMB, streaming y la captura multi-SO", "19 sep"],
     ], [1.5, 7.2, 5.4, 2.0])
     # -------------------------------------------------------- cronograma
     h1(doc, "4 ·", "En qué tiempo: cronograma comprometido")
