@@ -1,8 +1,19 @@
-# Entorno de entrenamiento congelado para CPython 3.14.4 en VM01.
+# Entorno de entrenamiento congelado para CPython 3.12.
+#
+# Recongelado el 2026-09-17. El entorno anterior estaba fijado para CPython
+# 3.14.4, y tres de sus seis versiones no existen para 3.12: numpy 2.5.1
+# (maximo 2.2.6), scikit-learn 1.9.0 (maximo 1.7.2) y scipy 1.18.0 (maximo
+# 1.16.3). Cargar el modelo antiguo bajo 3.12 funcionaba, pero scikit-learn
+# lo marcaba como no soportado ("may lead to invalid results"), que no es
+# una base sobre la que publicar cifras.
+#
+# El modelo se reajusto con el mismo protocolo, el mismo dataset y los mismos
+# hiperparametros bajo este entorno. Ver docs/dataset/MODEL_CARD_OCSVM.md.
+#
 # Instalar con: .venv/bin/python -m pip install -r requirements-model.txt
 joblib==1.5.3
 narwhals==2.24.0
-numpy==2.5.1
-scikit-learn==1.9.0
-scipy==1.18.0
+numpy==2.2.6
+scikit-learn==1.7.2
+scipy==1.16.3
 threadpoolctl==3.6.0

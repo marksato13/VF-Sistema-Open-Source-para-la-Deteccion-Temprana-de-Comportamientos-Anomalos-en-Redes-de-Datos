@@ -56,7 +56,10 @@ PROTOCOL_ID = "PM-multilayer-v2-v1"
 ALPHA = 0.05
 PRIMARY_SEED = 20260817
 STABILITY_SEEDS = tuple(range(20260817, 20260827))
-EXPECTED_PYTHON = "3.14.4"
+# Recongelado el 2026-09-17 desde 3.14.4. El candado se mantiene a
+# proposito: una calibracion que se ejecuta en otro interprete no es
+# comparable con la publicada, y es mejor que falle a que pase callando.
+EXPECTED_PYTHON = "3.12.3"
 EXPECTED_FEATURE_COUNT = 28
 KALI_ENTITY_IP = "10.20.0.100"
 EXPECTED_PARTITIONS = {
