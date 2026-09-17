@@ -1,19 +1,22 @@
-# Entorno de entrenamiento congelado para CPython 3.12.
+# Entorno de entrenamiento congelado para CPython 3.14.4.
 #
-# Recongelado el 2026-09-17. El entorno anterior estaba fijado para CPython
-# 3.14.4, y tres de sus seis versiones no existen para 3.12: numpy 2.5.1
-# (maximo 2.2.6), scikit-learn 1.9.0 (maximo 1.7.2) y scipy 1.18.0 (maximo
-# 1.16.3). Cargar el modelo antiguo bajo 3.12 funcionaba, pero scikit-learn
-# lo marcaba como no soportado ("may lead to invalid results"), que no es
-# una base sobre la que publicar cifras.
+# NO lo baje a 3.12. Se intento el 2026-09-17 y se revirtio: en scikit-learn
+# 1.7.2 -la version mas alta disponible para 3.12- IsolationForest.fit ACEPTA
+# sample_weight y lo IGNORA en silencio, sin aviso ni error. Medido:
 #
-# El modelo se reajusto con el mismo protocolo, el mismo dataset y los mismos
-# hiperparametros bajo este entorno. Ver docs/dataset/MODEL_CARD_OCSVM.md.
+#     delta maximo con y sin sample_weight: 0.0000000000
+#
+# El modelo if_primary_weighted, que el manifiesto declara como conclusion
+# principal, depende de esa ponderacion por episodio. Bajo 1.7.2 pasa de
+# 97/179 a 103/179 y queda identico al no ponderado, sin que nada lo indique.
+#
+# El OCSVM desplegado si reproduce exacto (158/179) bajo ambos entornos, pero
+# calibrar aqui invalidaria las ramas de Isolation Forest.
 #
 # Instalar con: .venv/bin/python -m pip install -r requirements-model.txt
 joblib==1.5.3
 narwhals==2.24.0
-numpy==2.2.6
-scikit-learn==1.7.2
-scipy==1.16.3
+numpy==2.5.1
+scikit-learn==1.9.0
+scipy==1.18.0
 threadpoolctl==3.6.0

@@ -405,13 +405,14 @@ pip download --platform manylinux2014_x86_64 --python-version 3.12 \
 
 ---
 
-## Anexo B · La versión de Python importa
+## Anexo B · La versión de Python importa, y más de lo que parece
 
-`requirements-model.txt` fija el entorno con el que se entrenó el modelo. Si su
-Python es distinto, **puede que esas versiones no existan para él**.
+`requirements-model.txt` fija CPython **3.14.4**. No es una formalidad ni una
+preferencia: es un requisito medido.
 
-Ejemplo real: con el entorno fijado para CPython 3.14, en un sensor con Python
-3.12 no existe ninguna de estas:
+### Lo que pasa si lo baja a 3.12
+
+Para Python 3.12 no existe ninguna de las versiones fijadas:
 
 | Fijado | Máximo para cp312 |
 |---|---|
@@ -419,13 +420,61 @@ Ejemplo real: con el entorno fijado para CPython 3.14, en un sensor con Python
 | `scikit-learn==1.9.0` | 1.7.2 |
 | `scipy==1.18.0` | 1.16.3 |
 
-El modelo **carga igual**, pero scikit-learn avisa:
+El modelo **carga igual** con las versiones disponibles, y scikit-learn avisa:
 
 ```
 Trying to unpickle estimator OneClassSVM from version 1.9.0 when using
 version 1.7.2. This might lead to breaking code or invalid results.
 ```
 
-Sirve para ver el sistema en marcha. **No sirve para ninguna medición
-publicable.** Si va a reportar cifras, use la versión de Python del manifiesto
-o recongele el modelo sobre la suya y publique el manifiesto nuevo.
+Eso es lo visible. **Lo que no se ve es peor.**
+
+### El fallo silencioso
+
+Se recalibró el protocolo completo bajo 3.12 para comprobarlo. El OCSVM
+desplegado reprodujo su resultado **exacto**: 158/179. Pero dos ramas de
+Isolation Forest cambiaron:
+
+```
+if_primary_weighted   97/179  ->  103/179
+if_scaled_weighted    97/179  ->  103/179
+```
+
+Y el umbral del modelo ponderado pasó a ser **idéntico** al del no ponderado:
+
+```
+if_primary_weighted   antes -0.50606563   ahora -0.55456155
+if_exact_collapsed    (sin ponderar)      ahora -0.55456155
+```
+
+La causa, comprobada directamente:
+
+```python
+>>> import sklearn; sklearn.__version__
+'1.7.2'
+>>> inspect.signature(IsolationForest.fit)
+(self, X, y=None, sample_weight=None)
+>>> # 300 filas, peso 20x en las primeras 50
+>>> abs(sin_peso - con_peso).max()
+0.0
+```
+
+**`IsolationForest.fit` acepta `sample_weight`, no avisa, no falla, y lo
+ignora.** El protocolo de calibración pondera cada fila por
+`1/filas_por_episodio` para corregir un desbalance medido —5 de 132 episodios
+concentran el 31,7 % de las filas de entrenamiento—, y bajo 1.7.2 esa
+corrección sencillamente no ocurre.
+
+El resultado sigue saliendo. Los números siguen siendo plausibles. Nada indica
+que la ponderación se haya perdido.
+
+### Qué hacer
+
+- **Para desplegar y ver el sistema funcionando**, 3.12 sirve. El OCSVM, que es
+  lo que corre el motor, reproduce exacto.
+- **Para calibrar, reentrenar o publicar cualquier cifra**, use 3.14.4. El
+  guardarraíl `EXPECTED_PYTHON` del script de calibración se lo va a exigir, y
+  está ahí por esto.
+- Si cambia de entorno, **no se fíe de que los números salgan**: compruebe que
+  salen *los mismos*. Un parámetro ignorado en silencio no se detecta de
+  ninguna otra forma.

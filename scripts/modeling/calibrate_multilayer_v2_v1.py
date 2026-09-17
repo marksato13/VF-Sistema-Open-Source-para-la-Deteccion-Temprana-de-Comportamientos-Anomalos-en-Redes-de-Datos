@@ -56,10 +56,11 @@ PROTOCOL_ID = "PM-multilayer-v2-v1"
 ALPHA = 0.05
 PRIMARY_SEED = 20260817
 STABILITY_SEEDS = tuple(range(20260817, 20260827))
-# Recongelado el 2026-09-17 desde 3.14.4. El candado se mantiene a
-# proposito: una calibracion que se ejecuta en otro interprete no es
-# comparable con la publicada, y es mejor que falle a que pase callando.
-EXPECTED_PYTHON = "3.12.3"
+# El candado no es una formalidad. Se intento bajar a 3.12.3 el 2026-09-17
+# y hubo que revertirlo: en scikit-learn 1.7.2, IsolationForest ignora
+# sample_weight en silencio, y con el la ponderacion por episodio en la
+# que se apoya if_primary_weighted. Ver requirements-model.txt.
+EXPECTED_PYTHON = "3.14.4"
 EXPECTED_FEATURE_COUNT = 28
 KALI_ENTITY_IP = "10.20.0.100"
 EXPECTED_PARTITIONS = {
