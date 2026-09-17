@@ -1,0 +1,46 @@
+# Licencia de los datos y la documentación
+
+Los **datos** y la **documentación** de este repositorio se publican bajo
+
+    Creative Commons Atribución 4.0 Internacional (CC BY 4.0)
+
+Texto legal completo: https://creativecommons.org/licenses/by/4.0/legalcode.es
+Resumen legible:      https://creativecommons.org/licenses/by/4.0/deed.es
+
+## Qué cubre esta licencia
+
+- `artifacts/dataset/multilayer-v2-normal.csv`
+- `artifacts/dataset/multilayer-v2-anomalies.csv`
+- `artifacts/dataset/multilayer-v2-audit-report.json`
+- `artifacts/dataset/partition-map-normal-v2.json`
+- `artifacts/model/manifest.json`
+- `artifacts/model/ocsvm_scaled.joblib`
+- Todo el contenido de `docs/`
+
+El **código fuente** (`scripts/`, `ansible/`, `tests/`, `configs/`) se publica
+por separado bajo la licencia MIT; ver `LICENSE`.
+
+## Qué puedes hacer
+
+Copiar, redistribuir, transformar y construir sobre este material, para
+cualquier finalidad, incluso comercial, siempre que des crédito adecuado.
+
+## Cómo citar
+
+> Salazar Tocas, R. M. y Sauñe Fernandez, U. E. (2026). *Dataset
+> `multilayer-v2`: ventanas causales multicapa para detección de anomalías de
+> red* [Conjunto de datos]. Universidad Peruana Unión.
+> https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos
+
+Documentación completa de procedencia, estructura y límites en
+`docs/dataset/DATASHEET_MULTILAYER_V2.md`.
+
+## Sin garantía
+
+El material se ofrece «tal cual». Los autores no ofrecen garantías y no se
+responsabilizan del uso que se le dé.
+
+Léase junto con la sección 10 del datasheet, que declara los usos previstos y
+los no previstos. En particular: **este corpus no sostiene conclusiones sobre
+generalización a redes de producción**, y un modelo ajustado sobre él no debe
+desplegarse sin recalibrar.

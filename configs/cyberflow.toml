@@ -1,0 +1,68 @@
+# =====================================================================
+#  CyberFlow - configuracion unica del despliegue
+# ---------------------------------------------------------------------
+#  Todo lo que cambia entre una instalacion y otra vive AQUI. Las unidades
+#  de systemd se generan desde este fichero con:
+#
+#      python3 scripts/setup/cyberflow_config.py --mostrar
+#      sudo python3 scripts/setup/cyberflow_config.py --escribir
+#
+#  Antes existia cableado dentro de los .service: la interfaz ens35, un
+#  filtro BPF con las redes 10.20.0.0/24 y 10.30.0.0/24 del laboratorio, el
+#  usuario useransible y rutas absolutas a /home/useransible. Nada de eso
+#  sobrevivio al primer despliegue en una red distinta.
+# =====================================================================
+
+[captura]
+# Interfaz que recibe el espejo. NO debe tener direccion IP.
+# Identificala por MAC, no por nombre: Linux renumera al anadir adaptadores.
+interfaz = "ens37"
+mac_esperada = "00:0c:29:15:7c:02"
+
+# Buffer en anillo: archivos x segundos = historia disponible.
+# 16 x 15 s = 240 s. --historia_segundos del motor debe ser algo menor.
+anillo_archivos = 16
+anillo_segundos = 15
+directorio = "/var/lib/ppi-motor-capture"
+
+# Filtro BPF. Vacio = capturar todo.
+# CUIDADO: sobre tramas etiquetadas 802.1Q un filtro "ip" normal NO casa;
+# hay que escribirlo como "vlan and ip" o el anillo sale vacio en silencio.
+filtro_bpf = ""
+
+[red]
+# Rango del que se extraen las entidades a puntuar.
+red_entidades = "10.10.0.0/16"
+
+# Trafico de gestion del propio despliegue. Se captura igual -para poder
+# medir cuanto ruido metemos- pero se marca para excluirlo del calculo.
+excluir = [
+    "10.10.60.11/32",   # el propio sensor: su SSH cruza el troncal espejado
+    "10.10.10.30/32",   # el bastion, el otro extremo de esa sesion
+]
+
+[motor]
+# "observacion" = puntua y registra, no toca nftables.
+# "bloqueo"     = anade --enforce. Solo tiene sentido si el sensor esta EN EL
+#                 CAMINO del trafico. Con un espejo SPAN no lo esta.
+modo = "observacion"
+
+paso_segundos = 10
+historia_segundos = 230
+umbral = 1.8126087939765134
+bloqueo_segundos = 120
+
+[rutas]
+usuario = "m4rk"
+raiz = "/home/m4rk/cyberflow"
+entorno = ".venv"
+eve = "/var/log/suricata/eve.json"
+modelo = "artifacts/model/ocsvm_scaled.joblib"
+manifiesto = "artifacts/model/manifest.json"
+esquema = "configs/features/multilayer-v2.json"
+registro = "logs/motor_decision.log"
+
+[panel]
+activo = false
+direccion = "127.0.0.1"
+puerto = 8788

@@ -1,0 +1,44 @@
+cff-version: 1.2.0
+title: >-
+  Sistema open source para la detección temprana de comportamientos
+  anómalos en redes de datos
+message: >-
+  Si usa este software, este dataset o sus resultados, cítelo con los
+  metadatos de este archivo.
+type: software
+authors:
+  - given-names: Rubén Mark
+    family-names: Salazar Tocas
+    affiliation: Universidad Peruana Unión
+  - given-names: Uziel Elias
+    family-names: Sauñe Fernandez
+    affiliation: Universidad Peruana Unión
+contact:
+  - given-names: Rubén Mark
+    family-names: Salazar Tocas
+    affiliation: Universidad Peruana Unión
+repository-code: >-
+  https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos
+abstract: >-
+  Detección de anomalías de red con aprendizaje no supervisado y control
+  en línea. El sistema extrae 28 variables de capas 3, 4 y 7 por ventana
+  temporal, puntúa el tráfico con un One-Class SVM congelado y bloquea la
+  IP ofensora mediante nftables en el propio router del laboratorio, con
+  expiración nativa de 120 segundos. Incluye el laboratorio virtualizado
+  reproducible, el dataset derivado con su datasheet, el modelo con su
+  model card, el motor en tiempo real con su system card y la validación
+  operacional sobre 58 corridas.
+keywords:
+  - detección de intrusiones
+  - detección de anomalías
+  - aprendizaje no supervisado
+  - One-Class SVM
+  - seguridad de redes
+  - Suricata
+  - nftables
+  - ciencia abierta
+license: MIT
+license-url: >-
+  https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/blob/main/LICENSE
+version: 1.0.0
+date-released: '2026-09-09'

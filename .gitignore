@@ -1,0 +1,65 @@
+.venv/
+__pycache__/
+.ansible/
+.collections/
+*.retry
+*.log
+*.vault-password
+*.pem
+*.key
+# artifacts/ se excluye por CONTENIDO, no como carpeta: git no permite
+# re-incluir un archivo cuyo directorio padre esta excluido.
+# El volumen real son wheels/ (60 MB) y campaigns/ (24 MB); el dataset y el
+# modelo suman 824 KB y SI se publican (ver LICENSE-DATA y el datasheet).
+artifacts/*
+!artifacts/dataset/
+artifacts/dataset/*
+!artifacts/dataset/multilayer-v2-normal.csv
+!artifacts/dataset/multilayer-v2-anomalies.csv
+!artifacts/dataset/multilayer-v2-audit-report.json
+!artifacts/dataset/partition-map-normal-v2.json
+!artifacts/model/
+artifacts/model/*
+!artifacts/model/manifest.json
+!artifacts/model/ocsvm_scaled.joblib
+!artifacts/model/candidates/
+!artifacts/model/candidates/*.joblib
+
+# Biblioteca personal exportada de Mendeley: material del autor, no del proyecto
+docs/entregables/05-ppi/biblioteca.bib
+docs/entregables/05-ppi/biblioteca.ris
+
+# ── material de tesis y orquestación ──────────────────────────────────
+# Vive en VF-PPI-TESIS-ORQUESTACION. Este repositorio es solo el producto:
+# código, artefactos, configuración y la documentación técnica que sostiene
+# la replicabilidad. Los archivos siguen en disco; simplemente no se versionan
+# aquí para no tener dos copias que se desincronicen.
+docs/entregables/
+docs/articulo/
+docs/revisiones-claude/
+docs/auditorias/
+mcp-servers/
+.agent/
+.agents/
+agent-skills/
+.codex/
+.claude/
+AGENTS.md
+.mcp.json
+
+# ── documentación del proceso de investigación ────────────────────────
+# Vive en VF-PPI-TESIS-ORQUESTACION/investigacion/. Este repositorio es el
+# producto: qué es, cómo se levanta y cómo se usa. Lo demás es el registro de
+# cómo se investigó, y ese es otro trabajo.
+docs/fase00-infraestructura/
+docs/fase01-diseno-experimental/
+docs/fase02-features-multicapa/
+docs/fase03-dataset/
+docs/fase04-modelado/
+docs/fase05-motor-tiempo-real/
+docs/fase06-dashboard/
+docs/fase07-validacion-final/
+docs/07-mejoras-futuras/
+docs/requisitos-jurado/
+docs/agent-context/
+CLAUDE.md

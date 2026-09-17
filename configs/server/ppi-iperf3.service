@@ -1,0 +1,19 @@
+[Unit]
+Description=PPI Lab controlled iperf3 server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+ExecStart=/usr/bin/iperf3 --server --bind 10.30.0.10 --port 5201 --server-max-duration 30 --server-bitrate-limit 300M/5 --forceflush
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
