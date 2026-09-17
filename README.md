@@ -46,62 +46,57 @@ usar el motor sobre una máquina que ya enrute tráfico.
 
 ## Puesta en marcha
 
-### 1 · Instalar
+Desde un clon recién hecho, cuatro comandos:
 
 ```bash
-git clone <este-repositorio> && cd <carpeta>
-python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements-model.txt
-```
-
-### 2 · Comprobar que los artefactos son los publicados
-
-```bash
-sha256sum -c docs/dataset/SHA256SUMS
-```
-
-Desde la **raíz** del repositorio: las rutas del archivo son relativas a ella.
-
-**Si un solo hash no cuadra, pare.** Los artefactos no son los publicados y
-nada de lo que salga después es comparable.
-
-### 3 · Ajustar a su red
-
-Todo lo que cambia entre una instalación y otra vive en **un solo fichero**:
-
-```bash
+git clone https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos.git cyberflow
+cd cyberflow
 cp configs/cyberflow.toml configs/cyberflow.local.toml
 $EDITOR configs/cyberflow.local.toml
 ```
 
-Lo mínimo: la interfaz de captura, la red a vigilar, el usuario, la raíz del
-repositorio y el modo (`observacion` u `bloqueo`).
-
-### 4 · Generar las unidades y desplegar
+En el fichero, lo mínimo: la **interfaz de captura**, la **red a vigilar**, el
+**usuario**, la **raíz** del repositorio y el **modo** (`observacion` o
+`bloqueo`). Todo lo demás tiene valor por omisión.
 
 ```bash
-python3 scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml --comprobar
-sudo python3 scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml --escribir
-sudo systemctl daemon-reload
-sudo systemctl enable --now cyberflow-capture-nic ppi-motor-capture ppi-motor
+sudo bash scripts/setup/instalar.sh --comprobar   # diagnostica, no toca nada
+sudo bash scripts/setup/instalar.sh               # instala y arranca
 ```
 
-`--comprobar` valida antes de tocar la máquina: redes mal escritas, un modo
-inexistente, una historia mayor que el búfer, o un filtro BPF que no casaría
-con tráfico etiquetado. Devuelve código 1 si algo falla, así que sirve en un
-*pre-flight*.
+`--comprobar` es un diagnóstico completo antes de tocar la máquina: requisitos,
+validez de la configuración, si la interfaz de captura existe, si su MAC es la
+esperada, si **está recibiendo tráfico de verdad**, si Suricata apunta a ella y
+si `eve.json` crece. Si algo falla, dice qué y dónde mirar. El instalador se
+niega a continuar mientras quede un fallo.
 
-> **Elija el modo antes de desplegar.** `bloqueo` solo tiene sentido si el
-> sensor está **en el camino** del tráfico. Con un espejo SPAN observa pero no
+Después crea el entorno de Python, **comprueba que el modelo carga**, genera las
+unidades de systemd desde su configuración, las arranca y verifica que el motor
+está decidiendo.
+
+> **Los artefactos publicados.** Antes de fiarse de una cifra:
+> ```bash
+> sha256sum -c docs/dataset/SHA256SUMS
+> ```
+> Desde la raíz del repositorio. **Si un solo hash no cuadra, pare.**
+
+> **Elija el modo antes de instalar.** `bloqueo` solo tiene sentido si esta
+> máquina está **en el camino** del tráfico. Con un espejo SPAN observa pero no
 > enruta: `nftables` ahí solo afecta a la propia máquina, y no daría ningún
-> error. Ver [`docs/INSTALACION.md`](docs/INSTALACION.md).
+> error. El instalador lo comprueba mirando `ip_forward`.
 
-### 5 · Comprobar que funciona
+Para redes sin salida a Internet, o si el espejo aún no llega al sensor, la
+guía larga está en [`docs/INSTALACION.md`](docs/INSTALACION.md).
+
+### Comprobar que sigue funcionando
 
 ```bash
-systemctl status ppi-motor.service
-sudo nft list set inet ppi_enforce bloqueadas
+sudo bash scripts/setup/instalar.sh --comprobar
+systemctl is-active cyberflow-capture-nic ppi-motor-capture ppi-motor suricata
+tail -f logs/motor_decision.log
 ```
+
+En modo bloqueo, además: `sudo nft list set inet ppi_enforce bloqueadas`
 
 ---
 

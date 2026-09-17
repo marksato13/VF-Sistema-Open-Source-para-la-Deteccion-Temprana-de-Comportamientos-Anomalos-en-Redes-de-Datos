@@ -260,6 +260,16 @@ frecuencia ni límite de tamaño**:
 
 ## 6 · Instalar CyberFlow
 
+> **La vía corta.** Si los pasos 1 a 5 están hechos, todo lo que sigue lo hace
+> un comando, y antes se diagnostica solo:
+> ```bash
+> sudo bash scripts/setup/instalar.sh --comprobar
+> sudo bash scripts/setup/instalar.sh
+> ```
+> El resto de esta sección explica qué hace por dentro, por si prefiere ir a
+> mano o algo falla.
+
+
 ```bash
 git clone <este-repositorio> cyberflow && cd cyberflow
 python3 -m venv .venv
