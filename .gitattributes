@@ -1,7 +1,9 @@
-# Finales de linea. Anadido el 2026-09-17 tras un incidente real: al clonar en
-# Windows, core.autocrlf convirtio LF a CRLF y esos bytes se commitearon. Dos
-# de los hashes de docs/dataset/SHA256SUMS dejaron de cuadrar, que es
-# exactamente lo que ese fichero existe para impedir.
+# Finales de linea. Anadido el 2026-09-17 tras un incidente real. Los CSV
+# publicados son CRLF -el modulo csv de Python escribe 
+ por defecto- y su
+# hash se calculo sobre esos bytes. Al commitear desde Windows, core.autocrlf
+# los normalizo a LF, y dos de los hashes de docs/dataset/SHA256SUMS dejaron
+# de cuadrar, que es exactamente lo que ese fichero existe para impedir.
 * text=auto eol=lf
 
 # Los artefactos publicados NO se tocan nunca, en ninguna plataforma: su hash

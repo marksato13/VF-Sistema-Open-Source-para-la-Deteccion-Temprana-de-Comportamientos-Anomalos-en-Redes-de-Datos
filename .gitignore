@@ -1,5 +1,10 @@
 .venv/
 __pycache__/
+
+# Lo propio de cada instalacion: nunca a un commit.
+configs/cyberflow.local.toml
+logs/
+ruedas/
 .ansible/
 .collections/
 *.retry
@@ -48,9 +53,9 @@ AGENTS.md
 .mcp.json
 
 # ── documentación del proceso de investigación ────────────────────────
-# Vive en VF-PPI-TESIS-ORQUESTACION/investigacion/. Este repositorio es el
-# producto: qué es, cómo se levanta y cómo se usa. Lo demás es el registro de
-# cómo se investigó, y ese es otro trabajo.
+# Se retiro de ambos repositorios el 2026-09-17; queda en el respaldo del
+# historial. Este repositorio es el producto: que es, como se levanta y como
+# se usa.
 docs/fase00-infraestructura/
 docs/fase01-diseno-experimental/
 docs/fase02-features-multicapa/

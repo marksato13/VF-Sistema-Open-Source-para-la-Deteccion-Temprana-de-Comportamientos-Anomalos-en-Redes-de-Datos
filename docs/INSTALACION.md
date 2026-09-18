@@ -432,8 +432,10 @@ Eso es lo visible. **Lo que no se ve es peor.**
 ### El fallo silencioso
 
 Se recalibró el protocolo completo bajo 3.12 para comprobarlo. El OCSVM
-desplegado reprodujo su resultado **exacto**: 158/179. Pero dos ramas de
-Isolation Forest cambiaron:
+desplegado conservó su resultado —158/179— y su umbral, y el LOF también. Los
+otros cinco detectores cambiaron de umbral, aunque tres mantuvieron el mismo
+número de detecciones, y **ningún modelo salió con el mismo hash**. Dos ramas
+de Isolation Forest cambiaron incluso el resultado:
 
 ```
 if_primary_weighted   97/179  ->  103/179

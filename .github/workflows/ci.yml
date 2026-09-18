@@ -1,0 +1,109 @@
+# =====================================================================
+#  CI de CyberFlow
+# ---------------------------------------------------------------------
+#  Cada comprobacion corresponde a algo que ya se rompio una vez sin que
+#  nadie se enterara hasta verificarlo a mano:
+#
+#    integridad      dos hashes publicados dejaron de cuadrar por CRLF
+#    tests           nadie los habia ejecutado tras la reorganizacion
+#    configuracion   las unidades venian cableadas a otro laboratorio
+#    guiones         un instalador con CRLF no arranca ("pipefail\r")
+#    reproduccion    bajo otra version de scikit-learn el modelo principal
+#                    cambio de resultado sin dar ningun error
+# =====================================================================
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integridad:
+    name: Integridad de los artefactos publicados
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: sha256sum -c docs/dataset/SHA256SUMS
+        run: sha256sum -c docs/dataset/SHA256SUMS
+      - name: Ningun fichero de texto con CRLF
+        run: |
+          # columna 1 = el indice, que es lo que se publica. Los ficheros
+          # marcados -text quedan fuera: los CSV publicados son CRLF de
+          # origen y su hash depende de esos bytes.
+          malos=$(git ls-files --eol | awk '$1 ~ /crlf/ && $3 !~ /-text/ {print $NF}')
+          if [ -n "$malos" ]; then
+            echo "Ficheros con CRLF en el repositorio:"; echo "$malos"; exit 1
+          fi
+
+  tests:
+    name: Tests (CPython del manifiesto)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Leer la version de Python que exige el manifiesto
+        id: py
+        run: echo "version=$(python3 -c "import json;print(json.load(open('artifacts/model/manifest.json'))['runtime']['python'])")" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ steps.py.outputs.version }}
+          cache: pip
+          cache-dependency-path: requirements-model.txt
+      - run: python -m pip install -r requirements-model.txt
+      - run: python -m unittest discover -s tests -v
+
+  configuracion:
+    name: Configuracion y unidades
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: El ejemplo publicado es valido
+        run: python scripts/setup/cyberflow_config.py --comprobar
+      - name: Las unidades se generan
+        run: python scripts/setup/cyberflow_config.py --mostrar
+
+  guiones:
+    name: Guiones de instalacion
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sintaxis
+        run: for f in scripts/setup/*.sh; do bash -n "$f" && echo "ok $f"; done
+      - name: shellcheck (errores)
+        run: shellcheck --severity=error scripts/setup/*.sh
+
+  reproduccion:
+    name: El modelo publicado se reproduce
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    needs: [integridad, tests]
+    steps:
+      - uses: actions/checkout@v4
+      - id: py
+        run: echo "version=$(python3 -c "import json;print(json.load(open('artifacts/model/manifest.json'))['runtime']['python'])")" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ steps.py.outputs.version }}
+          cache: pip
+          cache-dependency-path: requirements-model.txt
+      - run: python -m pip install -r requirements-model.txt
+      - name: Recalibrar con el protocolo publicado
+        run: |
+          python scripts/modeling/calibrate_multilayer_v2_v1.py --execute-once \
+            --protocol PM-multilayer-v2-v1 \
+            --expected-git-commit "$(git rev-parse HEAD)" \
+            --artifacts-root "$GITHUB_WORKSPACE/artifacts" \
+            --output-dir "$GITHUB_WORKSPACE/artifacts/model-ci" > "$RUNNER_TEMP/calibracion.json"
+          # fuera del repositorio: el script exige el arbol limpio antes y
+          # despues, y una redireccion aqui crearia el fichero antes de empezar
+      - name: Comparar con el manifiesto publicado
+        run: |
+          python scripts/analysis/verificar_reproduccion.py \
+            artifacts/model/manifest.json artifacts/model-ci/manifest.json
