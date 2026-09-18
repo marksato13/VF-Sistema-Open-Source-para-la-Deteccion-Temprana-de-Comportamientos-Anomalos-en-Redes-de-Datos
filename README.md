@@ -6,6 +6,7 @@ ofensora** por `nftables` en el propio router, con expiración automática de
 
 [![DOI](https://img.shields.io/badge/DOI-pendiente-lightgrey.svg)](docs/dataset/DOI-ZENODO.md)
 [![Licencia](https://img.shields.io/badge/código-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
 
 ```
 Cliente ─┐

@@ -521,3 +521,29 @@ REPRODUCCION EXACTA DEL PROTOCOLO: SI
 
 Con el entorno correcto, lo publicado se reproduce. Con el entorno equivocado,
 casi — y ese *casi* es el problema.
+
+### Bit a bit depende también de la CPU
+
+El CI recalibra el modelo en cada cambio, en un runner de GitHub con un AMD
+EPYC 7763. Ahí los siete detectores dan **las mismas detecciones**, y cinco
+reproducen bit a bit, pero dos difieren en el último bit del umbral:
+
+```
+lof_scaled                 diferencia relativa 2,7e-15
+elliptic_envelope_scaled   diferencia relativa 5,5e-11
+```
+
+La causa es OpenBLAS: elige un kernel distinto según el procesador, y el
+manifiesto se generó con el kernel `SkylakeX` (AVX-512) que ese AMD no tiene.
+Cambia el orden de las sumas en coma flotante, y con él el último bit, en los
+dos detectores con más álgebra lineal.
+
+Por eso `scripts/analysis/verificar_reproduccion.py` distingue dos niveles:
+
+| Nivel | Qué exige | Cuándo |
+|---|---|---|
+| Funcional | mismas detecciones y umbrales dentro de 10⁻⁹ relativo | siempre |
+| Bit a bit | umbral y hash del modelo idénticos | si el BLAS coincide con el del manifiesto |
+
+La tolerancia no esconde lo que importa: el fallo de `sample_weight` movía el
+umbral un 10 % y cambiaba el resultado, y sigue fallando.
