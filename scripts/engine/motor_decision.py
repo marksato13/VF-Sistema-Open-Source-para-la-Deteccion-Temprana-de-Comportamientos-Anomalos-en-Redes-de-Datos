@@ -103,6 +103,21 @@ def parse_args() -> argparse.Namespace:
         default=REPO_ROOT / "configs/features/multilayer-v2.json",
     )
     parser.add_argument("--entity-network", default="10.20.0.0/24")
+    parser.add_argument(
+        "--excluir",
+        default="",
+        help="IP o redes separadas por coma que NO se puntuan (gestion propia, "
+             "equipos declarados fuera de alcance). Se capturan igual: solo se "
+             "excluyen del calculo, para poder medir cuanto se excluyo",
+    )
+    parser.add_argument(
+        "--excluir-protocolos",
+        default="",
+        help="numeros de protocolo IP que no son trafico de usuarios y no se "
+             "atribuyen a ninguna entidad. Tipico: 112 (VRRP/CARP) y 240 "
+             "(pfsync). Sin esto, cada interfaz VLAN del cortafuegos aparece "
+             "como una entidad que emite un anuncio por segundo",
+    )
     parser.add_argument("--log-path", type=Path, required=True)
     parser.add_argument("--state-dir", type=Path, default=None)
     parser.add_argument("--step-seconds", type=int, default=10)
@@ -262,6 +277,20 @@ def main() -> int:
     import ipaddress
 
     entity_network = ipaddress.ip_network(args.entity_network)
+    redes_excluidas = [
+        ipaddress.ip_network(t.strip(), strict=False)
+        for t in args.excluir.split(",") if t.strip()
+    ]
+    protocolos_excluidos = {
+        int(t.strip()) for t in args.excluir_protocolos.split(",") if t.strip()
+    }
+
+    def entidad_excluida(ip: str) -> bool:
+        try:
+            direccion = ipaddress.ip_address(ip)
+        except ValueError:
+            return False
+        return any(direccion in red for red in redes_excluidas)
 
     state_dir = args.state_dir or (args.log_path.parent / "_state")
     state_dir.mkdir(parents=True, exist_ok=True)
@@ -272,6 +301,8 @@ def main() -> int:
     tail = EveTail(args.eve_path)
     eve_buffer: collections.deque[tuple[float, str]] = collections.deque()
     scored_windows: dict[tuple[str, str], float] = {}
+    descartados_plano_control = 0
+    ventanas_excluidas = 0
     # Buffer incremental de paquetes ya decodificados (ParsedPacket) + set de
     # PCAP ya parseados. Evita re-decodificar todo el anillo cada ciclo: cada
     # archivo se lee de disco UNA vez; la atribucion de flujo se recalcula
@@ -288,6 +319,8 @@ def main() -> int:
         "detector_name": args.detector_name,
         "threshold": threshold,
         "entity_network": str(entity_network),
+        "excluidas": [str(r) for r in redes_excluidas],
+        "protocolos_excluidos": sorted(protocolos_excluidos),
         "capture_dir": str(args.capture_dir),
         "eve_path": str(args.eve_path),
         "step_seconds": args.step_seconds,
@@ -381,10 +414,22 @@ def main() -> int:
                     pk for pk in packet_buffer if pk.timestamp >= data_cutoff
                 )
 
-        if packet_buffer or eve_buffer:
+        # El plano de control se descarta ANTES de atribuir: un anuncio CARP
+        # crea un flujo cuyo iniciador es la interfaz del cortafuegos, y esa
+        # interfaz pasa a ser una entidad puntuada. No se toca el extractor
+        # congelado: se filtra su entrada, que es alcance, no formula.
+        if protocolos_excluidos and packet_buffer:
+            paquetes_utiles = [
+                pk for pk in packet_buffer if pk.protocol not in protocolos_excluidos
+            ]
+            descartados_plano_control += len(packet_buffer) - len(paquetes_utiles)
+        else:
+            paquetes_utiles = list(packet_buffer)
+
+        if paquetes_utiles or eve_buffer:
             packets = (
-                extractor.attribute_packets(packet_buffer, entity_network)
-                if packet_buffer
+                extractor.attribute_packets(paquetes_utiles, entity_network)
+                if paquetes_utiles
                 else []
             )
             apps = (
@@ -417,6 +462,11 @@ def main() -> int:
             for row in rows:
                 window_key = (str(row["entity_ip"]), str(row["window_end_utc"]))
                 if window_key in scored_windows:
+                    continue
+                if entidad_excluida(str(row["entity_ip"])):
+                    ventanas_excluidas += 1
+                    scored_windows[window_key] = extractor.parse_eve_timestamp(
+                        str(row["window_end_utc"]))
                     continue
                 if not row["eligible_training"]:
                     continue
@@ -503,6 +553,8 @@ def main() -> int:
 
                 record = {
                     "event": "decision",
+                    "excluidas_acumulado": ventanas_excluidas,
+                    "plano_control_descartado": descartados_plano_control,
                     "logged_at": time.time(),
                     "entity_ip": row["entity_ip"],
                     "window_end_utc": row["window_end_utc"],

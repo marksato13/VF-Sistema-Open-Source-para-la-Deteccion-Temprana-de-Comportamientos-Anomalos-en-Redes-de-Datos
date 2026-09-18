@@ -113,6 +113,28 @@ class Generacion(unittest.TestCase):
 
 
 
+class AlcanceDeLaDeteccion(unittest.TestCase):
+    """Que entidades y protocolos entran en el calculo."""
+
+    def motor(self, **cambios):
+        return cc.render(cfg(**cambios))["ppi-motor.service"]
+
+    def test_el_ejemplo_excluye_el_plano_de_control(self):
+        # 112 = VRRP/CARP, 240 = pfsync. Sin esto, cada interfaz VLAN del
+        # cortafuegos es una entidad que emite un anuncio por segundo: medido,
+        # 14 de 23 entidades y el 87 % de las decisiones.
+        self.assertIn("--excluir-protocolos 112,240", self.motor())
+
+    def test_las_entidades_excluidas_llegan_al_motor(self):
+        m = self.motor(red__excluir=["10.10.60.11/32", "10.10.10.30/32"])
+        self.assertIn("--excluir 10.10.60.11/32,10.10.10.30/32", m)
+
+    def test_sin_exclusiones_no_se_pasan_banderas(self):
+        m = self.motor(red__excluir=[], red__excluir_protocolos=[])
+        self.assertNotIn("--excluir", m)
+        self.assertNotIn("--excluir-protocolos", m)
+
+
 class PanelEnLaRed(unittest.TestCase):
     """El panel no tiene autenticacion: exponerlo exige lista de origenes."""
 

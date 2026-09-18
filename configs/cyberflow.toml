@@ -34,8 +34,16 @@ filtro_bpf = ""
 # Rango del que se extraen las entidades a puntuar.
 red_entidades = "10.10.0.0/16"
 
+# Protocolos que no son trafico de usuarios y no se atribuyen a nadie.
+#   112 = VRRP/CARP. Cada interfaz VLAN del cortafuegos emite un anuncio por
+#         segundo; sin esto, cada una aparece como una entidad con actividad
+#         constante y el modelo la puntua. Medido: 14 de 23 entidades eran eso.
+#   240 = pfsync, la sincronizacion entre los dos cortafuegos.
+# Declarar esta exclusion en la tesis: es una decision de alcance, no un ajuste.
+excluir_protocolos = [112, 240]
+
 # Trafico de gestion del propio despliegue. Se captura igual -para poder
-# medir cuanto ruido metemos- pero se marca para excluirlo del calculo.
+# medir cuanto se excluyo- pero no se puntua.
 excluir = [
     "10.10.60.11/32",   # el propio sensor: su SSH cruza el troncal espejado
     "10.10.10.30/32",   # el bastion, el otro extremo de esa sesion

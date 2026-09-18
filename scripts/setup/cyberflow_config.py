@@ -99,7 +99,7 @@ ExecStart={python} \\
     --model-path {raiz}/{modelo} \\
     --manifest-path {raiz}/{manifiesto} \\
     --schema {raiz}/{esquema} \\
-    --entity-network {red_entidades} \\
+    --entity-network {red_entidades} \\{exclusiones}
     --log-path {raiz}/{registro} \\
     --step-seconds {paso_segundos} \\
     --history-seconds {historia_segundos}{enforce}
@@ -263,6 +263,17 @@ def comprobar(cfg: dict) -> list[str]:
     return fallos
 
 
+def exclusiones(red: dict) -> str:
+    """Lo que queda fuera del calculo, tal como lo recibe el motor."""
+    partes = []
+    if red.get("excluir"):
+        partes.append("\n    --excluir %s \\" % ",".join(red["excluir"]))
+    if red.get("excluir_protocolos"):
+        partes.append("\n    --excluir-protocolos %s \\"
+                      % ",".join(str(p) for p in red["excluir_protocolos"]))
+    return "".join(partes)
+
+
 def render(cfg: dict) -> dict[str, str]:
     cap, red, mot, rut = cfg["captura"], cfg["red"], cfg["motor"], cfg["rutas"]
     panel = cfg.get("panel", {})
@@ -291,6 +302,7 @@ def render(cfg: dict) -> dict[str, str]:
         paso_segundos=mot["paso_segundos"], historia_segundos=mot["historia_segundos"],
         modo=mot["modo"], anillo_segundos=cap["anillo_segundos"],
         anillo_archivos=cap["anillo_archivos"], filtro=filtro_linea, enforce=enforce,
+        exclusiones=exclusiones(red),
     )
 
     unidades = {
