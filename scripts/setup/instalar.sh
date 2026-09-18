@@ -41,7 +41,7 @@ titulo "1. Requisitos del sistema"
 command -v systemctl >/dev/null && ok "systemd" || mal "systemd no encontrado"
 
 if command -v python3 >/dev/null; then
-    PYV=$(python3 -c 'import sys; print("%d.%d"%sys.version_info[:2])')
+    PYV=$(python3 -c 'import sys; print("%d.%d.%d"%sys.version_info[:3])')
     if python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3,11) else 1)'; then
         ok "Python $PYV"
     else
@@ -76,6 +76,33 @@ MAC_ESPERADA=$(leer_toml captura mac_esperada)
 MODO=$(leer_toml motor modo)
 USUARIO=$(leer_toml rutas usuario)
 ENTORNO=$(leer_toml rutas entorno)
+
+# ---------------------------------------------------------------------
+titulo "2.1 Interprete que ejecutara el motor"
+# ---------------------------------------------------------------------
+# Lo que importa no es el python3 del sistema, sino el del entorno virtual con
+# el que arranca el motor. En scikit-learn 1.7.2 IsolationForest acepta
+# sample_weight y lo ignora en silencio, asi que una diferencia de version no
+# da error: da otro resultado. Ver docs/INSTALACION.md, anexo B.
+PYMOTOR="$RAIZ/${ENTORNO:-.venv}/bin/python"
+if [[ -x "$PYMOTOR" ]]; then
+    PYUSO=$("$PYMOTOR" -c 'import sys; print("%d.%d.%d"%sys.version_info[:3])')
+    echo "  entorno: $PYMOTOR"
+else
+    PYUSO="$PYV"
+    aviso "aun no existe el entorno virtual; se creara con el python3 del sistema"
+fi
+PYMAN=$(python3 -c "import json;print(json.load(open('$RAIZ/artifacts/model/manifest.json'))['runtime']['python'])" 2>/dev/null || echo "")
+if [[ -z "$PYMAN" ]]; then
+    aviso "no se pudo leer la version del manifiesto"
+elif [[ "$PYUSO" == "$PYMAN" ]]; then
+    ok "CPython $PYUSO, coincide con el manifiesto"
+else
+    aviso "el manifiesto se genero con CPython $PYMAN, y aqui se usaria $PYUSO"
+    echo "        Sirve para desplegar y ver el sistema funcionando."
+    echo "        NO sirve para calibrar ni para publicar ninguna cifra."
+    echo "        Ver docs/INSTALACION.md, anexo B."
+fi
 
 # ---------------------------------------------------------------------
 titulo "3. Interfaz de captura: $IFAZ"

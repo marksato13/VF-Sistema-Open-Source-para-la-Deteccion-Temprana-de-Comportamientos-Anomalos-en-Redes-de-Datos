@@ -478,3 +478,44 @@ que la ponderación se haya perdido.
 - Si cambia de entorno, **no se fíe de que los números salgan**: compruebe que
   salen *los mismos*. Un parámetro ignorado en silencio no se detecta de
   ninguna otra forma.
+
+### Instalar CPython 3.14.4
+
+Ubuntu 24.04 solo trae 3.12, y el PPA *deadsnakes* publica 3.14.6 — que el
+guardarraíl rechaza, porque compara la versión completa. Hay que compilarla:
+
+```bash
+sudo apt-get install -y build-essential zlib1g-dev libssl-dev libffi-dev     libbz2-dev liblzma-dev libsqlite3-dev libreadline-dev libncurses-dev     uuid-dev libgdbm-dev pkg-config
+
+curl -LO https://www.python.org/ftp/python/3.14.4/Python-3.14.4.tgz
+tar xzf Python-3.14.4.tgz && cd Python-3.14.4
+./configure --prefix=/opt/python3.14 --with-ensurepip=install
+make -j"$(nproc)"
+sudo make altinstall          # altinstall: no toca el python3 del sistema
+```
+
+Unos diez minutos en 4 vCPU. Después:
+
+```bash
+/opt/python3.14/bin/python3.14 -m venv .venv
+.venv/bin/python -m pip install -r requirements-model.txt
+```
+
+> En una máquina sin salida a Internet, descargue el `.tgz` y las ruedas de
+> `cp314` donde haya red y transfiéralos. Ver el anexo A.
+
+### Verificado
+
+El protocolo completo se reejecutó sobre un CPython 3.14.4 recién compilado, en
+una máquina distinta y con otra versión de glibc (2.39 frente a 2.43). Los
+siete detectores reprodujeron su resultado y su umbral **hasta el último
+decimal**, y los siete modelos salieron con **hash idéntico**:
+
+```
+if_primary_weighted   97/179 ->  97/179   umbral -0.506065635 -> -0.506065635
+ocsvm_scaled         158/179 -> 158/179   umbral +1.812608794 -> +1.812608794
+REPRODUCCION EXACTA DEL PROTOCOLO: SI
+```
+
+Con el entorno correcto, lo publicado se reproduce. Con el entorno equivocado,
+casi — y ese *casi* es el problema.
