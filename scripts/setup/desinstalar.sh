@@ -71,6 +71,7 @@ if command -v nft >/dev/null && nft list table inet cyberflow_panel >/dev/null 2
     hacer "nft delete table inet cyberflow_panel"
 fi
 hacer "rm -rf /etc/cyberflow"
+hacer "rm -f /etc/logrotate.d/cyberflow"
 
 if (( TODO )); then
     titulo "4. Suricata (--todo)"

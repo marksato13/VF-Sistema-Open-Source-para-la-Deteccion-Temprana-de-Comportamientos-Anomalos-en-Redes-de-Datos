@@ -135,6 +135,21 @@ class AlcanceDeLaDeteccion(unittest.TestCase):
         self.assertNotIn("--excluir-protocolos", m)
 
 
+class RotacionDelRegistro(unittest.TestCase):
+    """El motor escribe una linea por decision: sin tope, llena la raiz."""
+
+    def test_se_genera_para_el_registro_del_motor(self):
+        r = cc.render(cfg())[cc.RUTA_ROTACION]
+        self.assertIn("/no/existe/cyberflow/logs/motor_decision.log {", r)
+        self.assertIn("maxsize 200M", r)
+        self.assertIn("create 0640 m4rk m4rk", r)
+
+    def test_sin_copytruncate(self):
+        # El motor reabre el fichero en cada escritura, asi que copytruncate
+        # sobra; usarlo abriria una ventana en la que se pierden lineas.
+        self.assertNotIn("copytruncate", cc.render(cfg())[cc.RUTA_ROTACION])
+
+
 class AvisoDeCalibracion(unittest.TestCase):
     """Un umbral de otra red no mide nada aqui, y el panel debe decirlo."""
 

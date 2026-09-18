@@ -182,6 +182,27 @@ table inet cyberflow_panel {{
 """
 
 RUTA_REGLAS = "/etc/cyberflow/panel-acceso.nft"
+RUTA_ROTACION = "/etc/logrotate.d/cyberflow"
+
+ROTACION = """# Generado por scripts/setup/cyberflow_config.py. NO editar a mano.
+# El motor escribe una linea JSON por decision y puede producir cientos por
+# minuto. Sin tope, este fichero llena la raiz, y un / lleno tumba la maquina
+# entera, incluido el SSH de gestion.
+#
+# Sin copytruncate a proposito: el motor abre el fichero en modo append en
+# cada escritura y lo cierra, asi que tras renombrarlo escribe en el nuevo sin
+# necesidad de senales ni de reiniciar el servicio.
+{registro} {{
+    daily
+    maxsize 200M
+    rotate 14
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0640 {usuario} {usuario}
+}}
+"""
 
 
 def panel_expuesto(panel: dict) -> bool:
@@ -306,6 +327,8 @@ def render(cfg: dict) -> dict[str, str]:
     )
 
     unidades = {
+        RUTA_ROTACION: ROTACION.format(registro="%s/%s" % (raiz, rut["registro"]),
+                                       usuario=rut["usuario"]),
         "cyberflow-capture-nic.service": NIC.format(**comun),
         "ppi-motor-capture.service": CAPTURA.format(**comun),
         "ppi-motor.service": MOTOR.format(
@@ -390,7 +413,8 @@ def main() -> int:
         ruta.write_text(texto, encoding="utf-8")
         print("escrito %s" % ruta)
     print("\nAhora:  sudo systemctl daemon-reload")
-    print("        sudo systemctl enable --now %s" % " ".join(unidades))
+    servicios = [n for n in unidades if n.endswith(".service")]
+    print("        sudo systemctl enable --now %s" % " ".join(servicios))
     return 0
 
 
