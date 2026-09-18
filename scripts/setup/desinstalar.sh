@@ -44,7 +44,7 @@ titulo(){ printf '\n\033[1m%s\033[0m\n' "$*"; }
 (( SIMULAR )) && echo "MODO SIMULACION: no se ejecuta nada."
 
 titulo "1. Servicios de CyberFlow"
-for u in ppi-dashboard ppi-motor ppi-motor-capture cyberflow-capture-nic; do
+for u in ppi-dashboard cyberflow-panel-acceso ppi-motor ppi-motor-capture cyberflow-capture-nic; do
     if systemctl list-unit-files "$u.service" >/dev/null 2>&1 && \
        [[ -f "/etc/systemd/system/$u.service" ]]; then
         hacer "systemctl disable --now $u.service"
@@ -67,6 +67,10 @@ else
 fi
 hacer "rm -f /usr/local/sbin/ppi-enforce /usr/local/sbin/ppi-suricata-metrics"
 hacer "rm -f /etc/sudoers.d/ppi-enforce /etc/sudoers.d/ppi-metrics"
+if command -v nft >/dev/null && nft list table inet cyberflow_panel >/dev/null 2>&1; then
+    hacer "nft delete table inet cyberflow_panel"
+fi
+hacer "rm -rf /etc/cyberflow"
 
 if (( TODO )); then
     titulo "4. Suricata (--todo)"

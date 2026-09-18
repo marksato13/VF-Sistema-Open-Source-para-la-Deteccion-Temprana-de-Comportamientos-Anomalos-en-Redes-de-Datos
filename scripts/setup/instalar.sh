@@ -376,6 +376,7 @@ python3 "$RAIZ/scripts/setup/cyberflow_config.py" --config "$CONFIG" --escribir 
 systemctl daemon-reload
 UNIDADES="cyberflow-capture-nic ppi-motor-capture ppi-motor"
 [[ "$(leer_toml panel activo)" == "True" ]] && UNIDADES="$UNIDADES ppi-dashboard"
+[[ -f /etc/systemd/system/cyberflow-panel-acceso.service ]] && UNIDADES="cyberflow-panel-acceso $UNIDADES"
 systemctl enable --now $UNIDADES >/dev/null 2>&1
 sleep 20
 

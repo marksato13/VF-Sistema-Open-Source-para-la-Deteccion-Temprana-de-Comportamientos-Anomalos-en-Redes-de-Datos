@@ -74,5 +74,12 @@ registro = "logs/motor_decision.log"
 # Solo escucha en loopback y es de solo lectura. Para verlo desde otra
 # maquina: ssh -L 8788:127.0.0.1:8788 usuario@sensor
 activo = true
+# "127.0.0.1": solo en local; se ve con un tunel SSH (ver-panel.ps1).
+# Otra direccion: expuesto en la red. El panel NO tiene autenticacion, asi que
+# entonces es obligatorio "permitir": el generador crea una regla nftables que
+# solo deja pasar a esos origenes, y el panel no arranca si la regla falla.
 direccion = "127.0.0.1"
 puerto = 8788
+# Si llega por Tailscale a traves de un enrutador de subred, el sensor ve la
+# IP de ESE enrutador, no la del portatil: Tailscale traduce el origen.
+permitir = []

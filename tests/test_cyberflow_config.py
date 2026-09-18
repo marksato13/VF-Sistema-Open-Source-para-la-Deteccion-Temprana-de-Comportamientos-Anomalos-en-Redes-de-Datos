@@ -112,5 +112,45 @@ class Generacion(unittest.TestCase):
         self.assertIn("-i ens99", u["ppi-motor-capture.service"])
 
 
+
+class PanelEnLaRed(unittest.TestCase):
+    """El panel no tiene autenticacion: exponerlo exige lista de origenes."""
+
+    def expuesto(self, permitir):
+        return cfg(panel__activo=True, panel__direccion="10.10.60.11", panel__permitir=permitir)
+
+    def test_loopback_no_necesita_lista(self):
+        c = cfg(panel__activo=True, panel__direccion="127.0.0.1", panel__permitir=[])
+        self.assertEqual(cc.comprobar(c), [])
+        self.assertNotIn("cyberflow-panel-acceso.service", cc.render(c))
+
+    def test_expuesto_sin_lista_se_rechaza(self):
+        self.assertIn("permitir", " ".join(cc.comprobar(self.expuesto([]))))
+
+    def test_lista_que_no_filtra_se_rechaza(self):
+        self.assertIn("no filtrar nada", " ".join(cc.comprobar(self.expuesto(["0.0.0.0/0"]))))
+
+    def test_direccion_invalida(self):
+        c = cfg(panel__activo=True, panel__direccion="sensor", panel__permitir=["10.10.10.30/32"])
+        self.assertIn("direccion", " ".join(cc.comprobar(c)))
+
+    def test_expuesto_genera_regla_y_la_exige(self):
+        u = cc.render(self.expuesto(["10.10.10.30/32"]))
+        reglas = u[cc.RUTA_REGLAS]
+        self.assertIn("tcp dport 8788 ip saddr { 10.10.10.30/32 } accept", reglas)
+        self.assertIn("tcp dport 8788 drop", reglas)
+        # la tabla no puede cortar el SSH: solo decide sobre el puerto del panel
+        self.assertIn("policy accept", reglas)
+        self.assertNotIn("dport 22", reglas)
+        # si la regla falla, el panel no arranca
+        self.assertIn("Requires=cyberflow-panel-acceso.service", u["ppi-dashboard.service"])
+        self.assertIn("--host 10.10.60.11", u["ppi-dashboard.service"])
+
+    def test_ipv6_va_en_su_propia_regla(self):
+        reglas = cc.render(self.expuesto(["10.10.10.30/32", "fd7a::/48"]))[cc.RUTA_REGLAS]
+        self.assertIn("ip saddr { 10.10.10.30/32 }", reglas)
+        self.assertIn("ip6 saddr { fd7a::/48 }", reglas)
+
+
 if __name__ == "__main__":
     unittest.main()

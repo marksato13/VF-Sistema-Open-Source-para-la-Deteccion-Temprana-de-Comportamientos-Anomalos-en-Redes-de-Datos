@@ -130,7 +130,7 @@ PANEL = """{cabecera}
 [Unit]
 Description=CyberFlow - panel web de solo lectura
 After=ppi-motor.service
-Wants=ppi-motor.service
+Wants=ppi-motor.service{acceso}
 
 [Service]
 Type=simple
@@ -150,6 +150,46 @@ ProtectSystem=strict
 [Install]
 WantedBy=multi-user.target
 """
+
+
+ACCESO = """{cabecera}
+[Unit]
+Description=CyberFlow - acceso al panel: solo {resumen}
+# El panel no tiene autenticacion. Si esta unidad falla, ppi-dashboard no
+# arranca (la requiere con Requires=): nunca queda expuesto sin filtro.
+Before=ppi-dashboard.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/usr/sbin/nft delete table inet cyberflow_panel
+ExecStart=/usr/sbin/nft -f {reglas}
+ExecStop=-/usr/sbin/nft delete table inet cyberflow_panel
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+REGLAS = """# Generado por scripts/setup/cyberflow_config.py. NO editar a mano.
+# Tabla propia y aislada: solo decide sobre el puerto del panel y deja pasar
+# todo lo demas (policy accept), asi que no puede cortar el SSH de gestion.
+table inet cyberflow_panel {{
+    chain entrada {{
+        type filter hook input priority 0; policy accept;
+{permitidos}        tcp dport {puerto} drop
+    }}
+}}
+"""
+
+RUTA_REGLAS = "/etc/cyberflow/panel-acceso.nft"
+
+
+def panel_expuesto(panel: dict) -> bool:
+    try:
+        return bool(panel.get("activo")) and \
+            not ipaddress.ip_address(panel.get("direccion", "127.0.0.1")).is_loopback
+    except ValueError:
+        return True
 
 
 def cargar(ruta: Path) -> dict:
@@ -190,6 +230,28 @@ def comprobar(cfg: dict) -> list[str]:
             "captura.filtro_bpf no menciona 'vlan'. Si el espejo conserva la etiqueta "
             "802.1Q -y aqui la conserva- un filtro de capa 3 sin 'vlan' no casa con "
             "nada y el anillo queda vacio sin dar ningun error")
+
+    panel = cfg.get("panel", {})
+    if panel.get("activo"):
+        try:
+            ipaddress.ip_address(panel.get("direccion", ""))
+        except ValueError:
+            fallos.append("panel.direccion no es una direccion IP: %r" % panel.get("direccion"))
+        if panel_expuesto(panel):
+            permitir = panel.get("permitir", [])
+            if not permitir:
+                fallos.append(
+                    "panel.direccion %s expone el panel en la red y el panel NO tiene "
+                    "autenticacion: panel.permitir debe listar los origenes autorizados"
+                    % panel.get("direccion"))
+            for r in permitir:
+                try:
+                    n = ipaddress.ip_network(r, strict=False)
+                except ValueError as e:
+                    fallos.append("panel.permitir contiene %r invalido: %s" % (r, e))
+                    continue
+                if n.prefixlen == 0:
+                    fallos.append("panel.permitir contiene %s: equivale a no filtrar nada" % r)
 
     raiz = Path(rut["raiz"])
     for clave in ("modelo", "manifiesto", "esquema"):
@@ -238,8 +300,23 @@ def render(cfg: dict) -> dict[str, str]:
             endurecido=endurecido.format(**comun), **comun),
     }
     if panel.get("activo"):
+        acceso = ""
+        if panel_expuesto(panel):
+            redes = [ipaddress.ip_network(r, strict=False) for r in panel["permitir"]]
+            v4 = [str(n) for n in redes if n.version == 4]
+            v6 = [str(n) for n in redes if n.version == 6]
+            lineas = ""
+            if v4:
+                lineas += "        tcp dport %d ip saddr { %s } accept\n" % (panel["puerto"], ", ".join(v4))
+            if v6:
+                lineas += "        tcp dport %d ip6 saddr { %s } accept\n" % (panel["puerto"], ", ".join(v6))
+            unidades[RUTA_REGLAS] = REGLAS.format(permitidos=lineas, puerto=panel["puerto"])
+            unidades["cyberflow-panel-acceso.service"] = ACCESO.format(
+                cabecera=cabecera, resumen=", ".join(v4 + v6), reglas=RUTA_REGLAS)
+            acceso = ("\nRequires=cyberflow-panel-acceso.service"
+                      "\nAfter=cyberflow-panel-acceso.service")
         unidades["ppi-dashboard.service"] = PANEL.format(
-            direccion=panel["direccion"], puerto=panel["puerto"], **comun)
+            direccion=panel["direccion"], puerto=panel["puerto"], acceso=acceso, **comun)
     return unidades
 
 
@@ -288,7 +365,10 @@ def main() -> int:
 
     args.destino.mkdir(parents=True, exist_ok=True)
     for nombre, texto in unidades.items():
-        ruta = args.destino / nombre
+        # Las reglas de cortafuegos van a su ruta absoluta; las unidades, a
+        # --destino.
+        ruta = Path(nombre) if nombre.startswith("/") else args.destino / nombre
+        ruta.parent.mkdir(parents=True, exist_ok=True)
         if ruta.exists():
             copia = ruta.with_suffix(ruta.suffix + ".anterior")
             shutil.copy2(ruta, copia)
