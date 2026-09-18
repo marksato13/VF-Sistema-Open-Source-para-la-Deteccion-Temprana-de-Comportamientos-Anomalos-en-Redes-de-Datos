@@ -76,6 +76,27 @@ ssh -L 8788:127.0.0.1:8788 usuario@sensor
 
 Es de **solo lectura**: no ejecuta ninguna acción.
 
+**Verlo desde la red, sin túnel.** El panel no tiene autenticación, así que
+exponerlo exige decir quién puede entrar:
+
+```toml
+[panel]
+direccion = "10.10.60.11"          # la IP de gestión del sensor
+permitir  = ["10.10.10.30/32"]     # los únicos orígenes aceptados
+```
+
+El generador crea una regla `nftables` en su propia tabla que solo deja pasar
+a esos orígenes en el puerto del panel —no toca ningún otro puerto, así que no
+puede cortar el SSH—, y el panel **no arranca si la regla no se carga**.
+
+> **Si llega por Tailscale** a través de un enrutador de subred, el sensor no
+> ve la IP del portátil sino la del enrutador: Tailscale traduce el origen. En
+> el despliegue de referencia, todo el tráfico de la tailnet llega como
+> `10.10.10.30`. Compruébelo en el registro de SSH antes de escribir la lista.
+
+Verificado en los dos sentidos: desde la tailnet responde (HTTP 200) y desde
+cualquier otro origen la conexión se descarta.
+
 ### Desbloquear una IP antes de tiempo
 
 Solo en modo bloqueo:
