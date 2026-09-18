@@ -105,6 +105,11 @@ ExecStart={python} \\
     --history-seconds {historia_segundos}{enforce}
 Restart=always
 RestartSec=5
+# Las decisiones ya van a su fichero rotado. Dejarlas tambien en stdout las
+# duplicaba en el journal y, desde ahi, en /var/log/syslog: medido, 86.939
+# lineas repetidas y 320 MB entre los dos. Los errores siguen yendo al journal.
+StandardOutput=null
+StandardError=journal
 {endurecido}
 [Install]
 WantedBy=multi-user.target

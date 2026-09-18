@@ -117,6 +117,22 @@ sudo python3 scripts/setup/cyberflow_config.py --config configs/cyberflow.local.
 sudo systemctl daemon-reload && sudo systemctl restart ppi-motor
 ```
 
+### Permisos del operador
+
+El despliegue de referencia usa `configs/sensor/cyberflow-admin.sudoers.ejemplo`
+en vez de `NOPASSWD: ALL`. Da sin contraseña solo estado, registros y el
+gobierno de los servicios del producto; para instalar, actualizar o tocar
+`/etc` hay que escribir la contraseña.
+
+Dos cosas quedan fuera a propósito, porque equivalen a dar root entero:
+`tcpdump` —su opción `-z` ejecuta un programa arbitrario— y cualquier orden que
+escriba ficheros (`apt-get`, `tee`, `cp`). Y cada forma permitida lleva
+`--no-pager`: sin él, `systemctl` y `journalctl` abren `less`, y desde `less`
+se obtiene una shell con `!sh`.
+
+Leer las capturas **no necesita sudo**: el directorio del anillo es
+`tcpdump:<usuario>` con modo `2750`, así que el operador las lee por grupo.
+
 ---
 
 ## Cuándo NO fiarse
