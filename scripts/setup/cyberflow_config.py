@@ -139,6 +139,8 @@ Group={usuario}
 WorkingDirectory={raiz}
 ExecStart={python} {raiz}/scripts/engine/dashboard.py \\
     --log-path {raiz}/{registro} \\
+    --manifest-path {raiz}/{manifiesto} \\
+    --services ppi-motor.service,ppi-motor-capture.service,suricata.service \\
     --host {direccion} --port {puerto}
 Restart=always
 RestartSec=5

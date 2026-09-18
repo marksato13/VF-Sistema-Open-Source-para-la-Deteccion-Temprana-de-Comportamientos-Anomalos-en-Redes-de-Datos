@@ -53,6 +53,14 @@ umbral = 1.8126087939765134
 bloqueo_segundos = 120
 
 [rutas]
+# Interprete con el que se crea el entorno virtual. Vacio = el instalador
+# busca uno que coincida con la version del manifiesto del modelo y, si no lo
+# encuentra, usa el python3 del sistema avisando.
+# No es un capricho: en scikit-learn 1.7.2 -la version mas alta disponible
+# para Python 3.12- IsolationForest acepta sample_weight y lo ignora en
+# silencio. Ver docs/INSTALACION.md, anexo B.
+python = ""
+
 usuario = "m4rk"
 raiz = "/home/m4rk/cyberflow"
 entorno = ".venv"
@@ -63,6 +71,8 @@ esquema = "configs/features/multilayer-v2.json"
 registro = "logs/motor_decision.log"
 
 [panel]
-activo = false
+# Solo escucha en loopback y es de solo lectura. Para verlo desde otra
+# maquina: ssh -L 8788:127.0.0.1:8788 usuario@sensor
+activo = true
 direccion = "127.0.0.1"
 puerto = 8788

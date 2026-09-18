@@ -88,6 +88,22 @@ está decidiendo.
 Para redes sin salida a Internet, o si el espejo aún no llega al sensor, la
 guía larga está en [`docs/INSTALACION.md`](docs/INSTALACION.md).
 
+### Desinstalar y reinstalar
+
+```bash
+sudo bash scripts/setup/desinstalar.sh --simular   # dice qué haría
+sudo bash scripts/setup/desinstalar.sh             # quita CyberFlow
+sudo bash scripts/setup/desinstalar.sh --todo      # y además Suricata
+sudo bash scripts/setup/instalar.sh                # vuelve a dejarlo todo
+```
+
+Nunca toca la red, la sesión SPAN del switch, el hipervisor ni el usuario:
+no los creó CyberFlow, y romperlos deja la máquina ciega o incomunicada.
+
+Este ciclo **está probado**: el 2026-09-18 se desinstaló todo, Suricata
+incluido, y el instalador lo reconstruyó desde cero hasta el motor decidiendo y
+el panel respondiendo.
+
 ### Comprobar que sigue funcionando
 
 ```bash
