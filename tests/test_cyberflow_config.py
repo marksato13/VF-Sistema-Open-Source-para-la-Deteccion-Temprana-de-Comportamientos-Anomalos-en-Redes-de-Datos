@@ -135,6 +135,20 @@ class AlcanceDeLaDeteccion(unittest.TestCase):
         self.assertNotIn("--excluir-protocolos", m)
 
 
+class AvisoDeCalibracion(unittest.TestCase):
+    """Un umbral de otra red no mide nada aqui, y el panel debe decirlo."""
+
+    def panel(self, calibrado):
+        return cc.render(cfg(panel__activo=True,
+                             motor__calibrado_en_esta_red=calibrado))["ppi-dashboard.service"]
+
+    def test_por_omision_el_panel_avisa(self):
+        self.assertNotIn("--calibrado-en-esta-red", self.panel(False))
+
+    def test_solo_se_calla_si_se_declara(self):
+        self.assertIn("--calibrado-en-esta-red", self.panel(True))
+
+
 class PanelEnLaRed(unittest.TestCase):
     """El panel no tiene autenticacion: exponerlo exige lista de origenes."""
 

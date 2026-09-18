@@ -28,7 +28,7 @@ from pathlib import Path
 HTML = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PPI &middot; motor en vivo</title>
+<title>CyberFlow &middot; motor en vivo</title>
 <link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%235eead4'/%3E%3C/svg%3E">
 <style>
   :root {
@@ -143,7 +143,7 @@ HTML = """<!doctype html>
 
 <div class="wrap">
   <header>
-    <h1>Sistema PPI<small>Motor en vivo &middot; solo lectura</small></h1>
+    <h1>CyberFlow<small>Motor en vivo &middot; solo lectura</small></h1>
     <span class="stamp" id="stamp"></span>
   </header>
 
@@ -158,6 +158,13 @@ HTML = """<!doctype html>
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg><h2>Modelo congelado</h2></div>
     <div class="grid" id="model"></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="16.5" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Punto débil conocido:</strong> este modelo detecta peor la fuerza bruta de contraseñas (50&ndash;55%) que el resto de familias de ataque (&gt;80%). Una decisión PERMIT en ese escenario es menos confiable que en otros.</span></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg><h2>Alcance del análisis</h2></div>
+    <p class="lede-small">Lo que se captura pero NO se puntúa, y por qué. Declararlo con su cifra es parte del método: sin número, «se excluyó» no es una medición.</p>
+    <div class="grid" id="alcance"></div>
+    <p class="toolbar-hint" id="alcanceDetalle"></p>
   </section>
 
   <section>
@@ -239,6 +246,7 @@ let currentRange = '1h';
 // no esta mirando la tabla justo en ese momento. Solo cambia titulo/favicon
 // del propio navegador, no notificaciones del sistema operativo (mas
 // invasivo e innecesario para un panel de solo lectura).
+const PROTO = { 112: 'VRRP/CARP (latido del cortafuegos)', 240: 'pfsync (sincronización entre cortafuegos)' };
 const BASE_TITLE = document.title;
 const BASE_FAVICON = document.getElementById('favicon').href;
 const ALERT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%235eead4'/%3E%3Ccircle cx='24' cy='9' r='7' fill='%23f87171' stroke='%230a0f1a' stroke-width='1.5'/%3E%3C/svg%3E";
@@ -282,10 +290,21 @@ function fmtTime(t) {
   return new Date(t * 1000).toLocaleTimeString();
 }
 
-function renderHealthbar(services, counters, captureMetrics) {
+function renderHealthbar(services, counters, captureMetrics, calibracion) {
   const allUp = Object.values(services).every(Boolean);
   const el = document.getElementById('healthbar');
   const hasDrops = captureMetrics && (captureMetrics.kernel_drops > 0 || captureMetrics.kernel_ifdrops > 0);
+  const nAlertas = counters.alert_model + counters.alert_auth_heuristic;
+  // Un modelo calibrado en otra red no mide nada aqui: anunciar sus alertas
+  // como "reales" es dar una alarma falsa en la primera linea del panel.
+  // Medido en este despliegue: 87 % de ALERT sin ningun ataque en curso.
+  if (allUp && calibracion && !calibracion.calibrado_en_esta_red) {
+    el.className = 'healthbar warn';
+    el.innerHTML = `<span class="dot"></span><div><div class="msg">Modelo sin calibrar para esta red &mdash; las alertas aun no son fiables</div>` +
+      `<div class="sub">El umbral viene de otra red. ${nAlertas} alerta(s) en la última hora: trátalas como ruido hasta recalibrar con tráfico propio.` +
+      (hasDrops ? ' Además, Suricata está descartando paquetes.' : '') + `</div></div>`;
+    return;
+  }
   if (!allUp) {
     el.className = 'healthbar bad';
     el.innerHTML = `<span class="dot"></span><div><div class="msg">Atención: un servicio no está activo</div><div class="sub">Revisar con journalctl -- el motor puede no estar observando tráfico real ahora mismo.</div></div>`;
@@ -372,7 +391,7 @@ async function refresh() {
     const status = await (await fetch('/api/status')).json();
     stamp.textContent = 'Actualizado ' + new Date().toLocaleTimeString();
 
-    renderHealthbar(status.services, status.counters, status.capture_metrics);
+    renderHealthbar(status.services, status.counters, status.capture_metrics, status.calibracion);
 
     const healthCards = Object.entries(status.services).map(([name, active]) =>
       card(SERVICE_LABEL[name] || name, active ? ICON.ok + ' activo' : ICON.bad + ' inactivo', active ? 'ok' : 'bad')
@@ -414,6 +433,17 @@ async function refresh() {
       card('PERMIT (modelo)', c.permit_model, 'ok'),
       card('PERMIT (sin tráfico)', c.permit_heuristic),
     ].join('');
+
+    const ex = status.alcance || {};
+    document.getElementById('alcance').innerHTML = [
+      card('Paquetes de plano de control descartados', (ex.plano_control_descartado ?? 0).toLocaleString('es')),
+      card('Ventanas de entidades excluidas', (ex.ventanas_excluidas ?? 0).toLocaleString('es')),
+      card('Red analizada', ex.red_entidades || '&mdash;'),
+    ].join('');
+    const protos = (ex.protocolos_excluidos || []).map(p => PROTO[p] || ('proto ' + p));
+    document.getElementById('alcanceDetalle').textContent =
+      (protos.length ? 'Protocolos fuera del cálculo: ' + protos.join(', ') + '. ' : '') +
+      ((ex.excluidas || []).length ? 'Entidades fuera del cálculo: ' + ex.excluidas.join(', ') + '.' : '');
 
     if (currentRange === '1h') renderSparkline(status.activity);
     else loadActivity(currentRange);
@@ -467,7 +497,7 @@ document.getElementById('exportCsv').addEventListener('click', () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `ppi-decisiones-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+  a.download = `cyberflow-decisiones-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -505,6 +535,31 @@ def read_decisions(log_path: Path, limit: int, max_bytes: int = 1_048_576) -> li
             records.append(event)
     records.sort(key=lambda item: item.get("logged_at", 0))
     return records[-limit:][::-1]
+
+
+def leer_alcance(log_path: Path) -> dict:
+    """Lo que el motor declara excluir, leido de su propio registro.
+
+    No se configura aqui a proposito: el panel no debe afirmar un alcance
+    distinto del que el motor aplica de verdad. Los contadores viajan en cada
+    decision y la configuracion en el evento de arranque.
+    """
+    alcance: dict = {}
+    for line in tail_lines(log_path, max_bytes=1_048_576):
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("event") == "motor_startup":
+            alcance["red_entidades"] = event.get("entity_network")
+            alcance["excluidas"] = event.get("excluidas", [])
+            alcance["protocolos_excluidos"] = event.get("protocolos_excluidos", [])
+        elif event.get("event") == "decision":
+            if "plano_control_descartado" in event:
+                alcance["plano_control_descartado"] = event["plano_control_descartado"]
+            if "excluidas_acumulado" in event:
+                alcance["ventanas_excluidas"] = event["excluidas_acumulado"]
+    return alcance
 
 
 def compute_counters(decisions: list[dict], window_seconds: int = 3600) -> dict:
@@ -697,6 +752,13 @@ def parse_args() -> argparse.Namespace:
         "--services",
         default="ppi-motor.service,ppi-motor-capture.service,suricata.service",
     )
+    parser.add_argument(
+        "--calibrado-en-esta-red",
+        action="store_true",
+        help="declara que el umbral se calibro con trafico de ESTA red. Sin "
+             "esta bandera el panel avisa de que las alertas no son fiables, "
+             "que es lo correcto mientras se use un umbral de otro sitio",
+    )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8788)
     return parser.parse_args()
@@ -736,6 +798,10 @@ def main() -> int:
                         "counters": compute_counters(decisions),
                         "activity": bucket_by_minute(decisions),
                         "capture_metrics": suricata_metrics(args.suricata_metrics_command),
+                        "alcance": leer_alcance(args.log_path),
+                        "calibracion": {
+                            "calibrado_en_esta_red": args.calibrado_en_esta_red,
+                        },
                     }
                 )
                 return

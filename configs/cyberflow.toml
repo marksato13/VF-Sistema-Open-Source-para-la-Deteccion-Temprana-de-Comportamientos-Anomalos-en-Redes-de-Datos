@@ -58,6 +58,11 @@ modo = "observacion"
 paso_segundos = 10
 historia_segundos = 230
 umbral = 1.8126087939765134
+
+# false = el umbral viene de otra red. El panel lo advierte y pide tratar las
+# alertas como ruido. Ponlo en true SOLO despues de recalibrar con trafico
+# propio: es lo que separa una demostracion de una medicion.
+calibrado_en_esta_red = false
 bloqueo_segundos = 120
 
 [rutas]

@@ -140,7 +140,7 @@ WorkingDirectory={raiz}
 ExecStart={python} {raiz}/scripts/engine/dashboard.py \\
     --log-path {raiz}/{registro} \\
     --manifest-path {raiz}/{manifiesto} \\
-    --services ppi-motor.service,ppi-motor-capture.service,suricata.service \\
+    --services ppi-motor.service,ppi-motor-capture.service,suricata.service \\{calibrado}
     --host {direccion} --port {puerto}
 Restart=always
 RestartSec=5
@@ -327,8 +327,11 @@ def render(cfg: dict) -> dict[str, str]:
                 cabecera=cabecera, resumen=", ".join(v4 + v6), reglas=RUTA_REGLAS)
             acceso = ("\nRequires=cyberflow-panel-acceso.service"
                       "\nAfter=cyberflow-panel-acceso.service")
+        calibrado = ("\n    --calibrado-en-esta-red \\"
+                     if cfg["motor"].get("calibrado_en_esta_red") else "")
         unidades["ppi-dashboard.service"] = PANEL.format(
-            direccion=panel["direccion"], puerto=panel["puerto"], acceso=acceso, **comun)
+            direccion=panel["direccion"], puerto=panel["puerto"], acceso=acceso,
+            calibrado=calibrado, **comun)
     return unidades
 
 
