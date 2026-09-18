@@ -94,6 +94,12 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-model.txt
       - run: python -m pip install -r requirements-model.txt
+      - name: BLAS y CPU de este runner
+        # El bit a bit depende del kernel de OpenBLAS, que elige segun la CPU.
+        # El verificador lo compara con el que registra el manifiesto.
+        run: |
+          python -c "import threadpoolctl, json; print(json.dumps([{k: t.get(k) for k in ('internal_api','version','architecture','num_threads')} for t in threadpoolctl.threadpool_info()], indent=1))"
+          grep -m1 "model name" /proc/cpuinfo; nproc
       - name: Recalibrar con el protocolo publicado
         run: |
           python scripts/modeling/calibrate_multilayer_v2_v1.py --execute-once \
