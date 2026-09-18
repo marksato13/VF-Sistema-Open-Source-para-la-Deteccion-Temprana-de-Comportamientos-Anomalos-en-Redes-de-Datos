@@ -25,6 +25,12 @@ anillo_archivos = 16
 anillo_segundos = 15
 directorio = "/var/lib/ppi-motor-capture"
 
+# Cuanto se conserva en disco. tcpdump -G rota por tiempo, pero con un nombre
+# con fecha no reutiliza nombres: -W no borra nada y el anillo crece sin fin
+# (medido: 403 MB en un dia). Un temporizador poda lo mas viejo cada 5 min.
+# Tiene que ser mayor que la duracion del anillo o se borraria historia en uso.
+retener_minutos = 15
+
 # Filtro BPF. Vacio = capturar todo.
 # CUIDADO: sobre tramas etiquetadas 802.1Q un filtro "ip" normal NO casa;
 # hay que escribirlo como "vlan and ip" o el anillo sale vacio en silencio.

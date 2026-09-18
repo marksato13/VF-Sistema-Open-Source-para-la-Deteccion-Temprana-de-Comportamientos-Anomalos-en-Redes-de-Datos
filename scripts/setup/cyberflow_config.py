@@ -184,6 +184,33 @@ table inet cyberflow_panel {{
 RUTA_REGLAS = "/etc/cyberflow/panel-acceso.nft"
 RUTA_ROTACION = "/etc/logrotate.d/cyberflow"
 
+LIMPIEZA = """{cabecera}
+[Unit]
+Description=CyberFlow - poda el anillo de PCAP
+# tcpdump -G rota por tiempo, pero con un nombre con fecha NO reutiliza
+# nombres: -W no borra nada y el "anillo" crece para siempre. Medido en el
+# sensor de referencia: 6707 ficheros y 403 MB en un dia. El motor ya ignora
+# los ficheros viejos por su mtime, asi que esto no cambia lo que analiza:
+# solo impide que el disco se llene.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/find {directorio} -maxdepth 1 -name '{glob}' -mmin +{retener} -delete
+"""
+
+LIMPIEZA_TIMER = """{cabecera}
+[Unit]
+Description=CyberFlow - poda periodica del anillo de PCAP
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+"""
+
 ROTACION = """# Generado por scripts/setup/cyberflow_config.py. NO editar a mano.
 # El motor escribe una linea JSON por decision y puede producir cientos por
 # minuto. Sin tope, este fichero llena la raiz, y un / lleno tumba la maquina
@@ -244,6 +271,14 @@ def comprobar(cfg: dict) -> list[str]:
             "o el motor pedira historia que ya roto fuera del buffer"
             % (mot["historia_segundos"], cap["anillo_archivos"],
                cap["anillo_segundos"], anillo))
+
+    # Podar antes de que el motor deje de necesitarlos le quitaria historia.
+    anillo_minutos = cap["anillo_archivos"] * cap["anillo_segundos"] / 60.0
+    if cap.get("retener_minutos", 0) <= anillo_minutos:
+        fallos.append(
+            "captura.retener_minutos (%s) debe ser mayor que la duracion del "
+            "anillo (%.1f min): la poda borraria capturas que el motor todavia "
+            "necesita" % (cap.get("retener_minutos"), anillo_minutos))
 
     filtro = cap.get("filtro_bpf", "").strip()
     if filtro and "vlan" not in filtro:
@@ -327,6 +362,11 @@ def render(cfg: dict) -> dict[str, str]:
     )
 
     unidades = {
+        "cyberflow-limpieza.service": LIMPIEZA.format(
+            cabecera=cabecera, directorio=cap["directorio"].rstrip("/"),
+            glob=cap.get("anillo_glob", "live-*.pcap"),
+            retener=cap["retener_minutos"]),
+        "cyberflow-limpieza.timer": LIMPIEZA_TIMER.format(cabecera=cabecera),
         RUTA_ROTACION: ROTACION.format(registro="%s/%s" % (raiz, rut["registro"]),
                                        usuario=rut["usuario"]),
         "cyberflow-capture-nic.service": NIC.format(**comun),

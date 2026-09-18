@@ -374,7 +374,7 @@ titulo "8. Unidades de systemd"
 # ---------------------------------------------------------------------
 python3 "$RAIZ/scripts/setup/cyberflow_config.py" --config "$CONFIG" --escribir | sed 's/^/  /'
 systemctl daemon-reload
-UNIDADES="cyberflow-capture-nic ppi-motor-capture ppi-motor"
+UNIDADES="cyberflow-capture-nic ppi-motor-capture ppi-motor cyberflow-limpieza.timer"
 [[ "$(leer_toml panel activo)" == "True" ]] && UNIDADES="$UNIDADES ppi-dashboard"
 [[ -f /etc/systemd/system/cyberflow-panel-acceso.service ]] && UNIDADES="cyberflow-panel-acceso $UNIDADES"
 systemctl enable --now $UNIDADES >/dev/null 2>&1

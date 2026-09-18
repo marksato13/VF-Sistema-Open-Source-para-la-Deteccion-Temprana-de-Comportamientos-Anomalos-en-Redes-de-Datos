@@ -70,6 +70,7 @@ class Generacion(unittest.TestCase):
         u = cc.render(cfg(panel__activo=False))
         self.assertEqual(set(u), {"cyberflow-capture-nic.service",
                                   "ppi-motor-capture.service", "ppi-motor.service",
+                                  "cyberflow-limpieza.service", "cyberflow-limpieza.timer",
                                   cc.RUTA_ROTACION})
 
     def test_panel_solo_si_activo(self):
@@ -134,6 +135,23 @@ class AlcanceDeLaDeteccion(unittest.TestCase):
         m = self.motor(red__excluir=[], red__excluir_protocolos=[])
         self.assertNotIn("--excluir", m)
         self.assertNotIn("--excluir-protocolos", m)
+
+
+class PodaDelAnillo(unittest.TestCase):
+    """tcpdump -W no borra nada si el nombre lleva fecha: hay que podar."""
+
+    def test_se_genera_la_poda_y_su_temporizador(self):
+        u = cc.render(cfg())
+        self.assertIn("cyberflow-limpieza.service", u)
+        self.assertIn("cyberflow-limpieza.timer", u)
+        self.assertIn("-mmin +15 -delete", u["cyberflow-limpieza.service"])
+        self.assertIn("/var/lib/ppi-motor-capture", u["cyberflow-limpieza.service"])
+
+    def test_retener_menos_que_el_anillo_se_rechaza(self):
+        # 16 x 15 s = 4 min de anillo: podar a los 3 min borraria historia viva.
+        fallos = " ".join(cc.comprobar(cfg(captura__retener_minutos=3)))
+        self.assertIn("retener_minutos", fallos)
+        self.assertEqual(cc.comprobar(cfg(captura__retener_minutos=5)), [])
 
 
 class RotacionDelRegistro(unittest.TestCase):

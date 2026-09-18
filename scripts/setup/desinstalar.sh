@@ -51,6 +51,8 @@ for u in ppi-dashboard cyberflow-panel-acceso ppi-motor ppi-motor-capture cyberf
         hacer "rm -f /etc/systemd/system/$u.service /etc/systemd/system/$u.service.anterior"
     fi
 done
+hacer "systemctl disable --now cyberflow-limpieza.timer"
+hacer "rm -f /etc/systemd/system/cyberflow-limpieza.timer /etc/systemd/system/cyberflow-limpieza.service"
 hacer "systemctl daemon-reload"
 hacer "systemctl reset-failed"
 
