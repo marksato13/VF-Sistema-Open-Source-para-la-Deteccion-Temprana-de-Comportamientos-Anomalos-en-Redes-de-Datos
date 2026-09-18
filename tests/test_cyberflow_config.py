@@ -69,7 +69,8 @@ class Generacion(unittest.TestCase):
     def test_unidades_basicas(self):
         u = cc.render(cfg(panel__activo=False))
         self.assertEqual(set(u), {"cyberflow-capture-nic.service",
-                                  "ppi-motor-capture.service", "ppi-motor.service"})
+                                  "ppi-motor-capture.service", "ppi-motor.service",
+                                  cc.RUTA_ROTACION})
 
     def test_panel_solo_si_activo(self):
         self.assertIn("ppi-dashboard.service", cc.render(cfg(panel__activo=True)))
@@ -147,7 +148,12 @@ class RotacionDelRegistro(unittest.TestCase):
     def test_sin_copytruncate(self):
         # El motor reabre el fichero en cada escritura, asi que copytruncate
         # sobra; usarlo abriria una ventana en la que se pierden lineas.
-        self.assertNotIn("copytruncate", cc.render(cfg())[cc.RUTA_ROTACION])
+        # Se comprueba entre las DIRECTIVAS: la palabra aparece en el
+        # comentario que explica por que no se usa.
+        directivas = [l.strip() for l in cc.render(cfg())[cc.RUTA_ROTACION].splitlines()
+                      if l.strip() and not l.strip().startswith("#")]
+        self.assertNotIn("copytruncate", directivas)
+        self.assertIn("compress", directivas)
 
 
 class AvisoDeCalibracion(unittest.TestCase):
