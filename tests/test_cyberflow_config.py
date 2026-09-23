@@ -138,7 +138,22 @@ class AlcanceDeLaDeteccion(unittest.TestCase):
 
 
 class PodaDelAnillo(unittest.TestCase):
-    """tcpdump -W no borra nada si el nombre lleva fecha: hay que podar."""
+    """tcpdump no borra nada si el nombre lleva fecha: hay que podar."""
+
+    def test_la_captura_no_lleva_W(self):
+        # Medido en el sensor: con -G, la opcion -W hace SALIR a tcpdump al
+        # completar los N ficheros. NRestarts=1458, un relevo cada 4m02s. Cada
+        # relevo pierde ~2 s de captura (RestartSec) y deja un primer fichero
+        # con grupo tcpdump que el usuario del motor no puede leer: 1 de cada
+        # 16, el 5,55 % de los bytes del anillo, descartado en silencio.
+        captura = cc.render(cfg())["ppi-motor-capture.service"]
+        # Solo las directivas: el comentario de la unidad explica por que no
+        # esta -W, y buscarlo en el texto entero lo encontraria ahi.
+        directivas = "\n".join(
+            linea for linea in captura.splitlines() if not linea.lstrip().startswith("#")
+        )
+        self.assertIn("-G 15", directivas)
+        self.assertNotIn("-W ", directivas)
 
     def test_se_genera_la_poda_y_su_temporizador(self):
         u = cc.render(cfg())

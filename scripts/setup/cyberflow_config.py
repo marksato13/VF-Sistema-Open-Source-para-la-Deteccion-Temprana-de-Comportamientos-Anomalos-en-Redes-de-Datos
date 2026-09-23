@@ -68,10 +68,24 @@ Requires=cyberflow-capture-nic.service
 [Service]
 Type=simple
 # Arranca como root y suelta privilegios con -Z justo tras abrir el socket.
+#
+# SIN -W, a proposito. Con -G, la opcion -W hace que tcpdump SALGA con estado 0
+# al completar esos N ficheros, y systemd lo relanza: medido en el sensor,
+# NRestarts=1458 con reinicios cada 4m02s. Eso costaba dos cosas, las dos
+# invisibles:
+#   - RestartSec deja ~2 s sin capturar en cada relevo: 0,8 % del trafico que
+#     nunca llega al anillo.
+#   - tcpdump con -Z hace chown del PRIMER fichero de cada arranque a
+#     tcpdump:tcpdump; los siguientes los crea ya sin privilegios y heredan el
+#     grupo del directorio setgid. Ese primer fichero NO lo puede leer el
+#     usuario del motor: 1 de cada 16, el 5,55 % de los bytes del anillo,
+#     descartado en silencio.
+# -W tampoco servia para podar: como el nombre lleva fecha, tcpdump no
+# reutiliza ficheros. De eso se encarga cyberflow-limpieza.timer.
 ExecStartPre=/usr/bin/install -d -o tcpdump -g {usuario} -m 2750 {directorio}
 ExecStart=/usr/bin/tcpdump -i {interfaz} -n -s 0 -U -B 65536 \\
     -Z tcpdump -w {directorio}/live-%%Y%%m%%d%%H%%M%%S.pcap \\
-    -G {anillo_segundos} -W {anillo_archivos}{filtro}
+    -G {anillo_segundos}{filtro}
 UMask=0027
 Restart=always
 RestartSec=2
@@ -193,10 +207,11 @@ LIMPIEZA = """{cabecera}
 [Unit]
 Description=CyberFlow - poda el anillo de PCAP
 # tcpdump -G rota por tiempo, pero con un nombre con fecha NO reutiliza
-# nombres: -W no borra nada y el "anillo" crece para siempre. Medido en el
-# sensor de referencia: 6707 ficheros y 403 MB en un dia. El motor ya ignora
-# los ficheros viejos por su mtime, asi que esto no cambia lo que analiza:
-# solo impide que el disco se llene.
+# nombres, asi que nadie borra y el "anillo" crece para siempre. Medido en el
+# sensor de referencia: 6707 ficheros y 403 MB en un dia. Esta es la unica
+# poda que hay -por eso -W no hace falta, ver la unidad de captura-. El motor
+# ya ignora los ficheros viejos por su mtime, asi que esto no cambia lo que
+# analiza: solo impide que el disco se llene.
 
 [Service]
 Type=oneshot
