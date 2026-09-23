@@ -79,6 +79,67 @@ jobs:
       - name: shellcheck (errores)
         run: shellcheck --severity=error scripts/setup/*.sh
 
+  unidades:
+    name: Las unidades generadas son validas para systemd
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generar las unidades a un directorio temporal
+        # Se importa el generador y se usa render() directamente, en vez de
+        # trocear la salida de --mostrar: ese formato es para leerlo una
+        # persona y cambiarlo no deberia romper el CI.
+        run: |
+          mkdir -p "$RUNNER_TEMP/unidades"
+          python - "$RUNNER_TEMP/unidades" <<'PY'
+          import importlib.util, pathlib, sys
+          spec = importlib.util.spec_from_file_location(
+              "cc", "scripts/setup/cyberflow_config.py")
+          cc = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(cc)
+          destino = pathlib.Path(sys.argv[1])
+          unidades = cc.render(cc.cargar(pathlib.Path("configs/cyberflow.toml")))
+          n = 0
+          for nombre, cuerpo in unidades.items():
+              if nombre.endswith((".service", ".timer", ".socket")):
+                  (destino / nombre).write_text(cuerpo, encoding="utf-8")
+                  n += 1
+          print(f"{n} unidades escritas")
+          assert n >= 5, f"se esperaban al menos 5 unidades, se generaron {n}"
+          PY
+      - name: systemd-analyze verify
+        # Detecta directivas mal escritas, secciones invalidas y valores que
+        # systemd no sabe interpretar. Un .service con una errata arranca
+        # "bien" hasta que hace falta: este trabajo existe porque eso ya paso
+        # una vez (226/NAMESPACE por un ReadWritePaths a un directorio que no
+        # existia).
+        #
+        # Se BUSCAN los errores en vez de filtrar el ruido. En el runner no
+        # existen el usuario del despliegue, ni sus rutas, ni suricata.service,
+        # asi que systemd-analyze se queja de todo eso con razon y no es lo que
+        # se valida aqui: lo que se valida es la SINTAXIS de lo que genera el
+        # generador. Enumerar el ruido seria una lista que se queda corta a la
+        # primera version distinta de systemd.
+        run: |
+          salida=$(systemd-analyze verify "$RUNNER_TEMP"/unidades/*.service "$RUNNER_TEMP"/unidades/*.timer 2>&1 || true)
+          echo "--- salida completa de systemd-analyze ---"
+          echo "$salida"
+          echo "--- fin ---"
+          graves=$(echo "$salida" | grep -E -e "Unknown lvalue" \
+                                            -e "Unknown section" \
+                                            -e "Failed to parse" \
+                                            -e "Invalid (unit|section|setting|value)" \
+                                            -e "is not absolute" \
+                                            -e "Missing '='" || true)
+          if [ -n "$graves" ]; then
+            echo "systemd rechaza la SINTAXIS de alguna unidad generada:"
+            echo "$graves"
+            exit 1
+          fi
+          echo "Ninguna unidad tiene errores de sintaxis."
+
   reproduccion:
     name: El modelo publicado se reproduce
     runs-on: ubuntu-24.04
