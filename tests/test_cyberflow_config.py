@@ -99,6 +99,14 @@ class Generacion(unittest.TestCase):
             for resto in ("useransible", "ens35", "10.20.0.0", "10.30.0.0"):
                 self.assertNotIn(resto, texto)
 
+    def test_el_panel_recibe_la_ruta_de_eve(self):
+        # Sin --eve-path el panel cae al valor por omision y, si no coincide
+        # con el despliegue, se queda sin contadores de captura sin decirlo:
+        # capture_metrics viaja como null y tres nodos del diagrama dicen
+        # "sin medir". Medido en el sensor antes de pasarla.
+        u = cc.render(cfg())["ppi-dashboard.service"]
+        self.assertIn("--eve-path /var/log/suricata/eve.json", u)
+
     def test_el_panel_recibe_el_manifiesto(self):
         # Sin --manifest-path el panel buscaba /home/useransible/... y moria.
         p = cc.render(cfg(panel__activo=True))["ppi-dashboard.service"]

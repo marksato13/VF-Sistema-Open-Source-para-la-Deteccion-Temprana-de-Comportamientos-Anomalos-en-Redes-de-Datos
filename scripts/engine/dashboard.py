@@ -927,11 +927,16 @@ function topoEstado(id, s) {
     }
     case 'eve': {
       const drops = cm ? (cm.kernel_drops + cm.kernel_ifdrops) : null;
+      const datos = { 'Paquetes vistos': cm ? num(cm.kernel_packets) : 'sin medir',
+                      'Descartes del núcleo': drops == null ? 'sin medir' : num(drops) };
+      if (cm && cm.errors != null) datos['Errores de captura'] = num(cm.errors);
+      // La marca del propio evento stats, no la hora de esta pantalla: si
+      // Suricata dejo de emitir, la cifra se queda quieta y aqui se ve.
+      if (cm && cm.medido_en) datos['Medido en'] = String(cm.medido_en).slice(11, 19);
       return {
         estado: drops == null ? '' : (drops ? 'warn' : 'ok'),
         valor: drops == null ? 'sin medir' : (drops ? num(drops) + ' descartes' : 'sin descartes'),
-        datos: { 'Paquetes vistos': cm ? num(cm.kernel_packets) : 'sin medir',
-                 'Descartes del núcleo': drops == null ? 'sin medir' : num(drops) },
+        datos,
       };
     }
     case 'descartes': {
@@ -1341,8 +1346,52 @@ def enforcement_list(enforce_command: str) -> list[dict]:
         return []
 
 
+def suricata_stats_desde_eve(eve_path: Path) -> dict | None:
+    """Contadores de captura leidos del ultimo evento 'stats' de eve.json.
+
+    Se prefiere esta via a invocar un ayudante con sudo, por tres razones
+    medidas en el sensor de referencia:
+
+    - El ayudante ``/usr/local/sbin/ppi-suricata-metrics`` que el panel
+      esperaba por omision **no existe** en el despliegue, y tampoco estaba en
+      la lista NOPASSWD. El resultado era ``capture_metrics: null`` y tres
+      nodos del diagrama sin cifra, sin que nada lo dijera.
+    - ``eve.json`` ya lo escribe Suricata con permisos 644, asi que no hace
+      falta ningun privilegio nuevo ni un binario que instalar.
+    - Suricata emite un evento ``stats`` cada pocos segundos con el mismo
+      bloque ``capture`` que devolvia el ayudante.
+
+    Devuelve None -y no ceros- si no hay ningun evento: un cero afirmaria que
+    la captura no pierde paquetes, que no es lo mismo que no haberlo medido.
+    """
+    for line in reversed(tail_lines(eve_path, max_bytes=2_097_152)):
+        if '"stats"' not in line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("event_type") != "stats":
+            continue
+        captura = (event.get("stats") or {}).get("capture") or {}
+        if "kernel_packets" not in captura:
+            continue
+        return {
+            "kernel_packets": captura.get("kernel_packets", 0),
+            "kernel_drops": captura.get("kernel_drops", 0),
+            # af-packet no siempre publica ifdrops; ausente cuenta como 0
+            # porque el contador que importa, kernel_drops, si vino.
+            "kernel_ifdrops": captura.get("kernel_ifdrops", 0),
+            "errors": captura.get("errors", 0),
+            "medido_en": event.get("timestamp"),
+        }
+    return None
+
+
 def suricata_metrics(command: str) -> dict | None:
     """Metricas reales de captura via el helper ya autorizado en sudoers.
+
+    Solo se usa como respaldo si ``eve.json`` no trae eventos ``stats``.
 
     "activo/inactivo" del servicio no dice si esta PERDIENDO paquetes --
     un analista necesita saber eso, no solo si el proceso vive. Sin
@@ -1402,6 +1451,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--detector-name", default="ocsvm_scaled")
     parser.add_argument("--enforce-command", default="/usr/local/sbin/ppi-enforce")
+    parser.add_argument(
+        "--eve-path",
+        type=Path,
+        default=Path("/var/log/suricata/eve.json"),
+        help="registro de Suricata del que se leen los contadores de captura",
+    )
     parser.add_argument("--suricata-metrics-command", default="/usr/local/sbin/ppi-suricata-metrics")
     parser.add_argument(
         "--services",
@@ -1452,7 +1507,12 @@ def main() -> int:
                         "blocked": enforcement_list(args.enforce_command),
                         "counters": compute_counters(decisions),
                         "activity": bucket_by_minute(decisions),
-                        "capture_metrics": suricata_metrics(args.suricata_metrics_command),
+                        # eve.json primero: no necesita privilegios. El ayudante
+                        # queda como respaldo para despliegues que lo tengan.
+                        "capture_metrics": (
+                            suricata_stats_desde_eve(args.eve_path)
+                            or suricata_metrics(args.suricata_metrics_command)
+                        ),
                         "alcance": leer_alcance(args.log_path),
                         "calibracion": {
                             "calibrado_en_esta_red": args.calibrado_en_esta_red,

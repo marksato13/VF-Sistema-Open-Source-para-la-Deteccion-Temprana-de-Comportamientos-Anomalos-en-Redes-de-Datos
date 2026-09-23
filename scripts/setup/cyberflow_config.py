@@ -159,6 +159,7 @@ WorkingDirectory={raiz}
 ExecStart={python} {raiz}/scripts/engine/dashboard.py \\
     --log-path {raiz}/{registro} \\
     --manifest-path {raiz}/{manifiesto} \\
+    --eve-path {eve} \\
     --services ppi-motor.service,ppi-motor-capture.service,suricata.service \\{calibrado}
     --host {direccion} --port {puerto}
 Restart=always
