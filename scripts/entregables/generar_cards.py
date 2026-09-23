@@ -188,6 +188,16 @@ def model_card(d: dict, validacion: dict) -> str:
         "**La significancia entre modelos ya está medida**: las 6 comparaciones del OCSVM son significativas tras Holm, pero **ninguna diferencia de falso positivo lo es**. Ver [`08-significancia-entre-modelos.md`](../fase04-modelado/08-significancia-entre-modelos.md).",
         "**La ablación por capas ya está ejecutada** y matiza este contrato: la expansión multicapa es significativa (p < 0,001), pero las 8 variables L7 nuevas **no aportan detección medible y cuestan 5 falsos positivos**. Ver [`07-ablacion-multicapa.md`](../fase04-modelado/07-ablacion-multicapa.md).",
         "**Un solo punto de operación.** No hay segundo umbral, así que la respuesta es binaria: permitir o bloquear.",
+        "**Una de sus entradas venía corrupta en producción.** Sobre un espejo SPAN, la sesión "
+        "enseña la misma trama dos veces y `tcp_retransmission_ratio_10s` las contaba como "
+        "retransmisiones: **0,1488 medido, 0,0000 tras deduplicar**. El modelo nunca vio esa "
+        "distorsión en entrenamiento, así que toda puntuación anterior a la corrección usó "
+        "esa variable fuera de su distribución. Ver system card §8.3.",
+        "**Ciego a la capa 2 y al tráfico dentro de una misma VLAN.** Las 28 variables "
+        "descartan toda trama que no sea IPv4, así que nunca ven una ARP; y el espejo solo "
+        "cruza lo que va entre VLAN. Hay un caso medido de una máquina real invisible para "
+        "este modelo. El extractor `multilayer-v3` añade tres variables de enlace, pero "
+        "**este modelo no está entrenado con ellas**.",
     ], 1):
         a(f"| {i} | {s} |\n")
 
@@ -246,7 +256,11 @@ def system_card(limpio: list[dict], pase1: list[dict]) -> str:
       "nftables en el propio Sensor  ──►  bloqueo 120 s\n```\n\n")
     a("El Sensor **es** el router entre la red de clientes y la de servicio, así que el "
       "bloqueo se aplica en el punto de paso: no hace falta SSH a otra máquina ni un agente "
-      "en el servidor.\n")
+      "en el servidor.\n\n")
+    a("> **Esto describe el despliegue que se evaluó**, no necesariamente el que está "
+      "corriendo hoy. Las cifras de las secciones 4 y 7 se midieron con el sensor en el "
+      "camino del tráfico. La sección 8 declara en qué difiere el despliegue actual y qué "
+      "deja de valer por ello.\n")
 
     a("\n---\n\n## 2 · Detectores\n\n")
     a("| Detector | Qué dispara | Por qué existe |\n|---|---|---|\n")
@@ -334,6 +348,8 @@ def system_card(limpio: list[dict], pase1: list[dict]) -> str:
     a("| Falso positivo por ventana sin paquetes | ✅ Corregido | Con prueba positiva y negativa en producción |\n")
     a("| Reproceso del historial al reiniciar | ✅ Corregido | El motor descarta capturas más antiguas que su ventana |\n")
     a("| Bucle de re-bloqueo infinito | ✅ Corregido | La poda de memoria era por reloj y pasó a ser por dato |\n")
+    a("| Artefactos del espejo leídos como retransmisiones | ✅ Corregido | La sesión SPAN duplicaba tramas y `tcp_retransmission_ratio_10s` las contaba: **0,1488 antes, 0,0000 después**. Se deduplica la entrada, no la fórmula |\n")
+    a("| Parte del anillo descartada en silencio | ✅ Corregido | `tcpdump -W` hacía salir el proceso cada 4 min y el primer fichero de cada arranque quedaba ilegible para el motor: **5,55 %** de los bytes. El motor lo cuenta ahora en `pcaps_ilegibles` |\n")
     a("| Bloqueo por suplantación de IP | ⚪ **No evaluado** | Un tercero podría provocar el bloqueo de un cliente legítimo falsificando su origen. No se probó |\n")
     a("| Evasión del detector | ⚪ **No evaluado** | No se intentó eludirlo deliberadamente |\n")
 
@@ -356,6 +372,55 @@ def system_card(limpio: list[dict], pase1: list[dict]) -> str:
       "legítimo pesado. En esa condición el sistema **todavía no es apto para operación "
       "desatendida**.\n\n")
     a("Delimitar esa frontera con medición es el resultado, no un defecto del informe.\n")
+
+    # Seccion 8: el despliegue de produccion no es el que se evaluo. Las cifras
+    # de F6 no se reescriben -se midieron y valen para lo que se midio-; lo que
+    # se declara es en que difiere lo que hay hoy. Las cifras de aqui salen de
+    # mediciones sobre el espejo real, citadas en docs/INVENTARIO.md y
+    # docs/CASO-CAPA2-ARP.md.
+    a("\n---\n\n## 8 · El despliegue actual difiere del evaluado\n\n")
+    a("La evaluación de F6 se hizo con el sensor **en el camino del tráfico**. El "
+      "despliegue en la red de la entidad usa un **espejo SPAN**, y eso cambia cuatro "
+      "cosas que hay que declarar antes de leer cualquier cifra.\n\n")
+
+    a("### 8.1 · El control es demostrativo, no efectivo\n\n")
+    a("Con un espejo, el sensor **no está en el camino**: recibe una copia. La regla "
+      "nftables se escribe igual, pero el paquete ya pasó por otro sitio. Por eso el motor "
+      "corre en `modo = \"observacion\"`. **La mediana de 8,0 s hasta el bloqueo de la "
+      "sección 4 no aplica a este despliegue**: mide una acción que aquí no corta nada.\n\n")
+
+    a("### 8.2 · El umbral viene de otra red\n\n")
+    a("`calibrado_en_esta_red = false`. El umbral de la model card se calibró sobre un "
+      "conjunto de otra red, así que las alertas de este despliegue deben tratarse como "
+      "ruido hasta recalibrar con tráfico propio. El panel lo advierte en cada carga.\n\n")
+
+    a("### 8.3 · Qué se excluye del cálculo, y por qué\n\n")
+    a("| Exclusión | Motivo | Medido |\n|---|---|---|\n")
+    a("| Protocolos 112 (VRRP/CARP) y 240 (pfsync) | No son tráfico de usuarios: cada "
+      "interfaz VLAN del cortafuegos emite un anuncio por segundo y pasaba a ser una "
+      "entidad puntuada | **14 de 23** entidades eran eso. El **86,3 %** de las tramas de "
+      "capa 2 del espejo |\n")
+    a("| Copias que el espejo enseña dos veces | La sesión captura en los dos sentidos del "
+      "troncal y la difusión inunda los dos puertos origen | `tcp_retransmission_ratio_10s` "
+      "pasó de **0,1488 a 0,0000**: las 100 «retransmisiones» eran las 100 copias |\n")
+    a("| El bastión y el propio sensor | Su SSH de gestión cruza el troncal espejado | "
+      "Declaradas en `[red] excluir` |\n\n")
+    a("Las tres actúan sobre la **entrada** del extractor congelado, nunca sobre sus "
+      "fórmulas: son alcance, no modelo. El motor publica los contadores en cada decisión "
+      "para que la exclusión sea una medición y no una afirmación.\n\n")
+
+    a("### 8.4 · Lo que el punto de observación no puede ver\n\n")
+    a("- **Tráfico dentro de una misma VLAN.** El espejo tiene origen en los troncales del "
+      "cortafuegos, así que solo cruza por ahí lo que va **entre** VLAN. Una máquina que "
+      "solo hable con vecinos de su segmento es invisible para las 28 variables.\n")
+    a("- **Respuestas ARP completas.** Las peticiones son difusión y llegan enteras; las "
+      "respuestas son unidifusión y solo llegan las dirigidas al cortafuegos.\n")
+    a("- **Capas 5 y 6.** Sesión y presentación no son observables sin descifrar TLS, lo que "
+      "exigiría interceptación. Es una decisión de alcance declarada, no un olvido.\n\n")
+    a("El primer punto tiene un caso medido en producción: una máquina que emite **0,73 "
+      "peticiones ARP por segundo** durante horas y **ni un solo paquete IP** que el espejo "
+      "pueda atribuirle. Para las 28 variables es silencio absoluto. Ver "
+      "[`../CASO-CAPA2-ARP.md`](../CASO-CAPA2-ARP.md).\n")
     return "".join(L)
 
 
@@ -364,8 +429,11 @@ def main() -> None:
     validacion = json.loads(VALIDACION.read_text(encoding="utf-8"))
     carga = lambda f: [json.loads(l) for l in f.read_text(encoding="utf-8").splitlines() if l.strip()]
     limpio, pase1 = carga(F6_LIMPIO), carga(F6_PASE1)
-    OUT_M.write_text(model_card(d, validacion), encoding="utf-8")
-    OUT_S.write_text(system_card(limpio, pase1), encoding="utf-8")
+    # newline="\n" explicito: sin el, en Windows write_text traduce cada \n a
+    # CRLF y las fichas salen con otro fin de linea segun quien las genere. Ya
+    # paso una vez con los CSV publicados y dos hashes dejaron de cuadrar.
+    OUT_M.write_text(model_card(d, validacion), encoding="utf-8", newline="\n")
+    OUT_S.write_text(system_card(limpio, pase1), encoding="utf-8", newline="\n")
     print(f"Generado: {OUT_M.relative_to(REPO)}")
     print(f"Generado: {OUT_S.relative_to(REPO)}  "
           f"({len(limpio)} corridas limpias + {len(pase1)} del pase 1)")

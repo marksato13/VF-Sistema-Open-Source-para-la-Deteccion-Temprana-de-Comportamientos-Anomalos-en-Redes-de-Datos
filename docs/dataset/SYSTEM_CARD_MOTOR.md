@@ -25,6 +25,8 @@ nftables en el propio Sensor  ──►  bloqueo 120 s
 
 El Sensor **es** el router entre la red de clientes y la de servicio, así que el bloqueo se aplica en el punto de paso: no hace falta SSH a otra máquina ni un agente en el servidor.
 
+> **Esto describe el despliegue que se evaluó**, no necesariamente el que está corriendo hoy. Las cifras de las secciones 4 y 7 se midieron con el sensor en el camino del tráfico. La sección 8 declara en qué difiere el despliegue actual y qué deja de valer por ello.
+
 ---
 
 ## 2 · Detectores
@@ -112,6 +114,8 @@ La documentación de F6 describe una reproducción **en aislamiento**, sin otro 
 | Falso positivo por ventana sin paquetes | ✅ Corregido | Con prueba positiva y negativa en producción |
 | Reproceso del historial al reiniciar | ✅ Corregido | El motor descarta capturas más antiguas que su ventana |
 | Bucle de re-bloqueo infinito | ✅ Corregido | La poda de memoria era por reloj y pasó a ser por dato |
+| Artefactos del espejo leídos como retransmisiones | ✅ Corregido | La sesión SPAN duplicaba tramas y `tcp_retransmission_ratio_10s` las contaba: **0,1488 antes, 0,0000 después**. Se deduplica la entrada, no la fórmula |
+| Parte del anillo descartada en silencio | ✅ Corregido | `tcpdump -W` hacía salir el proceso cada 4 min y el primer fichero de cada arranque quedaba ilegible para el motor: **5,55 %** de los bytes. El motor lo cuenta ahora en `pcaps_ilegibles` |
 | Bloqueo por suplantación de IP | ⚪ **No evaluado** | Un tercero podría provocar el bloqueo de un cliente legítimo falsificando su origen. No se probó |
 | Evasión del detector | ⚪ **No evaluado** | No se intentó eludirlo deliberadamente |
 
@@ -134,3 +138,35 @@ La documentación de F6 describe una reproducción **en aislamiento**, sin otro 
 **No demostrado:** hacerlo con una tasa de falso positivo aceptable sobre tráfico legítimo pesado. En esa condición el sistema **todavía no es apto para operación desatendida**.
 
 Delimitar esa frontera con medición es el resultado, no un defecto del informe.
+
+---
+
+## 8 · El despliegue actual difiere del evaluado
+
+La evaluación de F6 se hizo con el sensor **en el camino del tráfico**. El despliegue en la red de la entidad usa un **espejo SPAN**, y eso cambia cuatro cosas que hay que declarar antes de leer cualquier cifra.
+
+### 8.1 · El control es demostrativo, no efectivo
+
+Con un espejo, el sensor **no está en el camino**: recibe una copia. La regla nftables se escribe igual, pero el paquete ya pasó por otro sitio. Por eso el motor corre en `modo = "observacion"`. **La mediana de 8,0 s hasta el bloqueo de la sección 4 no aplica a este despliegue**: mide una acción que aquí no corta nada.
+
+### 8.2 · El umbral viene de otra red
+
+`calibrado_en_esta_red = false`. El umbral de la model card se calibró sobre un conjunto de otra red, así que las alertas de este despliegue deben tratarse como ruido hasta recalibrar con tráfico propio. El panel lo advierte en cada carga.
+
+### 8.3 · Qué se excluye del cálculo, y por qué
+
+| Exclusión | Motivo | Medido |
+|---|---|---|
+| Protocolos 112 (VRRP/CARP) y 240 (pfsync) | No son tráfico de usuarios: cada interfaz VLAN del cortafuegos emite un anuncio por segundo y pasaba a ser una entidad puntuada | **14 de 23** entidades eran eso. El **86,3 %** de las tramas de capa 2 del espejo |
+| Copias que el espejo enseña dos veces | La sesión captura en los dos sentidos del troncal y la difusión inunda los dos puertos origen | `tcp_retransmission_ratio_10s` pasó de **0,1488 a 0,0000**: las 100 «retransmisiones» eran las 100 copias |
+| El bastión y el propio sensor | Su SSH de gestión cruza el troncal espejado | Declaradas en `[red] excluir` |
+
+Las tres actúan sobre la **entrada** del extractor congelado, nunca sobre sus fórmulas: son alcance, no modelo. El motor publica los contadores en cada decisión para que la exclusión sea una medición y no una afirmación.
+
+### 8.4 · Lo que el punto de observación no puede ver
+
+- **Tráfico dentro de una misma VLAN.** El espejo tiene origen en los troncales del cortafuegos, así que solo cruza por ahí lo que va **entre** VLAN. Una máquina que solo hable con vecinos de su segmento es invisible para las 28 variables.
+- **Respuestas ARP completas.** Las peticiones son difusión y llegan enteras; las respuestas son unidifusión y solo llegan las dirigidas al cortafuegos.
+- **Capas 5 y 6.** Sesión y presentación no son observables sin descifrar TLS, lo que exigiría interceptación. Es una decisión de alcance declarada, no un olvido.
+
+El primer punto tiene un caso medido en producción: una máquina que emite **0,73 peticiones ARP por segundo** durante horas y **ni un solo paquete IP** que el espejo pueda atribuirle. Para las 28 variables es silencio absoluto. Ver [`../CASO-CAPA2-ARP.md`](../CASO-CAPA2-ARP.md).

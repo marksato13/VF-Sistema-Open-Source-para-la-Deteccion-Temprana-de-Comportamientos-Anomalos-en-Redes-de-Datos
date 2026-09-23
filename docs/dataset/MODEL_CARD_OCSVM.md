@@ -121,6 +121,8 @@ Los siete objetos ajustados se publican en `artifacts/model/candidates/`, verifi
 | 6 | **La significancia entre modelos ya está medida**: las 6 comparaciones del OCSVM son significativas tras Holm, pero **ninguna diferencia de falso positivo lo es**. Ver [`08-significancia-entre-modelos.md`](../fase04-modelado/08-significancia-entre-modelos.md). |
 | 7 | **La ablación por capas ya está ejecutada** y matiza este contrato: la expansión multicapa es significativa (p < 0,001), pero las 8 variables L7 nuevas **no aportan detección medible y cuestan 5 falsos positivos**. Ver [`07-ablacion-multicapa.md`](../fase04-modelado/07-ablacion-multicapa.md). |
 | 8 | **Un solo punto de operación.** No hay segundo umbral, así que la respuesta es binaria: permitir o bloquear. |
+| 9 | **Una de sus entradas venía corrupta en producción.** Sobre un espejo SPAN, la sesión enseña la misma trama dos veces y `tcp_retransmission_ratio_10s` las contaba como retransmisiones: **0,1488 medido, 0,0000 tras deduplicar**. El modelo nunca vio esa distorsión en entrenamiento, así que toda puntuación anterior a la corrección usó esa variable fuera de su distribución. Ver system card §8.3. |
+| 10 | **Ciego a la capa 2 y al tráfico dentro de una misma VLAN.** Las 28 variables descartan toda trama que no sea IPv4, así que nunca ven una ARP; y el espejo solo cruza lo que va entre VLAN. Hay un caso medido de una máquina real invisible para este modelo. El extractor `multilayer-v3` añade tres variables de enlace, pero **este modelo no está entrenado con ellas**. |
 
 ---
 
