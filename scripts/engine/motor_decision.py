@@ -61,6 +61,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "features"))
 
 import extract_multilayer_v2 as extractor  # noqa: E402
+import extract_multilayer_v3 as v3  # noqa: E402  (capa 2 y deduplicacion)
 
 try:
     import joblib
@@ -109,6 +110,14 @@ def parse_args() -> argparse.Namespace:
         help="IP o redes separadas por coma que NO se puntuan (gestion propia, "
              "equipos declarados fuera de alcance). Se capturan igual: solo se "
              "excluyen del calculo, para poder medir cuanto se excluyo",
+    )
+    parser.add_argument(
+        "--sin-deduplicar",
+        action="store_true",
+        help="no quitar las copias que produce el espejo. Solo para medir "
+             "cuanto cambia la deduplicacion: en operacion normal sobran, y "
+             "sin quitarlas tcp_retransmission_ratio_10s cuenta artefactos "
+             "de la captura como retransmisiones de la red",
     )
     parser.add_argument(
         "--excluir-protocolos",
@@ -244,19 +253,23 @@ def list_closed_pcap_files(
 
 
 def parse_pcap_to_packets(path: Path) -> list:
-    """Decodifica un PCAP a ParsedPacket (parseo, sin atribucion de flujo).
+    """Decodifica un PCAP a FrameContext (parseo, sin atribucion de flujo).
 
     Reusa las funciones publicas del extractor congelado -- NO reimplementa la
     decodificacion. Separar el parseo (caro: I/O + decode por frame) de la
     atribucion permite decodificar cada archivo del anillo UNA sola vez y
     bufferear el resultado, en vez de re-decodificar todo el anillo cada ciclo
     (causa del atraso bajo carga medido en F6, docs/fase07-validacion-final/).
+
+    Devuelve FrameContext y no ParsedPacket porque la deduplicacion necesita
+    la etiqueta VLAN y el identificador IP, dos campos que el parser congelado
+    no conserva. El ParsedPacket que va dentro lo produce ese mismo parser.
     """
     out = []
     for timestamp, frame in extractor.iter_pcap_frames(path):
-        parsed = extractor.parse_ethernet_ipv4(timestamp, frame)
-        if parsed is not None:
-            out.append(parsed)
+        contexto = v3.parse_con_contexto(timestamp, frame)
+        if contexto is not None:
+            out.append(contexto)
     return out
 
 
@@ -303,6 +316,9 @@ def main() -> int:
     scored_windows: dict[tuple[str, str], float] = {}
     descartados_plano_control = 0
     ventanas_excluidas = 0
+    pcaps_ilegibles = 0
+    motivos_ilegibles: dict[str, str] = {}
+    duplicados_espejo = 0
     # Buffer incremental de paquetes ya decodificados (ParsedPacket) + set de
     # PCAP ya parseados. Evita re-decodificar todo el anillo cada ciclo: cada
     # archivo se lee de disco UNA vez; la atribucion de flujo se recalcula
@@ -394,8 +410,16 @@ def main() -> int:
                 continue
             try:
                 packet_buffer.extend(parse_pcap_to_packets(pcap))
-            except Exception:
-                pass  # archivo truncado/ilegible en este instante: se salta
+            except Exception as exc:
+                # Se salta, pero SE CUENTA. Tragarse esto en silencio escondio
+                # durante meses que el motor descartaba el 5,55 % de su propio
+                # anillo: tcpdump con -Z hace chown del primer fichero de cada
+                # arranque a tcpdump:tcpdump y el usuario del motor no podia
+                # leerlo. Un contador en cada decision lo habria delatado el
+                # primer dia. Ver scripts/setup/cyberflow_config.py, CAPTURA.
+                pcaps_ilegibles += 1
+                if type(exc).__name__ not in motivos_ilegibles:
+                    motivos_ilegibles[type(exc).__name__] = str(exc)[:120]
             parsed_pcaps[pcap.name] = None
         while len(parsed_pcaps) > MAX_PARSED_PCAP_NAMES:
             parsed_pcaps.popitem(last=False)
@@ -407,11 +431,11 @@ def main() -> int:
         # relativo al dato mas nuevo mantiene la ventana deslizante sobre lo que
         # el motor todavia debe digerir, y drena cuando la carga cesa.
         if packet_buffer:
-            newest_data = max(pk.timestamp for pk in packet_buffer)
+            newest_data = max(pk.packet.timestamp for pk in packet_buffer)
             data_cutoff = newest_data - args.history_seconds
-            if packet_buffer[0].timestamp < data_cutoff:
+            if packet_buffer[0].packet.timestamp < data_cutoff:
                 packet_buffer = collections.deque(
-                    pk for pk in packet_buffer if pk.timestamp >= data_cutoff
+                    pk for pk in packet_buffer if pk.packet.timestamp >= data_cutoff
                 )
 
         # El plano de control se descarta ANTES de atribuir: un anuncio CARP
@@ -420,16 +444,31 @@ def main() -> int:
         # congelado: se filtra su entrada, que es alcance, no formula.
         if protocolos_excluidos and packet_buffer:
             paquetes_utiles = [
-                pk for pk in packet_buffer if pk.protocol not in protocolos_excluidos
+                pk for pk in packet_buffer
+                if pk.packet.protocol not in protocolos_excluidos
             ]
             descartados_plano_control += len(packet_buffer) - len(paquetes_utiles)
         else:
             paquetes_utiles = list(packet_buffer)
 
-        if paquetes_utiles or eve_buffer:
+        # La sesion SPAN ensena la misma trama dos veces: el trafico entre VLAN
+        # se ve al entrar y al salir del cortafuegos (TTL-1), y la difusion
+        # inunda los dos puertos troncales que la sesion escucha (identica).
+        # Sin quitarlas, tcp_retransmission_ratio_10s lee artefactos de la
+        # captura como problemas de la red: medido en este sensor, 0,1488 antes
+        # y 0,0000 despues -- las 100 "retransmisiones" eran las 100 copias.
+        # Se filtra la ENTRADA del extractor congelado, no su formula, igual
+        # que con CARP y pfsync.
+        if args.sin_deduplicar:
+            paquetes = [pk.packet for pk in paquetes_utiles]
+        else:
+            paquetes, quitados = v3.deduplicar_espejo(paquetes_utiles)
+            duplicados_espejo += quitados
+
+        if paquetes or eve_buffer:
             packets = (
-                extractor.attribute_packets(paquetes_utiles, entity_network)
-                if paquetes_utiles
+                extractor.attribute_packets(paquetes, entity_network)
+                if paquetes
                 else []
             )
             apps = (
@@ -555,6 +594,9 @@ def main() -> int:
                     "event": "decision",
                     "excluidas_acumulado": ventanas_excluidas,
                     "plano_control_descartado": descartados_plano_control,
+                    "pcaps_ilegibles": pcaps_ilegibles,
+                    "pcaps_ilegibles_motivo": motivos_ilegibles or None,
+                    "duplicados_espejo": duplicados_espejo,
                     "logged_at": time.time(),
                     "entity_ip": row["entity_ip"],
                     "window_end_utc": row["window_end_utc"],
