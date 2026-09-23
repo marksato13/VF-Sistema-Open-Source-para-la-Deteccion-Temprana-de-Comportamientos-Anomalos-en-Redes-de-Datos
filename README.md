@@ -190,6 +190,7 @@ constante. Las otras 27 tienen variación.
 | [`docs/INSTALACION.md`](docs/INSTALACION.md) | Guía de instalación de principio a fin, con las trampas reales |
 | [`docs/GUIA-USUARIO.md`](docs/GUIA-USUARIO.md) | Uso diario, qué no ve, y resolución de problemas |
 | [`docs/CONFIGURACION.md`](docs/CONFIGURACION.md) | Referencia de `cyberflow.toml`, opción por opción |
+| [`docs/INVENTARIO.md`](docs/INVENTARIO.md) | Qué máquina, qué dirección, qué VLAN y en qué modo — y qué **no** debe estar |
 
 **Para entender qué hay dentro:**
 

@@ -8,6 +8,7 @@ fondo sobre el que se recalibra el modelo, y vive aquí por la misma razón que
 |---|---|---|
 | `servidor_lab.py` | servidor de la DMZ | HTTP y HTTPS con errores controlados: 401, 404, 500 y respuestas lentas |
 | `clientes_lab.py` | equipos de la VLAN de usuarios | Seis perfiles de comportamiento, uno por IP |
+| `BANCO-DE-PRUEBAS.md` | — | Qué máquinas hacen falta, con qué recursos, en qué VLAN y por qué |
 
 ## Por qué está hecho así
 
