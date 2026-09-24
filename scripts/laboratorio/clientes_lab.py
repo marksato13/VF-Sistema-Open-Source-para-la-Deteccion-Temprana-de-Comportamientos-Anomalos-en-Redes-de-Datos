@@ -116,10 +116,20 @@ class Cliente:
     # -- utilidades -------------------------------------------------------
     def _socket(self, destino: str, puerto: int, espera: float = 5.0) -> socket.socket:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(espera)
-        if self.origen:
-            s.bind((self.origen, 0))   # la IP de origen ES la identidad
-        s.connect((destino, puerto))
+        try:
+            s.settimeout(espera)
+            if self.origen:
+                s.bind((self.origen, 0))   # la IP de origen ES la identidad
+            s.connect((destino, puerto))
+        except BaseException:
+            # Sin esto el descriptor queda a merced del recolector. CPython lo
+            # cierra enseguida por conteo de referencias, pero este camino es
+            # el NORMAL en puerto_cerrado y en los abandonos: se recorre miles
+            # de veces en una linea base de 72 h, y depender del recolector
+            # para algo que ocurre por diseno es pedir un agotamiento de
+            # descriptores a las horas.
+            s.close()
+            raise
         return s
 
     def _http(self, ruta: str, metodo: str = "GET", cuerpo: bytes | None = None,
@@ -208,12 +218,20 @@ class Cliente:
         self._http("/estatico/2048k", leer=False)
 
     def puerto_cerrado(self) -> None:
-        # SYN sin respuesta o RST: alimenta syn_completion_ratio y rst_ratio.
+        # Un RST -o un SYN sin respuesta- ES el resultado buscado: alimenta
+        # rst_ratio_10s y syn_completion_ratio_10s. El codigo anterior hacia
+        # "except OSError: raise", asi que contaba como fallo justo el caso de
+        # exito: en 72 h habria sumado miles de fallos inexistentes y el
+        # recuento de acciones no significaria nada.
+        #
+        # Lo unico que si es un fallo de verdad es que el puerto este ABIERTO,
+        # porque querria decir que la regla de rechazo apunta a otros puertos.
+        puerto = random.choice([8081, 9001, 4444, 31337])
         try:
-            self._socket(self.servidor, random.choice([8081, 9001, 4444, 31337]),
-                         espera=2.0).close()
+            self._socket(self.servidor, puerto, espera=2.0).close()
         except OSError:
-            raise
+            return
+        raise RuntimeError("el puerto %d esta ABIERTO; se esperaba cerrado" % puerto)
 
     def ping(self) -> None:
         # ICMP sin privilegios no es posible con sockets crudos; se usa el
@@ -225,7 +243,13 @@ class Cliente:
         # icmp_ratio_10s habria quedado plana sin que nadie se enterara.
         import platform
         import subprocess
-        destino = random.choice([self.servidor, self.servidor_dns])
+        # Solo al servidor del laboratorio. Antes alternaba con el servidor DNS,
+        # y el cortafuegos bloquea ICMP hacia la VLAN de administracion: la
+        # mitad de los pings fallaba en silencio y icmp_ratio_10s recibia la
+        # mitad de la senal prevista. Abrir ICMP hacia el DNS seria un agujero
+        # mas en un cortafuegos de produccion para no ganar nada: el servidor
+        # del laboratorio ya da toda la senal que esta variable necesita.
+        destino = self.servidor
         if platform.system() == "Windows":
             orden = ["ping", "-n", "1", "-w", "2000"]
             if self.origen:

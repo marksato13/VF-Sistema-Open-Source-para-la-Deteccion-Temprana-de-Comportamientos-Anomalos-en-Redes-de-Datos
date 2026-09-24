@@ -8,7 +8,24 @@ fondo sobre el que se recalibra el modelo, y vive aquí por la misma razón que
 |---|---|---|
 | `servidor_lab.py` | servidor de la DMZ | HTTP y HTTPS con errores controlados: 401, 404, 500 y respuestas lentas |
 | `clientes_lab.py` | equipos de la VLAN de usuarios | Seis perfiles de comportamiento, uno por IP |
+| `clientes_config.py` | equipos de la VLAN de usuarios | Genera las seis unidades systemd y un target para arrancarlas juntas |
 | `BANCO-DE-PRUEBAS.md` | — | Qué máquinas hacen falta, con qué recursos, en qué VLAN y por qué |
+
+## Poner en marcha los seis perfiles
+
+```bash
+python3 clientes_config.py --comprobar      # valida sin escribir
+sudo python3 clientes_config.py --escribir
+sudo systemctl daemon-reload
+sudo systemctl enable --now cyberflow-lab.target
+```
+
+`--comprobar` mira que los seis alias existan en alguna interfaz. Sin ellos
+cada perfil arranca, falla al hacer `bind` y muere, y habría que descubrirlo
+leyendo seis journals distintos.
+
+El `target` existe para poder parar los seis a la vez: durante una línea base
+de 72 h, seis órdenes sueltas se quedan a medias sin que nadie lo note.
 
 ## Por qué está hecho así
 
