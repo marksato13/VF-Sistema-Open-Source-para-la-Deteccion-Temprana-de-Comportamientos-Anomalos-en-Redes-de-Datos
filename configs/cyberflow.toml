@@ -53,6 +53,11 @@ excluir_protocolos = [112, 240]
 excluir = [
     "10.10.60.11/32",   # el propio sensor: su SSH cruza el troncal espejado
     "10.10.10.30/32",   # el bastion, el otro extremo de esa sesion
+    # La direccion de gestion de la VM que genera el trafico. Los seis perfiles
+    # viven en .21-.26; esta es por donde se administra la maquina, asi que su
+    # trafico es SSH y sistema operativo, no ninguno de los perfiles. Medido
+    # antes de excluirla: 89 ventanas puntuadas como si fuera un usuario mas.
+    "10.10.20.20/32",
 ]
 
 [motor]
