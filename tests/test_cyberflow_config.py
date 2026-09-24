@@ -71,6 +71,7 @@ class Generacion(unittest.TestCase):
         self.assertEqual(set(u), {"cyberflow-capture-nic.service",
                                   "ppi-motor-capture.service", "ppi-motor.service",
                                   "cyberflow-limpieza.service", "cyberflow-limpieza.timer",
+                                  "cyberflow-acumular.service", "cyberflow-acumular.timer",
                                   cc.RUTA_ROTACION})
 
     def test_panel_solo_si_activo(self):
@@ -162,6 +163,26 @@ class PodaDelAnillo(unittest.TestCase):
         )
         self.assertIn("-G 15", directivas)
         self.assertNotIn("-W ", directivas)
+
+    def test_se_genera_el_acumulador_del_dataset(self):
+        # Sin el, al terminar una linea base de 72 h solo quedarian el registro
+        # de decisiones y los minutos que conserve el anillo: 20 de las 31
+        # variables salen del PCAP y no hay extraccion posible hacia atras.
+        u = cc.render(cfg())
+        self.assertIn("cyberflow-acumular.service", u)
+        self.assertIn("cyberflow-acumular.timer", u)
+        servicio = u["cyberflow-acumular.service"]
+        self.assertIn("acumular_v3.py", servicio)
+        self.assertIn("--salida", servicio)
+        # El mismo alcance que el motor: si acumulara CARP y pfsync, el dataset
+        # no describiria lo que el motor puntua.
+        self.assertIn("--excluir-protocolos 112,240", servicio)
+        self.assertIn("--entity-network 10.10.0.0/16", servicio)
+
+    def test_el_acumulador_corre_periodicamente(self):
+        t = cc.render(cfg())["cyberflow-acumular.timer"]
+        self.assertIn("OnUnitActiveSec=", t)
+        self.assertIn("Persistent=true", t)
 
     def test_se_genera_la_poda_y_su_temporizador(self):
         u = cc.render(cfg())

@@ -232,6 +232,49 @@ Persistent=true
 WantedBy=timers.target
 """
 
+ACUMULAR = """{cabecera}
+[Unit]
+Description=CyberFlow - acumula el dataset extrayendo sobre la marcha
+After=ppi-motor-capture.service suricata.service
+
+[Service]
+Type=oneshot
+User={usuario}
+Group={usuario}
+WorkingDirectory={raiz}
+# El anillo de PCAP solo conserva {retener} minutos, pero 20 de las 31
+# variables salen de ahi. Sin esto, al terminar una linea base de 72 h habria
+# registro de decisiones y quince minutos de captura: guardar los paquetes
+# enteros serian ~280 GB y no caben. Se guardan las FILAS, que son ~78 MB.
+# Las exclusiones son las MISMAS que las del motor, y por la misma razon: si
+# el dataset incluyera entidades que el sistema declara fuera de alcance, el
+# modelo se entrenaria sobre un conjunto que no describe lo que luego puntua.
+ExecStart={python} {raiz}/scripts/features/acumular_v3.py \\
+    --salida {raiz}/{dataset} \\
+    --capture-dir {directorio} \\
+    --eve {eve} \\{exclusiones}
+    --entity-network {red_entidades}
+StandardOutput=append:{raiz}/logs/acumular.log
+StandardError=journal
+NoNewPrivileges=true
+"""
+
+ACUMULAR_TIMER = """{cabecera}
+[Unit]
+Description=CyberFlow - extraccion periodica hacia el dataset
+
+[Timer]
+# Cada 10 min sobre un anillo de {retener}: el solape cubre lo que cada pasada
+# descarta por los bordes -historia truncada al principio, ventanas a medio
+# llenar al final- y aguanta un retraso puntual sin dejar agujeros.
+OnBootSec=8min
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+"""
+
 ROTACION = """# Generado por scripts/setup/cyberflow_config.py. NO editar a mano.
 # El motor escribe una linea JSON por decision y puede producir cientos por
 # minuto. Sin tope, este fichero llena la raiz, y un / lleno tumba la maquina
@@ -394,6 +437,12 @@ def render(cfg: dict) -> dict[str, str]:
         "ppi-motor-capture.service": CAPTURA.format(**comun),
         "ppi-motor.service": MOTOR.format(
             endurecido=endurecido.format(**comun), **comun),
+        "cyberflow-acumular.service": ACUMULAR.format(
+            retener=cap["retener_minutos"],
+            dataset=rut.get("dataset", "artifacts/linea-base/multilayer-v3.csv"),
+            **comun),
+        "cyberflow-acumular.timer": ACUMULAR_TIMER.format(
+            cabecera=cabecera, retener="%d min" % cap["retener_minutos"]),
     }
     if panel.get("activo"):
         acceso = ""

@@ -94,6 +94,12 @@ manifiesto = "artifacts/model/manifest.json"
 esquema = "configs/features/multilayer-v2.json"
 registro = "logs/motor_decision.log"
 
+# Donde se acumula el dataset de la linea base. El anillo de PCAP solo conserva
+# captura.retener_minutos, asi que cyberflow-acumular.timer extrae cada pocos
+# minutos y va anadiendo FILAS aqui: guardar los paquetes de 72 h serian ~280 GB
+# y no caben, mientras que las filas son ~78 MB.
+dataset = "artifacts/linea-base/multilayer-v3.csv"
+
 [panel]
 # Expuesto en la VLAN de gestion y de solo lectura. Desde el bastion se abre
 # directo; desde fuera, con un tunel que SALGA del bastion, porque es el unico
