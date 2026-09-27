@@ -232,6 +232,52 @@ HTML = """<!doctype html>
   .lede-small { font-size: 0.86rem; color: var(--text-dim); margin: -0.3rem 0 0.8rem; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; }
+
+  /* Variables por capa. La cabecera de capa es un boton: filtra la tabla. */
+  .var-capas { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem; margin-bottom: 0.9rem; }
+  .var-capa {
+    text-align: left; cursor: pointer; font: inherit; color: inherit;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.6rem 0.7rem; transition: border-color .15s, background .15s;
+  }
+  .var-capa:hover { border-color: var(--accent); }
+  .var-capa[aria-pressed="true"] { background: var(--surface-2); border-color: var(--accent); }
+  .var-capa .cid { font-size: 0.7rem; letter-spacing: .06em; color: var(--accent); font-weight: 700; }
+  .var-capa .cn { font-size: 0.95rem; font-weight: 600; margin-top: 0.1rem; }
+  .var-capa .cc { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.15rem; }
+
+  .var-tabla { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .var-grupo { font-size: 0.72rem; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--text-dim); background: var(--surface-2); padding: 0.4rem 0.8rem;
+    border-bottom: 1px solid var(--border); }
+  .var-fila {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; align-items: center;
+    width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
+    background: none; border: none; border-bottom: 1px solid var(--border);
+    padding: 0.55rem 0.8rem; transition: background .12s;
+  }
+  .var-fila:hover { background: var(--surface-2); }
+  .var-fila[aria-expanded="true"] { background: var(--surface-2); }
+  .var-fila .vn { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82rem; }
+  .var-fila .vq { display: block; font-size: 0.76rem; color: var(--text-dim); margin-top: 0.12rem;
+    font-family: inherit; }
+  .var-fila .vw { font-size: 0.72rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .var-chev { width: 14px; height: 14px; transition: transform .15s; color: var(--text-dim); }
+  .var-fila[aria-expanded="true"] .var-chev { transform: rotate(90deg); color: var(--accent); }
+  .var-badge { font-size: 0.64rem; letter-spacing: .05em; padding: 0.1rem 0.35rem;
+    border-radius: 4px; background: var(--amber-soft); color: var(--amber); margin-left: 0.4rem; }
+  .var-det { padding: 0.1rem 0.8rem 0.8rem; border-bottom: 1px solid var(--border);
+    background: var(--surface-2); font-size: 0.82rem; }
+  .var-det p { margin: 0.3rem 0 0.6rem; color: var(--text-dim); }
+  .var-det .stats { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; margin-bottom: 0.5rem;
+    font-variant-numeric: tabular-nums; }
+  .var-det .stats b { color: var(--text); font-weight: 600; }
+  .var-ej { width: 100%; border-collapse: collapse; font-size: 0.76rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .var-ej th { text-align: left; color: var(--text-dim); font-weight: 500; padding: 0.2rem 0.5rem 0.2rem 0;
+    font-family: inherit; }
+  .var-ej td { padding: 0.2rem 0.5rem 0.2rem 0; color: var(--text); }
+  .var-vacio { padding: 0.9rem 0.8rem; color: var(--text-dim); font-size: 0.82rem; }
   .card {
     background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border);
     border-radius: 10px; padding: 0.8rem 1rem;
@@ -280,6 +326,7 @@ HTML = """<!doctype html>
   <nav id="nav">
     <a href="#s-salud" data-sec="s-salud"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>Salud</a>
     <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Topología</a>
+    <a href="#s-variables" data-sec="s-variables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg>Variables</a>
     <a href="#s-modelo" data-sec="s-modelo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>Modelo</a>
     <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
     <a href="#s-scores" data-sec="s-scores"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg>Scores</a>
@@ -330,6 +377,14 @@ HTML = """<!doctype html>
       </div>
       <div class="topo-detail" id="topoDetail"></div>
     </div>
+  </section>
+
+  <section id="s-variables">
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg><h2>Variables por capa</h2></div>
+    <p class="lede-small">Qué mide el sistema en cada capa del modelo OSI. Pulsa una fila para ver su explicación y valores reales tomados del dataset que se está acumulando.</p>
+    <div class="var-capas" id="varCapas"></div>
+    <div class="var-tabla" id="varTabla"></div>
+    <p class="toolbar-hint" id="varPie"></p>
   </section>
 
   <section id="s-modelo">
@@ -753,7 +808,7 @@ const TOPO_VISTAS = {
       { id: 'eve',       x: 610, y: 344, w: 230, h: 48, icono: 'fichero', titulo: 'eve.json',          tag: 'ARTEFACTO', clase: 'artefacto' },
       { id: 'descartes', x: 30,  y: 424, w: 250, h: 56, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO',  clase: 'sumidero' },
       { id: 'motor',     x: 330, y: 424, w: 240, h: 56, icono: 'cpu',    titulo: 'Atribución de flujo', tag: 'SERVICIO' },
-      { id: 'variables', x: 330, y: 508, w: 240, h: 56, icono: 'tabla',  titulo: '28 variables / 10 s', tag: 'L3 · L4 · L7' },
+      { id: 'variables', x: 330, y: 508, w: 240, h: 56, icono: 'tabla',  titulo: 'Variables / 10 s', tag: 'L3 · L4 · L7' },
       { id: 'modelo',    x: 330, y: 592, w: 240, h: 56, icono: 'modelo', titulo: 'OCSVM congelado',    tag: 'UMBRAL FIJO' },
       { id: 'control',   x: 330, y: 676, w: 240, h: 56, icono: 'escudo', titulo: 'Control nftables',   tag: 'EXPIRA A 120 s' },
       { id: 'registro',  x: 330, y: 760, w: 240, h: 48, icono: 'fichero', titulo: 'motor_decision.log', tag: 'ARTEFACTO', clase: 'artefacto' },
@@ -826,8 +881,13 @@ const TOPO_TEXTO = {
     nota: 'Declararlo con su cifra es parte del método. Sin número, «se excluyó» no es una medición sino una afirmación.',
   },
   variables: {
-    que: 'Veintiocho variables por entidad y ventana: seis de red, cinco de transporte y diecisiete de aplicación.',
-    nota: 'El extractor está congelado y su salida se compara contra los SHA-256 del manifiesto. Los filtros actúan sobre su entrada, nunca sobre sus fórmulas.',
+    // El desglose por capas ya NO se escribe aqui: vive en la seccion
+    // "Variables", generado del esquema. Escrito a mano decia "seis de red,
+    // cinco de transporte y diecisiete de aplicacion" -el esquema dice nueve,
+    // ocho y once- y la suma daba 28, asi que el error sobrevivio meses.
+    que: 'Una fila por entidad y ventana, con las variables que el modelo puntúa.',
+    nota: 'El extractor está congelado: los filtros actúan sobre su entrada, nunca sobre sus fórmulas.',
+    enlace: { href: '#s-variables', txt: 'Ver las variables por capa' },
   },
   registro: {
     que: 'Una línea JSON por decisión: entidad, ventana, detector, score y los contadores de alcance.',
@@ -841,6 +901,12 @@ const TOPO_TEXTO = {
 
 let topoSel = 'motor';
 let topoUltimo = null;
+
+// Declarada AQUI, no junto al resto del codigo de la seccion "Variables": la
+// lee topoEstado(), y refresh() corre antes que aquel bloque. Un `let` leido
+// antes de su declaracion lanza ReferenceError -zona muerta temporal- y se
+// llevaba por delante el primer pintado entero del panel.
+let varDatos = null;
 
 function topoEstado(id, s) {
   const sv = s.services || {};
@@ -953,11 +1019,18 @@ function topoEstado(id, s) {
     }
     case 'variables': {
       const on = !!sv['ppi-motor.service'];
-      return {
-        estado: on ? 'ok' : 'bad',
-        valor: num(c.total || 0) + ' ventanas/h',
-        datos: { 'Variables por ventana': '28', 'Paso': '10 s', 'Historia máxima': '60 s' },
-      };
+      // Los numeros salen del esquema, no de literales: un "28" escrito aqui
+      // se queda atras en cuanto el esquema cambie y nadie lo notara.
+      const d = varDatos;
+      const datos = d
+        ? {
+            'Puntuadas por ventana': String(d.n_motor),
+            'En acumulación': String(d.n_total - d.n_motor),
+            'Paso': d.paso_segundos + ' s',
+            'Historia máxima': d.historia_maxima_s + ' s',
+          }
+        : { 'Paso': '10 s' };
+      return { estado: on ? 'ok' : 'bad', valor: num(c.total || 0) + ' ventanas/h', datos };
     }
     case 'registro':
       return { estado: '', valor: 'una línea por decisión', datos: {} };
@@ -1098,7 +1171,8 @@ function renderTopoDetalle() {
     `<h3>${n.titulo}<span class="state ${e.estado}">${e.valor}</span></h3>` +
     (t.que ? `<p>${t.que}</p>` : '') +
     (filas ? `<dl>${filas}</dl>` : '') +
-    (t.nota ? `<p class="dim">${t.nota}</p>` : '');
+    (t.nota ? `<p class="dim">${t.nota}</p>` : '') +
+    (t.enlace ? `<p><a href="${t.enlace.href}">${t.enlace.txt} &rarr;</a></p>` : '');
 }
 
 document.getElementById('topo').addEventListener('click', (ev) => {
@@ -1154,6 +1228,144 @@ const spy = new IntersectionObserver((entradas) => {
 secciones.forEach(s => spy.observe(s));
 
 refresh();
+// ---- Variables por capa ---------------------------------------------------
+// La tabla se GENERA desde el esquema. El texto que habia antes decia "seis de
+// red, cinco de transporte y diecisiete de aplicacion" cuando el esquema dice
+// nueve, ocho y once: como la suma seguia dando 28, nadie lo noto en meses.
+// Generarla hace imposible esa clase de error.
+// varDatos se declara arriba, junto a topoSel: topoEstado() la necesita antes
+// de que este bloque se ejecute.
+let varCapaSel = null;              // null = todas las capas
+const varAbiertas = new Set();      // se conserva entre refrescos
+
+function varEsc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function varFmt(v) {
+  if (v == null) return '—';
+  if (v === 0) return '0';
+  const a = Math.abs(v);
+  // Sin expresion regular a proposito: HTML es una cadena normal de Python, y
+  // una barra invertida aqui dentro seria una secuencia de escape invalida
+  // -Python ya avisa, y en una version futura sera error-. parseFloat quita
+  // los ceros sobrantes igual de bien y no necesita escapar nada.
+  if (a >= 1000) return v.toFixed(0);
+  if (a >= 1) return String(parseFloat(v.toFixed(2)));
+  return v.toPrecision(2);
+}
+
+function varDetalleHTML(v) {
+  const m = v.muestra;
+  let html = '<div class="var-det">';
+  if (v.senal) html += `<p>${varEsc(v.senal)}</p>`;
+
+  if (!m) {
+    html += '<p class="var-vacio" style="padding:0">Sin muestra: el dataset todavía no existe o no contiene esta variable. No se inventa ningún ejemplo.</p>';
+    return html + '</div>';
+  }
+
+  html += '<div class="stats">'
+    + `<span>ventanas <b>${m.n}</b></span>`
+    + `<span>mín <b>${varFmt(m.min)}</b></span>`
+    + `<span>mediana <b>${varFmt(m.p50)}</b></span>`
+    + `<span>máx <b>${varFmt(m.max)}</b></span>`
+    + `<span>en cero <b>${m.ceros}</b> (${Math.round(100 * m.ceros / m.n)}%)</span>`
+    + '</div>';
+
+  if (m.ceros === m.n) {
+    html += '<p>Esta variable está a cero en toda la muestra: esta red no ejercita todavía el comportamiento que mide. Es información, no un fallo.</p>';
+  }
+
+  if (m.ejemplos && m.ejemplos.length) {
+    html += '<table class="var-ej"><thead><tr><th>entidad</th><th>ventana</th><th>valor</th></tr></thead><tbody>';
+    for (const e of m.ejemplos) {
+      html += `<tr><td>${varEsc(e.entidad)}</td><td>${varEsc(e.ventana)}</td><td><b>${varFmt(e.valor)}</b></td></tr>`;
+    }
+    html += '</tbody></table>';
+  }
+  return html + '</div>';
+}
+
+function renderVariables() {
+  const cCapas = document.getElementById('varCapas');
+  const cTabla = document.getElementById('varTabla');
+  const pie = document.getElementById('varPie');
+  if (!varDatos) { cTabla.innerHTML = '<p class="var-vacio">Cargando…</p>'; return; }
+
+  cCapas.innerHTML = varDatos.capas.map(c => {
+    const sel = varCapaSel === c.id;
+    const fuera = c.n - c.n_motor;
+    const nota = fuera ? `${c.n_motor} en el motor · ${fuera} en acumulación` : `${c.n} en el motor`;
+    return `<button class="var-capa" data-capa="${c.id}" aria-pressed="${sel}" title="${varEsc(c.que)}">`
+      + `<span class="cid">${c.id} · ${varEsc(c.nombre)}</span>`
+      + `<div class="cn">${c.n} variable${c.n === 1 ? '' : 's'}</div>`
+      + `<div class="cc">${nota}</div></button>`;
+  }).join('');
+
+  const visibles = varDatos.variables.filter(v => !varCapaSel || v.layer === varCapaSel);
+  let html = '';
+  let capaActual = null;
+  for (const v of visibles) {
+    if (v.layer !== capaActual) {
+      capaActual = v.layer;
+      const c = varDatos.capas.find(x => x.id === capaActual) || {};
+      html += `<div class="var-grupo">${capaActual} · ${varEsc(c.nombre || '')} — ${varEsc(c.que || '')}</div>`;
+    }
+    const abierta = varAbiertas.has(v.name);
+    const badge = v.en_motor ? '' : '<span class="var-badge">EN ACUMULACIÓN</span>';
+    html += `<button class="var-fila" data-var="${varEsc(v.name)}" aria-expanded="${abierta}">`
+      + `<span><span class="vn">${varEsc(v.name)}</span>${badge}<span class="vq">${varEsc(v.que)}</span></span>`
+      + `<span class="vw">${v.window_seconds}s · ${varEsc(v.unit)}</span>`
+      + '<svg class="var-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,5 16,12 9,19"/></svg>'
+      + '</button>';
+    if (abierta) html += varDetalleHTML(v);
+  }
+  cTabla.innerHTML = html || '<p class="var-vacio">Ninguna variable en esta capa.</p>';
+
+  const d = varDatos.dataset;
+  const fuera = varDatos.n_total - varDatos.n_motor;
+  let txt = `${varDatos.n_motor} variables puntuadas cada ${varDatos.paso_segundos} s`
+    + (fuera ? `, ${fuera} más acumulándose para la próxima versión` : '')
+    + ` · historia máxima ${varDatos.historia_maxima_s} s`;
+  txt += d
+    ? ` · muestra: ${d.filas} filas de ${d.entidades} entidades, ${d.desde} → ${d.hasta}`
+    : ' · sin dataset: la tabla se pinta sin valores de ejemplo';
+  pie.textContent = txt;
+}
+
+document.getElementById('varCapas').addEventListener('click', (ev) => {
+  const b = ev.target.closest('.var-capa');
+  if (!b) return;
+  varCapaSel = varCapaSel === b.dataset.capa ? null : b.dataset.capa;
+  renderVariables();
+});
+
+document.getElementById('varTabla').addEventListener('click', (ev) => {
+  const b = ev.target.closest('.var-fila');
+  if (!b) return;
+  const n = b.dataset.var;
+  if (varAbiertas.has(n)) varAbiertas.delete(n); else varAbiertas.add(n);
+  renderVariables();
+});
+
+async function cargarVariables() {
+  try {
+    varDatos = await (await fetch('/api/variables')).json();
+    renderVariables();
+  } catch (e) {
+    document.getElementById('varTabla').innerHTML =
+      '<p class="var-vacio">No se pudo cargar el esquema de variables: ' + varEsc(e) + '</p>';
+  }
+}
+
+cargarVariables();
+// El esquema no cambia y la muestra se mueve despacio: cada minuto sobra. A 5 s
+// no aportaria nada y solo daria oportunidades de perder la fila desplegada.
+setInterval(cargarVariables, 60000);
+
 setInterval(refresh, 5000);
 </script>
 """
@@ -1437,6 +1649,187 @@ def load_model_summary(manifest_path: Path, detector_name: str) -> dict:
     }
 
 
+_CACHE_VARIABLES: dict[str, object] = {}
+
+
+def _cola_de_fichero(path: Path, max_bytes: int) -> list[str]:
+    """Ultimas lineas de datos de un CSV, sin leerlo entero.
+
+    El dataset de la linea base llega a ~155.000 filas. Leerlo entero en cada
+    peticion del panel costaria mas que todo lo demas junto, y no hace falta:
+    para una muestra representativa basta la cola.
+
+    La primera linea SIEMPRE se descarta, y por dos motivos distintos que se
+    dan segun el tamano: si el fichero es mayor que la ventana, esa linea viene
+    cortada por la mitad; si cabe entero, esa linea es la cabecera. Tratarla
+    como dato metia "entity_ip" entre las entidades y "window_end_utc" entre
+    las ventanas -visto con datos reales: 18 entidades donde habia 17, y un
+    rango temporal que terminaba en "utc"-.
+    """
+    with path.open("rb") as f:
+        f.seek(0, 2)
+        tamano = f.tell()
+        f.seek(max(0, tamano - max_bytes))
+        crudo = f.read().decode("utf-8", errors="replace")
+    return crudo.splitlines()[1:]
+
+
+def muestra_del_dataset(dataset: Path, nombres: list[str],
+                        max_bytes: int = 262_144) -> dict:
+    """Valores reales por variable, tomados del CSV que se esta acumulando.
+
+    Es lo que convierte la tabla del panel en una medicion y no en un folleto:
+    cada variable se explica con numeros que salieron de esta red, no con un
+    ejemplo inventado. Si el dataset aun no existe se devuelve vacio y el panel
+    lo dice; no se rellena con nada.
+    """
+    if not dataset.exists():
+        return {}
+    try:
+        with dataset.open("r", encoding="utf-8", errors="replace") as f:
+            cabecera = f.readline().rstrip("\n").split(",")
+        if not cabecera:
+            return {}
+        filas = [l.split(",") for l in _cola_de_fichero(dataset, max_bytes) if l.strip()]
+        filas = [c for c in filas if len(c) == len(cabecera)]
+        if not filas:
+            return {}
+        idx = {n: i for i, n in enumerate(cabecera)}
+        i_ent = idx.get("entity_ip")
+        i_ven = idx.get("window_end_utc")
+
+        salida: dict[str, object] = {}
+        for nombre in nombres:
+            i = idx.get(nombre)
+            if i is None:
+                continue
+            valores = []
+            for c in filas:
+                try:
+                    valores.append(float(c[i]))
+                except ValueError:
+                    pass
+            if not valores:
+                continue
+            ordenados = sorted(valores)
+
+            # Ejemplos: las ultimas filas con valor distinto de cero, que son
+            # las que ensenan algo. Si la variable esta a cero en toda la cola
+            # -pasa, y es informacion- se ensenan las ultimas tal cual.
+            def fila_ejemplo(c: list[str], v: float) -> dict:
+                return {
+                    "entidad": c[i_ent] if i_ent is not None else "",
+                    "ventana": c[i_ven] if i_ven is not None else "",
+                    "valor": v,
+                }
+
+            recientes = []
+            for c in reversed(filas):
+                try:
+                    recientes.append((c, float(c[i])))
+                except ValueError:
+                    continue
+                if len(recientes) >= 400:
+                    break
+            no_cero = [(c, v) for c, v in recientes if v != 0.0]
+            elegidos = (no_cero or recientes)[:3]
+            ejemplos = [fila_ejemplo(c, v) for c, v in elegidos]
+            salida[nombre] = {
+                "n": len(ordenados),
+                "min": ordenados[0],
+                "p50": ordenados[len(ordenados) // 2],
+                "max": ordenados[-1],
+                "ceros": sum(1 for v in valores if v == 0.0),
+                "ejemplos": ejemplos,
+            }
+
+        ventanas = {c[i_ven] for c in filas} if i_ven is not None else set()
+        entidades = {c[i_ent] for c in filas} if i_ent is not None else set()
+        return {
+            "_meta": {
+                "filas": len(filas),
+                "ventanas": len(ventanas),
+                "entidades": len(entidades),
+                "desde": min(ventanas) if ventanas else "",
+                "hasta": max(ventanas) if ventanas else "",
+            },
+            "por_variable": salida,
+        }
+    except OSError:
+        return {}
+
+
+def resumen_variables(schema_path: Path, extra_path: Path | None,
+                      descripciones_path: Path, dataset: Path | None) -> dict:
+    """Esquema + texto editorial + muestra real, listo para pintar la tabla.
+
+    La tabla se GENERA desde el esquema; no se escribe a mano. El texto que
+    habia antes decia "seis de red, cinco de transporte y diecisiete de
+    aplicacion" cuando el esquema dice nueve, ocho y once: una descripcion
+    escrita a mano se desincroniza y nadie lo nota porque la suma cuadra.
+    """
+    esquema = json.loads(schema_path.read_text(encoding="utf-8"))
+    del_motor = {f["name"] for f in esquema["features"]}
+    features = list(esquema["features"])
+
+    if extra_path is not None and extra_path.exists():
+        extra = json.loads(extra_path.read_text(encoding="utf-8"))
+        conocidas = {f["name"] for f in features}
+        for f in extra["features"]:
+            if f["name"] not in conocidas:
+                features.append(f)
+
+    try:
+        textos = json.loads(descripciones_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        textos = {"capas": {}, "features": {}}
+
+    dat = muestra_del_dataset(dataset, [f["name"] for f in features]) if dataset else {}
+    por_variable = dat.get("por_variable", {}) if dat else {}
+
+    variables = []
+    for f in sorted(features, key=lambda x: (x["layer"], x.get("order", 0))):
+        t = textos.get("features", {}).get(f["name"], {})
+        variables.append({
+            "name": f["name"],
+            "layer": f["layer"],
+            "unit": f.get("unit", ""),
+            "window_seconds": f.get("window_seconds"),
+            "source": f.get("source", ""),
+            "order": f.get("order"),
+            "en_motor": f["name"] in del_motor,
+            "que": t.get("que", ""),
+            "senal": t.get("senal", ""),
+            "muestra": por_variable.get(f["name"]),
+        })
+
+    capas = []
+    for cid in ("L2", "L3", "L4", "L7"):
+        de_esta = [v for v in variables if v["layer"] == cid]
+        if not de_esta:
+            continue
+        ct = textos.get("capas", {}).get(cid, {})
+        capas.append({
+            "id": cid,
+            "nombre": ct.get("nombre", cid),
+            "que": ct.get("que", ""),
+            "senal": ct.get("senal", ""),
+            "n": len(de_esta),
+            "n_motor": sum(1 for v in de_esta if v["en_motor"]),
+        })
+
+    return {
+        "paso_segundos": esquema.get("emission_step_seconds"),
+        "historia_maxima_s": esquema.get("maximum_history_seconds"),
+        "version": esquema.get("schema_version"),
+        "n_motor": len(del_motor),
+        "n_total": len(variables),
+        "capas": capas,
+        "variables": variables,
+        "dataset": dat.get("_meta") if dat else None,
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -1468,6 +1861,32 @@ def parse_args() -> argparse.Namespace:
         help="declara que el umbral se calibro con trafico de ESTA red. Sin "
              "esta bandera el panel avisa de que las alertas no son fiables, "
              "que es lo correcto mientras se use un umbral de otro sitio",
+    )
+    parser.add_argument(
+        "--schema",
+        type=Path,
+        default=Path("configs/features/multilayer-v2.json"),
+        help="esquema que usa el motor: define las variables que SE PUNTUAN",
+    )
+    parser.add_argument(
+        "--schema-extra",
+        type=Path,
+        default=None,
+        help="esquema mas amplio -v3- cuyas variables adicionales se acumulan "
+             "pero todavia no se puntuan. El panel las marca como tales",
+    )
+    parser.add_argument(
+        "--descripciones",
+        type=Path,
+        default=Path("configs/features/descripciones.json"),
+        help="texto editorial por variable y por capa, separado del esquema",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=None,
+        help="CSV acumulado del que se toman los valores de ejemplo. Sin el, "
+             "la tabla se pinta igual pero sin muestra: no se inventa ninguna",
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8788)
@@ -1519,6 +1938,20 @@ def main() -> int:
                         },
                     }
                 )
+                return
+            if path == "/api/variables":
+                # El dataset crece durante toda la linea base: se relee solo
+                # cuando cambia, no en cada refresco de 5 s del panel.
+                sello = None
+                if args.dataset and args.dataset.exists():
+                    st = args.dataset.stat()
+                    sello = (st.st_mtime_ns, st.st_size)
+                if _CACHE_VARIABLES.get("sello") != sello or "datos" not in _CACHE_VARIABLES:
+                    _CACHE_VARIABLES["sello"] = sello
+                    _CACHE_VARIABLES["datos"] = resumen_variables(
+                        args.schema, args.schema_extra, args.descripciones,
+                        args.dataset)
+                self._send_json(_CACHE_VARIABLES["datos"])
                 return
             if path == "/api/decisions":
                 params = dict(pair.split("=") for pair in query.split("&") if "=" in pair)

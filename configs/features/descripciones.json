@@ -1,0 +1,151 @@
+{
+  "_nota": "Texto editorial para el panel. Deliberadamente SEPARADO de multilayer-*.json: esos ficheros son el contrato del extractor congelado (nombre, capa, unidad, ventana) y no deben llevar prosa. Aqui 'que' dice que mide la variable y 'senal' que comportamiento la mueve. Una linea cada uno: el panel no es un manual.",
+  "capas": {
+    "L2": {
+      "nombre": "Enlace",
+      "que": "Lo que viaja en la trama Ethernet: direcciones MAC, etiqueta de VLAN y ARP.",
+      "senal": "Ve al atacante antes de que tenga una IP valida, y ve lo que la capa 3 no puede: suplantacion de MAC y envenenamiento de ARP."
+    },
+    "L3": {
+      "nombre": "Red",
+      "que": "La cabecera IP: volumen, tamano, TTL, fragmentacion y con cuantos destinos se habla.",
+      "senal": "Barridos, exfiltracion por volumen y cambios de ruta o de sistema operativo."
+    },
+    "L4": {
+      "nombre": "Transporte",
+      "que": "El comportamiento de TCP: intentos de flujo, SYN, RST, retransmisiones y duracion.",
+      "senal": "Escaneo de puertos, conexiones que no completan y degradacion del enlace."
+    },
+    "L7": {
+      "nombre": "Aplicacion",
+      "que": "Lo que Suricata reconoce del contenido: HTTP, DNS y TLS.",
+      "senal": "Fuerza bruta, tunelizacion por DNS y clientes que negocian TLS de forma anomala."
+    }
+  },
+  "features": {
+    "packet_rate_10s": {
+      "que": "Paquetes por segundo de la entidad.",
+      "senal": "La medida mas basica de actividad. Sube en descargas y en inundaciones."
+    },
+    "byte_rate_10s": {
+      "que": "Bytes IP por segundo.",
+      "senal": "Separa muchos paquetes pequenos de pocos grandes. La exfiltracion mueve bytes, no paquetes."
+    },
+    "mean_ip_len_10s": {
+      "que": "Tamano medio del paquete IP.",
+      "senal": "Un cliente normal mezcla tamanos. Un tunel o una copia masiva los uniforma cerca del MTU."
+    },
+    "large_ip_ratio_10s": {
+      "que": "Fraccion de paquetes grandes.",
+      "senal": "Transferencia sostenida frente a trafico interactivo."
+    },
+    "unique_dst_ip_ratio_30s": {
+      "que": "Destinos distintos sobre el total de paquetes.",
+      "senal": "La firma del barrido horizontal: hablar una vez con muchisimas IP."
+    },
+    "icmp_ratio_10s": {
+      "que": "Fraccion de trafico ICMP.",
+      "senal": "Descubrimiento de red, y tunelizacion sobre ping."
+    },
+    "flow_attempt_rate_10s": {
+      "que": "Intentos de abrir flujo por segundo.",
+      "senal": "Cuenta el intento, no la conexion lograda: un escaneo bloqueado sigue apareciendo aqui."
+    },
+    "syn_rate_10s": {
+      "que": "SYN por segundo.",
+      "senal": "Ritmo de apertura de conexiones."
+    },
+    "syn_completion_ratio_10s": {
+      "que": "Fraccion de SYN que llegan a SYN-ACK.",
+      "senal": "Cae en picado durante un escaneo de puertos: casi ningun SYN encuentra puerto abierto."
+    },
+    "rst_ratio_10s": {
+      "que": "Fraccion de paquetes con RST.",
+      "senal": "Puertos cerrados respondiendo. Sube con el escaneo y con los cortes bruscos."
+    },
+    "unique_dst_port_ratio_30s": {
+      "que": "Puertos destino distintos sobre el total.",
+      "senal": "La firma del barrido vertical: muchos puertos de una sola maquina."
+    },
+    "http_error_ratio_60s": {
+      "que": "Fraccion de respuestas HTTP 4xx.",
+      "senal": "Rutas que no existen: enumeracion de directorios."
+    },
+    "dns_nxdomain_ratio_60s": {
+      "que": "Fraccion de consultas DNS sin dominio.",
+      "senal": "Algoritmos de generacion de dominio y tunelizacion DNS producen nombres que no existen."
+    },
+    "tls_session_rate_60s": {
+      "que": "Sesiones TLS por segundo.",
+      "senal": "Ritmo de conexiones cifradas, la parte del trafico cuyo contenido no se ve."
+    },
+    "ttl_mean_10s": {
+      "que": "TTL medio de los paquetes IP.",
+      "senal": "Delata cuantos saltos hay hasta el origen. Un cambio brusco sugiere otra ruta u otro sistema."
+    },
+    "fragment_ratio_10s": {
+      "que": "Fraccion de paquetes fragmentados.",
+      "senal": "La fragmentacion es rara en una LAN sana; se usa para evadir inspeccion."
+    },
+    "protocol_diversity_30s": {
+      "que": "Variedad de protocolos IP distintos.",
+      "senal": "Un cliente usa dos o tres. Un equipo que de pronto habla muchos esta explorando."
+    },
+    "tcp_retransmission_ratio_10s": {
+      "que": "Fraccion de segmentos TCP retransmitidos.",
+      "senal": "Salud del enlace. OJO: el espejo SPAN duplica tramas y las inflaba; el motor las deduplica antes de medir."
+    },
+    "flow_duration_mean_30s": {
+      "que": "Duracion media de los flujos.",
+      "senal": "Separa sesiones largas de rafagas cortas. Un canal de mando y control tiende a durar."
+    },
+    "tx_rx_byte_ratio_30s": {
+      "que": "Bytes enviados frente a recibidos.",
+      "senal": "Un cliente descarga mas de lo que sube. Invertido, es exfiltracion."
+    },
+    "http_request_rate_60s": {
+      "que": "Peticiones HTTP por segundo.",
+      "senal": "Ritmo de navegacion; un automatismo lo mantiene demasiado constante."
+    },
+    "http_method_entropy_60s": {
+      "que": "Variedad de metodos HTTP usados.",
+      "senal": "Un navegador usa GET y POST. Mas variedad sugiere una herramienta, no una persona."
+    },
+    "http_auth_failure_ratio_60s": {
+      "que": "Fraccion de respuestas 401 y 403.",
+      "senal": "Fuerza bruta contra credenciales."
+    },
+    "dns_query_rate_60s": {
+      "que": "Consultas DNS por segundo.",
+      "senal": "Sube muchisimo cuando el DNS se usa como canal de datos."
+    },
+    "unique_dns_name_ratio_60s": {
+      "que": "Nombres distintos sobre el total de consultas.",
+      "senal": "Cerca de 1 significa que casi ningun nombre se repite: firma de tunelizacion DNS."
+    },
+    "tls_handshake_failure_ratio_60s": {
+      "que": "Fraccion de negociaciones TLS incompletas.",
+      "senal": "Clientes que abren y cortan, o que no aceptan el certificado."
+    },
+    "tls_version_ratio_60s": {
+      "que": "Proporcion de versiones TLS antiguas.",
+      "senal": "Herramientas viejas o deliberadamente degradadas."
+    },
+    "http_status_5xx_ratio_60s": {
+      "que": "Fraccion de respuestas HTTP 5xx.",
+      "senal": "El servidor rompiendose: peticiones malformadas o intento de explotacion."
+    },
+    "arp_request_rate_10s": {
+      "que": "Peticiones ARP por segundo.",
+      "senal": "Un equipo normal pregunta poco y siempre por lo mismo. Un barrido pregunta por toda la subred."
+    },
+    "unique_src_mac_30s": {
+      "que": "MAC de origen distintas asociadas a la entidad.",
+      "senal": "Deberia ser 1. Mas de una significa que dos tarjetas usan esa IP: suplantacion."
+    },
+    "mac_ip_binding_changes_60s": {
+      "que": "Veces que cambia el par MAC-IP.",
+      "senal": "La firma directa del envenenamiento ARP. Una renovacion DHCP normal NO la mueve: conserva el mismo par."
+    }
+  }
+}

@@ -160,6 +160,10 @@ ExecStart={python} {raiz}/scripts/engine/dashboard.py \\
     --log-path {raiz}/{registro} \\
     --manifest-path {raiz}/{manifiesto} \\
     --eve-path {eve} \\
+    --schema {raiz}/{esquema} \\
+    --schema-extra {raiz}/{esquema_extra} \\
+    --descripciones {raiz}/{descripciones} \\
+    --dataset {raiz}/{dataset} \\
     --services ppi-motor.service,ppi-motor-capture.service,suricata.service \\{calibrado}
     --host {direccion} --port {puerto}
 Restart=always
@@ -462,9 +466,17 @@ def render(cfg: dict) -> dict[str, str]:
                       "\nAfter=cyberflow-panel-acceso.service")
         calibrado = ("\n    --calibrado-en-esta-red \\"
                      if cfg["motor"].get("calibrado_en_esta_red") else "")
+        # El panel lee DOS esquemas: el del motor -las variables que se
+        # puntuan- y el ampliado, cuyas variables adicionales solo se acumulan.
+        # Ensenarlas mezcladas diria que el sistema detecta hoy cosas que
+        # todavia no detecta.
         unidades["ppi-dashboard.service"] = PANEL.format(
             direccion=panel["direccion"], puerto=panel["puerto"], acceso=acceso,
-            calibrado=calibrado, **comun)
+            calibrado=calibrado,
+            esquema_extra=rut.get("esquema_extra", "configs/features/multilayer-v3.json"),
+            descripciones=rut.get("descripciones", "configs/features/descripciones.json"),
+            dataset=rut.get("dataset", "artifacts/linea-base/multilayer-v3.csv"),
+            **comun)
     return unidades
 
 
