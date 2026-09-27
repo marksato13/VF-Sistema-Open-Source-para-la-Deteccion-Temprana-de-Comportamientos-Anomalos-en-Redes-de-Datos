@@ -255,6 +255,7 @@ WorkingDirectory={raiz}
 # modelo se entrenaria sobre un conjunto que no describe lo que luego puntua.
 ExecStart={python} {raiz}/scripts/features/acumular_v3.py \\
     --salida {raiz}/{dataset} \\
+    --campaign-id {campana} \\
     --capture-dir {directorio} \\
     --eve {eve} \\{exclusiones}
     --entity-network {red_entidades}
@@ -444,6 +445,7 @@ def render(cfg: dict) -> dict[str, str]:
         "cyberflow-acumular.service": ACUMULAR.format(
             retener=cap["retener_minutos"],
             dataset=rut.get("dataset", "artifacts/linea-base/multilayer-v3.csv"),
+            campana=rut.get("campana", "linea-base"),
             **comun),
         "cyberflow-acumular.timer": ACUMULAR_TIMER.format(
             cabecera=cabecera, retener="%d min" % cap["retener_minutos"]),
