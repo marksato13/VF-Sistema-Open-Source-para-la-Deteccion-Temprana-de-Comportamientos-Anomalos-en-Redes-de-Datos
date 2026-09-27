@@ -171,6 +171,15 @@ HTML = """<!doctype html>
   .topo-edge-label { fill: var(--text-dim); font: 9.5px var(--mono); }
   .topo-grupo { fill: none; stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.6; }
   .topo-grupo-txt { fill: var(--text-dim); font: 9.5px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+  .topo-host .box { fill: #101a2e; stroke: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .topo-host:hover .box { stroke: var(--accent); }
+  .topo-host .ico { color: var(--accent); }
+  .topo-host .hostip { fill: var(--accent); font: 10.5px var(--mono); }
+  .topo-pkt { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
+  @media (prefers-reduced-motion: reduce) { .topo-pkt { display: none; } }
+  .topo-cmd { background: #0b1220; border: 1px solid var(--border); border-radius: 7px;
+    padding: 0.5rem 0.6rem; margin: 0.5rem 0; font: 11px var(--mono); color: var(--text-dim);
+    white-space: pre-wrap; overflow-x: auto; }
 
   .topo-detail {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
@@ -822,6 +831,7 @@ const TOPO_ICON = {
 const TOPO_VISTAS = {
   esencial: {
     w: 620, h: 592,
+    packet: 'M310,37 L310,553',
     grupos: [],
     nodos: [
       { id: 'red',      x: 210, y: 8,   w: 200, h: 58, icono: 'red',    titulo: 'Red de la entidad' },
@@ -846,41 +856,55 @@ const TOPO_VISTAS = {
   },
   completa: {
     w: 900, h: 840,
+    // Camino ilustrativo de un paquete por la tuberia: baja al espejo, al
+    // anillo de PCAP y de ahi al motor y al modelo. Un punto lo recorre en vivo.
+    packet: 'M450,64 L450,232 L175,290 L175,392 L450,452 L450,732',
     grupos: [
+      { x: 12,  y: 0,   w: 300, h: 236, txt: 'Hosts · VLAN 20/30' },
       { x: 18,  y: 242, w: 834, h: 152, txt: 'Adquisición' },
       { x: 18,  y: 406, w: 834, h: 242, txt: 'Análisis' },
       { x: 300, y: 660, w: 300, h: 84,  txt: 'Respuesta' },
       { x: 300, y: 750, w: 552, h: 76,  txt: 'Observabilidad' },
     ],
     nodos: [
-      { id: 'red',       x: 330, y: 8,   w: 240, h: 56, icono: 'red',    titulo: 'Red de la entidad',  tag: 'ENTORNO' },
+      { id: 'atacante', x: 18, y: 22,  w: 200, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',   host: true, ip: '10.10.20.30',    desc: 'lanza los ataques' },
+      { id: 'clientes', x: 18, y: 78,  w: 200, h: 48, icono: 'red',    titulo: 'Clientes',          host: true, ip: '10.10.20.21-.26', desc: '6 perfiles legítimos' },
+      { id: 'servidor', x: 18, y: 134, w: 200, h: 48, icono: 'disco',  titulo: 'Servidor',          host: true, ip: '10.10.30.10',    desc: 'objetivo HTTP/HTTPS' },
+      { id: 'gateway',  x: 18, y: 190, w: 200, h: 48, icono: 'escudo', titulo: 'pfSense / gateway', host: true, ip: '10.10.20.1',     desc: 'enruta entre VLAN' },
+      { id: 'red',       x: 330, y: 8,   w: 240, h: 56, icono: 'red',    titulo: 'Red de la entidad',  tag: 'VLAN 10-100' },
       { id: 'span',      x: 330, y: 92,  w: 240, h: 56, icono: 'espejo', titulo: 'Espejo SPAN',        tag: 'CORE-STACK' },
-      { id: 'nic',       x: 330, y: 176, w: 240, h: 56, icono: 'nic',    titulo: 'Interfaz en escucha', tag: 'PROMISCUA · SIN IP' },
+      { id: 'nic',       x: 330, y: 176, w: 240, h: 56, icono: 'nic',    titulo: 'Interfaz en escucha', tag: 'ens37 · SIN IP' },
       { id: 'captura',   x: 60,  y: 260, w: 230, h: 56, icono: 'disco',  titulo: 'tcpdump',            tag: 'SERVICIO' },
       { id: 'suricata',  x: 610, y: 260, w: 230, h: 56, icono: 'lupa',   titulo: 'Suricata',           tag: 'SERVICIO' },
       { id: 'pcap',      x: 60,  y: 344, w: 230, h: 48, icono: 'fichero', titulo: 'anillo live-*.pcap', tag: 'ARTEFACTO', clase: 'artefacto' },
       { id: 'eve',       x: 610, y: 344, w: 230, h: 48, icono: 'fichero', titulo: 'eve.json',          tag: 'ARTEFACTO', clase: 'artefacto' },
       { id: 'descartes', x: 30,  y: 424, w: 250, h: 56, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO',  clase: 'sumidero' },
       { id: 'motor',     x: 330, y: 424, w: 240, h: 56, icono: 'cpu',    titulo: 'Atribución de flujo', tag: 'SERVICIO' },
-      { id: 'variables', x: 330, y: 508, w: 240, h: 56, icono: 'tabla',  titulo: 'Variables / 10 s', tag: 'L3 · L4 · L7' },
+      { id: 'variables', x: 330, y: 508, w: 240, h: 56, icono: 'tabla',  titulo: 'Variables / 10 s', tag: 'L2·L3·L4·L7' },
       { id: 'modelo',    x: 330, y: 592, w: 240, h: 56, icono: 'modelo', titulo: 'OCSVM congelado',    tag: 'UMBRAL FIJO' },
+      { id: 'reentrenamiento', x: 610, y: 592, w: 250, h: 56, icono: 'modelo', titulo: 'Reentrenamiento', tag: 'MENSUAL / POR DERIVA' },
       { id: 'control',   x: 330, y: 676, w: 240, h: 56, icono: 'escudo', titulo: 'Control nftables',   tag: 'EXPIRA A 120 s' },
       { id: 'registro',  x: 330, y: 760, w: 240, h: 48, icono: 'fichero', titulo: 'motor_decision.log', tag: 'ARTEFACTO', clase: 'artefacto' },
       { id: 'panel',     x: 620, y: 760, w: 230, h: 48, icono: 'ojo',    titulo: 'Este panel',         tag: 'SOLO LECTURA' },
     ],
     aristas: [
-      { d: 'M450,64 L450,92',                    desde: 'red',       hasta: 'span' },
-      { d: 'M450,148 L450,176',                  desde: 'span',      hasta: 'nic' },
-      { d: 'M450,232 C450,250 175,242 175,260',  desde: 'nic',       hasta: 'captura' },
-      { d: 'M450,232 C450,250 725,242 725,260',  desde: 'nic',       hasta: 'suricata' },
+      { d: 'M218,46 L330,34',  desde: 'atacante', hasta: 'red', etiqueta: 'ataca',    ex: 258, ey: 30 },
+      { d: 'M218,102 L330,38', desde: 'clientes', hasta: 'red', etiqueta: 'tráfico',  ex: 268, ey: 74 },
+      { d: 'M218,158 L330,44', desde: 'servidor', hasta: 'red', etiqueta: 'objetivo', ex: 300, ey: 128 },
+      { d: 'M218,214 L330,50', desde: 'gateway',  hasta: 'red', etiqueta: 'enruta',   ex: 300, ey: 190 },
+      { d: 'M450,64 L450,92',                    desde: 'red',       hasta: 'span', etiqueta: 'todo cruza el troncal', ex: 575, ey: 82 },
+      { d: 'M450,148 L450,176',                  desde: 'span',      hasta: 'nic', etiqueta: 'copia de tramas', ex: 560, ey: 166 },
+      { d: 'M450,232 C450,250 175,242 175,260',  desde: 'nic',       hasta: 'captura', etiqueta: 'paquetes', ex: 250, ey: 245 },
+      { d: 'M450,232 C450,250 725,242 725,260',  desde: 'nic',       hasta: 'suricata', etiqueta: 'paquetes', ex: 648, ey: 245 },
       { d: 'M175,316 L175,344',                  desde: 'captura',   hasta: 'pcap' },
       { d: 'M725,316 L725,344',                  desde: 'suricata',  hasta: 'eve' },
-      { d: 'M175,392 C175,412 450,404 450,424',  desde: 'pcap',      hasta: 'motor' },
-      { d: 'M725,392 C725,412 450,404 450,424',  desde: 'eve',       hasta: 'motor' },
+      { d: 'M175,392 C175,412 450,404 450,424',  desde: 'pcap',      hasta: 'motor', etiqueta: 'L3·L4', ex: 250, ey: 408 },
+      { d: 'M725,392 C725,412 450,404 450,424',  desde: 'eve',       hasta: 'motor', etiqueta: 'HTTP·DNS·TLS', ex: 662, ey: 408 },
       { d: 'M330,452 L280,452',                  desde: 'motor',     hasta: 'descartes', tipo: 'descarte', etiqueta: 'descarta', ex: 305, ey: 444 },
-      { d: 'M450,480 L450,508',                  desde: 'motor',     hasta: 'variables' },
-      { d: 'M450,564 L450,592',                  desde: 'variables', hasta: 'modelo' },
-      { d: 'M450,648 L450,676',                  desde: 'modelo',    hasta: 'control' },
+      { d: 'M450,480 L450,508',                  desde: 'motor',     hasta: 'variables', etiqueta: 'atribuye por IP', ex: 575, ey: 498 },
+      { d: 'M450,564 L450,592',                  desde: 'variables', hasta: 'modelo', etiqueta: '31 variables', ex: 548, ey: 582 },
+      { d: 'M610,620 L570,620',                  desde: 'reentrenamiento', hasta: 'modelo', etiqueta: 'entrena y congela', ex: 590, ey: 610 },
+      { d: 'M450,648 L450,676',                  desde: 'modelo',    hasta: 'control', etiqueta: 'score < umbral', ex: 560, ey: 666 },
       { d: 'M450,732 L450,760',                  desde: 'control',   hasta: 'registro' },
       { d: 'M570,784 L620,784',                  desde: 'registro',  hasta: 'panel' },
     ],
@@ -897,6 +921,27 @@ const TOPO_TEXTO = {
   span: {
     que: 'La sesión de espejo del conmutador copia el troncal del cortafuegos hacia el puerto del sensor.',
     nota: 'Desde el sensor no se puede leer el estado de la sesión: se infiere de que lleguen paquetes. Si deja de llegar tráfico, el problema puede estar aquí y el panel no lo distingue de una red en silencio.',
+    cmd: 'monitor session 1 source interface Gi1/0/20 , Gi2/0/20 both\\nmonitor session 1 destination interface Gi1/0/48 encapsulation replicate\\n! Gi1/0/20 y Gi2/0/20: troncales al hipervisor A (172.17.25.3)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
+  },
+  atacante: {
+    que: 'La VM Kali (10.10.20.30). Genera los ataques del ensayo: escaneo, nikto, flood HTTP y ARP spoofing.',
+    nota: 'Fuera de la fase de ataque debe estar apagada: si emite durante la línea base, el modelo aprendería el ataque como normal.',
+  },
+  clientes: {
+    que: 'Una VM con seis alias .21-.26, cada uno un perfil de tráfico legítimo (ofimática, navegación, descargas, aplicación, ligero, errático) contra el servidor.',
+    nota: 'Seis IP sobre una sola MAC, a propósito: el motor puntúa por IP, así que son seis entidades distintas para el modelo.',
+  },
+  servidor: {
+    que: 'El objetivo del laboratorio (10.10.30.10), servidor HTTP/HTTPS. Recibe el tráfico legítimo y los ataques.',
+    nota: 'Aparece con pocos paquetes propios porque el motor atribuye cada flujo a quien lo inicia -el cliente-, no al destino.',
+  },
+  gateway: {
+    que: 'La puerta de enlace de la VLAN 20 (10.10.20.1, VIP CARP de pfSense). Enruta entre VLAN.',
+    nota: 'En el ARP spoofing su IP pasó a verse con dos MAC: esa es la anomalía de capa 2 que dispara unique_src_mac_30s.',
+  },
+  reentrenamiento: {
+    que: 'El modelo envejece: la normalidad cambia con el tiempo. Se reentrena con datos verificados limpios, congelando el umbral en validación antes de evaluar.',
+    nota: 'Cadencia: mensual como suelo, pero el disparador real es la deriva del FPR, y es OBLIGATORIO al cambiar la red (nueva VLAN, Wazuh, AAA). La automatización prepara el candidato; promocionarlo pasa por la misma verificación, nunca a ciegas.',
   },
   nic: {
     que: 'La interfaz que recibe el espejo, sin dirección IP y en modo promiscuo.',
@@ -1090,6 +1135,11 @@ function topoEstado(id, s) {
       return { estado: '', valor: 'una línea por decisión', datos: {} };
     case 'panel':
       return { estado: 'ok', valor: 'solo lectura', datos: { 'Refresco': '5 s' } };
+    case 'reentrenamiento':
+      return { estado: '', valor: 'periódico', datos: {
+        'Cadencia base': 'mensual',
+        'Disparador real': 'deriva del FPR',
+        'Obligatorio': 'al cambiar la red' } };
   }
   return { estado: '', valor: '—', datos: {} };
 }
@@ -1117,10 +1167,29 @@ function renderTopologia(status) {
     }
     const vivo = est[e.desde].estado !== 'bad' && est[e.hasta].estado !== 'bad'
                  && est[e.desde].estado !== '';
-    return `<path class="topo-edge ${vivo ? 'live' : 'dim'}" d="${e.d}"/>`;
+    const label = e.etiqueta
+      ? `<text class="topo-edge-label" x="${e.ex}" y="${e.ey}" text-anchor="middle">${e.etiqueta}</text>` : '';
+    return `<path class="topo-edge ${vivo ? 'live' : 'dim'}" d="${e.d}"/>` + label;
   }).join('');
 
-  const nodos = v.nodos.map(n => {
+  // Un punto recorre la tuberia en bucle: hace visible que el dato fluye.
+  const packet = v.packet
+    ? `<circle class="topo-pkt" r="5"><animateMotion dur="6s" repeatCount="indefinite" calcMode="linear" path="${v.packet}"/></circle>`
+    : '';
+
+  // Los hosts no pasan por topoEstado: se dibujan con su IP y su rol.
+  const hosts = v.nodos.filter(n => n.host).map(n => {
+    const cy = n.y + n.h / 2;
+    return `<g class="topo-node topo-host ${topoSel === n.id ? 'sel' : ''}" data-node="${n.id}" tabindex="0" role="button" aria-label="${n.titulo}">
+      <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9"/>
+      <g class="ico" transform="translate(${n.x + 12}, ${cy - 9})"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[n.icono]}</svg></g>
+      <text class="ttl" x="${n.x + 40}" y="${cy - 3}">${n.titulo}</text>
+      <text class="hostip" x="${n.x + 40}" y="${cy + 11}">${n.ip}</text>
+      <text class="tag" x="${n.x + n.w - 10}" y="${n.y + n.h - 6}" text-anchor="end">${n.desc}</text>
+    </g>`;
+  }).join('');
+
+  const nodos = v.nodos.filter(n => !n.host).map(n => {
     const e = est[n.id];
     const cy = n.y + n.h / 2;
     const color = e.estado === 'ok' ? 'var(--ok)' : e.estado === 'warn' ? 'var(--amber)'
@@ -1138,7 +1207,7 @@ function renderTopologia(status) {
     </g>`;
   }).join('');
 
-  svg.innerHTML = grupos + aristas + nodos;
+  svg.innerHTML = grupos + aristas + packet + hosts + nodos;
   aplicarZoom();
   renderTopoDetalle();
 }
@@ -1221,10 +1290,12 @@ function renderTopoDetalle() {
   const t = TOPO_TEXTO[n.id] || {};
   const filas = Object.entries(e.datos || {})
     .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  const cabIp = n.host && n.ip ? `<span class="state">${n.ip}</span>` : `<span class="state ${e.estado}">${e.valor}</span>`;
   document.getElementById('topoDetail').innerHTML =
-    `<h3>${n.titulo}<span class="state ${e.estado}">${e.valor}</span></h3>` +
+    `<h3>${n.titulo}${cabIp}</h3>` +
     (t.que ? `<p>${t.que}</p>` : '') +
     (filas ? `<dl>${filas}</dl>` : '') +
+    (t.cmd ? `<pre class="topo-cmd">${t.cmd.replace(/</g, '&lt;')}</pre>` : '') +
     (t.nota ? `<p class="dim">${t.nota}</p>` : '') +
     (t.enlace ? `<p><a href="${t.enlace.href}">${t.enlace.txt} &rarr;</a></p>` : '');
 }
