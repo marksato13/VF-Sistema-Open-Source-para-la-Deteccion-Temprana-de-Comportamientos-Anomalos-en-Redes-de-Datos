@@ -106,7 +106,7 @@ dataset = "artifacts/linea-base/multilayer-v3.csv"
 # carga forzada- y rota tambien el fichero de arriba. Sin esto, dos capturas
 # que no son comparables quedan mezcladas bajo el mismo nombre y no hay forma
 # de separarlas despues.
-campana = "linea-base"
+campana = "piloto-con-dns"
 
 [panel]
 # Expuesto en la VLAN de gestion y de solo lectura. Desde el bastion se abre
