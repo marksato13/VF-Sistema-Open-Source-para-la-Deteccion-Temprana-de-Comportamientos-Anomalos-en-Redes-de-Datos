@@ -164,12 +164,17 @@ ExecStart={python} {raiz}/scripts/engine/dashboard.py \\
     --schema-extra {raiz}/{esquema_extra} \\
     --descripciones {raiz}/{descripciones} \\
     --dataset {raiz}/{dataset} \\
-    --services ppi-motor.service,ppi-motor-capture.service,suricata.service \\{calibrado}
+    --services ppi-motor.service,ppi-motor-capture.service,suricata.service \\{calibrado}{acceso_args}
     --host {direccion} --port {puerto}
 Restart=always
 RestartSec=5
 NoNewPrivileges=true
 ProtectSystem=strict
+# ProtectSystem=strict deja TODO en solo lectura, /home incluido. El panel no
+# escribia nada y por eso nunca hizo falta, pero el registro de accesos si.
+# Sin esta linea la auditoria fallaria en silencio -y un panel con login cuyo
+# registro no se escribe es peor que uno sin login, porque aparenta rastro-.
+ReadWritePaths={raiz}/logs
 
 [Install]
 WantedBy=multi-user.target
@@ -468,11 +473,41 @@ def render(cfg: dict) -> dict[str, str]:
                       "\nAfter=cyberflow-panel-acceso.service")
         calibrado = ("\n    --calibrado-en-esta-red \\"
                      if cfg["motor"].get("calibrado_en_esta_red") else "")
+        # Autenticacion. Si esta activada -lo normal- la unidad pasa los cuatro
+        # ficheros que hacen falta y el panel se niega a arrancar si falta
+        # alguno: servir sin login porque un fichero no estaba es el modo de
+        # fallo que hay que evitar. Con autenticacion = false se pasa
+        # --sin-autenticacion EXPRESAMENTE, para que quede escrito en la unidad
+        # y cualquiera que lea el servicio lo vea.
+        aut = panel.get("autenticacion", True)
+        if aut:
+            acceso_args = (
+                "\n    --usuarios {u} \\"
+                "\n    --clave-sesion {c} \\"
+                "\n    --tls-cert {cert} \\"
+                "\n    --tls-key {key} \\"
+                "\n    --auditoria {raiz}/{aud} \\"
+                "\n    --sesion-minutos {min} \\"
+                "\n    --intentos-max {int_} \\"
+                "\n    --bloqueo-minutos {blo} \\"
+            ).format(u=panel.get("usuarios", "/etc/cyberflow/usuarios.json"),
+                     c=panel.get("clave_sesion", "/etc/cyberflow/clave-sesion"),
+                     cert=panel.get("tls_cert", "/etc/cyberflow/panel.crt"),
+                     key=panel.get("tls_key", "/etc/cyberflow/panel.key"),
+                     raiz=raiz,
+                     aud=panel.get("auditoria", "logs/panel_auditoria.jsonl"),
+                     min=panel.get("sesion_minutos", 480),
+                     int_=panel.get("intentos_max", 5),
+                     blo=panel.get("bloqueo_minutos", 15))
+        else:
+            acceso_args = "\n    --sin-autenticacion \\"
+
         # El panel lee DOS esquemas: el del motor -las variables que se
         # puntuan- y el ampliado, cuyas variables adicionales solo se acumulan.
         # Ensenarlas mezcladas diria que el sistema detecta hoy cosas que
         # todavia no detecta.
         unidades["ppi-dashboard.service"] = PANEL.format(
+            acceso_args=acceso_args,
             direccion=panel["direccion"], puerto=panel["puerto"], acceso=acceso,
             calibrado=calibrado,
             esquema_extra=rut.get("esquema_extra", "configs/features/multilayer-v3.json"),

@@ -19,9 +19,15 @@ venv del motor, para una ganancia marginal frente a polling simple.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
+import hmac
 import json
+import secrets
+import ssl
 import subprocess
 import time
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -231,6 +237,20 @@ HTML = """<!doctype html>
   .toolbar-hint { font-size: 0.78rem; color: var(--text-dim); margin: 0.4rem 0 0; min-height: 1em; }
   .lede-small { font-size: 0.86rem; color: var(--text-dim); margin: -0.3rem 0 0.8rem; }
 
+  /* Cabecera de sesion: quien eres, en que modo y como salir. */
+  .sesion { display: flex; align-items: center; gap: 0.6rem; margin-left: auto; }
+  .sesion form { margin: 0; }
+  .quien { font-size: 0.78rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .btn-modo, .btn-salir {
+    font: inherit; font-size: 0.78rem; cursor: pointer; padding: 0.3rem 0.7rem;
+    border-radius: 7px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-dim); transition: border-color .15s, color .15s;
+  }
+  .btn-modo:hover, .btn-salir:hover { border-color: var(--accent); color: var(--text); }
+  .btn-modo[data-modo="desarrollo"] { border-color: var(--accent); color: var(--accent); }
+  /* El lector no recibe las secciones de desarrollo, asi que su barra lateral
+     es mas corta; nada que ocultar aqui, el marcado ya no las trae. */
+
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; }
 
   /* Variables por capa. La cabecera de capa es un boton: filtra la tabla. */
@@ -325,10 +345,12 @@ HTML = """<!doctype html>
   <div class="side-state" id="sideState"><span class="dot"></span><span id="sideStateText">conectando&hellip;</span></div>
   <nav id="nav">
     <a href="#s-salud" data-sec="s-salud"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>Salud</a>
+    <!--ADMIN-->
     <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Topología</a>
     <a href="#s-variables" data-sec="s-variables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg>Variables</a>
     <a href="#s-modelo" data-sec="s-modelo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>Modelo</a>
     <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
+    <!--/ADMIN-->
     <a href="#s-scores" data-sec="s-scores"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg>Scores</a>
     <a href="#s-actividad" data-sec="s-actividad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg>Actividad<span class="pill" id="navAlertPill" hidden></span></a>
     <a href="#s-bloqueos" data-sec="s-bloqueos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Bloqueos</a>
@@ -341,6 +363,12 @@ HTML = """<!doctype html>
   <header>
     <h1>CyberFlow<small>Motor en vivo &middot; solo lectura</small></h1>
     <span class="stamp" id="stamp"></span>
+    <div class="sesion">
+      <!--ADMIN--><button id="modoBtn" class="btn-modo" type="button"
+        title="Cambia entre la vista operativa y la de desarrollo. Las dos son de solo lectura."></button><!--/ADMIN-->
+      <span class="quien" id="quien"></span>
+      <form method="post" action="/logout"><button class="btn-salir" type="submit">Salir</button></form>
+    </div>
   </header>
 
   <div class="healthbar" id="healthbar"></div>
@@ -350,6 +378,7 @@ HTML = """<!doctype html>
     <div class="grid" id="health"></div>
   </section>
 
+  <!--ADMIN-->
   <section id="s-topologia">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg><h2>Topología y flujo</h2></div>
     <p class="lede-small">El camino que recorre un paquete desde el troncal hasta la decisión. Pulsa un componente para ver qué hace, qué mide y de dónde sale ese número.</p>
@@ -399,6 +428,7 @@ HTML = """<!doctype html>
     <div class="grid" id="alcance"></div>
     <p class="toolbar-hint" id="alcanceDetalle"></p>
   </section>
+  <!--/ADMIN-->
 
   <section id="s-scores">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg><h2>Distribución de scores recientes</h2></div>
@@ -457,6 +487,11 @@ HTML = """<!doctype html>
   </section>
 </div>
 </div>
+
+<!-- Quien ha iniciado sesion, puesto por el servidor al servir la pagina. Es
+     informativo: el rol de verdad se comprueba en cada peticion, y cambiar
+     esto en el navegador no da acceso a nada. -->
+<script type="application/json" id="datosSesion">__SESION__</script>
 
 <script>
 // Solo los iconos usados dinamicamente en refresh(); los estaticos (encabezados
@@ -612,13 +647,22 @@ async function loadActivity(range) {
     : '← hace 60 min    ahora →';
 }
 
-document.getElementById('rangeToggle').addEventListener('click', (e) => {
+on('rangeToggle', 'click', (e) => {
   const btn = e.target.closest('button[data-range]');
   if (!btn) return;
   currentRange = btn.dataset.range;
   document.querySelectorAll('#rangeToggle button').forEach(b => b.classList.toggle('active', b === btn));
   loadActivity(currentRange);
 });
+
+// El lector no recibe las secciones de desarrollo, asi que sus elementos NO
+// existen en su documento. Un addEventListener sobre null lanza TypeError y
+// aborta el script entero -se quedaria sin panel, no sin una seccion-. Este
+// ayudante hace que la ausencia sea silenciosa y esperada.
+function on(id, evento, fn) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener(evento, fn);
+}
 
 async function refresh() {
   try {
@@ -627,7 +671,11 @@ async function refresh() {
 
     renderHealthbar(status.services, status.counters, status.capture_metrics, status.calibracion);
     renderSidebar(status);
-    renderTopologia(status);
+    // Las tres secciones de desarrollo -topologia, modelo y alcance- no estan
+    // en el documento del lector. Se comprueba la existencia del elemento en
+    // vez del rol: el servidor ya decidio que enviarle, y el navegador no tiene
+    // por que repetir esa decision ni poder contradecirla.
+    if (document.getElementById('topo')) renderTopologia(status);
 
     const healthCards = Object.entries(status.services).map(([name, active]) =>
       card(SERVICE_LABEL[name] || name, active ? ICON.ok + ' activo' : ICON.bad + ' inactivo', active ? 'ok' : 'bad')
@@ -648,14 +696,17 @@ async function refresh() {
     }
     health.innerHTML = healthCards.join('');
 
-    const m = status.model;
-    model.innerHTML = [
-      card('Detector', 'OCSVM'),
-      card('Umbral', m.threshold.toFixed(4), 'accent'),
-      card('FPR benigno', (m.test_fpr * 100).toFixed(2) + '%'),
-      card('Detección global', (m.detection_rate * 100).toFixed(1) + '%', 'accent'),
-      card('Detección Kali-real', (m.kali_real_detection_rate * 100).toFixed(1) + '%', 'accent'),
-    ].join('');
+    const modelEl = document.getElementById('model');
+    if (modelEl) {
+      const m = status.model;
+      modelEl.innerHTML = [
+        card('Detector', 'OCSVM'),
+        card('Umbral', m.threshold.toFixed(4), 'accent'),
+        card('FPR benigno', (m.test_fpr * 100).toFixed(2) + '%'),
+        card('Detección global', (m.detection_rate * 100).toFixed(1) + '%', 'accent'),
+        card('Detección Kali-real', (m.kali_real_detection_rate * 100).toFixed(1) + '%', 'accent'),
+      ].join('');
+    }
 
     blocked.innerHTML = status.blocked.length
       ? status.blocked.map(b => `<tr><td class="ip">${b.ip}</td><td class="num">${b.expires_seconds != null ? b.expires_seconds + 's' : '?'}</td></tr>`).join('')
@@ -670,16 +721,19 @@ async function refresh() {
       card('PERMIT (sin tráfico)', c.permit_heuristic),
     ].join('');
 
-    const ex = status.alcance || {};
-    document.getElementById('alcance').innerHTML = [
-      card('Paquetes de plano de control descartados', (ex.plano_control_descartado ?? 0).toLocaleString('es')),
-      card('Ventanas de entidades excluidas', (ex.ventanas_excluidas ?? 0).toLocaleString('es')),
-      card('Red analizada', ex.red_entidades || '&mdash;'),
-    ].join('');
-    const protos = (ex.protocolos_excluidos || []).map(p => PROTO[p] || ('proto ' + p));
-    document.getElementById('alcanceDetalle').textContent =
-      (protos.length ? 'Protocolos fuera del cálculo: ' + protos.join(', ') + '. ' : '') +
-      ((ex.excluidas || []).length ? 'Entidades fuera del cálculo: ' + ex.excluidas.join(', ') + '.' : '');
+    const alcanceEl = document.getElementById('alcance');
+    if (alcanceEl) {
+      const ex = status.alcance || {};
+      alcanceEl.innerHTML = [
+        card('Paquetes de plano de control descartados', (ex.plano_control_descartado ?? 0).toLocaleString('es')),
+        card('Ventanas de entidades excluidas', (ex.ventanas_excluidas ?? 0).toLocaleString('es')),
+        card('Red analizada', ex.red_entidades || '&mdash;'),
+      ].join('');
+      const protos = (ex.protocolos_excluidos || []).map(p => PROTO[p] || ('proto ' + p));
+      document.getElementById('alcanceDetalle').textContent =
+        (protos.length ? 'Protocolos fuera del cálculo: ' + protos.join(', ') + '. ' : '') +
+        ((ex.excluidas || []).length ? 'Entidades fuera del cálculo: ' + ex.excluidas.join(', ') + '.' : '');
+    }
 
     if (currentRange === '1h') renderSparkline(status.activity);
     else loadActivity(currentRange);
@@ -714,9 +768,9 @@ function renderDecisionsTable() {
   }).join('') : `<tr class="empty-row"><td colspan="6">${query ? 'Ninguna decisión coincide con el filtro.' : 'Sin decisiones recientes.'}</td></tr>`;
 }
 
-document.getElementById('ipFilter').addEventListener('input', renderDecisionsTable);
+on('ipFilter', 'input', renderDecisionsTable);
 
-document.getElementById('exportCsv').addEventListener('click', () => {
+on('exportCsv', 'click', () => {
   const query = document.getElementById('ipFilter').value.trim();
   const rows = query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions;
   const header = ['hora_utc', 'ip', 'decision', 'motivo', 'score', 'paquetes_10s'];
@@ -1110,7 +1164,7 @@ function escalaActual() {
   return Math.max(0.25, (document.getElementById('topoScroll').clientWidth - 6) / v.w);
 }
 
-document.getElementById('topoVista').addEventListener('click', (ev) => {
+on('topoVista', 'click', (ev) => {
   const b = ev.target.closest('button[data-vista]');
   if (!b) return;
   topoVista = b.dataset.vista;
@@ -1121,17 +1175,17 @@ document.getElementById('topoVista').addEventListener('click', (ev) => {
   if (topoUltimo) renderTopologia(topoUltimo);
 });
 
-document.getElementById('topoMas').addEventListener('click', () => {
+on('topoMas', 'click', () => {
   topoZoom = Math.min(3, escalaActual() * 1.25); aplicarZoom();
 });
-document.getElementById('topoMenos').addEventListener('click', () => {
+on('topoMenos', 'click', () => {
   topoZoom = Math.max(0.25, escalaActual() / 1.25); aplicarZoom();
 });
-document.getElementById('topoReset').addEventListener('click', () => {
+on('topoReset', 'click', () => {
   topoZoom = null; aplicarZoom();
 });
 
-document.getElementById('topoExpandir').addEventListener('click', () => {
+on('topoExpandir', 'click', () => {
   const caja = document.getElementById('topoWrap');
   if (document.fullscreenElement) { document.exitFullscreen(); return; }
   if (!caja.requestFullscreen) { topoZoom = 1.4; aplicarZoom(); return; }
@@ -1175,14 +1229,14 @@ function renderTopoDetalle() {
     (t.enlace ? `<p><a href="${t.enlace.href}">${t.enlace.txt} &rarr;</a></p>` : '');
 }
 
-document.getElementById('topo').addEventListener('click', (ev) => {
+on('topo', 'click', (ev) => {
   const g = ev.target.closest('.topo-node');
   if (!g) return;
   topoSel = g.dataset.node;
   document.querySelectorAll('#topo .topo-node').forEach(x => x.classList.toggle('sel', x === g));
   renderTopoDetalle();
 });
-document.getElementById('topo').addEventListener('keydown', (ev) => {
+on('topo', 'keydown', (ev) => {
   if (ev.key !== 'Enter' && ev.key !== ' ') return;
   const g = ev.target.closest('.topo-node');
   if (!g) return;
@@ -1336,14 +1390,14 @@ function renderVariables() {
   pie.textContent = txt;
 }
 
-document.getElementById('varCapas').addEventListener('click', (ev) => {
+on('varCapas', 'click', (ev) => {
   const b = ev.target.closest('.var-capa');
   if (!b) return;
   varCapaSel = varCapaSel === b.dataset.capa ? null : b.dataset.capa;
   renderVariables();
 });
 
-document.getElementById('varTabla').addEventListener('click', (ev) => {
+on('varTabla', 'click', (ev) => {
   const b = ev.target.closest('.var-fila');
   if (!b) return;
   const n = b.dataset.var;
@@ -1361,10 +1415,48 @@ async function cargarVariables() {
   }
 }
 
-cargarVariables();
-// El esquema no cambia y la muestra se mueve despacio: cada minuto sobra. A 5 s
-// no aportaria nada y solo daria oportunidades de perder la fila desplegada.
-setInterval(cargarVariables, 60000);
+if (document.getElementById('varTabla')) {
+  cargarVariables();
+  // El esquema no cambia y la muestra se mueve despacio: cada minuto sobra. A
+  // 5 s no aportaria nada y solo daria ocasiones de perder la fila desplegada.
+  setInterval(cargarVariables, 60000);
+}
+
+// ---- Sesion: quien eres y en que modo miras ------------------------------
+// El modo es del ADMIN y solo del admin: alterna entre la vista operativa y la
+// de desarrollo. No es un permiso -esta autorizado a las dos- sino una forma de
+// quitarse de encima lo que no necesita mientras opera. Por eso vive en
+// localStorage y no en la sesion: es preferencia, no autorizacion.
+const SESION = JSON.parse(document.getElementById('datosSesion').textContent);
+const DEV_SECS = ['s-topologia', 's-variables', 's-modelo', 's-alcance'];
+
+function aplicarModo(modo) {
+  const dev = modo === 'desarrollo';
+  for (const id of DEV_SECS) {
+    const sec = document.getElementById(id);
+    if (sec) sec.hidden = !dev;
+    const enlace = document.querySelector('#nav a[data-sec="' + id + '"]');
+    if (enlace) enlace.hidden = !dev;
+  }
+  const b = document.getElementById('modoBtn');
+  if (b) {
+    b.dataset.modo = modo;
+    b.textContent = dev ? 'Modo desarrollo' : 'Modo operativo';
+  }
+  try { localStorage.setItem('cyberflow_modo', modo); } catch (e) { /* sin persistir */ }
+}
+
+document.getElementById('quien').textContent = SESION.usuario + ' · ' + SESION.rol;
+
+if (SESION.rol === 'admin') {
+  let modo = 'operativo';
+  try { modo = localStorage.getItem('cyberflow_modo') || 'operativo'; } catch (e) { /* por omision */ }
+  aplicarModo(modo);
+  on('modoBtn', 'click', () => {
+    const b = document.getElementById('modoBtn');
+    aplicarModo(b.dataset.modo === 'desarrollo' ? 'operativo' : 'desarrollo');
+  });
+}
 
 setInterval(refresh, 5000);
 </script>
@@ -1649,6 +1741,240 @@ def load_model_summary(manifest_path: Path, detector_name: str) -> dict:
     }
 
 
+# --------------------------------------------------------------- autenticacion
+#
+# Dos cuentas y nada mas: "admin" ve todo, "lector" solo la vista operativa. El
+# admin puede conmutar entre modo operativo y modo desarrollador con un boton,
+# pero eso es comodidad, no permiso: esta autorizado a los dos.
+#
+# La frontera de verdad es el ROL y se aplica en el servidor. Ocultar secciones
+# con CSS no sirve de nada -el lector leeria el marcado igual, o llamaria al
+# endpoint directamente-, asi que el HTML se recorta por rol y cada ruta
+# comprueba quien pregunta.
+#
+# El login NO sustituye la regla nftables que limita quien alcanza el puerto.
+# Son dos capas y se quedan las dos.
+
+ROLES = ("admin", "lector")
+
+# Rutas que solo sirve el administrador. La lista es explicita y una prueba
+# recorre las que el servidor despacha de verdad: si se anade un endpoint y
+# nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
+RUTAS_ADMIN = frozenset({"/api/variables"})
+
+# Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
+RUTAS_PUBLICAS = frozenset({"/login"})
+
+MARCA_INI = "<!--ADMIN-->"
+MARCA_FIN = "<!--/ADMIN-->"
+
+COOKIE = "cyberflow_sesion"
+
+# Parametros de scrypt. n=2**14 tarda ~50 ms en el sensor: bastante para que un
+# ataque por diccionario no sea gratis, poco para que un login legitimo se note.
+_SCRYPT_N, _SCRYPT_R, _SCRYPT_P = 2 ** 14, 8, 1
+
+
+def hash_contrasena(contrasena: str, sal: bytes | None = None) -> str:
+    """Devuelve la cadena que se guarda en el fichero de usuarios.
+
+    Lleva dentro los parametros y la sal, asi que se pueden subir en el futuro
+    sin invalidar los hashes viejos.
+    """
+    sal = secrets.token_bytes(16) if sal is None else sal
+    dk = hashlib.scrypt(contrasena.encode("utf-8"), salt=sal,
+                        n=_SCRYPT_N, r=_SCRYPT_R, p=_SCRYPT_P, dklen=32)
+    return "scrypt$%d$%d$%d$%s$%s" % (_SCRYPT_N, _SCRYPT_R, _SCRYPT_P,
+                                      sal.hex(), dk.hex())
+
+
+def verificar_contrasena(almacenado: str, contrasena: str) -> bool:
+    try:
+        algo, n, r, p, sal, esperado = almacenado.split("$")
+        if algo != "scrypt":
+            return False
+        dk = hashlib.scrypt(contrasena.encode("utf-8"), salt=bytes.fromhex(sal),
+                            n=int(n), r=int(r), p=int(p), dklen=len(esperado) // 2)
+    except (ValueError, TypeError):
+        return False
+    # compare_digest y no "==": la comparacion normal sale antes en cuanto
+    # encuentra un byte distinto, y ese tiempo es informacion.
+    return hmac.compare_digest(dk.hex(), esperado)
+
+
+def firmar_sesion(usuario: str, rol: str, caduca: int, clave: bytes) -> str:
+    """Cookie con la sesion DENTRO de la firma: el servidor no guarda estado.
+
+    Sin estado no hay tabla de sesiones que crezca ni que se pierda al
+    reiniciar el panel, y la caducidad va firmada, asi que el navegador no
+    puede estirarla.
+    """
+    cuerpo = base64.urlsafe_b64encode(
+        ("%s|%s|%d" % (usuario, rol, caduca)).encode("utf-8")).decode().rstrip("=")
+    firma = hmac.new(clave, cuerpo.encode("ascii"), hashlib.sha256).hexdigest()
+    return cuerpo + "." + firma
+
+
+def leer_sesion(cookie: str, clave: bytes, ahora: float | None = None) -> dict | None:
+    """Valida la cookie. Devuelve None ante cualquier duda, sin explicar cual."""
+    if not cookie or "." not in cookie:
+        return None
+    cuerpo, _, firma = cookie.rpartition(".")
+    esperada = hmac.new(clave, cuerpo.encode("ascii"), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(firma, esperada):
+        return None
+    try:
+        relleno = "=" * (-len(cuerpo) % 4)
+        usuario, rol, caduca = base64.urlsafe_b64decode(cuerpo + relleno).decode(
+            "utf-8").split("|")
+        caduca_i = int(caduca)
+    except (ValueError, UnicodeDecodeError):
+        return None
+    if rol not in ROLES:
+        return None
+    if (time.time() if ahora is None else ahora) >= caduca_i:
+        return None
+    return {"usuario": usuario, "rol": rol, "caduca": caduca_i}
+
+
+class Cerrojo:
+    """Bloquea una cuenta tras varios intentos fallidos seguidos.
+
+    En memoria a proposito: el panel es un solo proceso y un reinicio que
+    borre los contadores no es un agujero -reiniciarlo requiere root en el
+    sensor, que es mas de lo que da adivinar una contrasena-.
+    """
+
+    def __init__(self, maximo: int = 5, minutos: int = 15) -> None:
+        self.maximo = maximo
+        self.segundos = minutos * 60
+        self._fallos: dict[str, tuple[int, float]] = {}
+
+    def bloqueado(self, usuario: str, ahora: float | None = None) -> bool:
+        t = time.time() if ahora is None else ahora
+        _, hasta = self._fallos.get(usuario, (0, 0.0))
+        if hasta and t < hasta:
+            return True
+        if hasta and t >= hasta:
+            self._fallos.pop(usuario, None)
+        return False
+
+    def fallo(self, usuario: str, ahora: float | None = None) -> None:
+        t = time.time() if ahora is None else ahora
+        n, _ = self._fallos.get(usuario, (0, 0.0))
+        n += 1
+        self._fallos[usuario] = (n, t + self.segundos if n >= self.maximo else 0.0)
+
+    def acierto(self, usuario: str) -> None:
+        self._fallos.pop(usuario, None)
+
+
+def cargar_usuarios(ruta: Path) -> dict[str, dict]:
+    """Lee el fichero de usuarios. Vive FUERA del repositorio, en modo 0600.
+
+    Nunca en cyberflow.toml, que esta en git: ahi no van credenciales, ni
+    siquiera en forma de hash.
+    """
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {u: d for u, d in datos.items()
+            if isinstance(d, dict) and d.get("rol") in ROLES and d.get("hash")}
+
+
+_AVISO_AUDITORIA: list[bool] = []
+
+
+def auditar(ruta: Path | None, evento: str, usuario: str, origen: str,
+            rol: str = "", detalle: str = "") -> None:
+    """Una linea JSON por evento de sesion, en el formato del registro del motor.
+
+    Un panel con login sin registro de accesos no sirve para nada en una
+    auditoria: "quien vio que y cuando" es media pregunta del tribunal.
+    """
+    if ruta is None:
+        return
+    linea = json.dumps({
+        "event": "panel",
+        "tipo": evento,
+        "usuario": usuario,
+        "rol": rol,
+        "origen": origen,
+        "detalle": detalle,
+        "logged_at": time.time(),
+    }, sort_keys=True)
+    try:
+        with ruta.open("a", encoding="utf-8") as f:
+            f.write(linea + "\n")
+    except OSError as e:
+        # No se deja caer el panel por no poder escribir el registro, pero
+        # tampoco se calla: un panel con login cuya auditoria no se escribe es
+        # peor que uno sin login, porque aparenta un rastro que no existe. Se
+        # avisa UNA vez -si no, cada peticion llenaria el journal-.
+        if not _AVISO_AUDITORIA:
+            _AVISO_AUDITORIA.append(True)
+            print("AVISO: no se puede escribir la auditoria en %s (%s). "
+                  "Revisa ReadWritePaths en la unidad." % (ruta, e))
+
+
+def html_por_rol(plantilla: str, rol: str) -> str:
+    """Recorta del HTML lo que el rol no debe ni recibir.
+
+    Para el admin solo se quitan las marcas. Para el lector se elimina el
+    contenido que hay entre ellas: no basta con esconderlo, porque el marcado
+    viaja igual al navegador y se lee con Ctrl+U.
+    """
+    if rol == "admin":
+        return plantilla.replace(MARCA_INI, "").replace(MARCA_FIN, "")
+    trozos = []
+    resto = plantilla
+    while MARCA_INI in resto:
+        antes, _, resto = resto.partition(MARCA_INI)
+        trozos.append(antes)
+        _, _, resto = resto.partition(MARCA_FIN)
+    trozos.append(resto)
+    return "".join(trozos)
+
+
+LOGIN = """<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberFlow &middot; acceso</title>
+<style>
+  :root { color-scheme: dark; --bg:#0b1020; --surface:#111a2e; --border:#253150;
+          --text:#dbe4f2; --dim:#8da2c0; --accent:#5eead4; --bad:#f87171; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center;
+         background:var(--bg); color:var(--text);
+         font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  form { width: min(92vw, 340px); background:var(--surface);
+         border:1px solid var(--border); border-radius:14px; padding:1.6rem; }
+  h1 { margin:0 0 0.2rem; font-size:1.15rem; letter-spacing:-0.01em; }
+  p.sub { margin:0 0 1.3rem; font-size:0.8rem; color:var(--dim); }
+  label { display:block; font-size:0.76rem; color:var(--dim); margin-bottom:0.25rem; }
+  input { width:100%; font:inherit; font-size:0.9rem; padding:0.5rem 0.65rem;
+          margin-bottom:0.9rem; border-radius:8px; border:1px solid var(--border);
+          background:var(--bg); color:var(--text); }
+  input:focus { outline:none; border-color:var(--accent); }
+  button { width:100%; font:inherit; font-size:0.9rem; font-weight:600;
+           padding:0.55rem; border:none; border-radius:8px; cursor:pointer;
+           background:var(--accent); color:#06231e; }
+  .err { font-size:0.78rem; color:var(--bad); margin:0 0 0.9rem; }
+</style>
+<form method="post" action="/login">
+  <h1>CyberFlow</h1>
+  <p class="sub">Panel de solo lectura del motor</p>
+  __ERROR__
+  <label for="u">Usuario</label>
+  <input id="u" name="usuario" autocomplete="username" autofocus required>
+  <label for="p">Contraseña</label>
+  <input id="p" name="contrasena" type="password" autocomplete="current-password" required>
+  <button type="submit">Entrar</button>
+</form>
+"""
+
+
 _CACHE_VARIABLES: dict[str, object] = {}
 
 
@@ -1888,6 +2214,40 @@ def parse_args() -> argparse.Namespace:
         help="CSV acumulado del que se toman los valores de ejemplo. Sin el, "
              "la tabla se pinta igual pero sin muestra: no se inventa ninguna",
     )
+    parser.add_argument(
+        "--usuarios",
+        type=Path,
+        default=None,
+        help="JSON con los usuarios y sus hashes, FUERA del repositorio y en "
+             "modo 0600. Sin el, el panel no arranca: prefiere no servir a "
+             "servir sin autenticacion",
+    )
+    parser.add_argument(
+        "--clave-sesion",
+        type=Path,
+        default=None,
+        help="fichero con la clave que firma las cookies, 0600. Se genera en "
+             "la instalacion con cyberflow_usuarios.py --clave-sesion",
+    )
+    parser.add_argument("--tls-cert", type=Path, default=None)
+    parser.add_argument(
+        "--tls-key",
+        type=Path,
+        default=None,
+        help="sin TLS la contrasena viaja en claro por el troncal ESPEJADO y "
+             "acaba en el propio anillo de PCAP de CyberFlow",
+    )
+    parser.add_argument("--auditoria", type=Path, default=None,
+                        help="registro de accesos, una linea JSON por evento")
+    parser.add_argument("--sesion-minutos", type=int, default=480)
+    parser.add_argument("--intentos-max", type=int, default=5)
+    parser.add_argument("--bloqueo-minutos", type=int, default=15)
+    parser.add_argument(
+        "--sin-autenticacion",
+        action="store_true",
+        help="arranca sin login, como antes. Solo para desarrollo local: "
+             "el panel queda accesible a cualquiera que alcance el puerto",
+    )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8788)
     return parser.parse_args()
@@ -1898,7 +2258,144 @@ def main() -> int:
     service_names = [name.strip() for name in args.services.split(",") if name.strip()]
     model_summary = load_model_summary(args.manifest_path, args.detector_name)
 
+    # Sin autenticacion solo si se pide EXPRESAMENTE. Si faltan los ficheros y
+    # nadie lo pidio, el panel no arranca: servir sin login porque un fichero no
+    # estaba es el modo de fallo que hay que evitar.
+    auth = not args.sin_autenticacion
+    usuarios: dict[str, dict] = {}
+    clave = b""
+    if auth:
+        if args.usuarios is None or args.clave_sesion is None:
+            print("faltan --usuarios o --clave-sesion. Generalos con "
+                  "scripts/setup/cyberflow_usuarios.py, o arranca con "
+                  "--sin-autenticacion si de verdad quieres el panel abierto.")
+            return 2
+        usuarios = cargar_usuarios(args.usuarios)
+        if not usuarios:
+            print("el fichero de usuarios esta vacio o no se pudo leer: %s"
+                  % args.usuarios)
+            return 2
+        clave = args.clave_sesion.read_bytes().strip()
+        if len(clave) < 32:
+            print("la clave de sesion es demasiado corta; regenerala.")
+            return 2
+        if args.tls_cert is None or args.tls_key is None:
+            print("faltan --tls-cert y --tls-key. Sin TLS la contrasena viaja "
+                  "en claro por el troncal espejado y acaba en el anillo de "
+                  "PCAP de este mismo sistema.")
+            return 2
+
+    cerrojo = Cerrojo(args.intentos_max, args.bloqueo_minutos)
+    HTML_POR_ROL = {rol: html_por_rol(HTML, rol) for rol in ROLES}
+
     class Handler(BaseHTTPRequestHandler):
+        # ---------------------------------------------------------- sesion
+        def _sesion(self) -> dict | None:
+            """Quien pregunta, o None. Con --sin-autenticacion, siempre admin."""
+            if not auth:
+                return {"usuario": "anonimo", "rol": "admin", "caduca": 0}
+            crudo = self.headers.get("Cookie", "")
+            for parte in crudo.split(";"):
+                nombre, _, valor = parte.strip().partition("=")
+                if nombre == COOKIE:
+                    return leer_sesion(valor, clave)
+            return None
+
+        def _origen(self) -> str:
+            return self.client_address[0] if self.client_address else "?"
+
+        def _send_html(self, cuerpo: str, codigo: int = 200,
+                       cookie: str | None = None) -> None:
+            datos = cuerpo.encode("utf-8")
+            self.send_response(codigo)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(datos)))
+            if cookie is not None:
+                self.send_header("Set-Cookie", cookie)
+            self.end_headers()
+            self.wfile.write(datos)
+
+        def _login_html(self, error: str = "") -> str:
+            marca = '<p class="err">%s</p>' % error if error else ""
+            return LOGIN.replace("__ERROR__", marca)
+
+        def _pedir_login(self, json_esperado: bool) -> None:
+            if json_esperado:
+                body = json.dumps({"error": "sesion requerida"}).encode("utf-8")
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            else:
+                self._send_html(self._login_html(), 401)
+
+        def _prohibido(self) -> None:
+            body = json.dumps({"error": "rol insuficiente"}).encode("utf-8")
+            self.send_response(403)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        # ------------------------------------------------------------ POST
+        def do_POST(self) -> None:  # noqa: N802
+            path, _, _ = self.path.partition("?")
+            if path == "/logout":
+                s = self._sesion()
+                if s:
+                    auditar(args.auditoria, "salida", s["usuario"],
+                            self._origen(), s["rol"])
+                self.send_response(303)
+                self.send_header("Location", "/")
+                self.send_header("Set-Cookie",
+                                 "%s=; Max-Age=0; Path=/; HttpOnly; Secure; "
+                                 "SameSite=Strict" % COOKIE)
+                self.end_headers()
+                return
+
+            if path != "/login":
+                self.send_error(404)
+                return
+
+            largo = int(self.headers.get("Content-Length", "0") or 0)
+            campos = urllib.parse.parse_qs(
+                self.rfile.read(min(largo, 4096)).decode("utf-8", "replace"))
+            usuario = (campos.get("usuario") or [""])[0][:64]
+            contrasena = (campos.get("contrasena") or [""])[0][:256]
+            origen = self._origen()
+
+            if cerrojo.bloqueado(usuario):
+                auditar(args.auditoria, "bloqueado", usuario, origen)
+                self._send_html(self._login_html(
+                    "Cuenta bloqueada temporalmente por intentos fallidos."), 429)
+                return
+
+            ficha = usuarios.get(usuario)
+            # Se comprueba el hash aunque el usuario no exista, contra uno
+            # ficticio: si no, un usuario inexistente responderia al instante y
+            # eso dice cuales existen.
+            almacenado = ficha["hash"] if ficha else hash_contrasena("x" * 24)
+            valido = verificar_contrasena(almacenado, contrasena) and ficha is not None
+
+            if not valido:
+                cerrojo.fallo(usuario)
+                auditar(args.auditoria, "fallo", usuario, origen)
+                self._send_html(self._login_html("Usuario o contraseña incorrectos."), 401)
+                return
+
+            cerrojo.acierto(usuario)
+            caduca = int(time.time() + args.sesion_minutos * 60)
+            galleta = firmar_sesion(usuario, ficha["rol"], caduca, clave)
+            auditar(args.auditoria, "entrada", usuario, origen, ficha["rol"])
+            self.send_response(303)
+            self.send_header("Location", "/")
+            self.send_header(
+                "Set-Cookie",
+                "%s=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=Strict"
+                % (COOKIE, galleta, args.sesion_minutos * 60))
+            self.end_headers()
+
         def _send_json(self, payload: dict | list) -> None:
             body = json.dumps(payload).encode("utf-8")
             self.send_response(200)
@@ -1909,13 +2406,29 @@ def main() -> int:
 
         def do_GET(self) -> None:  # noqa: N802
             path, _, query = self.path.partition("?")
+
+            if path == "/login":
+                self._send_html(self._login_html())
+                return
+
+            sesion = self._sesion()
+            if sesion is None:
+                # Las llamadas de la API responden JSON; la pagina, el login.
+                self._pedir_login(path.startswith("/api/"))
+                return
+            if path in RUTAS_ADMIN and sesion["rol"] != "admin":
+                auditar(args.auditoria, "denegado", sesion["usuario"],
+                        self._origen(), sesion["rol"], path)
+                self._prohibido()
+                return
+
             if path == "/":
-                body = HTML.encode("utf-8")
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
+                # El HTML se recorta por rol ANTES de enviarlo: al lector no le
+                # llegan las secciones de desarrollo, no se le ocultan.
+                datos = json.dumps({"usuario": sesion["usuario"],
+                                    "rol": sesion["rol"]}).replace("<", "\\u003c")
+                pagina = HTML_POR_ROL[sesion["rol"]].replace("__SESION__", datos)
+                self._send_html(pagina)
                 return
             if path == "/api/status":
                 decisions = read_decisions(args.log_path, limit=2000)
@@ -1983,8 +2496,24 @@ def main() -> int:
         def log_message(self, *args_: object) -> None:  # silencioso, evita ruido en journal
             pass
 
-    print(f"Dashboard: http://{args.host}:{args.port}/")
-    ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
+    servidor = ThreadingHTTPServer((args.host, args.port), Handler)
+    esquema = "http"
+    if args.tls_cert and args.tls_key:
+        # TLS_SERVER exige TLS 1.2 como minimo y desactiva la renegociacion
+        # insegura por omision. El certificado es autofirmado: no hay CA que
+        # valide un sensor interno, asi que se comprueba por huella.
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(certfile=str(args.tls_cert), keyfile=str(args.tls_key))
+        servidor.socket = ctx.wrap_socket(servidor.socket, server_side=True)
+        esquema = "https"
+    elif auth:
+        # No deberia llegarse aqui -parse ya lo rechaza-, pero si alguien
+        # cambia esa comprobacion, que no pase en silencio.
+        print("AVISO: hay login pero NO hay TLS. La contrasena viaja en claro.")
+
+    print(f"Dashboard: {esquema}://{args.host}:{args.port}/"
+          + ("" if auth else "   [SIN AUTENTICACION]"))
+    servidor.serve_forever()
     return 0
 
 

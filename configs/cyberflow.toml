@@ -123,3 +123,30 @@ puerto = 8788
 # Si llega por Tailscale a traves de un enrutador de subred, el sensor ve la
 # IP de ESE enrutador, no la del portatil: Tailscale traduce el origen.
 permitir = ["10.10.10.30"]
+
+# Autenticacion. Dos cuentas: "admin" ve todo y puede conmutar entre la vista
+# operativa y la de desarrollo con un boton; "lector" solo recibe la operativa
+# -y la recibe recortada en el SERVIDOR, no escondida con CSS-.
+#
+# El login NO sustituye a "permitir": son dos capas y se quedan las dos.
+#
+# Las credenciales NO viven aqui. Este fichero esta en git. Los tres de abajo
+# se crean en la maquina con scripts/setup/cyberflow_usuarios.py y van en 0600.
+autenticacion = true
+usuarios = "/etc/cyberflow/usuarios.json"
+clave_sesion = "/etc/cyberflow/clave-sesion"
+
+# TLS obligatorio cuando hay login, y no por ceremonia: el trafico entre el
+# bastion y el sensor cruza el troncal espejado -ver la exclusion de
+# 10.10.60.11/32-, asi que en HTTP plano la contrasena acabaria dentro del
+# anillo de PCAP de este mismo sistema.
+tls_cert = "/etc/cyberflow/panel.crt"
+tls_key = "/etc/cyberflow/panel.key"
+
+# Quien entro, cuando y desde donde. Va bajo la raiz y no bajo /etc porque la
+# unidad tiene ProtectSystem=strict.
+auditoria = "logs/panel_auditoria.jsonl"
+
+sesion_minutos = 480
+intentos_max = 5
+bloqueo_minutos = 15
