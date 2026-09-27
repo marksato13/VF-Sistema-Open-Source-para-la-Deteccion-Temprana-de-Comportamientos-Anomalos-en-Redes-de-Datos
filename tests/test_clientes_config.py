@@ -92,6 +92,45 @@ class Generacion(unittest.TestCase):
             self.assertNotIn("\\usr", texto)
 
 
+class ForzarLaborable(unittest.TestCase):
+    """El interruptor del ensayo: presente solo si se pide, y bien formado."""
+
+    def test_por_omision_no_aparece(self):
+        for texto in cc.render(args()).values():
+            self.assertNotIn("--forzar-laborable", texto)
+
+    def test_cuando_se_pide_lo_llevan_los_seis(self):
+        u = cc.render(args(forzar_laborable=True))
+        servicios = [t for n, t in u.items() if n.endswith(".service")]
+        self.assertEqual(len(servicios), 6)
+        for texto in servicios:
+            self.assertIn("--forzar-laborable", texto)
+
+    def test_la_continuacion_de_linea_no_se_come_la_siguiente(self):
+        # El fallo que ya cometimos en el acumulador: una barra al final de la
+        # ultima linea del ExecStart hace que systemd se trague la linea que
+        # viene despues. Aqui se comprueba que ninguna linea del ExecStart
+        # termina en barra sin tener continuacion real.
+        for nombre, texto in cc.render(args(forzar_laborable=True)).items():
+            if not nombre.endswith(".service"):
+                continue
+            lineas = texto.splitlines()
+            for i, linea in enumerate(lineas):
+                if linea.rstrip().endswith("\\"):
+                    self.assertLess(i + 1, len(lineas),
+                                    "%s: barra final sin linea siguiente" % nombre)
+                    self.assertTrue(lineas[i + 1].strip(),
+                                    "%s: la barra se come una linea vacia" % nombre)
+            # Y que el argumento cierra el ExecStart: es la ultima linea del
+            # bloque y no arrastra barra.
+            bloque = texto.split("ExecStart=", 1)[1].splitlines()
+            fin = 0
+            while bloque[fin].rstrip().endswith("\\"):
+                fin += 1
+            self.assertIn("--forzar-laborable", bloque[fin])
+            self.assertFalse(bloque[fin].rstrip().endswith("\\"))
+
+
 class Validaciones(unittest.TestCase):
     def test_base_invalida(self):
         fallos = cc.comprobar(args(base="no-es-una-ip"))

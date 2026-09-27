@@ -81,8 +81,16 @@ DOMINIOS = ["ad.francos-sac.com", "srv.francos-sac.com", "intranet.francos-sac.c
             "erp.francos-sac.com", "correo.francos-sac.com", "wiki.francos-sac.com"]
 
 
-def factor_horario(ahora: datetime.datetime) -> float:
-    """Curva diaria: laborable activo, noche tranquila, fin de semana flojo."""
+def factor_horario(ahora: datetime.datetime, forzar_laborable: bool = False) -> float:
+    """Curva diaria: laborable activo, noche tranquila, fin de semana flojo.
+
+    ``forzar_laborable`` ignora la caida del fin de semana. Es para ENSAYOS, no
+    para medir: sube el trafico de los seis perfiles pero no el de Wazuh, los
+    AAA, pfSense ni CARP, que seguirian en su regimen real. El resultado dice
+    "martes" en la VLAN 20 y "domingo" en todo lo demas, y un modelo entrenado
+    asi marcaria como anomalia la manana del lunes. Sirve para llenar el anillo
+    y estresar la cadena antes de una captura de verdad; para nada mas.
+    """
     h = ahora.hour + ahora.minute / 60.0
     if 8 <= h < 13:
         base = 1.0
@@ -94,7 +102,7 @@ def factor_horario(ahora: datetime.datetime) -> float:
         base = 0.35
     else:
         base = 0.12          # madrugada: poco, pero nunca cero
-    if ahora.weekday() >= 5:
+    if ahora.weekday() >= 5 and not forzar_laborable:
         base *= 0.3
     return base
 
@@ -276,6 +284,11 @@ def main() -> int:
     p.add_argument("--puerto-https", type=int, default=443)
     p.add_argument("--intensidad", type=float, default=1.0,
                    help="multiplica el ritmo; 2.0 = el doble de trafico")
+    p.add_argument("--forzar-laborable", action="store_true",
+                   help="ignora la caida del fin de semana. SOLO PARA ENSAYOS: "
+                        "el trafico sintetico sube pero el de la infraestructura "
+                        "real no, asi que el dataset resultante no describe "
+                        "ningun dia que haya existido")
     p.add_argument("--listar-perfiles", action="store_true")
     p.add_argument("--una-vuelta", action="store_true",
                    help="ejecuta una accion de cada tipo y sale; para comprobar")
@@ -296,6 +309,13 @@ def main() -> int:
     pesos = [perfil["acciones"][a] for a in acciones]
     print("perfil %s desde %s -> %s" % (args.perfil, args.origen or "por omision",
                                         args.servidor), flush=True)
+    if args.forzar_laborable:
+        # Que quede en el journal de cada servicio. Un ensayo que se cuela en un
+        # dataset de medicion es un fallo caro y silencioso: esta linea es la
+        # unica prueba, del lado del generador, de que la curva iba forzada.
+        print("AVISO: --forzar-laborable activo. El fin de semana se genera con "
+              "carga de dia laborable. SOLO PARA ENSAYOS: no uses estos datos "
+              "para entrenar ni para calibrar el umbral.", flush=True)
 
     if args.una_vuelta:
         for nombre in acciones:
@@ -310,7 +330,8 @@ def main() -> int:
     fin_rafaga = 0.0
     while True:
         ahora = datetime.datetime.now()
-        factor = factor_horario(ahora) * max(args.intensidad, 0.01)
+        factor = (factor_horario(ahora, args.forzar_laborable)
+                  * max(args.intensidad, 0.01))
 
         if perfil.get("rafagas"):
             if en_rafaga and time.time() > fin_rafaga:

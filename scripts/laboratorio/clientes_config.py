@@ -52,7 +52,7 @@ ExecStart={python} {raiz}/clientes_lab.py \\
     --perfil {perfil} \\
     --origen {origen} \\
     --servidor {servidor} \\
-    --dns {dns}
+    --dns {dns}{forzar}
 Restart=always
 RestartSec=5
 # El generador imprime una linea por accion: a 1,9 acciones/s son ~272.000
@@ -94,11 +94,16 @@ def render(args) -> dict[str, str]:
     servicios = " ".join("cyberflow-lab-%s.service" % p for p in PERFILES)
     unidades = {"cyberflow-lab.target": TARGET.format(cabecera=cabecera,
                                                       servicios=servicios)}
+    # La continuacion de linea va DELANTE del argumento, no detras de --dns:
+    # una barra al final de la ultima linea del ExecStart se come la linea
+    # siguiente de la unidad. Ya paso una vez con el acumulador.
+    forzar = " \\\n    --forzar-laborable" if getattr(args, "forzar_laborable", False) else ""
     for i, perfil in enumerate(PERFILES):
         unidades["cyberflow-lab-%s.service" % perfil] = UNIDAD.format(
             cabecera=cabecera, perfil=perfil, origen=str(base + i),
             usuario=args.usuario, raiz=args.raiz.rstrip("/"),
-            python=args.python, servidor=args.servidor, dns=args.dns)
+            python=args.python, servidor=args.servidor, dns=args.dns,
+            forzar=forzar)
     return unidades
 
 
@@ -156,6 +161,10 @@ def main() -> int:
     p.add_argument("--raiz", default="/home/adminclientes/laboratorio")
     p.add_argument("--python", default="/usr/bin/python3")
     p.add_argument("--destino", default="/etc/systemd/system")
+    p.add_argument("--forzar-laborable", action="store_true",
+                   help="genera las unidades con --forzar-laborable. SOLO para "
+                        "el ensayo de fin de semana: los datos que salgan no "
+                        "sirven para entrenar ni para calibrar")
     modo = p.add_mutually_exclusive_group(required=True)
     modo.add_argument("--comprobar", action="store_true")
     modo.add_argument("--mostrar", action="store_true")

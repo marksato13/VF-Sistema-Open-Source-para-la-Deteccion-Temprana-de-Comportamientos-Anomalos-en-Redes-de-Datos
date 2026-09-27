@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import importlib.util
 import socket
 import sys
@@ -91,6 +92,34 @@ class DestinoDelPing(unittest.TestCase):
         cuerpo = texto[inicio:inicio + 1200]
         self.assertIn("destino = self.servidor", cuerpo)
         self.assertNotIn("self.servidor_dns", cuerpo)
+
+
+class CurvaHoraria(unittest.TestCase):
+    """El fin de semana cae al 30 %, salvo que se fuerce para un ensayo."""
+
+    SABADO = datetime.datetime(2026, 9, 26, 10, 0)   # sabado
+    MARTES = datetime.datetime(2026, 9, 22, 10, 0)   # laborable, misma hora
+
+    def test_el_fin_de_semana_cae(self):
+        self.assertAlmostEqual(cl.factor_horario(self.SABADO),
+                               cl.factor_horario(self.MARTES) * 0.3)
+
+    def test_forzado_iguala_el_sabado_al_martes(self):
+        self.assertEqual(cl.factor_horario(self.SABADO, forzar_laborable=True),
+                         cl.factor_horario(self.MARTES))
+
+    def test_forzar_no_toca_los_dias_laborables(self):
+        # Si tocara, el ensayo y la medicion no serian comparables ni siquiera
+        # entre semana, y el interruptor dejaria de ser reversible.
+        for h in range(0, 24):
+            t = self.MARTES.replace(hour=h)
+            self.assertEqual(cl.factor_horario(t),
+                             cl.factor_horario(t, forzar_laborable=True))
+
+    def test_la_madrugada_nunca_es_cero(self):
+        # Una entidad que calla del todo desaparece del dataset; el motor la
+        # trata con empty_window_heuristic y no aprende nada de ella.
+        self.assertGreater(cl.factor_horario(self.MARTES.replace(hour=3)), 0)
 
 
 if __name__ == "__main__":
