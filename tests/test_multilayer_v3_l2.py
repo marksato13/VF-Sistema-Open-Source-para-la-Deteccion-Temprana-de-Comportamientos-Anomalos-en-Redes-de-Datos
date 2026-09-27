@@ -485,5 +485,83 @@ class NoAlteraAV2(unittest.TestCase):
         )
 
 
+class UnaSolaPasadaPorPcap(unittest.TestCase):
+    """El acumulador parsea capa 3 y capa 2 abriendo cada PCAP una sola vez.
+
+    Antes recorria la lista dos veces con medio minuto entre ambas, y el
+    podador del anillo borraba lo mas viejo en ese hueco: la segunda lectura
+    moria con FileNotFoundError y se perdia la pasada entera. Estas pruebas
+    fijan que la pasada unica da exactamente lo mismo que la doble, para que
+    nadie deshaga el cambio creyendo que altera las features.
+    """
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+        self.addCleanup(self.tmp.cleanup)
+        tramas = [
+            (100.0, trama("ff:ff:ff:ff:ff:ff", MAC_CLIENTE, 20, 0x0806,
+                          arp(MAC_CLIENTE, CLIENTE, "10.10.20.99"))),
+            (100.5, trama(MAC_FIREWALL, MAC_CLIENTE, 20, 0x0800,
+                          ipv4(CLIENTE, SERVIDOR, tcp(44000, 443, 0x02)))),
+            (101.0, trama("ff:ff:ff:ff:ff:ff", MAC_OTRA, 30, 0x0806,
+                          arp(MAC_OTRA, "10.10.30.44", "10.10.30.1"))),
+            # Fuera de la red de entidades: no debe aportar observacion.
+            (101.5, trama("ff:ff:ff:ff:ff:ff", MAC_OTRA, 30, 0x0806,
+                          arp(MAC_OTRA, "192.168.1.5", "192.168.1.1"))),
+        ]
+        self.ficheros = []
+        for i, t in enumerate(tramas):
+            ruta = self.dir / f"live-{i}.pcap"
+            escribir_pcap(ruta, [t])
+            self.ficheros.append(ruta)
+
+    def pasada_unica(self, ficheros):
+        """Lo que hace acumular_v3: un solo recorrido, ambos parseos."""
+        capa2 = []
+        ilegibles = 0
+        for ruta in ficheros:
+            try:
+                for marca, cuerpo in v2.iter_pcap_frames(ruta):
+                    obs = extractor.l2_en_alcance(marca, cuerpo, RED, frozenset())
+                    if obs is not None:
+                        capa2.append(obs)
+            except Exception:
+                ilegibles += 1
+        capa2.sort(key=lambda o: o.timestamp)
+        return capa2, ilegibles
+
+    def test_da_lo_mismo_que_load_l2_observations(self) -> None:
+        esperado = extractor.load_l2_observations(self.ficheros, RED, frozenset())
+        obtenido, ilegibles = self.pasada_unica(self.ficheros)
+        self.assertEqual(ilegibles, 0)
+        self.assertEqual(obtenido, esperado)
+        self.assertTrue(esperado, "el caso no esta ejercitando nada")
+
+    def test_respeta_los_protocolos_excluidos_igual_que_la_doble(self) -> None:
+        excluidos = frozenset({-1})  # ARP lleva protocol = -1
+        esperado = extractor.load_l2_observations(self.ficheros, RED, excluidos)
+        obtenido, _ = self.pasada_unica(self.ficheros)
+        obtenido = [o for o in obtenido if o.protocol not in excluidos]
+        self.assertEqual(obtenido, esperado)
+
+    def test_un_pcap_que_desaparece_no_tumba_la_pasada(self) -> None:
+        # Exactamente el fallo de produccion: el podador se lleva un fichero
+        # despues de listarlo. La pasada unica lo cuenta y sigue; la doble
+        # moria con FileNotFoundError.
+        fantasma = self.dir / "live-borrado.pcap"
+        escribir_pcap(fantasma, [(102.0, trama("ff:ff:ff:ff:ff:ff", MAC_CLIENTE,
+                                               20, 0x0806,
+                                               arp(MAC_CLIENTE, CLIENTE, "10.10.20.98")))])
+        lista = self.ficheros + [fantasma]
+        fantasma.unlink()
+        obtenido, ilegibles = self.pasada_unica(lista)
+        self.assertEqual(ilegibles, 1)
+        self.assertEqual(obtenido,
+                         extractor.load_l2_observations(self.ficheros, RED, frozenset()))
+        with self.assertRaises(FileNotFoundError):
+            extractor.load_l2_observations(lista, RED, frozenset())
+
+
 if __name__ == "__main__":
     unittest.main()

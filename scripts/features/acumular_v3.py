@@ -139,7 +139,14 @@ def main() -> int:
         print(json.dumps({"event": "acumular", "estado": "sin_pcap"}))
         return 0
 
+    # Capa 3 y capa 2 se parsean en la MISMA pasada sobre cada PCAP. Antes se
+    # recorria la lista dos veces -una aqui y otra en load_l2_observations- con
+    # medio minuto entre ambas, y el podador del anillo (retener_minutos, cada
+    # 5 min) borraba lo mas viejo en ese hueco: la segunda lectura moria con
+    # FileNotFoundError y la pasada entera se perdia. Con una sola apertura la
+    # carrera no existe, y ademas se lee la mitad.
     contextos = []
+    capa2 = []
     ilegibles = 0
     for ruta in ficheros:
         try:
@@ -147,8 +154,12 @@ def main() -> int:
                 ctx = v3.parse_con_contexto(marca, trama)
                 if ctx is not None and ctx.packet.protocol not in excluidos:
                     contextos.append(ctx)
+                l2 = v3.l2_en_alcance(marca, trama, red, excluidos)
+                if l2 is not None:
+                    capa2.append(l2)
         except Exception:
             ilegibles += 1
+    capa2.sort(key=lambda o: o.timestamp)
 
     if not contextos:
         print(json.dumps({"event": "acumular", "estado": "sin_paquetes"}))
@@ -169,7 +180,17 @@ def main() -> int:
 
         paquetes = v2.attribute_packets(paquetes_ip, red)
         apps = v2.load_app_observations(corte, red) if eventos else []
-        capa2 = v3.load_l2_observations(ficheros, red, excluidos)
+        # La rebanada de eve.json se pide 90 s antes del primer paquete para no
+        # cortar un evento por la mitad, pero del anillo de PCAP no hay nada de
+        # esa franja. Una observacion de aplicacion anterior a `inicio`
+        # describiria trafico que las 20 variables de paquete no pueden ver, y
+        # ademas v2 rechaza un capture_start posterior a la primera
+        # observacion. Asi dio la cara: el acumulador murio en cuanto eve.json
+        # tuvo un evento en esos 90 s, y dejo de escribir durante horas.
+        # No se baja el capture_start para acallarlo: eso marcaria como
+        # elegibles ventanas con la historia de paquetes truncada.
+        apps_previas = sum(1 for a in apps if a.timestamp < inicio)
+        apps = [a for a in apps if a.timestamp >= inicio]
         filas = v3.build_rows(args.campaign_id, paquetes, apps, capa2,
                               capture_start=inicio)
 
@@ -219,6 +240,8 @@ def main() -> int:
         "paquetes": len(contextos),
         "duplicados_espejo": duplicados,
         "eventos_eve": eventos,
+        "apps_previas_descartadas": apps_previas,
+        "observaciones_capa2": len(capa2),
         "filas_generadas": len(filas),
         "filas_fuera_de_alcance": fuera_de_alcance,
         "filas_en_margen": len(candidatas),

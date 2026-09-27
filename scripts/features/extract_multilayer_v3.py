@@ -250,6 +250,31 @@ def deduplicar_espejo(
     return conservados, len(descartados)
 
 
+def l2_en_alcance(
+    timestamp: float,
+    frame: bytes,
+    entity_network: ipaddress.IPv4Network,
+    excluded_protocols: frozenset[int] = frozenset(),
+) -> L2Observation | None:
+    """Decide si una trama aporta una observacion de capa 2, o ninguna.
+
+    Existe para que haya **un solo** sitio donde se aplique este criterio. El
+    acumulador parsea capa 3 y capa 2 en la misma pasada sobre cada PCAP -abrir
+    el fichero dos veces dejaba una ventana por la que el podador del anillo se
+    llevaba el fichero entre lectura y lectura- y sin este ayudante tendria que
+    repetir aqui el filtro, con lo que las dos rutas podrian divergir en
+    silencio.
+    """
+    parsed = parse_ethernet_l2(timestamp, frame)
+    if parsed is None:
+        return None
+    if parsed.protocol in excluded_protocols:
+        return None
+    if not v2._in_scope(parsed.sender_ip, entity_network):
+        return None
+    return parsed
+
+
 def load_l2_observations(
     paths: Iterable[Path],
     entity_network: ipaddress.IPv4Network,
@@ -258,14 +283,10 @@ def load_l2_observations(
     observations: list[L2Observation] = []
     for path in paths:
         for timestamp, frame in v2.iter_pcap_frames(path):
-            parsed = parse_ethernet_l2(timestamp, frame)
-            if parsed is None:
-                continue
-            if parsed.protocol in excluded_protocols:
-                continue
-            if not v2._in_scope(parsed.sender_ip, entity_network):
-                continue
-            observations.append(parsed)
+            parsed = l2_en_alcance(timestamp, frame, entity_network,
+                                   excluded_protocols)
+            if parsed is not None:
+                observations.append(parsed)
     observations.sort(key=lambda item: item.timestamp)
     return observations
 
