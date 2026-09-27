@@ -291,12 +291,19 @@ def load_app_observations(
             elif event_type == "dns":
                 dns = event.get("dns", {})
                 dns_type = dns.get("type")
-                if dns_type == "request":
+                # Suricata emite "query" y "answer", nunca "request"/"response".
+                # Este fichero (v1) no lo usa el motor, pero llevaba el mismo
+                # fallo que v2 y su prueba lo daba por bueno. Ver el comentario
+                # largo en extract_multilayer_v2.py y las cifras medidas alli.
+                if dns_type == "query":
                     entity_ip = event.get("src_ip", "")
                     if _in_scope(entity_ip, entity_network):
                         observations.append(AppObservation(timestamp, entity_ip, "dns_query"))
-                elif dns_type == "response":
-                    entity_ip = event.get("dest_ip", "")
+                elif dns_type == "answer":
+                    # src_ip: Suricata registra la respuesta con las direcciones
+                    # del flujo, asi que "src" es quien pregunto. Mismo cambio
+                    # que en v2, donde estan las cifras que lo respaldan.
+                    entity_ip = event.get("src_ip", "")
                     if _in_scope(entity_ip, entity_network) and dns.get("rcode") == "NXDOMAIN":
                         observations.append(AppObservation(timestamp, entity_ip, "dns_nxdomain", True))
             elif event_type == "tls":

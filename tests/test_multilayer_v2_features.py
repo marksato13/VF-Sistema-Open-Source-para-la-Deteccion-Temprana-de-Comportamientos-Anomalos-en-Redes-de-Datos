@@ -148,14 +148,22 @@ class MultilayerV2FeatureTests(unittest.TestCase):
                 "event_type": "dns",
                 "src_ip": self.client,
                 "dest_ip": self.server,
-                "dns": {"type": "request", "rcode": "NOERROR", "rrname": "server.ppi.lab"},
+                # "query"/"answer" son los valores REALES de Suricata.
+                # Antes ponia "request"/"response", que no existen: la
+                # asercion de abajo pasaba en verde mientras las tres
+                # variables de DNS salian a cero en los datasets reales.
+                "dns": {"type": "query", "rcode": "NOERROR", "rrname": "server.ppi.lab"},
             },
             {
                 "timestamp": iso_timestamp(1004.2),
                 "event_type": "dns",
-                "src_ip": self.server,
-                "dest_ip": self.client,
-                "dns": {"type": "response", "rcode": "NXDOMAIN"},
+                # Suricata registra la respuesta con las direcciones del
+                # FLUJO: src sigue siendo quien pregunto. Antes estaban al
+                # reves, y con la atribucion corregida el NXDOMAIN habria
+                # caido en el servidor en vez de en el cliente.
+                "src_ip": self.client,
+                "dest_ip": self.server,
+                "dns": {"type": "answer", "rcode": "NXDOMAIN"},
             },
             {
                 "timestamp": iso_timestamp(1004.3),

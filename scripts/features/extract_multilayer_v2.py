@@ -371,6 +371,25 @@ def load_packet_observations(
     return attribute_packets(packets, entity_network)
 
 
+# Suricata NUNCA ha emitido "request"/"response" en dns.type: emite "query" y
+# "answer", tanto en el formato v1 como en el v2 que es el predeterminado desde
+# la 5.0. El extractor comparaba contra los dos nombres equivocados, asi que
+# dns_query_rate_60s, unique_dns_name_ratio_60s y dns_nxdomain_ratio_60s
+# salieron a cero en TODOS los datasets construidos hasta ahora, incluido aquel
+# con el que se entreno el modelo publicado.
+#
+# Sobrevivio porque las pruebas de este fichero alimentaban "request" y
+# "response": comprobaban lo que el parser suponia, no lo que la herramienta
+# produce. La correccion de verdad no es esta linea, es que los datos de prueba
+# salgan de un evento real -ver tests/test_dns_formato_suricata.py-.
+#
+# Medido en el sensor sobre 80.000 lineas de eve.json:
+#   13.838 "query" · 13.633 "answer" · 0 "request" · 0 "response"
+#   de las respuestas, 3.870 con rcode NXDOMAIN (un 28 %)
+_DNS_CONSULTA = frozenset({"query"})
+_DNS_RESPUESTA = frozenset({"answer"})
+
+
 def _dns_query_name(dns: dict) -> str:
     rrname = dns.get("rrname")
     if isinstance(rrname, str) and rrname:
@@ -420,7 +439,7 @@ def load_app_observations(
             elif event_type == "dns":
                 dns = event.get("dns", {})
                 dns_type = dns.get("type")
-                if dns_type == "request":
+                if dns_type in _DNS_CONSULTA:
                     entity_ip = event.get("src_ip", "")
                     if _in_scope(entity_ip, entity_network):
                         observations.append(
@@ -431,8 +450,19 @@ def load_app_observations(
                                 dns_name=_dns_query_name(dns),
                             )
                         )
-                elif dns_type == "response":
-                    entity_ip = event.get("dest_ip", "")
+                elif dns_type in _DNS_RESPUESTA:
+                    # src_ip, no dest_ip: Suricata registra el evento de
+                    # respuesta con las direcciones del FLUJO, no las del
+                    # paquete, asi que "src" sigue siendo quien pregunto -igual
+                    # que en la consulta-. Atribuirlo al destino se lo apuntaba
+                    # al servidor de DNS.
+                    #
+                    # Medido en el sensor sobre un trozo real de eve.json: los
+                    # 567 NXDOMAIN caian todos en 10.10.10.1, que no hizo ni
+                    # una consulta, mientras 10.10.10.20 -que hizo 568- se
+                    # quedaba a cero. Con las dos mitades en entidades
+                    # distintas, el ratio salia cero en ambas.
+                    entity_ip = event.get("src_ip", "")
                     if _in_scope(entity_ip, entity_network) and dns.get("rcode") == "NXDOMAIN":
                         observations.append(AppObservation(timestamp, entity_ip, "dns_nxdomain", True))
             elif event_type == "tls":
