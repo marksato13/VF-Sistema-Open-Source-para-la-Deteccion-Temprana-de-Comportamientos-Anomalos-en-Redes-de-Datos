@@ -164,6 +164,7 @@ ExecStart={python} {raiz}/scripts/engine/dashboard.py \\
     --schema-extra {raiz}/{esquema_extra} \\
     --descripciones {raiz}/{descripciones} \\
     --dataset {raiz}/{dataset} \\
+    --escenarios {raiz}/{escenarios} \\
     --services ppi-motor.service,ppi-motor-capture.service,suricata.service \\{calibrado}{acceso_args}
     --host {direccion} --port {puerto}
 Restart=always
@@ -513,6 +514,7 @@ def render(cfg: dict) -> dict[str, str]:
             esquema_extra=rut.get("esquema_extra", "configs/features/multilayer-v3.json"),
             descripciones=rut.get("descripciones", "configs/features/descripciones.json"),
             dataset=rut.get("dataset", "artifacts/linea-base/multilayer-v3.csv"),
+            escenarios=rut.get("escenarios", "configs/escenarios.json"),
             **comun)
     return unidades
 

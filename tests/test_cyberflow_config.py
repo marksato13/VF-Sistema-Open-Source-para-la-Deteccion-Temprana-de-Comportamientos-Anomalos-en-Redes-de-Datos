@@ -113,6 +113,13 @@ class Generacion(unittest.TestCase):
         p = cc.render(cfg(panel__activo=True))["ppi-dashboard.service"]
         self.assertIn("--manifest-path /no/existe/cyberflow/artifacts/model/manifest.json", p)
 
+    def test_el_panel_recibe_los_escenarios(self):
+        # Sin --escenarios explicito el panel caeria al valor por omision, que se
+        # resuelve contra WorkingDirectory; pasarlo con la raiz lo hace
+        # inequivoco y lo deja escrito en la unidad, igual que --dataset.
+        p = cc.render(cfg(panel__activo=True))["ppi-dashboard.service"]
+        self.assertIn("--escenarios /no/existe/cyberflow/configs/escenarios.json", p)
+
     def test_filtro_bpf_llega_a_tcpdump(self):
         c = cc.render(cfg(captura__filtro_bpf="vlan and ip"))["ppi-motor-capture.service"]
         self.assertIn("vlan and ip", c)
