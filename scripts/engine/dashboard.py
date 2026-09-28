@@ -434,6 +434,30 @@ HTML = """<!doctype html>
   .chart-tip b { font-variant-numeric: tabular-nums; }
   .chart-tip .t-p { color: var(--ok); } .chart-tip .t-a { color: var(--danger); }
 
+  /* Asistente guiado (recorrido). Botón flotante siempre disponible; en modo
+     demo se abre solo la primera vez. Foco = recuadro con sombra que oscurece
+     todo lo demás; tip = globo con el texto del paso. */
+  .tour-fab { position: fixed; right: 18px; bottom: 18px; z-index: 40; display: inline-flex;
+    align-items: center; gap: 0.4rem; background: var(--accent); color: #06251f; border: none;
+    border-radius: 999px; padding: 0.55rem 0.95rem; font: 600 0.82rem var(--sans); cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
+  .tour-fab:hover { filter: brightness(1.08); }
+  .tour-foco { position: fixed; z-index: 50; border-radius: 10px; border: 2px solid var(--accent);
+    box-shadow: 0 0 0 9999px rgba(4,8,16,0.62); pointer-events: none; transition: all .2s ease; }
+  .tour-tip { position: fixed; z-index: 51; max-width: 340px; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .tour-tip h4 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--text); }
+  .tour-tip p { margin: 0 0 0.75rem; font-size: 0.84rem; color: var(--text-dim); line-height: 1.45; }
+  .tour-tip .row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+  .tour-tip .prog { font: 0.74rem var(--mono); color: var(--text-dim); }
+  .tour-tip .btns { display: flex; gap: 0.4rem; }
+  .tour-tip button { font: 0.8rem var(--sans); border-radius: 7px; padding: 0.32rem 0.72rem;
+    cursor: pointer; border: 1px solid var(--border); }
+  .tour-tip .next { background: var(--accent); color: #06251f; border-color: var(--accent); font-weight: 600; }
+  .tour-tip .prev { background: var(--surface); color: var(--text); }
+  .tour-tip .skip { background: none; color: var(--text-dim); }
+
   table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
   .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; overflow-x: auto; }
   th { text-align: left; padding: 0.6rem 0.9rem; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); border-bottom: 1px solid var(--border); }
@@ -623,6 +647,13 @@ HTML = """<!doctype html>
     </div>
   </section>
 </div>
+
+<button class="tour-fab" id="tourBtn" title="Recorrido guiado">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.2a2.6 2.6 0 1 1 3.7 2.4c-.8.4-1.1 1-1.1 1.8"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
+  Guía
+</button>
+<div class="tour-foco" id="tourFoco" style="display:none"></div>
+<div class="tour-tip" id="tourTip" style="display:none"></div>
 </div>
 
 <!-- Quien ha iniciado sesion, puesto por el servidor al servir la pagina. Es
@@ -904,6 +935,77 @@ function on(id, evento, fn) {
   if (el) el.addEventListener(evento, fn);
 }
 
+// --- Asistente guiado: recorre el flujo de CyberFlow paso a paso -----------
+// Se abre solo en modo demo la primera vez (se recuerda en localStorage) y queda
+// disponible siempre en el botón flotante. Cada paso enfoca una sección; los
+// pasos cuyo elemento no existe -por rol o vista- se saltan solos.
+const TOUR_PASOS = [
+  { sel: '#kpis', t: 'Las cifras clave', d: 'Cuatro números de un vistazo: entidades vigiladas, ventanas analizadas por hora, cuántos scores rozan el umbral y las alertas reales de la última hora.' },
+  { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo → decisión → bloqueo. Pulsa cualquier componente para ver qué hace y qué mide.' },
+  { sel: '#s-modelo', t: 'El modelo y su umbral', d: 'Un One-Class SVM entrenado solo con tráfico normal. Su umbral separa lo normal de lo anómalo; aquí ves sus métricas.' },
+  { sel: '#s-scores', t: 'Distribución de scores', d: 'No solo si alertó o no, sino cuánto margen hubo respecto al umbral. Rojo = ALERT, verde = PERMIT.' },
+  { sel: '#s-decisiones', t: 'Las decisiones', d: 'Cada ventana con su decisión, su score frente al umbral (la mini-barra) y el motivo. Filtrable por IP y exportable.' },
+  { sel: '#s-simulacion', t: 'Escenarios guiados', d: 'Comandos listos para provocar tráfico normal o un ataque y ver cómo responde el modelo. El panel no ejecuta: copias el comando y observas.' },
+  { sel: null, t: 'Esto es el demo', d: 'Estás viendo datos de ejemplo. Para usarlo en tu propia red, sigue la instalación del README (modo despliegue) y recalibra con tu tráfico.' },
+];
+let tourI = 0, tourPasos = [], tourAuto = false;
+
+function tourInit() { tourPasos = TOUR_PASOS.filter(p => !p.sel || document.querySelector(p.sel)); }
+function tourEnd() {
+  const f = document.getElementById('tourFoco'), t = document.getElementById('tourTip');
+  if (f) f.style.display = 'none';
+  if (t) t.style.display = 'none';
+}
+function tourStart() {
+  tourInit();
+  if (!tourPasos.length) return;
+  tourI = 0;
+  try { localStorage.setItem('cf_tour_visto', '1'); } catch (e) {}
+  tourShow();
+}
+function tourNav(d) { tourI += d; tourShow(); }
+function tourShow() {
+  const foco = document.getElementById('tourFoco'), tip = document.getElementById('tourTip');
+  if (tourI >= tourPasos.length) { tourEnd(); return; }
+  if (tourI < 0) tourI = 0;
+  const paso = tourPasos[tourI], total = tourPasos.length;
+  const el = paso.sel ? document.querySelector(paso.sel) : null;
+  tip.innerHTML = `<h4>${paso.t}</h4><p>${paso.d}</p>`
+    + `<div class="row"><span class="prog">${tourI + 1} / ${total}</span><div class="btns">`
+    + (tourI > 0 ? `<button class="prev" onclick="tourNav(-1)">Atrás</button>` : '')
+    + `<button class="skip" onclick="tourEnd()">Cerrar</button>`
+    + `<button class="next" onclick="tourNav(1)">${tourI === total - 1 ? 'Listo' : 'Siguiente'}</button>`
+    + `</div></div>`;
+  tip.style.display = 'block';
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => {
+      const r = el.getBoundingClientRect();
+      foco.style.display = 'block';
+      foco.style.left = (r.left - 6) + 'px'; foco.style.top = (r.top - 6) + 'px';
+      foco.style.width = (r.width + 12) + 'px'; foco.style.height = (r.height + 12) + 'px';
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      let top = r.bottom + 12;
+      if (top + th > window.innerHeight - 8) top = Math.max(8, r.top - th - 12);
+      let left = r.left + r.width / 2 - tw / 2;
+      left = Math.max(8, Math.min(window.innerWidth - tw - 8, left));
+      tip.style.left = left + 'px'; tip.style.top = top + 'px';
+    }, 260);
+  } else {
+    foco.style.display = 'none';
+    tip.style.left = (window.innerWidth / 2 - tip.offsetWidth / 2) + 'px';
+    tip.style.top = (window.innerHeight / 2 - tip.offsetHeight / 2) + 'px';
+  }
+}
+function tourQuizasAuto(modo) {
+  if (tourAuto || modo !== 'demo') return;
+  tourAuto = true;
+  let visto = false;
+  try { visto = localStorage.getItem('cf_tour_visto') === '1'; } catch (e) {}
+  if (!visto) setTimeout(tourStart, 700);
+}
+on('tourBtn', 'click', tourStart);
+
 async function refresh() {
   try {
     // El histograma se pide junto al estado para que la tarjeta "Cerca del
@@ -917,6 +1019,7 @@ async function refresh() {
     renderHistogram(histogramData);
     renderKpis(status);
     renderHealthbar(status.services, status.counters, status.capture_metrics, status.calibracion, status.modo);
+    tourQuizasAuto(status.modo);
     renderSidebar(status);
     // Las tres secciones de desarrollo -topologia, modelo y alcance- no estan
     // en el documento del lector. Se comprueba la existencia del elemento en
