@@ -719,9 +719,18 @@ function renderKpis(status) {
          !cal ? 'warn' : (alertas > 0 ? 'bad' : 'ok'));
 }
 
-function renderHealthbar(services, counters, captureMetrics, calibracion) {
-  const allUp = Object.values(services).every(Boolean);
+function renderHealthbar(services, counters, captureMetrics, calibracion, modo) {
   const el = document.getElementById('healthbar');
+  // Modo demo: datos de ejemplo del repositorio, sin captura en vivo ni
+  // servicios reales. Se dice claramente para no aparentar una operación real.
+  if (modo === 'demo') {
+    el.className = 'healthbar warn';
+    el.innerHTML = `<span class="dot"></span><div><div class="msg">MODO DEMO &mdash; datos de ejemplo del repositorio</div>` +
+      `<div class="sub">Estás viendo cómo funciona CyberFlow con decisiones de muestra, sin captura en vivo ni sensor. ` +
+      `Para usarlo en tu red, sigue la instalación (modo despliegue).</div></div>`;
+    return;
+  }
+  const allUp = Object.values(services).every(Boolean);
   const hasDrops = captureMetrics && (captureMetrics.kernel_drops > 0 || captureMetrics.kernel_ifdrops > 0);
   const nAlertas = counters.alert_model + counters.alert_auth_heuristic;
   // Un modelo calibrado en otra red no mide nada aqui: anunciar sus alertas
@@ -907,7 +916,7 @@ async function refresh() {
 
     renderHistogram(histogramData);
     renderKpis(status);
-    renderHealthbar(status.services, status.counters, status.capture_metrics, status.calibracion);
+    renderHealthbar(status.services, status.counters, status.capture_metrics, status.calibracion, status.modo);
     renderSidebar(status);
     // Las tres secciones de desarrollo -topologia, modelo y alcance- no estan
     // en el documento del lector. Se comprueba la existencia del elemento en
@@ -2146,6 +2155,8 @@ def histogram_scores(decisions: list[dict], threshold: float, num_buckets: int =
 
 
 def service_status(names: list[str]) -> dict[str, bool]:
+    if not names:
+        return {}
     try:
         result = subprocess.run(
             ["systemctl", "is-active", *names],
@@ -2878,6 +2889,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8788)
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="modo demostración: sin login, sin comprobar servicios reales, con "
+             "un banner que avisa de que son datos de ejemplo. Para ver el "
+             "sistema funcionando desde un clon recién hecho, sin red ni sensor.",
+    )
     return parser.parse_args()
 
 
@@ -2889,7 +2907,7 @@ def main() -> int:
     # Sin autenticacion solo si se pide EXPRESAMENTE. Si faltan los ficheros y
     # nadie lo pidio, el panel no arranca: servir sin login porque un fichero no
     # estaba es el modo de fallo que hay que evitar.
-    auth = not args.sin_autenticacion
+    auth = not (args.sin_autenticacion or args.demo)
     usuarios: dict[str, dict] = {}
     clave = b""
     if auth:
@@ -3062,7 +3080,8 @@ def main() -> int:
                 decisions = read_decisions(args.log_path, limit=2000)
                 self._send_json(
                     {
-                        "services": service_status(service_names),
+                        "modo": "demo" if args.demo else "live",
+                        "services": service_status([] if args.demo else service_names),
                         "model": model_summary,
                         "blocked": enforcement_list(args.enforce_command),
                         "counters": compute_counters(decisions),

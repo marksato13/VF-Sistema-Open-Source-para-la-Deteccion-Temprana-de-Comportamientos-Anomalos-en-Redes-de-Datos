@@ -32,6 +32,22 @@ el entrenamiento.
 
 ---
 
+## Pruébalo en 2 minutos (modo demo)
+
+Desde un clon recién hecho, **sin red ni sensor**:
+
+```bash
+bash scripts/demo.sh          # abre http://127.0.0.1:8788
+```
+
+Levanta el panel con **decisiones de ejemplo** (marcadas como demo) para ver el
+flujo completo: detección, scores frente al umbral, topología y respuesta. Es la
+**reproducibilidad** — mismo código + datos incluidos → se ve igual en cualquier
+máquina. Para usarlo en **tu propia red** (replicabilidad), sigue la instalación
+de más abajo.
+
+---
+
 ## Requisitos
 
 ```
