@@ -393,12 +393,32 @@ else
     aviso "aun no hay decisiones. El motor necesita llenar su historia primero."
 fi
 
+# URL del panel: el instalador debe decir DONDE se abre y como.
+PANEL_INFO=""
+if [[ "$(leer_toml panel activo)" == "True" ]]; then
+    PDIR=$(leer_toml panel direccion); PPORT=$(leer_toml panel puerto)
+    ESQ="https"
+    if [[ "$(leer_toml panel autenticacion)" == "False" ]]; then ESQ="http"; fi
+    IPLOCAL=$(hostname -I 2>/dev/null | awk '{print $1}')
+    if [[ "$PDIR" == "127.0.0.1" || "$PDIR" == "localhost" ]]; then
+        PANEL_INFO="  Panel:              $ESQ://127.0.0.1:$PPORT   (solo local; certificado autofirmado)
+                      Desde otra maquina: tunel SSH y abre esa URL en el navegador:
+                        ssh -L $PPORT:127.0.0.1:$PPORT $USUARIO@$IPLOCAL
+  Cuentas del panel:  sudo python3 scripts/setup/cyberflow_usuarios.py --crear admin --rol admin
+"
+    else
+        PANEL_INFO="  Panel:              $ESQ://$PDIR:$PPORT   (certificado autofirmado)
+  Cuentas del panel:  sudo python3 scripts/setup/cyberflow_usuarios.py --crear admin --rol admin
+"
+    fi
+fi
+
 titulo "Instalado"
 cat <<FIN
   Ver decisiones:     tail -f $REGISTRO
   Ver el servicio:    journalctl -u ppi-motor -f
   Diagnosticar:       sudo bash $0 --comprobar
-
+$PANEL_INFO
   ANTES DE CREERSE UNA ALERTA: el umbral publicado esta calibrado para otra
   red. Sin recalibrar, la tasa de falsos positivos medida en un despliegue
   distinto fue del 92,4 %. Ver docs/GUIA-USUARIO.md
