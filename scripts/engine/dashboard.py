@@ -1988,7 +1988,7 @@ ROLES = ("admin", "lector")
 # Rutas que solo sirve el administrador. La lista es explicita y una prueba
 # recorre las que el servidor despacha de verdad: si se anade un endpoint y
 # nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
-RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos"})
+RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -2463,6 +2463,20 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
     }
 
 
+def cargar_escenarios(ruta: Path) -> dict:
+    """Catalogo de escenarios normal/anomalo. Es contenido, no accion.
+
+    El panel lo muestra para copiar y pegar en la propia terminal SSH; el panel
+    NUNCA ejecuta estos comandos. Si el fichero falta o es invalido, se devuelve
+    vacio en vez de romper el panel.
+    """
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"normal": [], "anomalo": []}
+    return {"normal": datos.get("normal", []), "anomalo": datos.get("anomalo", [])}
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -2520,6 +2534,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="CSV acumulado del que se toman los valores de ejemplo. Sin el, "
              "la tabla se pinta igual pero sin muestra: no se inventa ninguna",
+    )
+    parser.add_argument(
+        "--escenarios",
+        type=Path,
+        default=Path("configs/escenarios.json"),
+        help="catalogo de escenarios (normal/anomalo) para el panel guiado",
     )
     parser.add_argument(
         "--usuarios",
@@ -2777,6 +2797,9 @@ def main() -> int:
                 self._send_json(estado_artefactos(
                     args.eve_path, args.dataset, args.manifest_path, args.log_path,
                     args.schema_extra, args.descripciones))
+                return
+            if path == "/api/escenarios":
+                self._send_json(cargar_escenarios(args.escenarios))
                 return
             if path == "/api/decisions":
                 params = dict(pair.split("=") for pair in query.split("&") if "=" in pair)
