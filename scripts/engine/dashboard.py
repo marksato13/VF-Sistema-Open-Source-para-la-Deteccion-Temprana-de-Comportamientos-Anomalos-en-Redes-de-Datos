@@ -180,6 +180,33 @@ HTML = """<!doctype html>
   .topo-cmd { background: #0b1220; border: 1px solid var(--border); border-radius: 7px;
     padding: 0.5rem 0.6rem; margin: 0.5rem 0; font: 11px var(--mono); color: var(--text-dim);
     white-space: pre-wrap; overflow-x: auto; }
+  /* Mapa de artefactos: los "cuadraditos" de ficheros por componente. */
+  .export-btn.active { border-color: var(--accent); color: var(--accent); }
+  .topo-node .fbadge { fill: var(--accent); font: 9px var(--mono); }
+  .topo-node.tiene-archivos .box { stroke-dasharray: none; }
+  .topo-files { margin: 0.5rem 0 0.2rem; }
+  .topo-files h4 { font: 600 0.72rem var(--sans); letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--text-dim); margin: 0 0 0.4rem; }
+  .topo-file { display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;
+    font: 11px var(--mono); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.22rem 0.45rem; margin: 0 0.3rem 0.3rem 0; background: var(--surface);
+    color: var(--text); transition: border-color .12s; }
+  .topo-file:hover { border-color: var(--accent); }
+  .topo-file[aria-expanded="true"] { border-color: var(--accent); background: var(--surface-2); }
+  .topo-file .cuadro { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+  /* Color por tipo de fichero (paleta validada: py teal, json azul, csv ambar,
+     pcap violeta; el resto en tinta tenue). El color va en el cuadradito, el
+     texto queda en tinta normal -identidad por la marca, no por el texto-. */
+  .tipo-py .cuadro   { background: #14b8a6; }
+  .tipo-json .cuadro, .tipo-toml .cuadro { background: #3b82f6; }
+  .tipo-csv .cuadro  { background: #d97706; }
+  .tipo-pcap .cuadro { background: #a855f7; }
+  .tipo-joblib .cuadro { background: #4ade80; }
+  .tipo-log .cuadro, .tipo-sh .cuadro { background: var(--text-dim); }
+  .topo-file-det { font: 11px var(--mono); color: var(--text-dim);
+    border-left: 2px solid var(--border); padding: 0.3rem 0 0.3rem 0.6rem; margin: 0 0 0.5rem; }
+  .topo-file-det .ruta { color: var(--text); word-break: break-all; }
+  .topo-file-det .aus { color: var(--amber); }
 
   .topo-detail {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
@@ -404,6 +431,10 @@ HTML = """<!doctype html>
             <button id="topoMas" title="Ampliar" aria-label="Ampliar">+</button>
             <button id="topoReset" title="Ajustar al ancho" aria-label="Ajustar al ancho">Ajustar</button>
           </div>
+          <button id="topoArchivosBtn" class="export-btn" title="Muestra los ficheros que usa cada componente" aria-pressed="false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6l2 3h8v13H4Z"/></svg>
+            <span>Ver archivos</span>
+          </button>
           <button id="topoExpandir" class="export-btn" title="Pantalla completa">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg>
             <span id="topoExpandirTxt">Expandir</span>
@@ -912,6 +943,12 @@ const TOPO_VISTAS = {
 };
 
 let topoVista = 'esencial';
+// Mapa de artefactos: los ficheros de cada componente. Se pide solo cuando se
+// activa "Ver archivos" -es de admin- y se guarda; los chips abiertos se
+// recuerdan entre repintados.
+let topoArchivos = false;
+let artefactos = null;
+const filesAbiertos = new Set();
 
 const TOPO_TEXTO = {
   red: {
@@ -1197,12 +1234,17 @@ function renderTopologia(status) {
     const etiqueta = n.tag
       ? `<text class="tag" x="${n.x + 42}" y="${n.y + n.h - 5}">${n.tag}</text>` : '';
     const desplazar = n.tag ? -8 : 0;
-    return `<g class="topo-node ${e.estado} ${n.clase || ''} ${topoSel === n.id ? 'sel' : ''}" data-node="${n.id}" tabindex="0" role="button" aria-label="${n.titulo}">
+    // Con "Ver archivos" activo, cada nodo con ficheros muestra un contador; el
+    // detalle de cada uno se abre pulsando el nodo (aparecen como cuadraditos).
+    const nfiles = (topoArchivos && artefactos && artefactos[n.id]) ? artefactos[n.id].length : 0;
+    const badge = nfiles
+      ? `<text class="fbadge" x="${n.x + n.w - 24}" y="${n.y + n.h - 6}" text-anchor="end">▤ ${nfiles}</text>` : '';
+    return `<g class="topo-node ${e.estado} ${n.clase || ''} ${nfiles ? 'tiene-archivos' : ''} ${topoSel === n.id ? 'sel' : ''}" data-node="${n.id}" tabindex="0" role="button" aria-label="${n.titulo}">
       <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9"/>
       <g class="ico" transform="translate(${n.x + 13}, ${cy - 9 + desplazar})"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[n.icono]}</svg></g>
       <text class="ttl" x="${n.x + 42}" y="${cy - 3 + desplazar}">${n.titulo}</text>
       <text class="sub" x="${n.x + 42}" y="${cy + 12 + desplazar}">${e.valor}</text>
-      ${etiqueta}
+      ${etiqueta}${badge}
       <circle class="led" cx="${n.x + n.w - 13}" cy="${n.y + 13}" r="4" fill="${color}"/>
     </g>`;
   }).join('');
@@ -1296,9 +1338,74 @@ function renderTopoDetalle() {
     (t.que ? `<p>${t.que}</p>` : '') +
     (filas ? `<dl>${filas}</dl>` : '') +
     (t.cmd ? `<pre class="topo-cmd">${t.cmd.replace(/</g, '&lt;')}</pre>` : '') +
+    filesHTML(n.id) +
     (t.nota ? `<p class="dim">${t.nota}</p>` : '') +
     (t.enlace ? `<p><a href="${t.enlace.href}">${t.enlace.txt} &rarr;</a></p>` : '');
 }
+
+function fmtBytes(b) {
+  if (b == null) return '';
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(0) + ' KB';
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+  return (b / 1073741824).toFixed(1) + ' GB';
+}
+
+function nombreFichero(ruta) {
+  const p = ruta.split('/');
+  return p[p.length - 1] || ruta;
+}
+
+// Los "cuadraditos" de ficheros del componente seleccionado, cada uno con su
+// ventana de info que se abre al pulsar. Solo con "Ver archivos" activo.
+function filesHTML(nodeId) {
+  if (!topoArchivos) return '';
+  if (!artefactos) return '<div class="topo-files"><h4>Archivos</h4><p class="dim" style="font-size:11px">cargando…</p></div>';
+  const lista = artefactos[nodeId];
+  if (!lista || !lista.length) return '';
+  let html = '<div class="topo-files"><h4>Archivos que usa</h4>';
+  for (const f of lista) {
+    const clave = nodeId + '|' + f.ruta;
+    const abierto = filesAbiertos.has(clave);
+    html += `<button class="topo-file tipo-${f.tipo}" data-file="${clave.replace(/"/g, '&quot;')}" aria-expanded="${abierto}">`
+      + `<span class="cuadro"></span>${nombreFichero(f.ruta)}</button>`;
+    if (abierto) {
+      const estado = f.existe
+        ? [f.n != null ? f.n + ' ficheros' : null, fmtBytes(f.bytes),
+           f.mtime ? 'modif. ' + new Date(f.mtime * 1000).toLocaleString() : null]
+            .filter(Boolean).join(' · ')
+        : '<span class="aus">no existe todavía</span>';
+      html += `<div class="topo-file-det"><div class="ruta">${f.ruta}</div>`
+        + `<div>${f.que}</div><div>${estado}</div></div>`;
+    }
+  }
+  return html + '</div>';
+}
+
+async function cargarArtefactos() {
+  try {
+    artefactos = await (await fetch('/api/artefactos')).json();
+  } catch (e) {
+    artefactos = {};
+  }
+}
+
+on('topoArchivosBtn', 'click', async () => {
+  topoArchivos = !topoArchivos;
+  const b = document.getElementById('topoArchivosBtn');
+  b.setAttribute('aria-pressed', String(topoArchivos));
+  b.classList.toggle('active', topoArchivos);
+  if (topoArchivos && !artefactos) await cargarArtefactos();
+  if (topoUltimo) renderTopologia(topoUltimo);
+});
+
+on('topoDetail', 'click', (ev) => {
+  const f = ev.target.closest('.topo-file');
+  if (!f) return;
+  const clave = f.dataset.file;
+  if (filesAbiertos.has(clave)) filesAbiertos.delete(clave); else filesAbiertos.add(clave);
+  renderTopoDetalle();
+});
 
 on('topo', 'click', (ev) => {
   const g = ev.target.closest('.topo-node');
