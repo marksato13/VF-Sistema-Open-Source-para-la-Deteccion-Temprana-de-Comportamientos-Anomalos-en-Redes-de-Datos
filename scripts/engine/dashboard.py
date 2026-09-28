@@ -411,6 +411,7 @@ HTML = """<!doctype html>
   table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
   .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; overflow-x: auto; }
   th { text-align: left; padding: 0.6rem 0.9rem; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+  th .th-sub { text-transform: none; letter-spacing: 0; font-weight: 400; opacity: 0.75; }
   td { padding: 0.5rem 0.9rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
   tr.row-alert td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
@@ -422,6 +423,14 @@ HTML = """<!doctype html>
   .badge.permit { background: var(--ok-soft); color: var(--ok); }
   .badge.heur { background: var(--surface-2); color: var(--text-dim); }
   .why { color: var(--text-dim); font-size: 0.82rem; }
+
+  /* Tabla de decisiones: cabecera fija al desplazar la lista larga, y la celda
+     de score lleva una mini-barra que situa el valor respecto al umbral. */
+  .tbl-scroll { max-height: 420px; overflow-y: auto; }
+  .tbl-scroll thead th { position: sticky; top: 0; z-index: 1; background: var(--surface);
+    box-shadow: inset 0 -1px 0 var(--border); }
+  .score-cell { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .score-cell .mini { flex: none; }
 </style>
 
 <div class="shell">
@@ -579,9 +588,9 @@ HTML = """<!doctype html>
       </div>
     </div>
     <p class="toolbar-hint" id="filterHint"></p>
-    <div class="tbl-wrap">
+    <div class="tbl-wrap tbl-scroll">
       <table>
-        <thead><tr><th>Hora</th><th>IP</th><th>Decisión</th><th>Motivo</th><th>Score</th><th>Paquetes</th></tr></thead>
+        <thead><tr><th>Hora</th><th>IP</th><th>Decisión</th><th>Motivo</th><th>Score <span class="th-sub">(← umbral)</span></th><th>Paquetes</th></tr></thead>
         <tbody id="decisions"></tbody>
       </table>
     </div>
@@ -773,6 +782,8 @@ function renderHistogram(data) {
   svg.innerHTML = bars;
   const pct = data.n ? Math.round(100 * bajoUmbral / data.n) : 0;
   window._histResumen = { pct: pct, n: data.n, bajoUmbral: bajoUmbral };
+  // La misma escala del histograma la reusa la mini-barra de la tabla.
+  window._escalaScore = { min: data.min, max: data.max, umbral: data.threshold };
   hint.textContent = `${data.n} score(s) real(es) · ${bajoUmbral} (${pct}%) por debajo del umbral. `
     + `Pasa el ratón por una barra para ver su rango. Rojo = ALERT, ámbar = cruza el umbral, verde = PERMIT.`;
 }
@@ -895,6 +906,26 @@ async function refresh() {
 // que ya esta cargado en el navegador), sin pedir nada nuevo al backend.
 let lastDecisions = [];
 
+// Mini-barra del score: situa el valor en la misma escala del histograma, con
+// el umbral marcado. A la izquierda del umbral es zona ALERT (rojo); a la
+// derecha, PERMIT (verde). Sin escala aun (histograma no cargado) o sin score,
+// no se pinta nada -- no se inventa una posicion.
+function miniBarraScore(score) {
+  const e = window._escalaScore;
+  if (score == null || !e || e.max === e.min) return '';
+  const w = 66, h = 14, cy = h / 2;
+  const x = v => ((Math.max(e.min, Math.min(e.max, v)) - e.min) / (e.max - e.min)) * (w - 6) + 3;
+  const ux = x(e.umbral), sx = x(score);
+  const col = score < e.umbral ? 'var(--danger)' : 'var(--ok)';
+  const zona = score < e.umbral ? 'ALERT' : 'PERMIT';
+  return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img"`
+    + ` aria-label="score ${score.toFixed(3)}, umbral ${e.umbral.toFixed(3)}, ${zona}">`
+    + `<title>score ${score.toFixed(3)} · umbral ${e.umbral.toFixed(3)} · ${zona}</title>`
+    + `<line x1="3" y1="${cy}" x2="${w - 3}" y2="${cy}" stroke="var(--border)" stroke-width="2" stroke-linecap="round"/>`
+    + `<line x1="${ux.toFixed(1)}" y1="1.5" x2="${ux.toFixed(1)}" y2="${h - 1.5}" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="2 1.5"/>`
+    + `<circle cx="${sx.toFixed(1)}" cy="${cy}" r="3.4" fill="${col}"/></svg>`;
+}
+
 function renderDecisionsTable() {
   const query = document.getElementById('ipFilter').value.trim();
   const rows = query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions;
@@ -904,9 +935,12 @@ function renderDecisionsTable() {
   document.getElementById('decisions').innerHTML = rows.length ? rows.map(d => {
     const isAlert = d.decision === 'ALERT';
     const badge = isAlert ? `<span class="badge alert">${ICON.bad} ALERT</span>` : `<span class="badge permit">${ICON.ok} PERMIT</span>`;
+    const scoreCell = d.score != null
+      ? `<span class="score-cell"><span>${d.score.toFixed(4)}</span>${miniBarraScore(d.score)}</span>`
+      : '&mdash;';
     return `<tr class="${isAlert ? 'row-alert' : ''}"><td>${fmtTime(d.logged_at)}</td><td class="ip">${d.entity_ip}</td>` +
       `<td>${badge}</td><td class="why">${DETECTOR_LABEL[d.detector_name] || d.detector_name}</td>` +
-      `<td class="num">${d.score != null ? d.score.toFixed(4) : '&mdash;'}</td><td class="num">${d.packet_count_10s}</td></tr>`;
+      `<td class="num">${scoreCell}</td><td class="num">${d.packet_count_10s}</td></tr>`;
   }).join('') : `<tr class="empty-row"><td colspan="6">${query ? 'Ninguna decisión coincide con el filtro.' : 'Sin decisiones recientes.'}</td></tr>`;
 }
 
