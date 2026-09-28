@@ -222,6 +222,14 @@ HTML = """<!doctype html>
     padding: 0.05rem 0.3rem; }
   .topo-flujo .gar { font-size: 0.76rem; color: var(--text-dim); margin-top: 0.1rem; }
   .topo-flujo .flecha { color: var(--text-dim); margin: 0.1rem 0 0.1rem 0.5rem; font-size: 0.9rem; }
+
+  /* Regla de decision del modelo: recta de score con el umbral y los scores
+     reales recientes, para ver DONDE y COMO se decide ALERT vs PERMIT. */
+  .modelo-dec { margin: 0.8rem 0 0.2rem; }
+  .modelo-dec h4 { font: 600 0.72rem var(--sans); letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--text-dim); margin: 0 0 0.35rem; }
+  .modelo-dec .cap { font-size: 0.78rem; color: var(--text-dim); margin-top: 0.35rem; }
+  .modelo-dec .cap b.a { color: var(--danger); } .modelo-dec .cap b.p { color: var(--ok); }
   /* Escenarios de simulacion. */
   .sim-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0.9rem; margin-top: 0.9rem; }
   .sim-card { border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; background: var(--surface); }
@@ -1545,12 +1553,50 @@ function renderTopoDetalle() {
   document.getElementById('topoDetail').innerHTML =
     `<h3>${n.titulo}${cabIp}</h3>` +
     (t.que ? `<p>${t.que}</p>` : '') +
+    (n.id === 'modelo' ? decisionModeloHTML() : '') +
     (filas ? `<dl>${filas}</dl>` : '') +
     (t.cmd ? `<pre class="topo-cmd">${t.cmd.replace(/</g, '&lt;')}</pre>` : '') +
     (t.flujo ? flujoHTML(t.flujo) : '') +
     filesHTML(n.id) +
     (t.nota ? `<p class="dim">${t.nota}</p>` : '') +
     (t.enlace ? `<p><a href="${t.enlace.href}">${t.enlace.txt} &rarr;</a></p>` : '');
+}
+
+// La regla de decision del modelo, hecha visible en el nodo "Modelo": una recta
+// de score con el umbral marcado y los scores reales recientes como puntos. A la
+// izquierda del umbral la ventana es anomala (ALERT); a la derecha, normal
+// (PERMIT). Reusa la escala del histograma y las decisiones ya cargadas; si aun
+// no hay scores, lo dice en vez de dibujar una recta vacia que afirme algo.
+function decisionModeloHTML() {
+  const e = window._escalaScore;
+  if (!e || e.max === e.min) {
+    return '<div class="modelo-dec"><h4>Cómo decide</h4>'
+      + '<p class="cap">Sin scores recientes que ilustrar. La regla es: '
+      + 'score < umbral &rarr; <b class="a">ALERT</b>; score &ge; umbral &rarr; <b class="p">PERMIT</b>.</p></div>';
+  }
+  const w = 300, h = 52, y = 30, x0 = 10, x1 = w - 10;
+  const px = v => x0 + (Math.max(e.min, Math.min(e.max, v)) - e.min) / (e.max - e.min) * (x1 - x0);
+  const ux = px(e.umbral);
+  let s = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Recta de score con el umbral y scores recientes">`;
+  // Zonas: ALERT a la izquierda del umbral, PERMIT a la derecha.
+  s += `<rect x="${x0}" y="${y - 7}" width="${(ux - x0).toFixed(1)}" height="14" fill="var(--danger-soft)"/>`;
+  s += `<rect x="${ux.toFixed(1)}" y="${y - 7}" width="${(x1 - ux).toFixed(1)}" height="14" fill="var(--ok-soft)"/>`;
+  s += `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
+  // Scores reales recientes como puntos semitransparentes (densidad visible).
+  const scores = (lastDecisions || []).filter(d => d.score != null).slice(0, 60);
+  scores.forEach(d => {
+    const col = d.score < e.umbral ? 'var(--danger)' : 'var(--ok)';
+    s += `<circle cx="${px(d.score).toFixed(1)}" cy="${y}" r="3" fill="${col}" fill-opacity="0.55"/>`;
+  });
+  // Umbral: linea discontinua con etiqueta.
+  s += `<line x1="${ux.toFixed(1)}" y1="${y - 11}" x2="${ux.toFixed(1)}" y2="${y + 11}" stroke="var(--text)" stroke-width="1.3" stroke-dasharray="3 2"/>`;
+  s += `<text x="${ux.toFixed(1)}" y="12" font-size="9" fill="var(--text)" text-anchor="middle" font-family="ui-monospace, monospace">umbral ${e.umbral.toFixed(2)}</text>`;
+  s += `<text x="${x0}" y="${h - 3}" font-size="8.5" fill="var(--danger)" font-family="ui-monospace, monospace">${e.min.toFixed(2)} · anómalo</text>`;
+  s += `<text x="${x1}" y="${h - 3}" font-size="8.5" fill="var(--ok)" text-anchor="end" font-family="ui-monospace, monospace">normal · ${e.max.toFixed(2)}</text>`;
+  s += '</svg>';
+  return `<div class="modelo-dec"><h4>Cómo decide</h4>${s}`
+    + `<p class="cap">${scores.length} score(s) reciente(s). A la izquierda del umbral, `
+    + `<b class="a">ALERT</b>; a la derecha, <b class="p">PERMIT</b>.</p></div>`;
 }
 
 // Mini-flujo del reentrenamiento: pasos encadenados, cada uno con su fichero y
