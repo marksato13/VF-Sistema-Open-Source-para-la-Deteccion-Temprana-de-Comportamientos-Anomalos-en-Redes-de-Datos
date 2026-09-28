@@ -71,13 +71,15 @@ Desde un clon recién hecho, cuatro comandos:
 ```bash
 git clone https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos.git cyberflow
 cd cyberflow
-cp configs/cyberflow.toml configs/cyberflow.local.toml
-$EDITOR configs/cyberflow.local.toml
+bash scripts/setup/configurar.sh          # asistente: escribe tu configuración
 ```
 
-En el fichero, lo mínimo: la **interfaz de captura**, la **red a vigilar**, el
-**usuario**, la **raíz** del repositorio y el **modo** (`observacion` o
-`bloqueo`). Todo lo demás tiene valor por omisión.
+El **asistente** auto-detecta la interfaz de captura (la que no tiene IP y recibe
+el espejo) y su MAC, propone la **red a vigilar** desde tu subred, y pregunta el
+**modo** (`observacion` o `bloqueo`), el **usuario** y la **raíz**. Escribe
+`configs/cyberflow.local.toml` por ti; en una terminal pregunta con valores por
+omisión, y sin terminal toma los detectados. (También puedes copiar y editar
+`configs/cyberflow.toml` a mano si prefieres.)
 
 ```bash
 sudo bash scripts/setup/instalar.sh --comprobar   # diagnostica, no toca nada

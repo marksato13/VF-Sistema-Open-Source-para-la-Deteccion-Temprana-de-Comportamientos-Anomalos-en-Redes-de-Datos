@@ -69,8 +69,9 @@ titulo "2. Configuracion"
 # ---------------------------------------------------------------------
 echo "  usando: $CONFIG"
 if [[ "$CONFIG" == *"/cyberflow.toml" ]]; then
-    aviso "esta usando la configuracion de ejemplo. Copiela antes de tocarla:"
-    echo "        cp configs/cyberflow.toml configs/cyberflow.local.toml"
+    aviso "esta usando la configuracion de ejemplo. Genera la tuya, adaptada a"
+    echo "        esta maquina, con el asistente (auto-detecta interfaz y red):"
+    echo "        bash scripts/setup/configurar.sh"
 fi
 if python3 "$RAIZ/scripts/setup/cyberflow_config.py" --config "$CONFIG" --comprobar >/dev/null 2>&1; then
     ok "configuracion valida"
