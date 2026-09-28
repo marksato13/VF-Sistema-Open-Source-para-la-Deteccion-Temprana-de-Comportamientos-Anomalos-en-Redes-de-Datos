@@ -207,6 +207,21 @@ HTML = """<!doctype html>
     border-left: 2px solid var(--border); padding: 0.3rem 0 0.3rem 0.6rem; margin: 0 0 0.5rem; }
   .topo-file-det .ruta { color: var(--text); word-break: break-all; }
   .topo-file-det .aus { color: var(--amber); }
+  /* Mini-flujo de reentrenamiento en el detalle. */
+  .topo-flujo { margin: 0.6rem 0 0.3rem; }
+  .topo-flujo h4 { font: 600 0.72rem var(--sans); letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--text-dim); margin: 0 0 0.5rem; }
+  .topo-flujo .paso { display: flex; gap: 0.55rem; align-items: flex-start; }
+  .topo-flujo .n { flex: none; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--surface-2); border: 1px solid var(--accent); color: var(--accent);
+    font: 600 11px var(--mono); display: grid; place-items: center; }
+  .topo-flujo .tit { font: 600 0.82rem var(--sans); color: var(--text); display: flex;
+    gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
+  .topo-flujo .tit code { font: 10.5px var(--mono); color: var(--accent);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    padding: 0.05rem 0.3rem; }
+  .topo-flujo .gar { font-size: 0.76rem; color: var(--text-dim); margin-top: 0.1rem; }
+  .topo-flujo .flecha { color: var(--text-dim); margin: 0.1rem 0 0.1rem 0.5rem; font-size: 0.9rem; }
 
   .topo-detail {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
@@ -978,6 +993,13 @@ const TOPO_TEXTO = {
   },
   reentrenamiento: {
     que: 'El modelo envejece: la normalidad cambia con el tiempo. Se reentrena con datos verificados limpios, congelando el umbral en validación antes de evaluar.',
+    flujo: [
+      {paso: 'Dataset limpio', fichero: 'multilayer-v3.csv', garantia: 'solo tráfico benigno verificado'},
+      {paso: 'Particionar', fichero: 'particionar_linea_base.py', garantia: 'bandas de guarda: sin fuga temporal'},
+      {paso: 'Entrenar', fichero: 'entrenar_preliminar.py', garantia: 'umbral congelado en validación, antes de evaluar'},
+      {paso: 'Modelo + manifiesto', fichero: 'ocsvm_scaled.joblib', garantia: 'hashes que fijan la reproducibilidad'},
+      {paso: 'Promoción', fichero: 'misma verificación', garantia: 'FPR y partición revisados; nunca a ciegas'},
+    ],
     nota: 'Cadencia: mensual como suelo, pero el disparador real es la deriva del FPR, y es OBLIGATORIO al cambiar la red (nueva VLAN, Wazuh, AAA). La automatización prepara el candidato; promocionarlo pasa por la misma verificación, nunca a ciegas.',
   },
   nic: {
@@ -1338,9 +1360,24 @@ function renderTopoDetalle() {
     (t.que ? `<p>${t.que}</p>` : '') +
     (filas ? `<dl>${filas}</dl>` : '') +
     (t.cmd ? `<pre class="topo-cmd">${t.cmd.replace(/</g, '&lt;')}</pre>` : '') +
+    (t.flujo ? flujoHTML(t.flujo) : '') +
     filesHTML(n.id) +
     (t.nota ? `<p class="dim">${t.nota}</p>` : '') +
     (t.enlace ? `<p><a href="${t.enlace.href}">${t.enlace.txt} &rarr;</a></p>` : '');
+}
+
+// Mini-flujo del reentrenamiento: pasos encadenados, cada uno con su fichero y
+// la garantia que aporta. Hace visible POR QUE el reentrenamiento es fiable
+// (sin fuga, umbral congelado, promocion verificada), no solo que existe.
+function flujoHTML(pasos) {
+  let html = '<div class="topo-flujo"><h4>Flujo de reentrenamiento</h4>';
+  pasos.forEach((p, i) => {
+    html += `<div class="paso"><span class="n">${i + 1}</span>`
+      + `<div><div class="tit">${p.paso}<code>${p.fichero}</code></div>`
+      + `<div class="gar">${p.garantia}</div></div></div>`;
+    if (i < pasos.length - 1) html += '<div class="flecha">↓</div>';
+  });
+  return html + '</div>';
 }
 
 function fmtBytes(b) {
