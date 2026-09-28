@@ -42,6 +42,11 @@ En la descripción, resuma lo que incluye y **las limitaciones medidas**:
 
 **Publish release.** En unos minutos Zenodo crea el depósito y emite el DOI.
 
+> Los metadatos (título, autores, descripción con las limitaciones, licencia,
+> palabras clave) **ya vienen pre-rellenados** en `.zenodo.json`, en la raíz del
+> repositorio: Zenodo lo lee solo al publicar la versión. No hay que teclearlos a
+> mano. Revísalos si quieres y ajusta la descripción del release si procede.
+
 ---
 
 ## Después

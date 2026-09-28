@@ -1,0 +1,32 @@
+{
+  "title": "Sistema open source para la detección temprana de comportamientos anómalos en redes de datos",
+  "upload_type": "software",
+  "language": "spa",
+  "access_right": "open",
+  "license": "MIT",
+  "version": "1.0.0",
+  "creators": [
+    {
+      "name": "Salazar Tocas, Rubén Mark",
+      "affiliation": "Universidad Peruana Unión"
+    },
+    {
+      "name": "Sauñe Fernandez, Uziel Elias",
+      "affiliation": "Universidad Peruana Unión"
+    }
+  ],
+  "description": "<p>Detección de anomalías de red con aprendizaje no supervisado y control en línea. El sistema extrae 28 variables de capas 3, 4 y 7 por ventana temporal e IP (27 observables), puntúa el tráfico con un One-Class SVM congelado (umbral 1,8126, calibrado solo con validación) y bloquea la IP ofensora mediante nftables en el propio router, con expiración nativa de 120 s.</p><p>Incluye el laboratorio virtualizado reproducible, el dataset derivado <em>multilayer-v2</em> con su datasheet, el modelo con su model card, el motor en tiempo real con su system card, y la validación operacional sobre 58 corridas.</p><p><strong>Limitaciones declaradas y medidas:</strong> el FPR benigno de 4,71 % en laboratorio no se sostiene en operación, donde se midió 25,81 % y 22,97 % sobre tráfico legítimo intenso; el sistema no es apto todavía para operación desatendida sin recalibrar en la red de destino. Reproducibilidad verificada; la replicabilidad con datos nuevos queda como trabajo declarado.</p><p><strong>Licencias:</strong> el código se publica bajo MIT; el dataset y la documentación bajo CC BY 4.0 (ver LICENSE-DATA). <strong>Reproducibilidad:</strong> los artefactos se generaron con CPython 3.14.4 (ver docs/INSTALACION.md, anexo B).</p>",
+  "keywords": [
+    "detección de intrusiones",
+    "detección de anomalías",
+    "aprendizaje no supervisado",
+    "One-Class SVM",
+    "seguridad de redes",
+    "Suricata",
+    "nftables",
+    "ciencia abierta",
+    "network anomaly detection",
+    "intrusion detection"
+  ],
+  "notes": "Zenodo emite dos DOI: uno de concepto (última versión) y uno por versión. En el artículo se cita el DOI de la versión. Antes de publicar, verificar que no queden secretos en el repositorio."
+}
