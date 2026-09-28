@@ -1831,7 +1831,7 @@ ROLES = ("admin", "lector")
 # Rutas que solo sirve el administrador. La lista es explicita y una prueba
 # recorre las que el servidor despacha de verdad: si se anade un endpoint y
 # nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
-RUTAS_ADMIN = frozenset({"/api/variables"})
+RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -2227,6 +2227,85 @@ def resumen_variables(schema_path: Path, extra_path: Path | None,
     }
 
 
+def _stat_fichero(ruta: Path, tipo: str, que: str) -> dict:
+    """Metadatos de UN fichero real. Nunca su contenido: el panel solo mira.
+
+    Si no existe, se dice -no se inventa-. El estado en vivo (tamano, mtime)
+    es lo que hace util el mapa: un CSV que no crece o un log parado se ven.
+    """
+    info = {"ruta": str(ruta), "tipo": tipo, "que": que, "existe": ruta.exists()}
+    try:
+        if ruta.exists():
+            st = ruta.stat()
+            info["bytes"] = st.st_size
+            info["mtime"] = st.st_mtime
+    except OSError:
+        pass
+    return info
+
+
+def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
+                      log_path: Path, schema_extra: Path | None,
+                      descripciones: Path, raiz: Path | None = None,
+                      capture_dir: Path = Path("/var/lib/ppi-motor-capture")) -> dict:
+    """Los ficheros que cada componente USA de verdad, con su estado en vivo.
+
+    Da nombre y forma al mapa de artefactos del panel: por cada nodo de la
+    topologia, los .py/.sh/.pcap/.json/.csv/.joblib que participan. Solo se
+    listan los que existen o deberian existir en ESTE despliegue; nada teorico.
+    """
+    r = raiz or Path.cwd()
+
+    def rel(p: str, tipo: str, que: str) -> dict:
+        return _stat_fichero(r / p, tipo, que)
+
+    # El anillo de PCAP es un directorio que rota: se resume, no se lista entero.
+    anillo = {"ruta": str(capture_dir / "live-*.pcap"), "tipo": "pcap",
+              "que": "anillo de captura crudo (capa 3/4)", "existe": capture_dir.exists()}
+    try:
+        pcaps = sorted(capture_dir.glob("live-*.pcap"))
+        anillo["n"] = len(pcaps)
+        if pcaps:
+            anillo["bytes"] = sum(f.stat().st_size for f in pcaps)
+            anillo["mtime"] = pcaps[-1].stat().st_mtime
+    except OSError:
+        pass
+
+    modelo_dir = manifest_path.parent
+    return {
+        "captura": [anillo,
+                    rel("scripts/setup/cyberflow_config.py", "py",
+                        "genera la unidad de tcpdump y del resto")],
+        "suricata": [_stat_fichero(eve_path, "json",
+                                   "eventos HTTP/DNS/TLS, una linea por evento")],
+        "motor": [rel("scripts/engine/motor_decision.py", "py",
+                      "atribuye, extrae y puntua cada ventana"),
+                  rel("scripts/features/extract_multilayer_v2.py", "py",
+                      "extractor congelado de las 28 variables"),
+                  rel("configs/cyberflow.toml", "toml", "alcance, umbral, rutas")],
+        "variables": [_stat_fichero(schema_extra, "json", "contrato de las 31 variables")
+                      if schema_extra else rel("configs/features/multilayer-v3.json",
+                                               "json", "contrato de las 31 variables"),
+                      _stat_fichero(descripciones, "json", "texto por variable"),
+                      rel("scripts/features/acumular_v3.py", "py",
+                          "acumula filas del anillo al dataset"),
+                      (_stat_fichero(dataset, "csv", "dataset acumulado")
+                       if dataset else rel("artifacts/linea-base/multilayer-v3.csv",
+                                           "csv", "dataset acumulado"))],
+        "modelo": [_stat_fichero(modelo_dir / "ocsvm_scaled.joblib", "joblib",
+                                 "modelo entrenado, umbral congelado"),
+                   _stat_fichero(manifest_path, "json", "hashes y evaluacion")],
+        "reentrenamiento": [rel("scripts/dataset/particionar_linea_base.py", "py",
+                                "parte sin fuga temporal"),
+                            rel("scripts/modeling/entrenar_preliminar.py", "py",
+                                "entrena y congela el umbral")],
+        "control": [rel("scripts/engine/responder_iptables.py", "py",
+                        "bloqueo con interlock de calibracion")],
+        "registro": [_stat_fichero(log_path, "log", "una linea JSON por decision")],
+        "panel": [rel("scripts/engine/dashboard.py", "py", "este panel, solo lectura")],
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -2537,6 +2616,11 @@ def main() -> int:
                         args.dataset)
                 self._send_json(_CACHE_VARIABLES["datos"])
                 return
+            if path == "/api/artefactos":
+                self._send_json(estado_artefactos(
+                    args.eve_path, args.dataset, args.manifest_path, args.log_path,
+                    args.schema_extra, args.descripciones))
+                return
             if path == "/api/decisions":
                 params = dict(pair.split("=") for pair in query.split("&") if "=" in pair)
                 limit = int(params.get("limit", "100"))
@@ -2567,7 +2651,6 @@ def main() -> int:
         def log_message(self, *args_: object) -> None:  # silencioso, evita ruido en journal
             pass
 
-    servidor = ThreadingHTTPServer((args.host, args.port), Handler)
     esquema = "http"
     if args.tls_cert and args.tls_key:
         # TLS_SERVER exige TLS 1.2 como minimo y desactiva la renegociacion
@@ -2575,12 +2658,33 @@ def main() -> int:
         # valide un sensor interno, asi que se comprueba por huella.
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.load_cert_chain(certfile=str(args.tls_cert), keyfile=str(args.tls_key))
-        servidor.socket = ctx.wrap_socket(servidor.socket, server_side=True)
+
+        class ServidorTLS(ThreadingHTTPServer):
+            # El handshake TLS se hace en el hilo de CADA conexion, no en el
+            # bucle de aceptar. Envolver el socket de ESCUCHA -lo obvio- serializa
+            # el handshake en el hilo principal: un cliente lento o a medias -una
+            # pestana colgada, un tunel con conexiones zombis- bloquea a todos los
+            # demas y el panel deja de responder (visto: cola de accept sin vaciar
+            # y 000 para cualquiera). do_handshake_on_connect=False lo aplaza a la
+            # primera lectura, que ya ocurre en el hilo del handler; el timeout
+            # evita que un handshake que nunca termina retenga un hilo para siempre.
+            daemon_threads = True
+
+            def get_request(self):
+                sock, addr = self.socket.accept()
+                sock.settimeout(30)
+                return ctx.wrap_socket(sock, server_side=True,
+                                       do_handshake_on_connect=False), addr
+
+            def handle_error(self, request, client_address):
+                pass   # un handshake fallido no es error del servidor
+
+        servidor = ServidorTLS((args.host, args.port), Handler)
         esquema = "https"
-    elif auth:
-        # No deberia llegarse aqui -parse ya lo rechaza-, pero si alguien
-        # cambia esa comprobacion, que no pase en silencio.
-        print("AVISO: hay login pero NO hay TLS. La contrasena viaja en claro.")
+    else:
+        servidor = ThreadingHTTPServer((args.host, args.port), Handler)
+        if auth:
+            print("AVISO: hay login pero NO hay TLS. La contrasena viaja en claro.")
 
     print(f"Dashboard: {esquema}://{args.host}:{args.port}/"
           + ("" if auth else "   [SIN AUTENTICACION]"))
