@@ -54,6 +54,47 @@ class SinFugaTemporal(unittest.TestCase):
         self.assertNotEqual(pt.comprobar(f, 60), [])
 
 
+class ExcluirIntervalos(unittest.TestCase):
+    """Ventanas de aprovisionamiento fuera, con guarda por la cola."""
+
+    def intervalo(self, desde_h, hasta_h):
+        base = INICIO.timestamp()
+        return [(base + desde_h * 3600, base + hasta_h * 3600)]
+
+    def test_descarta_las_ventanas_del_intervalo(self):
+        # Intervalo en la hora 2-3 de una franja de 6 h; esas ventanas salen.
+        f, informe = pt.particionar(filas(6), bloque_s=3600, guarda_s=60,
+                                    intervalos=self.intervalo(2, 3))
+        self.assertGreater(informe["descartadas_por_intervalo"], 0)
+        for fila in f:
+            t = pt.marca(fila["window_end_utc"])
+            base = INICIO.timestamp()
+            if base + 2 * 3600 < t <= base + 3 * 3600:
+                self.assertEqual(fila["particion"], "descartada_intervalo")
+
+    def test_la_guarda_va_por_la_cola_no_por_delante(self):
+        base = INICIO.timestamp()
+        f, _ = pt.particionar(filas(6), bloque_s=3600, guarda_s=60,
+                              intervalos=self.intervalo(2, 3))
+        for fila in f:
+            t = pt.marca(fila["window_end_utc"])
+            # Justo despues del fin (dentro de la guarda): descartada.
+            if base + 3 * 3600 < t <= base + 3 * 3600 + 60:
+                self.assertEqual(fila["particion"], "descartada_intervalo")
+            # Justo antes del inicio: limpia (la historia va hacia atras).
+            if base + 2 * 3600 - 120 < t <= base + 2 * 3600 - 30:
+                self.assertNotEqual(fila["particion"], "descartada_intervalo")
+
+    def test_sin_intervalos_no_descarta_nada_por_intervalo(self):
+        _, informe = pt.particionar(filas(6), bloque_s=3600, guarda_s=60)
+        self.assertEqual(informe["descartadas_por_intervalo"], 0)
+
+    def test_no_hay_fuga_entre_lo_que_queda(self):
+        f, _ = pt.particionar(filas(8), bloque_s=3600, guarda_s=60,
+                              intervalos=self.intervalo(3, 4))
+        self.assertEqual(pt.comprobar(f, 60), [])
+
+
 class RepartoPorBloques(unittest.TestCase):
     def test_los_tres_conjuntos_cubren_el_ciclo_diario(self):
         # Con bloques de 2 h sobre 24 h, cada conjunto toca varias franjas

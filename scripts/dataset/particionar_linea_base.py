@@ -57,20 +57,33 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def particionar(filas: list[dict], bloque_s: int, guarda_s: int) -> tuple[list[dict], dict]:
+def particionar(filas: list[dict], bloque_s: int, guarda_s: int,
+                intervalos: list[tuple[float, float]] | None = None) -> tuple[list[dict], dict]:
     tiempos = [marca(f["window_end_utc"]) for f in filas]
     t0, t1 = min(tiempos), max(tiempos)
     n_bloques = max(1, math.ceil((t1 - t0) / bloque_s))
+    intervalos = intervalos or []
+
+    def sucia(t: float) -> bool:
+        # Una ventana termina en t y cubre [t-guarda, t]. Esta contaminada si
+        # esa historia toca un intervalo de aprovisionamiento: t en
+        # (ini, fin+guarda]. La guarda va por la COLA -una ventana posterior
+        # arrastra historia de dentro del intervalo-; una anterior es limpia.
+        return any(ini < t <= fin + guarda_s for ini, fin in intervalos)
 
     reparto = Counter()
     descartadas = 0
+    descartadas_intervalo = 0
     for fila, t in zip(filas, tiempos):
         indice = min(int((t - t0) // bloque_s), n_bloques - 1)
         inicio = t0 + indice * bloque_s
         # La banda de guarda va al PRINCIPIO de cada bloque salvo el primero:
         # esas ventanas son las unicas cuya historia entra en el bloque
         # anterior, que puede pertenecer a otro conjunto.
-        if indice > 0 and (t - inicio) < guarda_s:
+        if sucia(t):
+            fila["particion"] = "descartada_intervalo"
+            descartadas_intervalo += 1
+        elif indice > 0 and (t - inicio) < guarda_s:
             fila["particion"] = "descartada_guarda"
             descartadas += 1
         else:
@@ -88,6 +101,8 @@ def particionar(filas: list[dict], bloque_s: int, guarda_s: int) -> tuple[list[d
         "horas_cubiertas": round((t1 - t0) / 3600.0, 2),
         "reparto": dict(reparto),
         "descartadas_por_guarda": descartadas,
+        "descartadas_por_intervalo": descartadas_intervalo,
+        "intervalos_excluidos": len(intervalos),
     }
 
     # Un conjunto vacio es un fallo silencioso: si el patron no llega a
@@ -113,7 +128,7 @@ def comprobar(filas: list[dict], guarda_s: int) -> list[str]:
     sin ella seria una intencion, no un hecho.
     """
     utiles = [(marca(f["window_end_utc"]), f["particion"], f["entity_ip"])
-              for f in filas if f["particion"] != "descartada_guarda"]
+              for f in filas if not f["particion"].startswith("descartada")]
     utiles.sort()
     fallos = []
     for (t_a, p_a, ip_a), (t_b, p_b, ip_b) in zip(utiles, utiles[1:]):
@@ -138,7 +153,24 @@ def main() -> int:
     p.add_argument("--solo-elegibles", action="store_true",
                    help="descartar las ventanas con eligible_training=False, que "
                         "no tienen los 60 s de historia completos")
+    p.add_argument("--excluir-intervalos", default="",
+                   help="ventanas de aprovisionamiento a descartar, como pares "
+                        "ini/fin ISO separados por coma: "
+                        "'2026-09-27T10:00:00+00:00/2026-09-27T11:30:00+00:00,...'. "
+                        "Se descartan con banda de guarda por la cola.")
     args = p.parse_args()
+
+    intervalos = []
+    for par in args.excluir_intervalos.split(","):
+        par = par.strip()
+        if not par:
+            continue
+        try:
+            ini, fin = par.split("/")
+            intervalos.append((marca(ini.strip()), marca(fin.strip())))
+        except (ValueError, TypeError):
+            print(json.dumps({"error": "intervalo mal formado: %r (usa ini/fin ISO)" % par}))
+            return 1
 
     with args.entrada.open(newline="", encoding="utf-8") as f:
         lector = csv.DictReader(f)
@@ -161,7 +193,7 @@ def main() -> int:
             return 1
 
     bloque_s = int(args.bloque_horas * 3600)
-    filas, informe = particionar(filas, bloque_s, args.guarda_segundos)
+    filas, informe = particionar(filas, bloque_s, args.guarda_segundos, intervalos)
     informe["descartadas_no_elegibles"] = descartadas_no_elegibles
     informe["entrada_sha256"] = sha256(args.entrada)
 
