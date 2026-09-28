@@ -672,26 +672,39 @@ function renderHistogram(data) {
     hint.textContent = 'Sin scores recientes para graficar (solo hay decisiones del heurístico de ventana vacía).';
     return;
   }
-  const w = 610, h = 90, padBottom = 14;
+  const w = 610, h = 90, padBottom = 16;
   const maxCount = Math.max(...data.buckets.map(b => b.count), 1);
   const bw = w / data.buckets.length;
+  const base = h - padBottom;
   let bars = '';
+  let bajoUmbral = 0;
   data.buckets.forEach((b, i) => {
-    const barH = b.count > 0 ? Math.max(3, (b.count / maxCount) * (h - padBottom - 4)) : 0;
+    const barH = b.count > 0 ? Math.max(3, (b.count / maxCount) * (base - 4)) : 0;
     const x = i * bw;
     // Rojo: cubo enteramente en zona ALERT (por debajo del umbral). Verde:
     // enteramente en zona PERMIT. Ambar: el cubo cruza el umbral -- scores
     // ahi mezclan ambas decisiones, la zona mas interesante para mirar.
-    let color = 'var(--accent)';
-    if (b.hi <= data.threshold) color = 'var(--danger)';
-    else if (b.lo < data.threshold) color = 'var(--amber)';
-    bars += `<rect x="${x.toFixed(1)}" y="${(h - padBottom - barH).toFixed(1)}" width="${Math.max(1, bw - 1.2).toFixed(1)}" height="${barH.toFixed(1)}" rx="1" fill="${color}"/>`;
+    let color = 'var(--accent)', zona = 'PERMIT';
+    if (b.hi <= data.threshold) { color = 'var(--danger)'; zona = 'ALERT'; bajoUmbral += b.count; }
+    else if (b.lo < data.threshold) { color = 'var(--amber)'; zona = 'cruza el umbral'; }
+    // Barra con tope redondeado (spec de marcas) y, encima, un area invisible de
+    // toda la altura como diana de hover: el <title> da el tooltip nativo sin
+    // depender de JS -robusto, y el raton no tiene que acertar la barra fina-.
+    if (barH > 0)
+      bars += `<rect x="${x.toFixed(1)}" y="${(base - barH).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${barH.toFixed(1)}" rx="2" fill="${color}"/>`;
+    bars += `<rect x="${x.toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${base}" fill="transparent">`
+      + `<title>score ${b.lo.toFixed(3)} a ${b.hi.toFixed(3)} · ${b.count} ventana(s) · ${zona}</title></rect>`;
   });
   const thresholdX = ((data.threshold - data.min) / (data.max - data.min)) * w;
-  bars += `<line x1="${thresholdX.toFixed(1)}" y1="0" x2="${thresholdX.toFixed(1)}" y2="${h - padBottom}" stroke="var(--text)" stroke-width="1.3" stroke-dasharray="3 2"/>`;
-  bars += `<text x="${thresholdX.toFixed(1)}" y="${h - 3}" font-size="9" fill="var(--text-dim)" text-anchor="middle" font-family="ui-monospace, monospace">umbral</text>`;
+  bars += `<line x1="${thresholdX.toFixed(1)}" y1="0" x2="${thresholdX.toFixed(1)}" y2="${base}" stroke="var(--text)" stroke-width="1.3" stroke-dasharray="3 2"/>`;
+  bars += `<text x="${Math.min(w - 40, thresholdX + 4).toFixed(1)}" y="10" font-size="9" fill="var(--text)" font-family="ui-monospace, monospace">umbral ${data.threshold.toFixed(2)}</text>`;
+  // Eje X: score minimo y maximo, para que las barras tengan escala.
+  bars += `<text x="2" y="${h - 3}" font-size="9" fill="var(--text-dim)" font-family="ui-monospace, monospace">${data.min.toFixed(2)}</text>`;
+  bars += `<text x="${w - 2}" y="${h - 3}" font-size="9" fill="var(--text-dim)" text-anchor="end" font-family="ui-monospace, monospace">${data.max.toFixed(2)}</text>`;
   svg.innerHTML = bars;
-  hint.textContent = `${data.n} score(s) real(es) de las últimas 500 decisiones, entre ${data.min.toFixed(2)} y ${data.max.toFixed(2)}. Rojo = zona ALERT, ámbar = cruza el umbral, verde = zona PERMIT.`;
+  const pct = data.n ? Math.round(100 * bajoUmbral / data.n) : 0;
+  hint.textContent = `${data.n} score(s) real(es) · ${bajoUmbral} (${pct}%) por debajo del umbral. `
+    + `Pasa el ratón por una barra para ver su rango. Rojo = ALERT, ámbar = cruza el umbral, verde = PERMIT.`;
 }
 
 async function loadActivity(range) {
