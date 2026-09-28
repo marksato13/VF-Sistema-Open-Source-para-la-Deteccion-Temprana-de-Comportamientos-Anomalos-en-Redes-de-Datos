@@ -590,6 +590,12 @@ llegan el código, Suricata y las dependencias de Python? El principio es siempr
 el mismo: **se obtienen en una zona con conexión y se transfieren al sensor por
 la red interna o por un medio aprobado. El sensor nunca toca Internet.**
 
+> **Atajo automatizado:** `scripts/setup/preparar-bundle.sh` hace las tres cosas
+> de golpe en un host de construcción Ubuntu 24.04 (o un contenedor
+> `ubuntu:24.04`): descarga los `.deb` de Suricata, compila Python 3.14 y baja
+> las ruedas `cp314`. Produce una carpeta `bundle/` que se transfiere al sensor.
+> Ver el encabezado del script. Lo de abajo explica cada pieza por separado.
+
 Hay que llevar tres piezas. Para cada una, de más simple a más aislado:
 
 ### 1 · El código (este repositorio)
