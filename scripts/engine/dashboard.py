@@ -320,6 +320,22 @@ HTML = """<!doctype html>
   /* El lector no recibe las secciones de desarrollo, asi que su barra lateral
      es mas corta; nada que ocultar aqui, el marcado ya no las trae. */
 
+  /* Fila de KPIs: las cuatro cifras que importan de un vistazo. */
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.8rem; margin-bottom: 1.1rem; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 0.8rem 1rem; position: relative; }
+  .kpi .k-lab { font: 0.72rem var(--sans); letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--text-dim); }
+  .kpi .k-val { font: 700 1.9rem var(--sans); color: var(--text); font-variant-numeric: tabular-nums;
+    line-height: 1.15; margin-top: 0.15rem; }
+  .kpi .k-val small { font-size: 0.9rem; font-weight: 600; color: var(--text-dim); }
+  .kpi .k-sub { font: 0.74rem var(--sans); color: var(--text-dim); margin-top: 0.1rem; }
+  .kpi .k-dot { position: absolute; top: 0.9rem; right: 0.9rem; width: 9px; height: 9px; border-radius: 50%; }
+  .kpi.ok .k-dot { background: var(--ok); }
+  .kpi.warn .k-dot { background: var(--amber); }
+  .kpi.bad .k-dot { background: var(--danger); }
+
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; }
 
   /* Variables por capa. La cabecera de capa es un boton: filtra la tabla. */
@@ -441,6 +457,7 @@ HTML = """<!doctype html>
     </div>
   </header>
 
+  <div class="kpi-row" id="kpis"></div>
   <div class="healthbar" id="healthbar"></div>
 
   <section id="s-salud">
@@ -643,6 +660,29 @@ function fmtTime(t) {
   return new Date(t * 1000).toLocaleTimeString();
 }
 
+// Fila de KPIs: las cuatro cifras que un operador mira primero. Todo sale de
+// datos ya cargados (contadores + el resumen del histograma); nada inventado.
+function renderKpis(status) {
+  const el = document.getElementById('kpis');
+  if (!el) return;
+  const c = status.counters || {};
+  const cal = status.calibracion && status.calibracion.calibrado_en_esta_red;
+  const alertas = c.alert_model || 0;
+  const hr = window._histResumen;
+  const tile = (lab, val, sub, estado) =>
+    `<div class="kpi ${estado || ''}"><div class="k-dot"></div>`
+    + `<div class="k-lab">${lab}</div><div class="k-val">${val}</div>`
+    + `<div class="k-sub">${sub}</div></div>`;
+  el.innerHTML =
+    tile('Entidades vigiladas', c.entidades != null ? c.entidades : '—', 'última hora', '') +
+    tile('Ventanas/h', (c.total != null ? c.total : 0).toLocaleString('es'), 'analizadas', '') +
+    tile('Cerca del umbral', hr ? hr.pct + '<small>%</small>' : '—',
+         hr ? hr.bajoUmbral + ' de ' + hr.n + ' scores' : 'sin scores', hr && hr.pct > 20 ? 'warn' : '') +
+    tile('Alertas reales (1h)', alertas,
+         cal ? 'modelo calibrado' : 'modelo sin calibrar: ruido',
+         !cal ? 'warn' : (alertas > 0 ? 'bad' : 'ok'));
+}
+
 function renderHealthbar(services, counters, captureMetrics, calibracion) {
   const allUp = Object.values(services).every(Boolean);
   const el = document.getElementById('healthbar');
@@ -732,6 +772,7 @@ function renderHistogram(data) {
   bars += `<text x="${w - 2}" y="${h - 3}" font-size="9" fill="var(--text-dim)" text-anchor="end" font-family="ui-monospace, monospace">${data.max.toFixed(2)}</text>`;
   svg.innerHTML = bars;
   const pct = data.n ? Math.round(100 * bajoUmbral / data.n) : 0;
+  window._histResumen = { pct: pct, n: data.n, bajoUmbral: bajoUmbral };
   hint.textContent = `${data.n} score(s) real(es) · ${bajoUmbral} (${pct}%) por debajo del umbral. `
     + `Pasa el ratón por una barra para ver su rango. Rojo = ALERT, ámbar = cruza el umbral, verde = PERMIT.`;
 }
@@ -763,9 +804,16 @@ function on(id, evento, fn) {
 
 async function refresh() {
   try {
-    const status = await (await fetch('/api/status')).json();
+    // El histograma se pide junto al estado para que la tarjeta "Cerca del
+    // umbral" tenga su cifra ya en la primera pintada, no un ciclo despues.
+    const [statusRes, histRes] = await Promise.all([
+      fetch('/api/status'), fetch('/api/score-histogram')]);
+    const status = await statusRes.json();
+    const histogramData = await histRes.json();
     stamp.textContent = 'Actualizado ' + new Date().toLocaleTimeString();
 
+    renderHistogram(histogramData);
+    renderKpis(status);
     renderHealthbar(status.services, status.counters, status.capture_metrics, status.calibracion);
     renderSidebar(status);
     // Las tres secciones de desarrollo -topologia, modelo y alcance- no estan
@@ -834,9 +882,6 @@ async function refresh() {
 
     if (currentRange === '1h') renderSparkline(status.activity);
     else loadActivity(currentRange);
-
-    const histogramData = await (await fetch('/api/score-histogram')).json();
-    renderHistogram(histogramData);
 
     lastDecisions = await (await fetch('/api/decisions?limit=100')).json();
     markSeenAndCountNewAlerts(lastDecisions);
@@ -1877,6 +1922,7 @@ def compute_counters(decisions: list[dict], window_seconds: int = 3600) -> dict:
         "alert_auth_heuristic": alert_auth_heuristic,
         "permit_model": permit_model,
         "permit_heuristic": permit_heuristic,
+        "entidades": len({d.get("entity_ip") for d in recent if d.get("entity_ip")}),
     }
 
 
