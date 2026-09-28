@@ -48,6 +48,11 @@ HTML = """<!doctype html>
     --ok: #4ade80; --ok-soft: #12271c;
     --amber: #f0b429; --amber-soft: #332508;
     --danger: #f87171; --danger-soft: #351515;
+    /* Paleta categorica para las capas del modelo (L2/L3/L4/L7): tonos vivos y
+       distintos entre si, elegidos para NO chocar con los colores semanticos
+       (verde=ok, ambar=aviso, rojo=alerta). Contraste medido sobre las
+       superficies del panel >= 5.9 (AA de texto normal). */
+    --capa-a: #2dd4bf; --capa-b: #60a5fa; --capa-c: #c084fc; --capa-d: #f472b6;
     --mono: ui-monospace, "Cascadia Code", "Roboto Mono", "SF Mono", Menlo, Consolas, monospace;
     --sans: ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
   }
@@ -150,7 +155,7 @@ HTML = """<!doctype html>
   .topo-node.warn .box { stroke: color-mix(in srgb, var(--amber) 55%, var(--border)); }
   .topo-node.bad .box { stroke: color-mix(in srgb, var(--danger) 60%, var(--border)); }
   .topo-node .ttl { fill: var(--text); font: 600 12.5px var(--sans); }
-  .topo-node .sub { fill: var(--text-dim); font: 11px var(--mono); }
+  .topo-node .sub { fill: var(--text-dim); font: 11px var(--mono); font-variant-numeric: tabular-nums; }
   .topo-node .ico { color: var(--text-dim); }
   .topo-node.ok .ico { color: var(--ok); }
   .topo-node.warn .ico { color: var(--amber); }
@@ -352,17 +357,20 @@ HTML = """<!doctype html>
     text-align: left; cursor: pointer; font: inherit; color: inherit;
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 10px; padding: 0.6rem 0.7rem; transition: border-color .15s, background .15s;
+    /* Franja de color de la capa; --cc-color lo fija el JS por capa. */
+    box-shadow: inset 3px 0 0 var(--cc-color, var(--border));
   }
   .var-capa:hover { border-color: var(--accent); }
   .var-capa[aria-pressed="true"] { background: var(--surface-2); border-color: var(--accent); }
-  .var-capa .cid { font-size: 0.7rem; letter-spacing: .06em; color: var(--accent); font-weight: 700; }
+  .var-capa .cid { font-size: 0.7rem; letter-spacing: .06em; color: var(--cc-color, var(--accent)); font-weight: 700; }
   .var-capa .cn { font-size: 0.95rem; font-weight: 600; margin-top: 0.1rem; }
   .var-capa .cc { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.15rem; }
 
   .var-tabla { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
   .var-grupo { font-size: 0.72rem; letter-spacing: .07em; text-transform: uppercase;
     color: var(--text-dim); background: var(--surface-2); padding: 0.4rem 0.8rem;
-    border-bottom: 1px solid var(--border); }
+    border-bottom: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--cc-color, var(--border)); }
+  .var-grupo b { color: var(--cc-color, var(--accent)); font-weight: 700; }
   .var-fila {
     display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; align-items: center;
     width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
@@ -1800,6 +1808,15 @@ refresh();
 let varCapaSel = null;              // null = todas las capas
 const varAbiertas = new Set();      // se conserva entre refrescos
 
+// Paleta categorica de las capas: se asigna por ORDEN de aparicion, no por el id
+// literal, asi que funciona sea cual sea el nombre de la capa y con cuantas haya.
+const CAPA_PALETA = ['var(--capa-a)', 'var(--capa-b)', 'var(--capa-c)', 'var(--capa-d)'];
+function capaColor(id) {
+  if (!varDatos || !varDatos.capas) return 'var(--accent)';
+  const i = varDatos.capas.findIndex(c => c.id === id);
+  return CAPA_PALETA[(i < 0 ? 0 : i) % CAPA_PALETA.length];
+}
+
 function varEsc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -1861,7 +1878,7 @@ function renderVariables() {
     const sel = varCapaSel === c.id;
     const fuera = c.n - c.n_motor;
     const nota = fuera ? `${c.n_motor} en el motor · ${fuera} en acumulación` : `${c.n} en el motor`;
-    return `<button class="var-capa" data-capa="${c.id}" aria-pressed="${sel}" title="${varEsc(c.que)}">`
+    return `<button class="var-capa" data-capa="${c.id}" aria-pressed="${sel}" title="${varEsc(c.que)}" style="--cc-color:${capaColor(c.id)}">`
       + `<span class="cid">${c.id} · ${varEsc(c.nombre)}</span>`
       + `<div class="cn">${c.n} variable${c.n === 1 ? '' : 's'}</div>`
       + `<div class="cc">${nota}</div></button>`;
@@ -1874,7 +1891,7 @@ function renderVariables() {
     if (v.layer !== capaActual) {
       capaActual = v.layer;
       const c = varDatos.capas.find(x => x.id === capaActual) || {};
-      html += `<div class="var-grupo">${capaActual} · ${varEsc(c.nombre || '')} — ${varEsc(c.que || '')}</div>`;
+      html += `<div class="var-grupo" style="--cc-color:${capaColor(capaActual)}"><b>${capaActual}</b> · ${varEsc(c.nombre || '')} — ${varEsc(c.que || '')}</div>`;
     }
     const abierta = varAbiertas.has(v.name);
     const badge = v.en_motor ? '' : '<span class="var-badge">EN ACUMULACIÓN</span>';
