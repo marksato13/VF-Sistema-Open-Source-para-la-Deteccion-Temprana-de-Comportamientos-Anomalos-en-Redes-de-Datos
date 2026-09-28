@@ -580,3 +580,58 @@ Por eso `scripts/analysis/verificar_reproduccion.py` distingue dos niveles:
 
 La tolerancia no esconde lo que importa: el fallo de `sample_weight` movía el
 umbral un 10 % y cambiaba el resultado, y sigue fallando.
+
+---
+
+## Anexo C · Despliegue en un entorno real (sensor aislado)
+
+Un sensor de seguridad **no debe tener salida a Internet**. Entonces, ¿cómo
+llegan el código, Suricata y las dependencias de Python? El principio es siempre
+el mismo: **se obtienen en una zona con conexión y se transfieren al sensor por
+la red interna o por un medio aprobado. El sensor nunca toca Internet.**
+
+Hay que llevar tres piezas. Para cada una, de más simple a más aislado:
+
+### 1 · El código (este repositorio)
+
+- **Mirror Git interno** (GitLab/Gitea/Bitbucket en la LAN, sincronizado con
+  GitHub desde una zona con salida): el sensor hace `git clone` del mirror
+  interno, no de GitHub. *Recomendado a escala.*
+- **Staging host**: una máquina con Internet clona el repo (o descarga el tarball
+  del Release) y se transfiere al sensor por la red interna:
+  ```bash
+  # en la máquina con Internet:
+  git clone https://github.com/.../VF-Sistema-...-Redes-de-Datos.git cyberflow
+  tar czf cyberflow.tgz cyberflow
+  # transferir por el bastión y, en el sensor:
+  tar xzf cyberflow.tgz
+  ```
+  *Es el método usado en este laboratorio (air-gap).*
+- **Release tarball**: descargar el `.tar.gz` del GitHub Release una vez y
+  llevarlo.
+
+### 2 · Suricata (paquetes del sistema)
+
+- **Proxy o mirror APT interno**: el sensor apunta a él (no a Internet).
+- **Bundle de `.deb`**: en una máquina conectada, `apt-get download suricata` y
+  sus dependencias (libhtp2, libhyperscan5, libhiredis, libluajit, libevent…) →
+  transferir → `sudo apt-get install ./*.deb`.
+
+### 3 · Python y sus dependencias
+
+- **Mirror PyPI interno** (devpi/Nexus): `pip install` apunta ahí.
+- **Ruedas offline**: en una máquina conectada, con el intérprete correcto
+  (3.14), `pip download -r requirements-model.txt -d ruedas/` → transferir la
+  carpeta `ruedas/`. **El instalador la usa automáticamente si existe.**
+- **Python 3.14**: desde un paquete interno, o compilarlo una vez (anexo B) y
+  distribuir `/opt/python3.14`.
+
+### En resumen
+
+Los cuatro patrones habituales —salida por **proxy** controlado, **mirror
+interno**, **imagen dorada**/automatización, o **bundle air-gap**— mantienen el
+sensor aislado. `instalar.sh` **no necesita Internet**: usa `ruedas/` y los
+paquetes ya presentes. El único requisito es haber **traído** esas piezas desde
+una zona conectada. En este laboratorio, ese "traer" se hace copiando el bundle
+ya preparado de un sensor gemelo; en producción, del mirror o del bundle
+versionado del release.
