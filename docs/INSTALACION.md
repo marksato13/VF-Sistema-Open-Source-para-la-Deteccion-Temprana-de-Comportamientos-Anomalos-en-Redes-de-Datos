@@ -394,15 +394,30 @@ panel avisa en ámbar de que las alertas no son fiables — que es lo correcto.
 ## Anexo A · Instalar sin salida a Internet
 
 Un sensor sin salida a Internet es una buena postura de seguridad, y es
-compatible con instalarlo. Dos vías.
+compatible con instalarlo. Tres vías, de la más simple a la más aislada.
 
-**Paquetes del sistema**, con un túnel desde una máquina que sí tenga salida:
+**Vía 0 — Internet temporal (lo más simple para un banco de pruebas).** En el
+hipervisor, añada de forma temporal un adaptador con salida (NAT/puente),
+instale, y quítelo:
 
 ```bash
-# desde el bastión, el túnel vive solo mientras dura el comando
+sudo apt-get update && sudo apt-get install -y suricata
+# ...instalado; retire el adaptador con Internet en el hipervisor.
+```
+
+**Vía 1 — Paquetes del sistema por túnel**, desde una máquina que sí tenga
+salida y que **alcance al sensor**. El destino del reenvío `-R` se resuelve en el
+CLIENTE ssh, así que el cliente debe ser la máquina con Internet:
+
+```bash
+# el túnel vive solo mientras dura el comando
 ssh -R 18080:archive.ubuntu.com:80 -R 18081:security.ubuntu.com:80 \
     usuario@sensor "sudo apt-get update && sudo apt-get install -y suricata"
 ```
+
+> Si el sensor solo se alcanza a través de un **bastión sin Internet**, el
+> bastión NO sirve de cliente (no resolvería `archive.ubuntu.com`). Encadene
+> desde la máquina con Internet con `-J bastión`, o use la Vía 0.
 
 Apuntando temporalmente `/etc/apt/sources.list.d/ubuntu.sources` a
 `http://127.0.0.1:18080/ubuntu/`.
