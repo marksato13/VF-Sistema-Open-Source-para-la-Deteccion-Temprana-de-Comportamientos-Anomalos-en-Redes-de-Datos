@@ -357,14 +357,32 @@ Las entidades señaladas eran las interfaces del propio cortafuegos emitiendo
 sus anuncios CARP. **El 92,4 % eran falsos positivos.**
 
 No es un defecto del motor: es lo que pasa cuando se aplica un umbral calibrado
-en otro sitio. Recalibre con tráfico normal **de su red**:
+en otro sitio. Recalibre con tráfico normal **de su red**. Pipeline v3, tres pasos
+sobre la línea base que el acumulador va escribiendo en
+`artifacts/linea-base/multilayer-v3.csv`:
 
 ```bash
-python3 scripts/features/extract_multilayer_v2.py --help
-python3 scripts/modeling/calibrate_multilayer_v2_v1.py --help
+# 1) Particionar por bloques temporales con banda de guarda (sin fuga entre
+#    entrenamiento, validación y prueba).
+python3 scripts/dataset/particionar_linea_base.py \
+  --entrada artifacts/linea-base/multilayer-v3.csv \
+  --salida  artifacts/linea-base/particionado.csv \
+  --informe artifacts/linea-base/particion.json
+
+# 2) Entrenar sobre `train` y CONGELAR el umbral en el percentil alpha de
+#    `validation` -nunca de `test`-. El informe trae el umbral y el FPR de prueba.
+python3 scripts/modeling/entrenar_preliminar.py \
+  --entrada artifacts/linea-base/particionado.csv \
+  --schema  configs/features/multilayer-v3.json \
+  --salida  artifacts/preliminar/modelo.joblib \
+  --informe artifacts/preliminar/informe.json
 ```
 
-Use solo datos de validación para fijar el umbral, nunca los de prueba.
+**3) Promocione con criterio.** Abra `artifacts/preliminar/informe.json` y confirme
+que el **FPR sobre `test`** ronda `alpha` (0,05): esa es la señal de que el umbral
+generaliza. Solo entonces reemplace el modelo y el umbral de producción por los
+nuevos y arranque el panel con `--calibrado-en-esta-red`. Hasta que lo haga, el
+panel avisa en ámbar de que las alertas no son fiables — que es lo correcto.
 
 > **Y antes de recalibrar, asegúrese de tener tráfico que merezca llamarse
 > línea base.** En una red sin usuarios, el 87 % de lo que ve el sensor es plano

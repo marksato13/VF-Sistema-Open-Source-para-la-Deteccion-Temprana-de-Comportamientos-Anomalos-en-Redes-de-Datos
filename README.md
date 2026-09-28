@@ -105,6 +105,35 @@ está decidiendo.
 Para redes sin salida a Internet, o si el espejo aún no llega al sensor, la
 guía larga está en [`docs/INSTALACION.md`](docs/INSTALACION.md).
 
+### Adaptar a tu red (replicabilidad)
+
+Instalar no basta: el modelo publicado aprendió qué era «normal» en **otra** red.
+Para que detecte bien en la tuya hay que **recalibrarlo con tu propio tráfico** —
+ese es el paso que hace el sistema *replicable*, no solo reproducible. Pipeline v3:
+
+1. Deja el motor **capturando línea base** unas horas con tráfico real (no una red vacía).
+2. **Particiona** por bloques con banda de guarda (sin fuga temporal):
+   ```bash
+   python3 scripts/dataset/particionar_linea_base.py \
+     --entrada artifacts/linea-base/multilayer-v3.csv \
+     --salida  artifacts/linea-base/particionado.csv \
+     --informe artifacts/linea-base/particion.json
+   ```
+3. **Entrena y congela el umbral** desde validación (nunca desde prueba):
+   ```bash
+   python3 scripts/modeling/entrenar_preliminar.py \
+     --entrada artifacts/linea-base/particionado.csv \
+     --schema  configs/features/multilayer-v3.json \
+     --salida  artifacts/preliminar/modelo.joblib \
+     --informe artifacts/preliminar/informe.json
+   ```
+4. Comprueba en el informe que el **FPR sobre `test`** ronda `alpha` (0,05). Si cuadra,
+   promociona el modelo y su umbral a producción y arranca el panel con
+   `--calibrado-en-esta-red`. Hasta entonces el panel **avisa en ámbar** de que las
+   alertas son ruido.
+
+Detalle y advertencias en [`docs/INSTALACION.md`](docs/INSTALACION.md) §8.
+
 ### Desinstalar y reinstalar
 
 ```bash
