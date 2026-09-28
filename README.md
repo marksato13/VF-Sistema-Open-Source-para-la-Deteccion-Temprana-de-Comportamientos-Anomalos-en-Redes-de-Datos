@@ -40,6 +40,9 @@ Desde un clon recién hecho, **sin red ni sensor**:
 bash scripts/demo.sh          # abre http://127.0.0.1:8788
 ```
 
+> Solo necesita **Python 3.11+** (librería estándar, **sin dependencias que
+> instalar** ni salida a Internet). Verificado en Ubuntu 24.04 con Python 3.12.
+
 Levanta el panel con **decisiones de ejemplo** (marcadas como demo) para ver el
 flujo completo: detección, scores frente al umbral, topología y respuesta. Es la
 **reproducibilidad** — mismo código + datos incluidos → se ve igual en cualquier
