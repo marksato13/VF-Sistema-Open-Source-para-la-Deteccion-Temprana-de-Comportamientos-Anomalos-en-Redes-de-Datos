@@ -418,6 +418,7 @@ cat <<FIN
   Ver decisiones:     tail -f $REGISTRO
   Ver el servicio:    journalctl -u ppi-motor -f
   Diagnosticar:       sudo bash $0 --comprobar
+  Salud (en marcha):  bash scripts/setup/doctor.sh
 $PANEL_INFO
   ANTES DE CREERSE UNA ALERTA: el umbral publicado esta calibrado para otra
   red. Sin recalibrar, la tasa de falsos positivos medida en un despliegue
