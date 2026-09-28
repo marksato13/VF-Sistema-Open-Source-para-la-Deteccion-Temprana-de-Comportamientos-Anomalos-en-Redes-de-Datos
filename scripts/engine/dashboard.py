@@ -403,10 +403,20 @@ HTML = """<!doctype html>
   }
   .note svg { color: var(--amber); flex: none; margin-top: 0.1rem; }
 
-  .spark-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; overflow-x: auto; }
+  .spark-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; overflow-x: auto; position: relative; }
   .spark-legend { display: flex; gap: 1.1rem; font-size: 0.76rem; color: var(--text-dim); margin-top: 0.5rem; }
   .spark-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
   .swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+  /* Tooltip de la grafica de actividad: sigue al raton con una cruz de
+     referencia y muestra las dos series -PERMIT y ALERT- del intervalo. */
+  .chart-tip { position: absolute; top: 6px; transform: translateX(-50%); pointer-events: none;
+    z-index: 3; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.35rem 0.55rem; font-size: 0.72rem; line-height: 1.35; color: var(--text);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35); white-space: nowrap; visibility: hidden; }
+  .chart-tip .t-when { color: var(--text-dim); margin-bottom: 0.15rem; }
+  .chart-tip b { font-variant-numeric: tabular-nums; }
+  .chart-tip .t-p { color: var(--ok); } .chart-tip .t-a { color: var(--danger); }
 
   table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
   .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; overflow-x: auto; }
@@ -560,6 +570,7 @@ HTML = """<!doctype html>
     <div class="grid" id="counters"></div>
     <div class="spark-wrap">
       <svg id="spark" width="100%" height="46" viewBox="0 0 610 46" preserveAspectRatio="none"></svg>
+      <div class="chart-tip" id="sparkTip"></div>
       <div class="spark-legend">
         <span><i class="swatch" style="background:var(--danger)"></i>intervalo con ALERT</span>
         <span><i class="swatch" style="background:var(--accent)"></i>solo PERMIT</span>
@@ -723,10 +734,19 @@ function renderHealthbar(services, counters, captureMetrics, calibracion) {
   }
 }
 
+// La grafica de actividad guarda sus datos para el tooltip; la unidad de tiempo
+// depende del rango elegido (minutos en 1h, horas en 24h).
+let _sparkData = { activity: [], unidad: 'min' };
+
+function _sparkCuando(b) {
+  return b.offset === 0 ? 'ahora' : ('hace ' + b.offset + ' ' + _sparkData.unidad);
+}
+
 function renderSparkline(activity) {
   const svg = document.getElementById('spark');
   const n = activity.length;
   const w = 610, h = 46, bw = w / n;
+  _sparkData = { activity: activity, unidad: currentRange === '24h' ? 'h' : 'min' };
   let bars = '';
   activity.forEach((b, i) => {
     const total = b.alert + b.permit;
@@ -737,10 +757,56 @@ function renderSparkline(activity) {
       barH = Math.max(4, Math.min(h - 2, 4 + Math.log2(total + 1) * 9));
       color = b.alert > 0 ? 'var(--danger)' : 'var(--accent)';
     }
-    bars += `<rect x="${x.toFixed(1)}" y="${(h - barH).toFixed(1)}" width="${Math.max(1, bw - 1.2).toFixed(1)}" height="${barH.toFixed(1)}" rx="1" fill="${color}"/>`;
+    // <title> nativo por barra: el tooltip basico funciona aunque el JS de la
+    // cruz falle. La cruz y el recuadro de abajo lo enriquecen, no lo sustituyen.
+    bars += `<rect x="${x.toFixed(1)}" y="${(h - barH).toFixed(1)}" width="${Math.max(1, bw - 1.2).toFixed(1)}" height="${barH.toFixed(1)}" rx="1" fill="${color}">`
+      + `<title>${_sparkCuando(b)} · ${b.permit} PERMIT · ${b.alert} ALERT</title></rect>`;
   });
+  bars += `<line id="sparkCross" x1="0" y1="0" x2="0" y2="${h}" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="3 2" visibility="hidden"/>`;
   svg.innerHTML = bars;
 }
+
+function _sparkMove(ev) {
+  const svg = document.getElementById('spark');
+  const tip = document.getElementById('sparkTip');
+  const cross = document.getElementById('sparkCross');
+  const a = _sparkData.activity;
+  if (!svg || !tip || !cross || !a.length) return;
+  const rect = svg.getBoundingClientRect();
+  let i = Math.floor((ev.clientX - rect.left) / rect.width * a.length);
+  i = Math.max(0, Math.min(a.length - 1, i));
+  const b = a[i];
+  const cx = (i + 0.5) * (610 / a.length);
+  cross.setAttribute('x1', cx.toFixed(1));
+  cross.setAttribute('x2', cx.toFixed(1));
+  cross.setAttribute('visibility', 'visible');
+  tip.innerHTML = `<div class="t-when">${_sparkCuando(b)}</div>`
+    + `<div><span class="t-p">PERMIT</span> <b>${b.permit}</b></div>`
+    + `<div><span class="t-a">ALERT</span> <b>${b.alert}</b></div>`;
+  // Situa el recuadro sobre la barra sin salirse del contenedor. Un <svg> no
+  // tiene offsetLeft (es API de HTMLElement), asi que se calcula con los rects
+  // de cliente respecto al contenedor posicionado.
+  const wrapRect = tip.offsetParent.getBoundingClientRect();
+  const centroX = rect.left + (i + 0.5) / a.length * rect.width - wrapRect.left;
+  const media = tip.offsetWidth / 2;
+  tip.style.left = Math.max(media + 2, Math.min(wrapRect.width - media - 2, centroX)).toFixed(0) + 'px';
+  tip.style.visibility = 'visible';
+}
+
+function _sparkLeave() {
+  const tip = document.getElementById('sparkTip');
+  const cross = document.getElementById('sparkCross');
+  if (tip) tip.style.visibility = 'hidden';
+  if (cross) cross.setAttribute('visibility', 'hidden');
+}
+
+(function initSpark() {
+  const svg = document.getElementById('spark');
+  if (svg) {
+    svg.addEventListener('mousemove', _sparkMove);
+    svg.addEventListener('mouseleave', _sparkLeave);
+  }
+})();
 
 function renderHistogram(data) {
   const svg = document.getElementById('histogram');
