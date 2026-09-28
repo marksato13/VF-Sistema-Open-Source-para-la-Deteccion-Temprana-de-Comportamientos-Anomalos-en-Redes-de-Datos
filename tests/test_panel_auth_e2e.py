@@ -182,6 +182,21 @@ class PanelConLogin(unittest.TestCase):
         self.assertIn(b'id="s-decisiones"', pagina)
         self.assertNotIn(b'id="modoBtn"', pagina)
 
+    def test_una_conexion_muerta_no_bloquea_a_las_demas(self):
+        # Regresion del bug del TLS: al envolver el socket de escucha, el
+        # handshake corria en el bucle de aceptar y un cliente que conecta pero
+        # no completa el handshake congelaba el panel para todos. Con el
+        # handshake por-hilo, un zombi no estorba.
+        import socket as _s
+        zombis = []
+        for _ in range(3):
+            z = _s.create_connection(("127.0.0.1", PUERTO), timeout=5)
+            zombis.append(z)          # conecta y calla: nunca habla TLS
+            self.addCleanup(z.close)
+        # Un cliente normal debe seguir siendo atendido sin colgarse.
+        estado, _ = self.pedir("/login")
+        self.assertEqual(estado, 200)
+
     def test_al_admin_si(self):
         _, admin = self.entrar("admin", self.CLAVE_ADMIN)
         _, pagina = self.pedir("/", admin)

@@ -76,22 +76,33 @@ def _escribir_privado(ruta: Path, contenido: bytes, duenno: str | None) -> None:
     os.replace(tmp, ruta)
 
 
-def crear_usuario(nombre: str, rol: str, duenno: str | None) -> int:
+def crear_usuario(nombre: str, rol: str, duenno: str | None,
+                  por_stdin: bool = False) -> int:
     if rol not in _dash.ROLES:
         print("rol invalido: %s (validos: %s)" % (rol, ", ".join(_dash.ROLES)))
         return 2
-    if not sys.stdin.isatty():
-        print("hace falta una terminal: la contrasena se pide por getpass y "
-              "nunca por argumento.")
-        return 2
 
-    contrasena = getpass.getpass("Contraseña para %s (%s): " % (nombre, rol))
-    if len(contrasena) < MINIMO:
-        print("demasiado corta: minimo %d caracteres." % MINIMO)
-        return 2
-    if contrasena != getpass.getpass("Repítela: "):
-        print("no coinciden.")
-        return 2
+    if por_stdin:
+        # La contrasena llega por una tuberia (read -s | ...). Util cuando el
+        # getpass no funciona: sobre sudo con use_pty a traves de un doble SSH,
+        # el prompt interactivo suele fallar y no se crea nada. Aqui se lee una
+        # linea de stdin; no pasa por argv ni por el historial si se usa read -s.
+        contrasena = sys.stdin.readline().rstrip("\n")
+        if len(contrasena) < MINIMO:
+            print("demasiado corta: minimo %d caracteres." % MINIMO)
+            return 2
+    else:
+        if not sys.stdin.isatty():
+            print("hace falta una terminal: la contrasena se pide por getpass y "
+                  "nunca por argumento. O usa --stdin con 'read -s'.")
+            return 2
+        contrasena = getpass.getpass("Contraseña para %s (%s): " % (nombre, rol))
+        if len(contrasena) < MINIMO:
+            print("demasiado corta: minimo %d caracteres." % MINIMO)
+            return 2
+        if contrasena != getpass.getpass("Repítela: "):
+            print("no coinciden.")
+            return 2
 
     try:
         datos = json.loads(USUARIOS.read_text(encoding="utf-8"))
@@ -210,13 +221,16 @@ def main() -> int:
                    help="CN y SAN del certificado: la IP o el nombre por el que "
                         "se abre el panel")
     p.add_argument("--dias", type=int, default=825)
+    p.add_argument("--stdin", action="store_true",
+                   help="lee la contrasena de stdin (una linea) en vez de getpass; "
+                        "usar con 'read -s PW; printf %s\\\\n \"$PW\" | ...'")
     args = p.parse_args()
 
     if args.crear:
         if not args.rol:
             print("--crear necesita --rol")
             return 2
-        return crear_usuario(args.crear, args.rol, args.duenno)
+        return crear_usuario(args.crear, args.rol, args.duenno, args.stdin)
     if args.clave_sesion:
         return crear_clave(args.duenno)
     if args.certificado:
