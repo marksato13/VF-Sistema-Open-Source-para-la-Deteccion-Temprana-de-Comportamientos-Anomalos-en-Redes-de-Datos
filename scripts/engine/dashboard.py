@@ -222,6 +222,24 @@ HTML = """<!doctype html>
     padding: 0.05rem 0.3rem; }
   .topo-flujo .gar { font-size: 0.76rem; color: var(--text-dim); margin-top: 0.1rem; }
   .topo-flujo .flecha { color: var(--text-dim); margin: 0.1rem 0 0.1rem 0.5rem; font-size: 0.9rem; }
+  /* Escenarios de simulacion. */
+  .sim-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0.9rem; margin-top: 0.9rem; }
+  .sim-card { border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; background: var(--surface); }
+  .sim-card h3 { margin: 0 0 0.1rem; font-size: 0.98rem; }
+  .sim-card .donde { font: 11px var(--mono); color: var(--accent); margin-bottom: 0.5rem; }
+  .sim-card .explica { font-size: 0.84rem; color: var(--text-dim); margin: 0 0 0.6rem; }
+  .sim-cmd { position: relative; background: #0b1220; border: 1px solid var(--border);
+    border-radius: 7px; padding: 0.5rem 2.4rem 0.5rem 0.6rem; margin: 0 0 0.6rem;
+    font: 11px var(--mono); color: var(--text); white-space: pre-wrap; word-break: break-all; }
+  .sim-copiar { position: absolute; top: 0.35rem; right: 0.35rem; font: 10px var(--sans);
+    cursor: pointer; border: 1px solid var(--border); border-radius: 5px; padding: 0.15rem 0.4rem;
+    background: var(--surface-2); color: var(--text-dim); }
+  .sim-copiar:hover { border-color: var(--accent); color: var(--accent); }
+  .sim-vars { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.5rem; }
+  .sim-var { font: 10.5px var(--mono); background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 5px; padding: 0.1rem 0.4rem; color: var(--text-dim); }
+  .sim-resp { font-size: 0.82rem; border-left: 2px solid var(--accent); padding-left: 0.6rem; color: var(--text); }
+  .sim-card.peligro .sim-resp { border-left-color: var(--amber); }
 
   .topo-detail {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
@@ -401,6 +419,7 @@ HTML = """<!doctype html>
     <a href="#s-variables" data-sec="s-variables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg>Variables</a>
     <a href="#s-modelo" data-sec="s-modelo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>Modelo</a>
     <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
+    <a href="#s-simulacion" data-sec="s-simulacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg>Simulación</a>
     <!--/ADMIN-->
     <a href="#s-scores" data-sec="s-scores"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg>Scores</a>
     <a href="#s-actividad" data-sec="s-actividad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg>Actividad<span class="pill" id="navAlertPill" hidden></span></a>
@@ -482,6 +501,16 @@ HTML = """<!doctype html>
     <p class="lede-small">Lo que se captura pero NO se puntúa, y por qué. Declararlo con su cifra es parte del método: sin número, «se excluyó» no es una medición.</p>
     <div class="grid" id="alcance"></div>
     <p class="toolbar-hint" id="alcanceDetalle"></p>
+  </section>
+
+  <section id="s-simulacion">
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg><h2>Simulación de escenarios</h2></div>
+    <p class="lede-small">Cada escenario trae su explicación y el comando exacto para copiar y pegar en TU terminal SSH. El panel no ejecuta nada: solo guía y luego verás la respuesta del modelo en Actividad y Decisiones.</p>
+    <div class="range-toggle" id="simTabs">
+      <button data-sim="normal" class="active">Tráfico normal</button>
+      <button data-sim="anomalo">Tráfico anómalo</button>
+    </div>
+    <div class="sim-grid" id="simGrid"></div>
   </section>
   <!--/ADMIN-->
 
@@ -1440,6 +1469,66 @@ async function cargarArtefactos() {
   }
 }
 
+// ---- Simulacion de escenarios --------------------------------------------
+// El panel GUIA, no ejecuta: muestra el comando para copiar. Es la opcion que
+// eligio Mark; el panel de solo lectura no gana capacidad de ejecutar nada.
+let escenarios = null;
+let simTab = 'normal';
+
+function escSimple(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderSimulacion() {
+  const cont = document.getElementById('simGrid');
+  if (!cont) return;
+  if (!escenarios) { cont.innerHTML = '<p class="dim" style="font-size:12px">cargando…</p>'; return; }
+  const lista = escenarios[simTab] || [];
+  if (!lista.length) { cont.innerHTML = '<p class="dim" style="font-size:12px">sin escenarios en esta pestaña.</p>'; return; }
+  cont.innerHTML = lista.map(e => {
+    const peligro = /sudo|arpspoof/.test(e.comando || '') ? ' peligro' : '';
+    const vars = (e.variables || []).map(v => `<span class="sim-var">${escSimple(v)}</span>`).join('');
+    return `<div class="sim-card${peligro}">`
+      + `<h3>${escSimple(e.nombre)}</h3>`
+      + `<div class="donde">${escSimple(e.donde || '')}</div>`
+      + `<p class="explica">${escSimple(e.explica || '')}</p>`
+      + `<div class="sim-cmd"><button class="sim-copiar" data-cmd="${escSimple(e.comando)}">copiar</button>${escSimple(e.comando)}</div>`
+      + `<div class="sim-vars">${vars}</div>`
+      + `<div class="sim-resp">${escSimple(e.responde || '')}</div>`
+      + `</div>`;
+  }).join('');
+}
+
+async function cargarEscenarios() {
+  try {
+    escenarios = await (await fetch('/api/escenarios')).json();
+  } catch (e) {
+    escenarios = { normal: [], anomalo: [] };
+  }
+  renderSimulacion();
+}
+
+on('simTabs', 'click', (ev) => {
+  const b = ev.target.closest('button[data-sim]');
+  if (!b) return;
+  simTab = b.dataset.sim;
+  document.querySelectorAll('#simTabs button').forEach(x => x.classList.toggle('active', x === b));
+  renderSimulacion();
+});
+
+on('simGrid', 'click', async (ev) => {
+  const b = ev.target.closest('.sim-copiar');
+  if (!b) return;
+  try {
+    await navigator.clipboard.writeText(b.dataset.cmd);
+    const antes = b.textContent; b.textContent = 'copiado ✓';
+    setTimeout(() => { b.textContent = antes; }, 1500);
+  } catch (e) {
+    b.textContent = 'copia manual';
+  }
+});
+
 on('topoArchivosBtn', 'click', async () => {
   topoArchivos = !topoArchivos;
   const b = document.getElementById('topoArchivosBtn');
@@ -1650,13 +1739,16 @@ if (document.getElementById('varTabla')) {
   setInterval(cargarVariables, 60000);
 }
 
+// Escenarios: catalogo estatico, se pide una vez (solo el admin tiene la seccion).
+if (document.getElementById('simGrid')) cargarEscenarios();
+
 // ---- Sesion: quien eres y en que modo miras ------------------------------
 // El modo es del ADMIN y solo del admin: alterna entre la vista operativa y la
 // de desarrollo. No es un permiso -esta autorizado a las dos- sino una forma de
 // quitarse de encima lo que no necesita mientras opera. Por eso vive en
 // localStorage y no en la sesion: es preferencia, no autorizacion.
 const SESION = JSON.parse(document.getElementById('datosSesion').textContent);
-const DEV_SECS = ['s-topologia', 's-variables', 's-modelo', 's-alcance'];
+const DEV_SECS = ['s-topologia', 's-variables', 's-modelo', 's-alcance', 's-simulacion'];
 
 function aplicarModo(modo) {
   const dev = modo === 'desarrollo';
