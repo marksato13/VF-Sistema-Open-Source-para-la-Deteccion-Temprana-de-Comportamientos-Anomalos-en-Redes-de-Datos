@@ -110,6 +110,9 @@ sed -i "s|^modo = .*|modo = \"$MODO\"|"                   "$DESTINO"
 sed -i "s|^usuario = .*|usuario = \"$USUARIO\"|"          "$DESTINO"
 sed -i "s|^raiz = .*|raiz = \"$RAIZ_CFG\"|"               "$DESTINO"
 sed -i "s|^direccion = .*|direccion = \"127.0.0.1\"|"     "$DESTINO"
+# "El propio sensor" en la lista de exclusion: adaptalo a ESTA maquina, para que
+# su trafico de gestion no se puntue como si fuera una entidad de la red.
+[[ -n "$IPGEST" ]] && sed -i "s|\"10.10.60.11/32\"|\"$IPGEST/32\"|" "$DESTINO"
 
 c_ok "escrito $DESTINO"
 if python3 "$RAIZ/scripts/setup/cyberflow_config.py" --config "$DESTINO" --comprobar >/dev/null 2>&1; then
