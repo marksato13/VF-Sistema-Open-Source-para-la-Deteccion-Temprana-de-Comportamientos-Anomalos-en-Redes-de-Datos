@@ -621,7 +621,9 @@ Hay que llevar tres piezas. Para cada una, de más simple a más aislado:
 - **Proxy o mirror APT interno**: el sensor apunta a él (no a Internet).
 - **Bundle de `.deb`**: en una máquina conectada, `apt-get download suricata` y
   sus dependencias (libhtp2, libhyperscan5, libhiredis, libluajit, libevent…) →
-  transferir → `sudo apt-get install ./*.deb`.
+  transferir → instalar con **`sudo dpkg -i *.deb`** (dos pasadas, y luego
+  `sudo dpkg --configure -a`). **No** uses `apt-get install ./*.deb` sin red:
+  intenta contactar los mirrors y se cuelga.
 
 ### 3 · Python y sus dependencias
 

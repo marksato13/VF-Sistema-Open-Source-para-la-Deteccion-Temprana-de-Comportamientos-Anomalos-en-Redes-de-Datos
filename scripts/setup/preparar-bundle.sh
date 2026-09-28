@@ -12,10 +12,13 @@
 #
 #  Luego se transfiere al sensor y alli se instala sin Internet:
 #     tar czf bundle.tgz bundle    # y copiar al sensor
-#     # en el sensor:
+#     # en el sensor (rutas ABSOLUTAS si entras como root: ~ apunta a /root):
 #     tar xzf bundle.tgz
 #     sudo tar -C / -xzf bundle/python3.14.tar.gz
-#     sudo apt-get install -y ./bundle/debs/*.deb
+#     # dpkg -i offline (NO apt-get: intenta la red y se cuelga sin Internet).
+#     # Dos pasadas: la 1a puede dejar pre-deps sin ordenar; la 2a las resuelve.
+#     sudo dpkg -i bundle/debs/*.deb; sudo dpkg -i bundle/debs/*.deb
+#     sudo dpkg --configure -a
 #     cp -r bundle/ruedas ~/cyberflow/ruedas
 #     cd ~/cyberflow && sudo bash scripts/setup/instalar.sh
 #
