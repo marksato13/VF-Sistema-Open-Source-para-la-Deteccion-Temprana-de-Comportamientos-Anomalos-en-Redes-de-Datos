@@ -234,8 +234,10 @@ LIMPIEZA_TIMER = """{cabecera}
 Description=CyberFlow - poda periodica del anillo de PCAP
 
 [Timer]
-OnBootSec=5min
-OnUnitActiveSec=5min
+# OnCalendar (reloj de pared), no OnUnitActiveSec: ver la nota del timer de
+# acumulacion. Con OnUnitActiveSec el timer se quedaba sin proximo disparo tras
+# un reinstalar/daemon-reload y el anillo de PCAP dejaba de podarse.
+OnCalendar=*:0/5
 Persistent=true
 
 [Install]
@@ -278,8 +280,12 @@ Description=CyberFlow - extraccion periodica hacia el dataset
 # Cada 10 min sobre un anillo de {retener}: el solape cubre lo que cada pasada
 # descarta por los bordes -historia truncada al principio, ventanas a medio
 # llenar al final- y aguanta un retraso puntual sin dejar agujeros.
-OnBootSec=8min
-OnUnitActiveSec=10min
+# Se usa OnCalendar (reloj de pared), NO OnUnitActiveSec: este ultimo agenda el
+# proximo disparo relativo a la ultima activacion del .service, marca que un
+# reset-failed o un daemon-reload (p.ej. al reinstalar) borra. Sin esa marca el
+# timer queda "active" pero con NextElapse=infinity y no vuelve a dispararse
+# jamas. OnCalendar siempre tiene proximo disparo, sobrevive reinstalar/reiniciar.
+OnCalendar=*:0/10
 Persistent=true
 
 [Install]
