@@ -256,11 +256,36 @@ fi
 titulo "6. Suricata (instalacion y configuracion)"
 # ---------------------------------------------------------------------
 if [[ -n "${FALTAN_PAQUETES// /}" ]]; then
-    echo "  instalando:$FALTAN_PAQUETES"
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $FALTAN_PAQUETES >/dev/null 2>&1 \
-        || { mal "fallo la instalacion de$FALTAN_PAQUETES"
-             echo "        Sin salida a Internet, vea docs/INSTALACION.md, anexo A."; exit 1; }
-    ok "instalado$FALTAN_PAQUETES"
+    echo "  faltan:$FALTAN_PAQUETES"
+    # Dos caminos, y el offline es el primero A PROPOSITO: en un sensor aislado
+    # `apt-get install` no falla rapido, se CUELGA intentando llegar a
+    # archive.ubuntu.com. Si hay un bundle de .deb, se instala con dpkg -i sin
+    # tocar la red. Solo si no hay bundle se recurre a apt (maquina con Internet).
+    DEBS=""
+    for d in "${CYBERFLOW_DEBS:-}" "$RAIZ/debs" "/home/$USUARIO/bundle/debs" "$HOME/bundle/debs"; do
+        [[ -n "$d" && -d "$d" ]] && ls "$d"/*.deb >/dev/null 2>&1 && { DEBS="$d"; break; }
+    done
+    if [[ -n "$DEBS" ]]; then
+        echo "  sin red asumida: instalando offline desde $DEBS con dpkg -i"
+        # Dos pasadas: la primera puede dejar paquetes a medio configurar por el
+        # orden de predependencias (isa-support antes que sse3-support, etc.); la
+        # segunda las cierra. Es el mismo procedimiento del anexo A.
+        dpkg -i "$DEBS"/*.deb >/dev/null 2>&1
+        dpkg -i "$DEBS"/*.deb >/dev/null 2>&1
+        FALLAN=""
+        for b in $FALTAN_PAQUETES; do command -v "$b" >/dev/null || FALLAN="$FALLAN $b"; done
+        [[ -z "${FALLAN// /}" ]] && ok "instalado offline desde el bundle:$FALTAN_PAQUETES" \
+            || { mal "el dpkg offline no dejo utilizable:$FALLAN"
+                 echo "        Revise $DEBS y docs/INSTALACION.md, anexo A."; exit 1; }
+    else
+        echo "  instalando con apt-get:$FALTAN_PAQUETES"
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $FALTAN_PAQUETES >/dev/null 2>&1 \
+            || { mal "fallo la instalacion de$FALTAN_PAQUETES"
+                 echo "        Sin salida a Internet y sin bundle de .deb. Prepare el bundle"
+                 echo "        (scripts/setup/preparar-bundle.sh) o vea docs/INSTALACION.md, anexo A."
+                 exit 1; }
+        ok "instalado$FALTAN_PAQUETES"
+    fi
 fi
 
 SURICONF=/etc/suricata/suricata.yaml
