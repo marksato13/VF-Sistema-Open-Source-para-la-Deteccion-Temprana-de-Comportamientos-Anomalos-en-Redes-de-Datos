@@ -73,7 +73,9 @@ if [[ -r "$REGISTRO" ]]; then
     n=$(grep -c '"event": "decision"' "$REGISTRO" 2>/dev/null || echo 0)
     (( n > 0 )) && ok "decidiendo: $n decisiones registradas" || aviso "aun sin decisiones (el motor llena su historia ~230 s primero)"
     if (( n > 0 )); then
-        python3 - "$REGISTRO" <<'PY' 2>/dev/null
+        # Python solo EXTRAE los dos numeros de la ultima decision; el veredicto
+        # (OK/AVISO) lo da bash, para que el aviso de pcaps cuente en el resumen.
+        nums=$(python3 - "$REGISTRO" <<'PY' 2>/dev/null
 import sys, json
 linea = ""
 with open(sys.argv[1], encoding="utf-8", errors="ignore") as f:
@@ -82,13 +84,15 @@ with open(sys.argv[1], encoding="utf-8", errors="ignore") as f:
             linea = l
 try:
     d = json.loads(linea)
-    il = d.get("pcaps_ilegibles", 0); dup = d.get("duplicados_espejo", 0)
-    print(("  \033[33mAVISO\033[0m pcaps ilegibles (acumulado desde el arranque): %s" % il)
-          if il else "  \033[32mOK\033[0m    sin pcaps ilegibles")
-    print("  \033[32mOK\033[0m    duplicados de espejo descartados: %s" % dup)
+    print(int(d.get("pcaps_ilegibles", 0)), int(d.get("duplicados_espejo", 0)))
 except Exception:
-    pass
+    print(0, 0)
 PY
+)
+        il=${nums%% *}; dup=${nums##* }; il=${il:-0}; dup=${dup:-0}
+        (( il > 0 )) && aviso "pcaps ilegibles (acumulado desde el arranque): $il" \
+                     || ok "sin pcaps ilegibles"
+        ok "duplicados de espejo descartados: $dup"
     fi
 else
     mal "no existe el registro del motor: $REGISTRO"
