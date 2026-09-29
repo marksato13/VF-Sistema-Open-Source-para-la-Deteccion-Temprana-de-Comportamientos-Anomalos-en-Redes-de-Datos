@@ -383,7 +383,23 @@ sleep 20
 
 titulo "9. Comprobacion final"
 for u in $UNIDADES; do
-    systemctl is-active --quiet "$u" && ok "$u activo" || mal "$u NO arranco: journalctl -u $u"
+    if systemctl is-active --quiet "$u"; then
+        ok "$u activo"
+    elif [[ "$u" == "ppi-dashboard" ]] && \
+         { [[ ! -f /etc/cyberflow/usuarios.json ]] || [[ ! -f /etc/cyberflow/clave-sesion ]] || \
+           [[ ! -f /etc/cyberflow/panel.crt ]]; }; then
+        # No es un fallo de instalacion: el panel no arranca hasta que existan sus
+        # ficheros de auth, que se crean aparte (no pueden vivir en el repo). El
+        # resto del sistema esta sano; en cuanto se creen, el panel arranca.
+        aviso "ppi-dashboard aun no arranca: faltan las cuentas del panel. Creelas:"
+        echo "        sudo python3 scripts/setup/cyberflow_usuarios.py --clave-sesion"
+        echo "        sudo python3 scripts/setup/cyberflow_usuarios.py --certificado --nombre <IP-o-nombre>"
+        echo "        sudo python3 scripts/setup/cyberflow_usuarios.py --crear admin  --rol admin"
+        echo "        sudo python3 scripts/setup/cyberflow_usuarios.py --crear lector --rol lector"
+        echo "        sudo systemctl start ppi-dashboard"
+    else
+        mal "$u NO arranco: journalctl -u $u"
+    fi
 done
 REGISTRO="$RAIZ/$(leer_toml rutas registro)"
 sleep 15
