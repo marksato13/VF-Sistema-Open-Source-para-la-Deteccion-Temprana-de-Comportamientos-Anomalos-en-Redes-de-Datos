@@ -71,12 +71,35 @@ fi
 preguntar RED "rango de entidades a puntuar" "$DEFECTO_RED"
 c_ok "red $RED"
 
-# --- Modo ------------------------------------------------------------
-c_tit "3. Modo"
-echo "  observacion = puntua y registra (no toca nftables)"
-echo "  bloqueo     = ademas corta con nftables (solo si el sensor ENRUTA el trafico)"
-preguntar MODO "modo (observacion/bloqueo)" "observacion"
-[[ "$MODO" == "bloqueo" || "$MODO" == "observacion" ]] || MODO="observacion"
+# --- Escenario de despliegue -----------------------------------------
+c_tit "3. Escenario de despliegue"
+echo "  1) Observacion por espejo SPAN   [recomendado]"
+echo "       el sensor recibe un espejo, fuera del camino: puntua y registra."
+echo "       Cero riesgo sobre la red; nftables no se toca."
+echo "  2) En linea con bloqueo (IPS)"
+echo "       el sensor ENRUTA el trafico y ademas corta con nftables."
+echo "       Solo si esta maquina esta en el camino del trafico."
+echo "  3) Personalizado (elegir el modo a mano)"
+preguntar ESC "escenario" "1"
+case "$ESC" in
+    2)
+        MODO="bloqueo"
+        echo "  AVISO: bloqueo solo tiene sentido si esta maquina ENRUTA el trafico."
+        echo "         Con un espejo SPAN observa pero no corta nada (y no avisa)."
+        if [[ "$(cat /proc/sys/net/ipv4/ip_forward 2>/dev/null)" == "1" ]]; then
+            c_ok "ip_forward=1: la maquina enruta"
+        else
+            echo "  AVISO: ip_forward=0: esta maquina NO enruta ahora mismo. Revisa el modo."
+        fi
+        ;;
+    3)
+        preguntar MODO "modo (observacion/bloqueo)" "observacion"
+        [[ "$MODO" == "bloqueo" || "$MODO" == "observacion" ]] || MODO="observacion"
+        ;;
+    *)
+        MODO="observacion"
+        ;;
+esac
 c_ok "modo $MODO"
 
 # --- Usuario y raiz --------------------------------------------------
