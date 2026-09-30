@@ -87,12 +87,26 @@ def plan_nftables(vig: dict[str, dict], ahora: float) -> list[list[str]]:
     """
     blocks = {ip: v for ip, v in vig.items() if v["accion"] == "BLOCK"}
     limits = {ip: v for ip, v in vig.items() if v["accion"] == "LIMIT"}
+    # Tabla PROPIA y AISLADA (`inet cyberflow`): coexiste con el firewall del host
+    # sin tocarlo. La cadena tiene `policy accept` -> solo cae lo que esté en los
+    # sets; jamás bloquea nada más. Los sets llevan `timeout` nativo (caducidad).
+    # Las reglas se recrean cada pasada (flush chain) para no duplicarse; los sets
+    # se repueblan para converger exactamente al feed (idempotente).
     cmds: list[list[str]] = [
         ["nft", "add", "table", "inet", "cyberflow"],
         ["nft", "add", "set", "inet", "cyberflow", SET_BLOCK,
          "{", "type", "ipv4_addr;", "flags", "timeout;", "}"],
         ["nft", "add", "set", "inet", "cyberflow", SET_LIMIT,
          "{", "type", "ipv4_addr;", "flags", "timeout;", "}"],
+        ["nft", "add", "chain", "inet", "cyberflow", "entrada",
+         "{", "type", "filter", "hook", "input", "priority", "-10;",
+         "policy", "accept;", "}"],
+        ["nft", "flush", "chain", "inet", "cyberflow", "entrada"],
+        # BLOCK: cae todo el tráfico de esas IPs. LIMIT: cae solo lo que EXCEDE la tasa.
+        ["nft", "add", "rule", "inet", "cyberflow", "entrada",
+         "ip", "saddr", "@" + SET_BLOCK, "drop"],
+        ["nft", "add", "rule", "inet", "cyberflow", "entrada",
+         "ip", "saddr", "@" + SET_LIMIT, "limit", "rate", "over", LIMIT_RATE, "drop"],
         ["nft", "flush", "set", "inet", "cyberflow", SET_BLOCK],
         ["nft", "flush", "set", "inet", "cyberflow", SET_LIMIT],
     ]

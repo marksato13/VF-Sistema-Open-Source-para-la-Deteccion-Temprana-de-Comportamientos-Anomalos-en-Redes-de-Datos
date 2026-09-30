@@ -43,6 +43,14 @@ class PlanNftables(unittest.TestCase):
         self.assertIn(ag.SET_BLOCK, texto)
         self.assertIn("flush set inet cyberflow " + ag.SET_BLOCK, texto)
 
+    def test_hay_cadena_hook_input_y_reglas_de_drop(self):
+        texto = " ".join(" ".join(c) for c in ag.plan_nftables({}, ahora=1000.0))
+        self.assertIn("chain inet cyberflow entrada", texto)
+        self.assertIn("hook input", texto)
+        self.assertIn("policy accept;", texto)   # solo cae lo que esté en los sets
+        self.assertIn("saddr @" + ag.SET_BLOCK + " drop", texto)
+        self.assertIn("saddr @" + ag.SET_LIMIT + " limit rate over", texto)
+
     def test_block_va_al_set_con_timeout(self):
         vig = {"10.10.20.30": {"accion": "BLOCK", "hasta": 1300}}
         cmds = ag.plan_nftables(vig, ahora=1000.0)
