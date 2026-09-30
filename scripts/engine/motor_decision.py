@@ -62,6 +62,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "features"))
 
 import extract_multilayer_v2 as extractor  # noqa: E402
 import extract_multilayer_v3 as v3  # noqa: E402  (capa 2 y deduplicacion)
+import heuristicos  # noqa: E402  (heuristicos deterministas para el feed de enforcement)
 
 try:
     import joblib
@@ -606,6 +607,12 @@ def main() -> int:
                     "score": score,
                     "threshold": threshold,
                     "decision": decision,
+                    # Veredicto de los heuristicos deterministas (brute-force,
+                    # port-scan, http-abuse, dns-entropy). Es ADITIVO: no cambia
+                    # `decision` (que sigue siendo ALERT/PERMIT, calibracion
+                    # intacta); lo consume publicar_feed.py para derivar LIMIT/BLOCK
+                    # sin tocar el modelo. None si ningun heuristico dispara.
+                    "heuristico": heuristicos.evaluar(row),
                 }
                 # decision == "ALERT" solo ocurre por (modelo con pkts10>0) o
                 # (heuristico de fuerza bruta sobre L7); ambos son bloqueos

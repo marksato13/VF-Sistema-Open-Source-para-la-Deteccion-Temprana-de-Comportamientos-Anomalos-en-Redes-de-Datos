@@ -40,6 +40,25 @@ class DecisionesAEntradas(unittest.TestCase):
         self.assertEqual(len(ent), 1)
         self.assertEqual(ent[0]["accion"], "BLOCK")
 
+    def test_campo_heuristico_block(self):
+        d = dec("10.10.20.30", decision="PERMIT")
+        d["heuristico"] = {"heuristico": "port_scan", "accion": "BLOCK", "motivo": "x"}
+        ent = pf.decisiones_a_entradas([d], {}, 1000.0, self.nunca)
+        self.assertEqual(ent[0]["accion"], "BLOCK")
+        self.assertEqual(ent[0]["detector"], "port_scan")
+
+    def test_heuristico_limit_con_modelo_limit_es_limit(self):
+        d = dec("10.10.20.30", decision="ALERT")   # modelo -> LIMIT
+        d["heuristico"] = {"heuristico": "http_abuse", "accion": "LIMIT", "motivo": "x"}
+        ent = pf.decisiones_a_entradas([d], {}, 1000.0, self.nunca)
+        self.assertEqual(ent[0]["accion"], "LIMIT")
+
+    def test_heuristico_block_gana_a_modelo_limit(self):
+        d = dec("10.10.20.30", decision="ALERT")   # modelo -> LIMIT
+        d["heuristico"] = {"heuristico": "brute_force", "accion": "BLOCK", "motivo": "x"}
+        ent = pf.decisiones_a_entradas([d], {}, 1000.0, self.nunca)
+        self.assertEqual(ent[0]["accion"], "BLOCK")
+
     def test_reincidencia_escala_el_timeout(self):
         estado = {}
         e1 = pf.decisiones_a_entradas([dec("10.10.20.30", detector="x_heuristic")],

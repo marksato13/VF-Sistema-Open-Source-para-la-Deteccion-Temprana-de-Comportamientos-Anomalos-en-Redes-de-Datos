@@ -36,12 +36,30 @@ NUNCA_BLOQUEAR_POR_DEFECTO = {
 _SEVERIDAD = {"BLOCK": 2, "LIMIT": 1}
 
 
-def _accion_de(decision: dict) -> str | None:
-    """ALERT del modelo -> LIMIT; ALERT de heurístico -> BLOCK; resto -> None."""
-    if decision.get("decision") != "ALERT":
+def _verdicto_de(d: dict) -> tuple[str, str, str] | None:
+    """Veredicto (accion, motivo, detector) de una decisión, o None.
+
+    Combina dos señales y se queda con la MÁS severa:
+      - Modelo: ALERT del modelo (score < umbral)  -> LIMIT (anomalía).
+      - Heurístico: el campo `heuristico` del registro (brute-force, port-scan,
+        http-abuse, dns-entropy) -> su acción (BLOCK/LIMIT). También se acepta el
+        ALERT de heurístico "legacy" del motor (detector `*_heuristic`) -> BLOCK.
+    """
+    candidatos: list[tuple[str, str, str]] = []
+    if d.get("decision") == "ALERT":
+        det = str(d.get("detector_name", ""))
+        if det.endswith("_heuristic"):
+            candidatos.append(("BLOCK", det, det))
+        else:
+            candidatos.append(("LIMIT", "modelo:" + det, det))
+    h = d.get("heuristico")
+    if isinstance(h, dict) and h.get("accion") in _SEVERIDAD:
+        candidatos.append((h["accion"],
+                           "%s: %s" % (h.get("heuristico", "?"), h.get("motivo", "")),
+                           str(h.get("heuristico", "heuristico"))))
+    if not candidatos:
         return None
-    det = str(decision.get("detector_name", ""))
-    return "BLOCK" if det.endswith("_heuristic") else "LIMIT"
+    return max(candidatos, key=lambda c: _SEVERIDAD[c[0]])
 
 
 def decisiones_a_entradas(decisiones: list[dict], estado: dict, ahora: float,
@@ -56,14 +74,13 @@ def decisiones_a_entradas(decisiones: list[dict], estado: dict, ahora: float,
         ip = str(d.get("entity_ip", ""))
         if not ip or ip in nunca:
             continue
-        accion = _accion_de(d)
-        if accion is None:
+        v = _verdicto_de(d)
+        if v is None:
             continue
+        accion, motivo, detector = v
         prev = por_ip.get(ip)
         if prev is None or _SEVERIDAD[accion] > _SEVERIDAD[prev["accion"]]:
-            por_ip[ip] = {"accion": accion,
-                          "motivo": str(d.get("detector_name", "")),
-                          "detector": str(d.get("detector_name", ""))}
+            por_ip[ip] = {"accion": accion, "motivo": motivo, "detector": detector}
 
     entradas = []
     for ip, v in sorted(por_ip.items()):
