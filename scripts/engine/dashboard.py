@@ -114,11 +114,12 @@ HTML = """<!doctype html>
   }
 
   /* --- Topologia --- */
+  /* El diagrama es HORIZONTAL (ancho): se apila -diagrama arriba a todo el
+     ancho, detalle debajo- para que no quede estrecho al lado. */
   .topo-wrap {
-    display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1rem;
+    display: grid; grid-template-columns: 1fr; gap: 1rem;
     align-items: start;
   }
-  @media (max-width: 820px) { .topo-wrap { grid-template-columns: 1fr; } }
   /* Panel de detalle plegado: el diagrama ocupa todo el ancho. */
   .topo-wrap.sin-detalle { grid-template-columns: 1fr; }
   .topo-wrap.sin-detalle .topo-detail { display: none; }
@@ -139,7 +140,7 @@ HTML = """<!doctype html>
   }
   .topo-zoom button:hover { border-color: var(--accent); color: var(--accent); }
   .topo-zoom #topoNivel { min-width: 38px; text-align: center; }
-  .topo-scroll { overflow: auto; flex: 1; min-height: 0; height: min(76vh, 760px); }
+  .topo-scroll { overflow: auto; flex: 1; min-height: 0; max-height: 82vh; }
   .topo-scroll svg { display: block; }
   /* Zoom por seccion: un boton por fase que encuadra ese grupo. */
   .topo-fases { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }
@@ -152,10 +153,10 @@ HTML = """<!doctype html>
   .topo-fases button:hover { border-color: var(--accent); color: var(--accent); }
 
   /* Pantalla completa: el diagrama manda y el detalle se queda al lado. */
-  .topo-wrap:fullscreen { background: var(--bg); padding: 1rem; gap: 1rem; height: 100%; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); }
-  .topo-wrap:fullscreen .topo-canvas { height: 100%; }
-  .topo-wrap:fullscreen .topo-scroll { height: auto; }
-  .topo-wrap:fullscreen .topo-detail { overflow-y: auto; max-height: 100%; }
+  .topo-wrap:fullscreen { background: var(--bg); padding: 1rem; gap: 1rem; height: 100%; grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  .topo-wrap:fullscreen .topo-canvas { height: 100%; min-height: 0; }
+  .topo-wrap:fullscreen .topo-scroll { height: auto; max-height: none; display: grid; place-items: center; }
+  .topo-wrap:fullscreen .topo-detail { overflow-y: auto; max-height: 34vh; }
 
   .topo-node { cursor: pointer; }
   .topo-node .box {
@@ -271,7 +272,7 @@ HTML = """<!doctype html>
 
   .topo-detail {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 1rem 1.1rem; min-height: 100%;
+    padding: 1rem 1.1rem;
   }
   .topo-detail h3 { margin: 0 0 0.15rem; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; }
   .topo-detail .state {
@@ -1712,8 +1713,12 @@ function escalaAjuste() {
   const v = TOPO_VISTAS[topoVista];
   const caja = document.getElementById('topoScroll');
   const fw = (caja.clientWidth - 8) / v.w;
+  // En modo normal ajustamos al ANCHO (el lienzo se encoge a la altura del
+  // diagrama, sin hueco). En pantalla completa encuadramos ancho Y alto para
+  // que el diagrama llene la pantalla, centrado.
+  if (!document.fullscreenElement) return Math.max(0.25, Math.min(1.4, fw));
   const fh = (caja.clientHeight - 8) / v.h;
-  return Math.max(0.25, Math.min(fw, fh));
+  return Math.max(0.25, Math.min(2, Math.min(fw, fh)));
 }
 
 function aplicarZoom() {
