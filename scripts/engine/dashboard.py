@@ -119,6 +119,9 @@ HTML = """<!doctype html>
     align-items: start;
   }
   @media (max-width: 820px) { .topo-wrap { grid-template-columns: 1fr; } }
+  /* Panel de detalle plegado: el diagrama ocupa todo el ancho. */
+  .topo-wrap.sin-detalle { grid-template-columns: 1fr; }
+  .topo-wrap.sin-detalle .topo-detail { display: none; }
   .topo-canvas {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
     padding: 0.6rem 0.7rem 0.8rem; display: flex; flex-direction: column; min-height: 0;
@@ -164,8 +167,8 @@ HTML = """<!doctype html>
   .topo-node.ok .box { stroke: color-mix(in srgb, var(--ok) 55%, var(--border)); }
   .topo-node.warn .box { stroke: color-mix(in srgb, var(--amber) 55%, var(--border)); }
   .topo-node.bad .box { stroke: color-mix(in srgb, var(--danger) 60%, var(--border)); }
-  .topo-node .ttl { fill: var(--text); font: 600 12.5px var(--sans); }
-  .topo-node .sub { fill: var(--text-dim); font: 11px var(--mono); font-variant-numeric: tabular-nums; }
+  .topo-node .ttl { fill: var(--text); font: 700 13px var(--sans); }
+  .topo-node .sub { fill: var(--text-dim); font: 600 11px var(--mono); font-variant-numeric: tabular-nums; }
   .topo-node .ico { color: var(--text); }
   .topo-node.ok .ico { color: var(--ok); }
   .topo-node.warn .ico { color: var(--amber); }
@@ -175,7 +178,7 @@ HTML = """<!doctype html>
      trazo discontinuo para que el diagrama no mienta sobre qué es cada caja. */
   .topo-node.artefacto .box { stroke-dasharray: 5 4; fill: #101827; }
   .topo-node.sumidero .box { stroke-dasharray: 2 3; fill: #16111a; }
-  .topo-node .tag { fill: var(--text-dim); font: 9.5px var(--mono); letter-spacing: 0.06em; }
+  .topo-node .tag { fill: var(--text-dim); font: 600 10px var(--mono); letter-spacing: 0.06em; }
 
   .topo-edge { stroke: var(--border); stroke-width: 1.6; fill: none; }
   .topo-edge.live { stroke: var(--accent); stroke-dasharray: 5 6; animation: flow 1.1s linear infinite; }
@@ -183,7 +186,7 @@ HTML = """<!doctype html>
   .topo-edge.descarte { stroke: var(--danger); opacity: 0.55; stroke-dasharray: 2 4; animation: none; }
   @keyframes flow { to { stroke-dashoffset: -22; } }
   @media (prefers-reduced-motion: reduce) { .topo-edge.live { animation: none; } }
-  .topo-edge-label { fill: var(--text-dim); font: 9.5px var(--mono); }
+  .topo-edge-label { fill: var(--text); font: 600 10px var(--mono); }
   .topo-grupo { fill: none; stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.6; }
   .topo-grupo-txt { fill: var(--text); font: 600 10.5px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
   .topo-fase-n { fill: color-mix(in srgb, var(--accent) 20%, transparent); stroke: var(--accent); stroke-width: 1; }
@@ -191,7 +194,7 @@ HTML = """<!doctype html>
   .topo-host .box { fill: #101a2e; stroke: color-mix(in srgb, var(--accent) 35%, var(--border)); }
   .topo-host:hover .box { stroke: var(--accent); }
   .topo-host .ico { color: var(--accent); }
-  .topo-host .hostip { fill: var(--accent); font: 10.5px var(--mono); }
+  .topo-host .hostip { fill: var(--accent); font: 600 11px var(--mono); }
   .topo-pkt { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
   @media (prefers-reduced-motion: reduce) { .topo-pkt { display: none; } }
   .topo-cmd { background: #0b1220; border: 1px solid var(--border); border-radius: 7px;
@@ -557,6 +560,10 @@ HTML = """<!doctype html>
           <button id="topoArchivosBtn" class="export-btn" title="Muestra los ficheros que usa cada componente" aria-pressed="false">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6l2 3h8v13H4Z"/></svg>
             <span>Ver archivos</span>
+          </button>
+          <button id="topoDetalleBtn" class="export-btn" title="Oculta el panel de la derecha para ver el diagrama a lo ancho" aria-pressed="false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="15" y1="4" x2="15" y2="20"/></svg>
+            <span id="topoDetalleTxt">Ocultar panel</span>
           </button>
           <button id="topoExpandir" class="export-btn" title="Pantalla completa">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg>
@@ -1200,6 +1207,10 @@ const TOPO_ICON = {
   tijera:   '<circle cx="4.4" cy="13.4" r="2.2"/><circle cx="13.6" cy="13.4" r="2.2"/><path d="M5.9 11.9 14.4 2.6M12.1 11.9 3.6 2.6"/>',
   tabla:    '<rect x="2" y="3" width="14" height="12" rx="1.4"/><path d="M2 7h14M7 7v8M11.5 7v8"/>',
   ojo:      '<path d="M1.6 9S4.4 3.8 9 3.8 16.4 9 16.4 9 13.6 14.2 9 14.2 1.6 9 1.6 9Z"/><circle cx="9" cy="9" r="2.3"/>',
+  captura:  '<circle cx="9" cy="9" r="6.6"/><circle cx="9" cy="9" r="2.4" fill="currentColor" stroke="none"/>',
+  reglas:   '<path d="M4 2.4h7l3 3v10.2H4Z"/><path d="M6.4 7h5M6.4 9.8h5M6.4 12.6h3"/>',
+  ciclo:    '<path d="M15.2 9a6.2 6.2 0 1 1-1.9-4.5"/><path d="M15.4 2.6V6.1h-3.5"/>',
+  decision: '<path d="M9 2 16 9 9 16 2 9Z"/><path d="M9 6.2v2.4M6.9 11h4.2"/>',
 };
 
 // Dos vistas del mismo sistema. "esencial" es el camino del paquete en siete
@@ -1253,17 +1264,17 @@ const TOPO_VISTAS = {
       { id: 'red',       x: 330, y: 8,   w: 240, h: 56, icono: 'red',    titulo: 'Red de la entidad',  tag: 'VLAN 10-100' },
       { id: 'span',      x: 330, y: 92,  w: 240, h: 56, icono: 'espejo', titulo: 'Espejo SPAN',        tag: 'CORE-STACK' },
       { id: 'nic',       x: 330, y: 176, w: 240, h: 56, icono: 'nic',    titulo: 'Interfaz en escucha', tag: 'ens37 · SIN IP' },
-      { id: 'captura',   x: 60,  y: 260, w: 230, h: 56, icono: 'disco',  titulo: 'tcpdump',            tag: 'SERVICIO' },
+      { id: 'captura',   x: 60,  y: 260, w: 230, h: 56, icono: 'captura', titulo: 'tcpdump',            tag: 'SERVICIO' },
       { id: 'suricata',  x: 610, y: 260, w: 230, h: 56, icono: 'lupa',   titulo: 'Suricata',           tag: 'SERVICIO' },
       { id: 'pcap',      x: 60,  y: 344, w: 230, h: 48, icono: 'fichero', titulo: 'anillo live-*.pcap', tag: 'ARTEFACTO', clase: 'artefacto' },
       { id: 'eve',       x: 610, y: 344, w: 230, h: 48, icono: 'fichero', titulo: 'eve.json',          tag: 'ARTEFACTO', clase: 'artefacto' },
       { id: 'descartes', x: 30,  y: 424, w: 250, h: 56, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO',  clase: 'sumidero' },
       { id: 'motor',     x: 330, y: 424, w: 240, h: 56, icono: 'cpu',    titulo: 'Atribución de flujo', tag: 'SERVICIO' },
       { id: 'variables', x: 330, y: 508, w: 240, h: 56, icono: 'tabla',  titulo: 'Variables / 10 s', tag: 'L2·L3·L4·L7' },
-      { id: 'heuristicos', x: 610, y: 508, w: 242, h: 56, icono: 'lupa', titulo: 'Heurísticos', tag: 'DETERMINISTAS' },
+      { id: 'heuristicos', x: 610, y: 508, w: 242, h: 56, icono: 'reglas', titulo: 'Heurísticos', tag: 'DETERMINISTAS' },
       { id: 'modelo',    x: 330, y: 592, w: 240, h: 56, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
-      { id: 'reentrenamiento', x: 610, y: 592, w: 242, h: 56, icono: 'modelo', titulo: 'Reentrenamiento', tag: 'MENSUAL / POR DERIVA' },
-      { id: 'control',   x: 330, y: 676, w: 240, h: 56, icono: 'escudo', titulo: 'Decisión', tag: 'PERMIT / LIMIT / BLOCK' },
+      { id: 'reentrenamiento', x: 610, y: 592, w: 242, h: 56, icono: 'ciclo', titulo: 'Reentrenamiento', tag: 'MENSUAL / POR DERIVA' },
+      { id: 'control',   x: 330, y: 676, w: 240, h: 56, icono: 'decision', titulo: 'Decisión', tag: 'PERMIT / LIMIT / BLOCK' },
       { id: 'feed',      x: 610, y: 676, w: 242, h: 56, icono: 'fichero', titulo: 'Feed firmado', tag: 'ed25519' },
       { id: 'agente',    x: 610, y: 760, w: 242, h: 56, icono: 'escudo', titulo: 'Agente en host', tag: 'nftables LIMIT/BLOCK' },
       { id: 'registro',  x: 330, y: 864, w: 240, h: 48, icono: 'fichero', titulo: 'motor_decision.log', tag: 'ARTEFACTO', clase: 'artefacto' },
@@ -1773,6 +1784,30 @@ on('topoMenos', 'click', () => {
 on('topoReset', 'click', () => {
   topoZoom = null; aplicarZoom();
 });
+
+// Plegar/desplegar el panel de detalle: al ocultarlo el diagrama toma todo el
+// ancho (util para verlo a lo ancho). La preferencia es por-visor.
+on('topoDetalleBtn', 'click', () => {
+  const wrap = document.getElementById('topoWrap');
+  const oculto = wrap.classList.toggle('sin-detalle');
+  document.getElementById('topoDetalleBtn').setAttribute('aria-pressed', oculto ? 'true' : 'false');
+  document.getElementById('topoDetalleTxt').textContent = oculto ? 'Ver panel' : 'Ocultar panel';
+  try { localStorage.setItem('cf_topo_detalle', oculto ? 'oculto' : 'visible'); } catch (e) {}
+  topoZoom = null;               // reajusta al nuevo ancho disponible
+  setTimeout(aplicarZoom, 60);   // tras el reflujo del grid
+});
+(function () {
+  let pref = null;
+  try { pref = localStorage.getItem('cf_topo_detalle'); } catch (e) {}
+  if (pref !== 'oculto') return;
+  const wrap = document.getElementById('topoWrap');
+  if (!wrap) return;
+  wrap.classList.add('sin-detalle');
+  const btn = document.getElementById('topoDetalleBtn');
+  if (btn) btn.setAttribute('aria-pressed', 'true');
+  const txt = document.getElementById('topoDetalleTxt');
+  if (txt) txt.textContent = 'Ver panel';
+})();
 
 on('topoExpandir', 'click', () => {
   const caja = document.getElementById('topoWrap');
