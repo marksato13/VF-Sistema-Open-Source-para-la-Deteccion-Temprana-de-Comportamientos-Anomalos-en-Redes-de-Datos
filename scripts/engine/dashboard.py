@@ -1275,7 +1275,7 @@ const TOPO_VISTAS = {
       { d: 'M570,536 L610,536',                  desde: 'variables', hasta: 'heuristicos', etiqueta: 'mismas variables', ex: 556, ey: 528 },
       { d: 'M450,564 L450,592',                  desde: 'variables', hasta: 'modelo', etiqueta: '31 variables', ex: 548, ey: 582 },
       { d: 'M610,620 L570,620',                  desde: 'reentrenamiento', hasta: 'modelo', etiqueta: 'entrena y congela', ex: 588, ey: 610 },
-      { d: 'M450,648 L450,676',                  desde: 'modelo',    hasta: 'control', etiqueta: 'score<umbral → LIMIT', ex: 470, ey: 662 },
+      { d: 'M450,648 L450,676',                  desde: 'modelo',    hasta: 'control', etiqueta: 'score &lt; umbral → LIMIT', ex: 470, ey: 662 },
       { d: 'M731,564 C731,632 450,650 450,676',  desde: 'heuristicos', hasta: 'control', etiqueta: 'confirmado → BLOCK', ex: 600, ey: 636 },
       { d: 'M570,704 L610,704',                  desde: 'control',   hasta: 'feed', etiqueta: 'veredicto firmado', ex: 556, ey: 696 },
       { d: 'M731,732 L731,760',                  desde: 'feed',      hasta: 'agente', etiqueta: 'pull + verifica', ex: 742, ey: 746 },
