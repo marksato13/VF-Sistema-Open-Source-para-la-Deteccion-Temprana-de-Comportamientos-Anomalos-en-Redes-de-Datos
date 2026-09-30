@@ -32,6 +32,25 @@ el entrenamiento.
 
 ---
 
+## Complementa, no reemplaza
+
+CyberFlow **se enchufa en tu stack de seguridad; no lo suplanta.** Y la
+arquitectura lo demuestra: **consume** Suricata (`eve.json`) y **emite** sus
+alertas hacia el SIEM (Wazuh), sin duplicar lo que esas herramientas ya hacen.
+
+| Capa | Herramienta | Rol |
+|---|---|---|
+| Firmas / amenazas conocidas | **Suricata** | CyberFlow lo **consume** (`eve.json`) |
+| SIEM · logs · correlación · EDR | **Wazuh** | el **hub**: CyberFlow le **emite** sus veredictos |
+| Anomalía **conductual de lo desconocido** + respuesta temprana | **CyberFlow** | el nicho: modelo *one-class* por entidad, **recalibrado a tu red**, con acción graduada |
+
+Lo que **no** intenta ser (y por eso complementa): gestor de logs, EDR de host o
+tablero-para-todo. Lo que **aporta**: detección no supervisada calibrada a la red
+concreta, alimentando al SIEM — un equipo con Suricata + Wazuh lo **añade** sin
+arrancar nada.
+
+---
+
 ## Pruébalo en 2 minutos (modo demo)
 
 Desde un clon recién hecho, **sin red ni sensor**:
