@@ -112,6 +112,7 @@ ExecStart={python} \\
     --capture-dir {directorio} \\
     --model-path {raiz}/{modelo} \\
     --manifest-path {raiz}/{manifiesto} \\
+    --detector-name {detector} \\
     --schema {raiz}/{esquema} \\
     --entity-network {red_entidades} \\{exclusiones}
     --log-path {raiz}/{registro} \\
@@ -435,6 +436,7 @@ def render(cfg: dict) -> dict[str, str]:
         # Path convertiria las barras a "\", produciendo una unidad invalida.
         eve=rut["eve"], eve_dir=rut["eve"].rsplit("/", 1)[0] or "/",
         modelo=rut["modelo"], manifiesto=rut["manifiesto"], esquema=rut["esquema"],
+        detector=mot.get("detector", "ocsvm_scaled"),
         registro=rut["registro"], red_entidades=red["red_entidades"],
         paso_segundos=mot["paso_segundos"], historia_segundos=mot["historia_segundos"],
         modo=mot["modo"], anillo_segundos=cap["anillo_segundos"],
