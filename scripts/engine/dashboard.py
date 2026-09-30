@@ -673,7 +673,12 @@ const DETECTOR_LABEL = {
   empty_window_heuristic: 'sin tráfico (heurístico)',
   no_live_packets_heuristic: 'sin paquetes aún (heurístico)',
   ocsvm_scaled: 'modelo (OCSVM)',
+  if_recalibrado_2026_09: 'modelo recalibrado (IsolationForest)',
   auth_failure_heuristic: 'fuerza bruta (heurístico)',
+  brute_force: 'fuerza bruta (heurístico)',
+  port_scan: 'escaneo de puertos (heurístico)',
+  http_abuse: 'abuso HTTP (heurístico)',
+  dns_entropy: 'DNS de alta entropía (heurístico)',
 };
 const SERVICE_LABEL = { 'ppi-motor.service': 'Motor', 'ppi-motor-capture.service': 'Captura', 'suricata.service': 'Suricata' };
 let currentRange = '1h';
@@ -2166,14 +2171,18 @@ def leer_alcance(log_path: Path) -> dict:
     return alcance
 
 
-def compute_counters(decisions: list[dict], window_seconds: int = 3600) -> dict:
+def compute_counters(decisions: list[dict], window_seconds: int = 3600,
+                     detector_modelo: str = "ocsvm_scaled") -> dict:
     now = time.time()
     recent = [d for d in decisions if now - d.get("logged_at", 0) <= window_seconds]
     # Los dos detectores reales que pueden producir ALERT se cuentan por
     # separado -- mezclarlos en un solo numero oculta cual esta disparando,
     # justo cuando el motor ya tiene dos caminos distintos hacia ALERT
-    # (ocsvm_scaled y el heuristico de fuerza bruta agregado despues).
-    alert_ocsvm = sum(1 for d in recent if d["decision"] == "ALERT" and d.get("detector_name") == "ocsvm_scaled")
+    # (el modelo desplegado y el heuristico de fuerza bruta). `detector_modelo`
+    # es el nombre del detector del modelo EN ESTA red (viene de --detector-name):
+    # tras recalibrar puede ser `if_recalibrado_2026_09`, no `ocsvm_scaled`; si se
+    # dejara fijo, los contadores del modelo saldrian en 0 tras congelar.
+    alert_ocsvm = sum(1 for d in recent if d["decision"] == "ALERT" and d.get("detector_name") == detector_modelo)
     alert_auth_heuristic = sum(
         1 for d in recent if d["decision"] == "ALERT" and d.get("detector_name") == "auth_failure_heuristic"
     )
@@ -2189,7 +2198,7 @@ def compute_counters(decisions: list[dict], window_seconds: int = 3600) -> dict:
     )
     permit_model = sum(
         1 for d in recent
-        if d["decision"] == "PERMIT" and d.get("detector_name") == "ocsvm_scaled"
+        if d["decision"] == "PERMIT" and d.get("detector_name") == detector_modelo
     )
     return {
         "total": len(recent),
@@ -3187,7 +3196,7 @@ def main() -> int:
                         "services": service_status([] if args.demo else service_names),
                         "model": model_summary,
                         "blocked": enforcement_list(args.enforce_command),
-                        "counters": compute_counters(decisions),
+                        "counters": compute_counters(decisions, detector_modelo=args.detector_name),
                         "activity": bucket_by_minute(decisions),
                         # eve.json primero: no necesita privilegios. El ayudante
                         # queda como respaldo para despliegues que lo tengan.
