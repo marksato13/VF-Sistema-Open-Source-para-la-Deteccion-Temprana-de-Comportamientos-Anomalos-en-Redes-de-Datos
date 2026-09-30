@@ -188,7 +188,10 @@ class PodaDelAnillo(unittest.TestCase):
 
     def test_el_acumulador_corre_periodicamente(self):
         t = cc.render(cfg())["cyberflow-acumular.timer"]
-        self.assertIn("OnUnitActiveSec=", t)
+        # OnCalendar (reloj de pared), no OnUnitActiveSec: este ultimo se quedaba
+        # sin proximo disparo tras un daemon-reload/reinstalar (NextElapse=infinity)
+        # y la linea base dejaba de crecer. Ver commit del fix de timers.
+        self.assertIn("OnCalendar=", t)
         self.assertIn("Persistent=true", t)
 
     def test_se_genera_la_poda_y_su_temporizador(self):
