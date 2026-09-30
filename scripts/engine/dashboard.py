@@ -1206,8 +1206,8 @@ const TOPO_VISTAS = {
       { id: 'captura',  x: 12,  y: 266, w: 194, h: 58, icono: 'disco',  titulo: 'Anillo de PCAP' },
       { id: 'suricata', x: 414, y: 266, w: 194, h: 58, icono: 'lupa',   titulo: 'Suricata' },
       { id: 'motor',    x: 210, y: 352, w: 200, h: 58, icono: 'cpu',    titulo: 'Motor de decisión' },
-      { id: 'modelo',   x: 210, y: 438, w: 200, h: 58, icono: 'modelo', titulo: 'OCSVM congelado' },
-      { id: 'control',  x: 210, y: 524, w: 200, h: 58, icono: 'escudo', titulo: 'Control nftables' },
+      { id: 'modelo',   x: 210, y: 438, w: 200, h: 58, icono: 'modelo', titulo: 'Modelo recalibrado' },
+      { id: 'control',  x: 210, y: 524, w: 200, h: 58, icono: 'escudo', titulo: 'Respuesta: LIMIT/BLOCK' },
     ],
     aristas: [
       { d: 'M310,66 L310,94',                   desde: 'red',      hasta: 'span' },
@@ -1221,7 +1221,7 @@ const TOPO_VISTAS = {
     ],
   },
   completa: {
-    w: 900, h: 840,
+    w: 900, h: 992,
     // Camino ilustrativo de un paquete por la tuberia: baja al espejo, al
     // anillo de PCAP y de ahi al motor y al modelo. Un punto lo recorre en vivo.
     packet: 'M450,64 L450,232 L175,290 L175,392 L450,452 L450,732',
@@ -1229,8 +1229,8 @@ const TOPO_VISTAS = {
       { x: 12,  y: 0,   w: 300, h: 236, txt: 'Hosts · VLAN 20/30' },
       { x: 18,  y: 242, w: 834, h: 152, txt: 'Adquisición' },
       { x: 18,  y: 406, w: 834, h: 242, txt: 'Análisis' },
-      { x: 300, y: 660, w: 300, h: 84,  txt: 'Respuesta' },
-      { x: 300, y: 750, w: 552, h: 76,  txt: 'Observabilidad' },
+      { x: 18,  y: 660, w: 834, h: 180, txt: 'Decisión y respuesta' },
+      { x: 18,  y: 852, w: 834, h: 128, txt: 'Observabilidad' },
     ],
     nodos: [
       { id: 'atacante', x: 18, y: 22,  w: 200, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',   host: true, ip: '10.10.20.30',    desc: 'lanza los ataques' },
@@ -1247,11 +1247,15 @@ const TOPO_VISTAS = {
       { id: 'descartes', x: 30,  y: 424, w: 250, h: 56, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO',  clase: 'sumidero' },
       { id: 'motor',     x: 330, y: 424, w: 240, h: 56, icono: 'cpu',    titulo: 'Atribución de flujo', tag: 'SERVICIO' },
       { id: 'variables', x: 330, y: 508, w: 240, h: 56, icono: 'tabla',  titulo: 'Variables / 10 s', tag: 'L2·L3·L4·L7' },
-      { id: 'modelo',    x: 330, y: 592, w: 240, h: 56, icono: 'modelo', titulo: 'OCSVM congelado',    tag: 'UMBRAL FIJO' },
-      { id: 'reentrenamiento', x: 610, y: 592, w: 250, h: 56, icono: 'modelo', titulo: 'Reentrenamiento', tag: 'MENSUAL / POR DERIVA' },
-      { id: 'control',   x: 330, y: 676, w: 240, h: 56, icono: 'escudo', titulo: 'Control nftables',   tag: 'EXPIRA A 120 s' },
-      { id: 'registro',  x: 330, y: 760, w: 240, h: 48, icono: 'fichero', titulo: 'motor_decision.log', tag: 'ARTEFACTO', clase: 'artefacto' },
-      { id: 'panel',     x: 620, y: 760, w: 230, h: 48, icono: 'ojo',    titulo: 'Este panel',         tag: 'SOLO LECTURA' },
+      { id: 'heuristicos', x: 610, y: 508, w: 242, h: 56, icono: 'lupa', titulo: 'Heurísticos', tag: 'DETERMINISTAS' },
+      { id: 'modelo',    x: 330, y: 592, w: 240, h: 56, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
+      { id: 'reentrenamiento', x: 610, y: 592, w: 242, h: 56, icono: 'modelo', titulo: 'Reentrenamiento', tag: 'MENSUAL / POR DERIVA' },
+      { id: 'control',   x: 330, y: 676, w: 240, h: 56, icono: 'escudo', titulo: 'Decisión', tag: 'PERMIT / LIMIT / BLOCK' },
+      { id: 'feed',      x: 610, y: 676, w: 242, h: 56, icono: 'fichero', titulo: 'Feed firmado', tag: 'ed25519' },
+      { id: 'agente',    x: 610, y: 760, w: 242, h: 56, icono: 'escudo', titulo: 'Agente en host', tag: 'nftables LIMIT/BLOCK' },
+      { id: 'registro',  x: 330, y: 864, w: 240, h: 48, icono: 'fichero', titulo: 'motor_decision.log', tag: 'ARTEFACTO', clase: 'artefacto' },
+      { id: 'panel',     x: 60,  y: 864, w: 240, h: 48, icono: 'ojo',    titulo: 'Este panel',         tag: 'SOLO LECTURA' },
+      { id: 'wazuh',     x: 610, y: 864, w: 242, h: 48, icono: 'ojo',    titulo: 'Wazuh (SIEM)',       tag: 'CONCENTRADOR' },
     ],
     aristas: [
       { d: 'M218,46 L330,34',  desde: 'atacante', hasta: 'red', etiqueta: 'ataca',    ex: 258, ey: 30 },
@@ -1268,11 +1272,16 @@ const TOPO_VISTAS = {
       { d: 'M725,392 C725,412 450,404 450,424',  desde: 'eve',       hasta: 'motor', etiqueta: 'HTTP·DNS·TLS', ex: 662, ey: 408 },
       { d: 'M330,452 L280,452',                  desde: 'motor',     hasta: 'descartes', tipo: 'descarte', etiqueta: 'descarta', ex: 305, ey: 444 },
       { d: 'M450,480 L450,508',                  desde: 'motor',     hasta: 'variables', etiqueta: 'atribuye por IP', ex: 575, ey: 498 },
+      { d: 'M570,536 L610,536',                  desde: 'variables', hasta: 'heuristicos', etiqueta: 'mismas variables', ex: 556, ey: 528 },
       { d: 'M450,564 L450,592',                  desde: 'variables', hasta: 'modelo', etiqueta: '31 variables', ex: 548, ey: 582 },
-      { d: 'M610,620 L570,620',                  desde: 'reentrenamiento', hasta: 'modelo', etiqueta: 'entrena y congela', ex: 590, ey: 610 },
-      { d: 'M450,648 L450,676',                  desde: 'modelo',    hasta: 'control', etiqueta: 'score < umbral', ex: 560, ey: 666 },
-      { d: 'M450,732 L450,760',                  desde: 'control',   hasta: 'registro' },
-      { d: 'M570,784 L620,784',                  desde: 'registro',  hasta: 'panel' },
+      { d: 'M610,620 L570,620',                  desde: 'reentrenamiento', hasta: 'modelo', etiqueta: 'entrena y congela', ex: 588, ey: 610 },
+      { d: 'M450,648 L450,676',                  desde: 'modelo',    hasta: 'control', etiqueta: 'score<umbral → LIMIT', ex: 470, ey: 662 },
+      { d: 'M731,564 C731,632 450,650 450,676',  desde: 'heuristicos', hasta: 'control', etiqueta: 'confirmado → BLOCK', ex: 600, ey: 636 },
+      { d: 'M570,704 L610,704',                  desde: 'control',   hasta: 'feed', etiqueta: 'veredicto firmado', ex: 556, ey: 696 },
+      { d: 'M731,732 L731,760',                  desde: 'feed',      hasta: 'agente', etiqueta: 'pull + verifica', ex: 742, ey: 746 },
+      { d: 'M450,732 L450,864',                  desde: 'control',   hasta: 'registro', etiqueta: 'cada decisión', ex: 462, ey: 800 },
+      { d: 'M330,888 L300,888',                  desde: 'registro',  hasta: 'panel', etiqueta: 'lee', ex: 302, ey: 880 },
+      { d: 'M570,888 L610,888',                  desde: 'registro',  hasta: 'wazuh', etiqueta: 'syslog', ex: 556, ey: 880 },
     ],
   },
 };
@@ -1317,7 +1326,7 @@ const TOPO_TEXTO = {
       {paso: 'Dataset limpio', fichero: 'multilayer-v3.csv', garantia: 'solo tráfico benigno verificado'},
       {paso: 'Particionar', fichero: 'particionar_linea_base.py', garantia: 'bandas de guarda: sin fuga temporal'},
       {paso: 'Entrenar', fichero: 'entrenar_preliminar.py', garantia: 'umbral congelado en validación, antes de evaluar'},
-      {paso: 'Modelo + manifiesto', fichero: 'ocsvm_scaled.joblib', garantia: 'hashes que fijan la reproducibilidad'},
+      {paso: 'Modelo + manifiesto', fichero: 'if_recalibrado_desplegable.joblib', garantia: 'hashes que fijan la reproducibilidad'},
       {paso: 'Promoción', fichero: 'misma verificación', garantia: 'FPR y partición revisados; nunca a ciegas'},
     ],
     nota: 'Cadencia: mensual como suelo, pero el disparador real es la deriva del FPR, y es OBLIGATORIO al cambiar la red (nueva VLAN, Wazuh, AAA). La automatización prepara el candidato; promocionarlo pasa por la misma verificación, nunca a ciegas.',
@@ -1339,12 +1348,43 @@ const TOPO_TEXTO = {
     nota: 'Antes de puntuar descarta el plano de control y las copias que el espejo enseña dos veces. Ese filtrado es alcance, no fórmula: el extractor congelado no se toca.',
   },
   modelo: {
-    que: 'Un One-Class SVM entrenado solo con tráfico benigno. El umbral se calibró con datos de validación y se congeló antes de evaluar.',
-    nota: 'Mientras el umbral venga de otra red, las alertas son ruido: la distribución de esta red no es la que vio el modelo.',
+    que: 'El modelo one-class RECALIBRADO en esta red (IsolationForest). Aprende la normalidad propia; el umbral se congela desde validación (score_samples < -0,568892).',
+    nota: 'Ya calibrado en esta red: la recalibración bajó el FPR del 92,4 % (umbral de otra red) al 4,45 %. Score bajo el umbral = anomalía → LIMIT.',
+  },
+  heuristicos: {
+    que: 'Reglas deterministas sobre las mismas variables de la ventana, complemento del modelo: fuerza bruta, escaneo de puertos, abuso HTTP y DNS de alta entropía.',
+    nota: 'Cubren huecos donde el modelo mide flojo (p.ej. DNS-entropy). Validado: disparan en 47/104 ventanas de ataque y solo 0,08 % en tráfico normal. Umbrales versionados, criterio razonado (NO calibrados como el modelo).',
+    flujo: [
+      {paso: 'Fuerza bruta', fichero: 'heuristicos.py', garantia: '≥5 req/60s con ≥80% de fallo de auth → BLOCK'},
+      {paso: 'Escaneo de puertos', fichero: 'heuristicos.py', garantia: 'muchos puertos, pocas conexiones completadas → BLOCK'},
+      {paso: 'Abuso HTTP', fichero: 'heuristicos.py', garantia: 'volumen alto sin fallos de auth → LIMIT'},
+      {paso: 'DNS-entropy', fichero: 'heuristicos.py', garantia: 'muchas consultas, casi todas únicas/NXDOMAIN → LIMIT'},
+    ],
   },
   control: {
-    que: 'Una regla nftables con expiración nativa, en una tabla separada y aditiva.',
-    nota: 'Solo corta de verdad si el sensor está en el camino del tráfico. Con un espejo SPAN no lo está: la regla se escribe, pero el paquete ya pasó por otro sitio.',
+    que: 'La decisión por entidad: PERMIT, LIMIT (degradar la tasa) o BLOCK (cortar). El modelo aporta LIMIT (anomalía); un heurístico confirmado aporta BLOCK.',
+    nota: 'LIMIT existe para el coste de un falso positivo (con 4,45 % de FPR, degradar es mejor que cortar). La acción la aplica el agente en el host, no el sensor (que solo observa por espejo).',
+  },
+  feed: {
+    que: 'La lista FIRMADA (ed25519) de acciones que el sensor publica. Cada entrada: IP, acción, caducidad y motivo.',
+    nota: 'Modelo pull: el sensor no tiene credenciales de los hosts; publica y firma, y cada host trae la lista y la verifica. Caducidad escalada (300/1800/3600 s); nunca bloqueo permanente automático.',
+    flujo: [
+      {paso: 'Publicar', fichero: 'publicar_feed.py', garantia: 'desde las decisiones del motor + la escalera de reincidencia'},
+      {paso: 'Firmar', fichero: 'feed.py', garantia: 'ed25519 vía openssl; el host verifica antes de aplicar'},
+      {paso: 'Caducidad', fichero: 'escalada.py', garantia: '300→1800→3600 s por reincidencia; ∞ solo revisión humana'},
+    ],
+  },
+  agente: {
+    que: 'Corre en cada host protegido: trae el feed, verifica la firma y sincroniza nftables (LIMIT con rate-limit, BLOCK con drop y timeout).',
+    nota: 'Fail-safe: si la firma no verifica, no toca nada. Tabla aislada (policy accept): solo cae lo que trae el feed. Nunca bloquea gateways ni DNS. Demostrado: un BLOCK real cortó a la Kali (http_200 → http_000).',
+    flujo: [
+      {paso: 'Pull + verifica', fichero: 'agente_enforce.py', garantia: 'firma ed25519; fail-safe si falla'},
+      {paso: 'Aplica', fichero: 'nftables', garantia: 'set con timeout nativo → caduca solo'},
+    ],
+  },
+  wazuh: {
+    que: 'El concentrador de alertas (SIEM) en la VLAN de gestión. El sensor le emite por syslog; Wazuh correlaciona y guarda el histórico.',
+    nota: 'Regla de diseño: las alertas fluyen HACIA ADENTRO (a Wazuh), no hacia afuera. El sensor NUNCA sale a Internet (nada de bots externos): esa falta de egress es una propiedad de seguridad. CyberFlow complementa a Wazuh, no lo reemplaza.',
   },
   pcap: {
     que: 'Ficheros PCAP rotados cada 15 s. Es toda la historia de capa 3 y 4 de la que dispone el motor.',
@@ -1519,6 +1559,22 @@ function topoEstado(id, s) {
         'Cadencia base': 'mensual',
         'Disparador real': 'deriva del FPR',
         'Obligatorio': 'al cambiar la red' } };
+    case 'heuristicos':
+      return { estado: '', valor: '4 reglas deterministas', datos: {
+        'Cubren': 'brute-force · port-scan · http-abuse · dns-entropy',
+        'Papel': 'complementan al modelo (0,08 % de falsos positivos)' } };
+    case 'feed':
+      return { estado: '', valor: 'firmado (ed25519)', datos: {
+        'Publica': 'el sensor; el host lo trae (pull) y verifica',
+        'Caducidad': '300/1800/3600 s, nunca permanente' } };
+    case 'agente':
+      return { estado: '', valor: 'en el host protegido', datos: {
+        'Aplica': 'nftables: LIMIT (rate) / BLOCK (drop), con timeout',
+        'Alcance': 'solo lo que trae el feed; nunca gateways/DNS' } };
+    case 'wazuh':
+      return { estado: '', valor: 'concentrador de alertas', datos: {
+        'Recibe': 'del sensor (syslog), intra-VLAN',
+        'Regla': 'las alertas van HACIA ADENTRO; el sensor no sale a Internet' } };
   }
   return { estado: '', valor: '—', datos: {} };
 }
