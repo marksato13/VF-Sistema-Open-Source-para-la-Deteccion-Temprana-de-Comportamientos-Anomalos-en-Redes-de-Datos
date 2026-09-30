@@ -2,9 +2,10 @@
 set -euo pipefail
 
 # Evaluación únicamente contra la DMZ PPI autorizada; no acepta destinos externos.
-TARGET="${PPI_TARGET_IP:-10.30.0.10}"
-[[ "$TARGET" == 10.30.0.10 || "$TARGET" == 10.30.0.11 || "$TARGET" == 10.30.0.12 ]] || {
-  echo "ERROR: destino fuera de la DMZ PPI" >&2; exit 2;
+# Escenario actual (sensor1): DMZ = VLAN 30, servidor srv-dmz 10.10.30.10.
+TARGET="${PPI_TARGET_IP:-10.10.30.10}"
+[[ "$TARGET" == 10.10.30.10 || "$TARGET" == 10.10.30.11 || "$TARGET" == 10.10.30.12 ]] || {
+  echo "ERROR: destino fuera de la DMZ PPI autorizada (10.10.30.10-.12)" >&2; exit 2;
 }
 scenario="${1:-}"
 shift || true
