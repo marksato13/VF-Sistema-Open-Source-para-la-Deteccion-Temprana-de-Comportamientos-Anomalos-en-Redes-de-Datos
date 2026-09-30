@@ -136,12 +136,22 @@ HTML = """<!doctype html>
   }
   .topo-zoom button:hover { border-color: var(--accent); color: var(--accent); }
   .topo-zoom #topoNivel { min-width: 38px; text-align: center; }
-  .topo-scroll { overflow: auto; flex: 1; min-height: 0; }
+  .topo-scroll { overflow: auto; flex: 1; min-height: 0; height: min(76vh, 760px); }
   .topo-scroll svg { display: block; }
+  /* Zoom por seccion: un boton por fase que encuadra ese grupo. */
+  .topo-fases { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }
+  .topo-fases .lbl { font: 0.72rem var(--mono); color: var(--text-dim); margin-right: 0.15rem; }
+  .topo-fases button {
+    font: 600 0.76rem var(--sans); line-height: 1; min-width: 22px;
+    background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.25rem 0.5rem; cursor: pointer;
+  }
+  .topo-fases button:hover { border-color: var(--accent); color: var(--accent); }
 
   /* Pantalla completa: el diagrama manda y el detalle se queda al lado. */
   .topo-wrap:fullscreen { background: var(--bg); padding: 1rem; gap: 1rem; height: 100%; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); }
   .topo-wrap:fullscreen .topo-canvas { height: 100%; }
+  .topo-wrap:fullscreen .topo-scroll { height: auto; }
   .topo-wrap:fullscreen .topo-detail { overflow-y: auto; max-height: 100%; }
 
   .topo-node { cursor: pointer; }
@@ -156,7 +166,7 @@ HTML = """<!doctype html>
   .topo-node.bad .box { stroke: color-mix(in srgb, var(--danger) 60%, var(--border)); }
   .topo-node .ttl { fill: var(--text); font: 600 12.5px var(--sans); }
   .topo-node .sub { fill: var(--text-dim); font: 11px var(--mono); font-variant-numeric: tabular-nums; }
-  .topo-node .ico { color: var(--text-dim); }
+  .topo-node .ico { color: var(--text); }
   .topo-node.ok .ico { color: var(--ok); }
   .topo-node.warn .ico { color: var(--amber); }
   .topo-node.bad .ico { color: var(--danger); }
@@ -169,13 +179,15 @@ HTML = """<!doctype html>
 
   .topo-edge { stroke: var(--border); stroke-width: 1.6; fill: none; }
   .topo-edge.live { stroke: var(--accent); stroke-dasharray: 5 6; animation: flow 1.1s linear infinite; }
-  .topo-edge.dim { stroke: var(--border); stroke-dasharray: 3 5; }
+  .topo-edge.dim { stroke: color-mix(in srgb, var(--text-dim) 45%, var(--border)); stroke-dasharray: 3 5; }
   .topo-edge.descarte { stroke: var(--danger); opacity: 0.55; stroke-dasharray: 2 4; animation: none; }
   @keyframes flow { to { stroke-dashoffset: -22; } }
   @media (prefers-reduced-motion: reduce) { .topo-edge.live { animation: none; } }
   .topo-edge-label { fill: var(--text-dim); font: 9.5px var(--mono); }
   .topo-grupo { fill: none; stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.6; }
-  .topo-grupo-txt { fill: var(--text-dim); font: 9.5px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+  .topo-grupo-txt { fill: var(--text); font: 600 10.5px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+  .topo-fase-n { fill: color-mix(in srgb, var(--accent) 20%, transparent); stroke: var(--accent); stroke-width: 1; }
+  .topo-fase-nt { fill: var(--accent); font: 700 11px var(--mono); }
   .topo-host .box { fill: #101a2e; stroke: color-mix(in srgb, var(--accent) 35%, var(--border)); }
   .topo-host:hover .box { stroke: var(--accent); }
   .topo-host .ico { color: var(--accent); }
@@ -539,8 +551,9 @@ HTML = """<!doctype html>
             <button id="topoMenos" title="Reducir" aria-label="Reducir">&minus;</button>
             <span id="topoNivel">100%</span>
             <button id="topoMas" title="Ampliar" aria-label="Ampliar">+</button>
-            <button id="topoReset" title="Ajustar al ancho" aria-label="Ajustar al ancho">Ajustar</button>
+            <button id="topoReset" title="Ver todo el diagrama" aria-label="Ver todo el diagrama">Ajustar</button>
           </div>
+          <div class="topo-fases" id="topoFases"></div>
           <button id="topoArchivosBtn" class="export-btn" title="Muestra los ficheros que usa cada componente" aria-pressed="false">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6l2 3h8v13H4Z"/></svg>
             <span>Ver archivos</span>
@@ -1227,10 +1240,10 @@ const TOPO_VISTAS = {
     packet: 'M450,64 L450,232 L175,290 L175,392 L450,452 L450,732',
     grupos: [
       { x: 12,  y: 0,   w: 300, h: 236, txt: 'Hosts · VLAN 20/30' },
-      { x: 18,  y: 242, w: 834, h: 152, txt: 'Adquisición' },
-      { x: 18,  y: 406, w: 834, h: 242, txt: 'Análisis' },
-      { x: 18,  y: 660, w: 834, h: 180, txt: 'Decisión y respuesta' },
-      { x: 18,  y: 852, w: 834, h: 128, txt: 'Observabilidad' },
+      { x: 18,  y: 242, w: 834, h: 152, txt: 'Adquisición',          n: 1 },
+      { x: 18,  y: 406, w: 834, h: 242, txt: 'Análisis',             n: 2 },
+      { x: 18,  y: 660, w: 834, h: 180, txt: 'Decisión y respuesta', n: 3 },
+      { x: 18,  y: 852, w: 834, h: 128, txt: 'Observabilidad',       n: 4 },
     ],
     nodos: [
       { id: 'atacante', x: 18, y: 22,  w: 200, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',   host: true, ip: '10.10.20.30',    desc: 'lanza los ataques' },
@@ -1350,7 +1363,7 @@ const TOPO_TEXTO = {
     flujo: [
       {paso: 'Atribución por flujo', fichero: 'extract_multilayer_v2.py', garantia: 'cada paquete a la IP que INICIÓ el flujo, no al destino'},
       {paso: 'Filtrado de alcance', fichero: 'extract_multilayer_v2.py', garantia: 'descarta plano de control y las copias que el espejo duplica'},
-      {paso: 'Ventaneo + variables', fichero: 'extract_multilayer_v2.py', garantia: 'ventanas fijas; 28 variables por entidad y ventana'},
+      {paso: 'Ventaneo + variables', fichero: 'extract_multilayer_v2.py', garantia: 'ventanas fijas; una fila de variables por entidad y ventana'},
       {paso: 'Puntuación', fichero: 'motor_decision.py', garantia: 'score del modelo + reglas heurísticas → decisión por ventana'},
     ],
     nota: 'El filtrado es ALCANCE, no fórmula: el extractor está congelado (sus fórmulas no se tocan); los filtros actúan sobre su ENTRADA. Así se descartan el plano de control y las tramas que el espejo enseña dos veces antes de puntuar.',
@@ -1604,10 +1617,16 @@ function renderTopologia(status) {
   const est = {};
   for (const n of v.nodos) est[n.id] = topoEstado(n.id, status);
 
-  const grupos = v.grupos.map(g =>
-    `<rect class="topo-grupo" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="12"/>` +
-    `<text class="topo-grupo-txt" x="${g.x + 12}" y="${g.y + 15}">${g.txt}</text>`
-  ).join('');
+  const grupos = v.grupos.map(g => {
+    const badge = g.n
+      ? `<circle class="topo-fase-n" cx="${g.x + 21}" cy="${g.y + 15}" r="9.5"/>` +
+        `<text class="topo-fase-nt" x="${g.x + 21}" y="${g.y + 18}" text-anchor="middle">${g.n}</text>`
+      : '';
+    const tx = g.n ? g.x + 38 : g.x + 12;
+    return `<rect class="topo-grupo" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="12"/>` +
+      badge +
+      `<text class="topo-grupo-txt" x="${tx}" y="${g.y + 19}">${g.txt}</text>`;
+  }).join('');
 
   // Una arista se anima cuando el tramo esta operativo: ningun extremo caido.
   // Un aviso -por ejemplo, umbral sin calibrar- no interrumpe el flujo, asi
@@ -1635,9 +1654,9 @@ function renderTopologia(status) {
     const cy = n.y + n.h / 2;
     return `<g class="topo-node topo-host ${topoSel === n.id ? 'sel' : ''}" data-node="${n.id}" tabindex="0" role="button" aria-label="${n.titulo}">
       <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9"/>
-      <g class="ico" transform="translate(${n.x + 12}, ${cy - 9})"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[n.icono]}</svg></g>
-      <text class="ttl" x="${n.x + 40}" y="${cy - 3}">${n.titulo}</text>
-      <text class="hostip" x="${n.x + 40}" y="${cy + 11}">${n.ip}</text>
+      <g class="ico" transform="translate(${n.x + 12}, ${cy - 11})"><svg width="22" height="22" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[n.icono]}</svg></g>
+      <text class="ttl" x="${n.x + 44}" y="${cy - 3}">${n.titulo}</text>
+      <text class="hostip" x="${n.x + 44}" y="${cy + 11}">${n.ip}</text>
       <text class="tag" x="${n.x + n.w - 10}" y="${n.y + n.h - 6}" text-anchor="end">${n.desc}</text>
     </g>`;
   }).join('');
@@ -1648,7 +1667,7 @@ function renderTopologia(status) {
     const color = e.estado === 'ok' ? 'var(--ok)' : e.estado === 'warn' ? 'var(--amber)'
                 : e.estado === 'bad' ? 'var(--danger)' : 'var(--border)';
     const etiqueta = n.tag
-      ? `<text class="tag" x="${n.x + 42}" y="${n.y + n.h - 5}">${n.tag}</text>` : '';
+      ? `<text class="tag" x="${n.x + 46}" y="${n.y + n.h - 5}">${n.tag}</text>` : '';
     const desplazar = n.tag ? -8 : 0;
     // Con "Ver archivos" activo, cada nodo con ficheros muestra un contador; el
     // detalle de cada uno se abre pulsando el nodo (aparecen como cuadraditos).
@@ -1657,15 +1676,16 @@ function renderTopologia(status) {
       ? `<text class="fbadge" x="${n.x + n.w - 24}" y="${n.y + n.h - 6}" text-anchor="end">▤ ${nfiles}</text>` : '';
     return `<g class="topo-node ${e.estado} ${n.clase || ''} ${nfiles ? 'tiene-archivos' : ''} ${topoSel === n.id ? 'sel' : ''}" data-node="${n.id}" tabindex="0" role="button" aria-label="${n.titulo}">
       <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9"/>
-      <g class="ico" transform="translate(${n.x + 13}, ${cy - 9 + desplazar})"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[n.icono]}</svg></g>
-      <text class="ttl" x="${n.x + 42}" y="${cy - 3 + desplazar}">${n.titulo}</text>
-      <text class="sub" x="${n.x + 42}" y="${cy + 12 + desplazar}">${e.valor}</text>
+      <g class="ico" transform="translate(${n.x + 13}, ${cy - 11 + desplazar})"><svg width="22" height="22" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[n.icono]}</svg></g>
+      <text class="ttl" x="${n.x + 46}" y="${cy - 3 + desplazar}">${n.titulo}</text>
+      <text class="sub" x="${n.x + 46}" y="${cy + 12 + desplazar}">${e.valor}</text>
       ${etiqueta}${badge}
       <circle class="led" cx="${n.x + n.w - 13}" cy="${n.y + 13}" r="4" fill="${color}"/>
     </g>`;
   }).join('');
 
   svg.innerHTML = grupos + aristas + packet + hosts + nodos;
+  if (topoFasesVista !== topoVista) { renderFases(); topoFasesVista = topoVista; }
   aplicarZoom();
   renderTopoDetalle();
 }
@@ -1673,23 +1693,65 @@ function renderTopologia(status) {
 // --- Controles del diagrama: vista, escala y pantalla completa --------------
 let topoZoom = null;   // null = ajustar al ancho disponible
 
+// Ajuste por defecto: encuadra TODO el diagrama (ancho Y alto) dentro del
+// lienzo, para que se vea entero de un vistazo. El lienzo tiene una altura
+// acotada por CSS (min(76vh,760px)); en pantalla completa la hereda del padre.
+function escalaAjuste() {
+  const v = TOPO_VISTAS[topoVista];
+  const caja = document.getElementById('topoScroll');
+  const fw = (caja.clientWidth - 8) / v.w;
+  const fh = (caja.clientHeight - 8) / v.h;
+  return Math.max(0.25, Math.min(fw, fh));
+}
+
 function aplicarZoom() {
   const v = TOPO_VISTAS[topoVista];
   const svg = document.getElementById('topo');
-  const caja = document.getElementById('topoScroll');
   svg.setAttribute('viewBox', `0 0 ${v.w} ${v.h}`);
   let escala = topoZoom;
-  if (escala == null) escala = Math.max(0.25, (caja.clientWidth - 6) / v.w);
+  if (escala == null) escala = escalaAjuste();
   svg.setAttribute('width', Math.round(v.w * escala));
   svg.setAttribute('height', Math.round(v.h * escala));
   document.getElementById('topoNivel').textContent = Math.round(escala * 100) + '%';
 }
 
 function escalaActual() {
-  if (topoZoom != null) return topoZoom;
-  const v = TOPO_VISTAS[topoVista];
-  return Math.max(0.25, (document.getElementById('topoScroll').clientWidth - 6) / v.w);
+  return topoZoom != null ? topoZoom : escalaAjuste();
 }
+
+// Zoom por seccion: encuadra un grupo (fase) y lo centra en el lienzo.
+function zoomAGrupo(g) {
+  const caja = document.getElementById('topoScroll');
+  const m = 28;
+  const esc = Math.max(0.3, Math.min(3, Math.min(
+    (caja.clientWidth - m) / g.w, (caja.clientHeight - m) / g.h)));
+  topoZoom = esc;
+  aplicarZoom();
+  caja.scrollLeft = Math.max(0, (g.x + g.w / 2) * esc - caja.clientWidth / 2);
+  caja.scrollTop = Math.max(0, (g.y + g.h / 2) * esc - caja.clientHeight / 2);
+}
+
+// Un boton por fase (solo en vistas con grupos numerados) + "Todo".
+let topoFasesVista = null;
+function renderFases() {
+  const cont = document.getElementById('topoFases');
+  if (!cont) return;
+  const grupos = (TOPO_VISTAS[topoVista].grupos || []).filter(g => g.n);
+  if (!grupos.length) { cont.innerHTML = ''; cont.style.display = 'none'; return; }
+  cont.style.display = 'flex';
+  cont.innerHTML = '<span class="lbl">Fase</span>'
+    + grupos.map(g => `<button type="button" data-fase="${g.n}" title="Encuadrar: ${g.txt}">${g.n}</button>`).join('')
+    + '<button type="button" data-fase="all" title="Ver todo el diagrama">Todo</button>';
+}
+
+on('topoFases', 'click', (ev) => {
+  const b = ev.target.closest('button[data-fase]');
+  if (!b) return;
+  const caja = document.getElementById('topoScroll');
+  if (b.dataset.fase === 'all') { topoZoom = null; aplicarZoom(); caja.scrollTop = 0; caja.scrollLeft = 0; return; }
+  const g = (TOPO_VISTAS[topoVista].grupos || []).find(x => String(x.n) === b.dataset.fase);
+  if (g) zoomAGrupo(g);
+});
 
 on('topoVista', 'click', (ev) => {
   const b = ev.target.closest('button[data-vista]');
