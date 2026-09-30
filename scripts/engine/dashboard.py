@@ -1322,6 +1322,7 @@ const TOPO_TEXTO = {
   },
   reentrenamiento: {
     que: 'El modelo envejece: la normalidad cambia con el tiempo. Se reentrena con datos verificados limpios, congelando el umbral en validación antes de evaluar.',
+    flujoTit: 'Flujo de reentrenamiento',
     flujo: [
       {paso: 'Dataset limpio', fichero: 'multilayer-v3.csv', garantia: 'solo tráfico benigno verificado'},
       {paso: 'Particionar', fichero: 'particionar_linea_base.py', garantia: 'bandas de guarda: sin fuga temporal'},
@@ -1344,8 +1345,15 @@ const TOPO_TEXTO = {
     nota: 'Los descartes del núcleo miden si la captura llega completa. Con descartes, las ventanas afectadas están incompletas y el modelo las puntúa igual.',
   },
   motor: {
-    que: 'Atribuye cada paquete a la IP que inició el flujo, extrae las variables en ventanas fijas y puntúa cada ventana.',
-    nota: 'Antes de puntuar descarta el plano de control y las copias que el espejo enseña dos veces. Ese filtrado es alcance, no fórmula: el extractor congelado no se toca.',
+    que: 'El corazón del sistema. Convierte paquetes crudos en una decisión por entidad: atribuye el flujo, acota el alcance, arma las variables por ventana y puntúa.',
+    flujoTit: 'Procesamiento interno',
+    flujo: [
+      {paso: 'Atribución por flujo', fichero: 'extract_multilayer_v2.py', garantia: 'cada paquete a la IP que INICIÓ el flujo, no al destino'},
+      {paso: 'Filtrado de alcance', fichero: 'extract_multilayer_v2.py', garantia: 'descarta plano de control y las copias que el espejo duplica'},
+      {paso: 'Ventaneo + variables', fichero: 'extract_multilayer_v2.py', garantia: 'ventanas fijas; 28 variables por entidad y ventana'},
+      {paso: 'Puntuación', fichero: 'motor_decision.py', garantia: 'score del modelo + reglas heurísticas → decisión por ventana'},
+    ],
+    nota: 'El filtrado es ALCANCE, no fórmula: el extractor está congelado (sus fórmulas no se tocan); los filtros actúan sobre su ENTRADA. Así se descartan el plano de control y las tramas que el espejo enseña dos veces antes de puntuar.',
   },
   modelo: {
     que: 'El modelo one-class RECALIBRADO en esta red (IsolationForest). Aprende la normalidad propia; el umbral se congela desde validación (score_samples < -0,568892).',
@@ -1354,6 +1362,7 @@ const TOPO_TEXTO = {
   heuristicos: {
     que: 'Reglas deterministas sobre las mismas variables de la ventana, complemento del modelo: fuerza bruta, escaneo de puertos, abuso HTTP y DNS de alta entropía.',
     nota: 'Cubren huecos donde el modelo mide flojo (p.ej. DNS-entropy). Validado: disparan en 47/104 ventanas de ataque y solo 0,08 % en tráfico normal. Umbrales versionados, criterio razonado (NO calibrados como el modelo).',
+    flujoTit: 'Las cuatro reglas',
     flujo: [
       {paso: 'Fuerza bruta', fichero: 'heuristicos.py', garantia: '≥5 req/60s con ≥80% de fallo de auth → BLOCK'},
       {paso: 'Escaneo de puertos', fichero: 'heuristicos.py', garantia: 'muchos puertos, pocas conexiones completadas → BLOCK'},
@@ -1362,12 +1371,20 @@ const TOPO_TEXTO = {
     ],
   },
   control: {
-    que: 'La decisión por entidad: PERMIT, LIMIT (degradar la tasa) o BLOCK (cortar). El modelo aporta LIMIT (anomalía); un heurístico confirmado aporta BLOCK.',
-    nota: 'LIMIT existe para el coste de un falso positivo (con 4,45 % de FPR, degradar es mejor que cortar). La acción la aplica el agente en el host, no el sensor (que solo observa por espejo).',
+    que: 'Fusiona las dos señales en UNA acción por entidad: PERMIT (dejar pasar), LIMIT (degradar la tasa) o BLOCK (cortar). El modelo aporta LIMIT (anomalía); un heurístico confirmado aporta BLOCK.',
+    flujoTit: 'Cómo se decide la acción',
+    flujo: [
+      {paso: 'Dos entradas', fichero: 'motor_decision.py', garantia: 'score del modelo (anomalía→LIMIT) + heurístico (confirmado→BLOCK)'},
+      {paso: 'Acción más severa', fichero: 'publicar_feed.py', garantia: 'por IP; BLOCK gana a LIMIT y LIMIT a PERMIT'},
+      {paso: 'Escalada por reincidencia', fichero: 'escalada.py', garantia: '300→1800→3600 s; nunca ∞ automático'},
+      {paso: 'Lista nunca-bloquear', fichero: 'publicar_feed.py', garantia: 'gateways y DNS quedan siempre fuera'},
+    ],
+    nota: 'LIMIT existe para el coste de un falso positivo (con 4,45 % de FPR, degradar es mejor que cortar). El sensor DECIDE pero no ejecuta: solo observa por espejo. La acción la aplica el agente en el host, con el feed firmado de por medio.',
   },
   feed: {
     que: 'La lista FIRMADA (ed25519) de acciones que el sensor publica. Cada entrada: IP, acción, caducidad y motivo.',
     nota: 'Modelo pull: el sensor no tiene credenciales de los hosts; publica y firma, y cada host trae la lista y la verifica. Caducidad escalada (300/1800/3600 s); nunca bloqueo permanente automático.',
+    flujoTit: 'Cómo se publica',
     flujo: [
       {paso: 'Publicar', fichero: 'publicar_feed.py', garantia: 'desde las decisiones del motor + la escalera de reincidencia'},
       {paso: 'Firmar', fichero: 'feed.py', garantia: 'ed25519 vía openssl; el host verifica antes de aplicar'},
@@ -1377,6 +1394,7 @@ const TOPO_TEXTO = {
   agente: {
     que: 'Corre en cada host protegido: trae el feed, verifica la firma y sincroniza nftables (LIMIT con rate-limit, BLOCK con drop y timeout).',
     nota: 'Fail-safe: si la firma no verifica, no toca nada. Tabla aislada (policy accept): solo cae lo que trae el feed. Nunca bloquea gateways ni DNS. Demostrado: un BLOCK real cortó a la Kali (http_200 → http_000).',
+    flujoTit: 'Cómo actúa en el host',
     flujo: [
       {paso: 'Pull + verifica', fichero: 'agente_enforce.py', garantia: 'firma ed25519; fail-safe si falla'},
       {paso: 'Aplica', fichero: 'nftables', garantia: 'set con timeout nativo → caduca solo'},
@@ -1737,7 +1755,7 @@ function renderTopoDetalle() {
     (n.id === 'modelo' ? decisionModeloHTML() : '') +
     (filas ? `<dl>${filas}</dl>` : '') +
     (t.cmd ? `<pre class="topo-cmd">${t.cmd.replace(/</g, '&lt;')}</pre>` : '') +
-    (t.flujo ? flujoHTML(t.flujo) : '') +
+    (t.flujo ? flujoHTML(t.flujo, t.flujoTit) : '') +
     filesHTML(n.id) +
     (t.nota ? `<p class="dim">${t.nota}</p>` : '') +
     (t.enlace ? `<p><a href="${t.enlace.href}">${t.enlace.txt} &rarr;</a></p>` : '');
@@ -1783,8 +1801,8 @@ function decisionModeloHTML() {
 // Mini-flujo del reentrenamiento: pasos encadenados, cada uno con su fichero y
 // la garantia que aporta. Hace visible POR QUE el reentrenamiento es fiable
 // (sin fuga, umbral congelado, promocion verificada), no solo que existe.
-function flujoHTML(pasos) {
-  let html = '<div class="topo-flujo"><h4>Flujo de reentrenamiento</h4>';
+function flujoHTML(pasos, titulo) {
+  let html = '<div class="topo-flujo"><h4>' + (titulo || 'Flujo interno') + '</h4>';
   pasos.forEach((p, i) => {
     html += `<div class="paso"><span class="n">${i + 1}</span>`
       + `<div><div class="tit">${p.paso}<code>${p.fichero}</code></div>`
