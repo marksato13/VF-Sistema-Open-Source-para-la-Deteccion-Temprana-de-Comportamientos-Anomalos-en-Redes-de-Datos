@@ -136,6 +136,10 @@ def main() -> int:
     p.add_argument("--firma", required=True, help="URL o fichero de la firma")
     p.add_argument("--clave-publica", required=True)
     p.add_argument("--aplicar", action="store_true", help="sin esto: dry-run")
+    p.add_argument("--sudo", action="store_true",
+                   help="ejecuta cada 'nft' con 'sudo -n' (para el cron de un "
+                        "usuario con sudo SIN contrasena solo para nft). Minimo "
+                        "privilegio: se eleva el nft, no el proceso entero.")
     a = p.parse_args()
 
     try:
@@ -154,16 +158,28 @@ def main() -> int:
     vig = vigentes(feed_obj, ahora, NUNCA_BLOQUEAR)
     cmds = plan_nftables(vig, ahora)
 
+    errores: list[str] = []
     if a.aplicar:
         for c in cmds:
-            subprocess.run(c, check=False)
-    print(json.dumps({
+            orden = (["sudo", "-n", *c] if a.sudo else c)
+            r = subprocess.run(orden, check=False, capture_output=True, text=True)
+            # Un nft que falla y NO se reporta deja el host sin proteger creyendo
+            # que la aplico: por eso se cuenta y se guarda el primer motivo.
+            if r.returncode != 0:
+                errores.append((r.stderr or r.stdout or "fallo nft").strip()[:160])
+    salida = {
         "estado": "aplicado" if a.aplicar else "dry-run",
         "block": sorted(ip for ip, v in vig.items() if v["accion"] == "BLOCK"),
         "limit": sorted(ip for ip, v in vig.items() if v["accion"] == "LIMIT"),
         "comandos": len(cmds),
-    }, sort_keys=True))
-    return 0
+        "errores": len(errores),
+    }
+    if errores:
+        salida["primer_error"] = errores[0]
+    print(json.dumps(salida, sort_keys=True))
+    # Codigo != 0 si se pidio aplicar y algun nft fallo: el cron lo deja en el
+    # log y un fallo sistematico se nota, en vez de "aplicado" mintiendo.
+    return 1 if errores else 0
 
 
 if __name__ == "__main__":
