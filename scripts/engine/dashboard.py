@@ -488,6 +488,10 @@ HTML = """<!doctype html>
   .badge.alert { background: var(--danger-soft); color: var(--danger); }
   .badge.permit { background: var(--ok-soft); color: var(--ok); }
   .badge.heur { background: var(--surface-2); color: var(--text-dim); }
+  /* Accion de enforcement: PERMIT deja pasar, LIMIT degrada, BLOCK corta. */
+  .badge.acc-permit { background: var(--ok-soft); color: var(--ok); }
+  .badge.acc-limit { background: var(--amber-soft); color: var(--amber); }
+  .badge.acc-block { background: var(--danger-soft); color: var(--danger); }
   .why { color: var(--text-dim); font-size: 0.82rem; }
 
   /* Tabla de decisiones: cabecera fija al desplazar la lista larga, y la celda
@@ -662,7 +666,7 @@ HTML = """<!doctype html>
     <p class="toolbar-hint" id="filterHint"></p>
     <div class="tbl-wrap tbl-scroll">
       <table>
-        <thead><tr><th>Hora</th><th>IP</th><th>Decisión</th><th>Motivo</th><th>Score <span class="th-sub">(← umbral)</span></th><th>Paquetes</th></tr></thead>
+        <thead><tr><th>Hora</th><th>IP</th><th>Decisión</th><th>Acción</th><th>Motivo</th><th>Score <span class="th-sub">(← umbral)</span></th><th>Paquetes</th></tr></thead>
         <tbody id="decisions"></tbody>
       </table>
     </div>
@@ -1146,6 +1150,15 @@ function miniBarraScore(score) {
     + `<circle cx="${sx.toFixed(1)}" cy="${cy}" r="3.4" fill="${col}"/></svg>`;
 }
 
+// La ACCION que el enforcement aplicaria para esta decision. Misma logica que
+// publicar_feed.py: un heuristico confirmado manda (BLOCK o LIMIT); si no, una
+// anomalia del modelo (ALERT) degrada a LIMIT; lo demas, PERMIT. Si el motor
+// aun no emite el campo `heuristico` (no reiniciado), se cae a modelo/PERMIT.
+function accionDeDecision(d) {
+  if (d.heuristico && d.heuristico.accion) return d.heuristico.accion;
+  return d.decision === 'ALERT' ? 'LIMIT' : 'PERMIT';
+}
+
 function renderDecisionsTable() {
   const query = document.getElementById('ipFilter').value.trim();
   const rows = query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions;
@@ -1155,13 +1168,15 @@ function renderDecisionsTable() {
   document.getElementById('decisions').innerHTML = rows.length ? rows.map(d => {
     const isAlert = d.decision === 'ALERT';
     const badge = isAlert ? `<span class="badge alert">${ICON.bad} ALERT</span>` : `<span class="badge permit">${ICON.ok} PERMIT</span>`;
+    const accion = accionDeDecision(d);
+    const accBadge = `<span class="badge acc-${accion.toLowerCase()}">${accion}</span>`;
     const scoreCell = d.score != null
       ? `<span class="score-cell"><span>${d.score.toFixed(4)}</span>${miniBarraScore(d.score)}</span>`
       : '&mdash;';
     return `<tr class="${isAlert ? 'row-alert' : ''}"><td>${fmtTime(d.logged_at)}</td><td class="ip">${d.entity_ip}</td>` +
-      `<td>${badge}</td><td class="why">${DETECTOR_LABEL[d.detector_name] || d.detector_name}</td>` +
+      `<td>${badge}</td><td>${accBadge}</td><td class="why">${DETECTOR_LABEL[d.detector_name] || d.detector_name}</td>` +
       `<td class="num">${scoreCell}</td><td class="num">${d.packet_count_10s}</td></tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="6">${query ? 'Ninguna decisión coincide con el filtro.' : 'Sin decisiones recientes.'}</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="7">${query ? 'Ninguna decisión coincide con el filtro.' : 'Sin decisiones recientes.'}</td></tr>`;
 }
 
 on('ipFilter', 'input', renderDecisionsTable);
@@ -1169,11 +1184,12 @@ on('ipFilter', 'input', renderDecisionsTable);
 on('exportCsv', 'click', () => {
   const query = document.getElementById('ipFilter').value.trim();
   const rows = query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions;
-  const header = ['hora_utc', 'ip', 'decision', 'motivo', 'score', 'paquetes_10s'];
+  const header = ['hora_utc', 'ip', 'decision', 'accion', 'motivo', 'score', 'paquetes_10s'];
   const csvRows = rows.map(d => [
     d.window_end_utc,
     d.entity_ip,
     d.decision,
+    accionDeDecision(d),
     DETECTOR_LABEL[d.detector_name] || d.detector_name,
     d.score != null ? d.score : '',
     d.packet_count_10s,
