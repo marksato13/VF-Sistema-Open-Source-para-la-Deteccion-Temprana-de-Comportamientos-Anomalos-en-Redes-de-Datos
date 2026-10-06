@@ -38,8 +38,8 @@ la redacción de la metodología los lleva el compañero — **no** entran aquí
 |---|---|---|---|
 | 1 | Escenario funcionando | ✅ | enforcement en vivo; `port_scan`→BLOCK confirmado en el motor |
 | 2 | Código / modelo / arquitectura / dashboard | ✅ | repo `producto-as-deployed`; modelo `artifacts/preliminar/if_recalibrado_desplegable.joblib`; arquitectura = **topología del panel**; dashboard operativo |
-| 3 | Explicar inline/online, aprendizaje, desconocida | ◐ | ver §3; falta un artefacto/figura de explicación clara |
-| 4 | Tiempos detección / decisión / respuesta | ◐ | **detección ✅ medida** (comparación: 1–13 s); falta medir **decisión** y **bloqueo** limpios (hay ~8 s de latencia de bloqueo en nota F6) |
+| 3 | Explicar inline/online, aprendizaje, desconocida | ✅ | ver §3; el panel lo muestra: Modelo congelado (aprendizaje), heurísticos con umbrales+versión (sin firma), topología (inline/online) |
+| 4 | Tiempos detección / decisión / respuesta | ✅ medido | **los tres, anclados al reloj del sensor** (`evidencias/tiempos-2026-10-06.md`): detección 1–9 s, decisión 17–18 s, respuesta 51–57 s; orden det≤dec≤resp confirmado. El tiempo de respuesta lo domina la cadencia minutely del feed firmado (parámetro de diseño), no el cómputo |
 | 5 | Acciones alertar/limitar/**cuarentena**/bloquear | ◐ | PERMIT/LIMIT/BLOCK ✅; **"cuarentena/aislar" no existe** como acción propia (gap) |
 | 6 | Qué anomalías (concreto) | ✅ | 4 familias: escaneo, DGA/DNS alta entropía, flood HTTP, fuerza bruta (nota 21) |
 | 7 | Datos no manipulados / parámetros válidos | ✅ | **línea base medida** (nota 24) + umbrales **justificados** + **replay de PCAP reproducible** (el PCAP es el artefacto verificable) |
@@ -80,12 +80,19 @@ la redacción de la metodología los lleva el compañero — **no** entran aquí
 
 ## 5. Mejoras de GUI (para que la demo convenza)
 
-- **Mostrar los tiempos** en el panel: por episodio/entidad, tiempo de detección y de
-  acción (hoy se ve la Acción, falta el "cuándo").
-- **Dejar visible la historia "sin firma"**: qué cazó el **modelo** vs el
-  **heurístico** (ya está en la topología; reforzarlo en Decisiones).
+- **Mostrar los tiempos**: los tres tiempos no caben en el log (el t_respuesta es
+  cross-host); van **medidos** en `evidencias/tiempos-2026-10-06.md` y se enseñan
+  en la demo (§3 del guion). ✅ cubierto por evidencia + guion.
+- **Dejar visible la historia "sin firma"** (B2.1 ✅): la columna *Motivo* de
+  Decisiones ahora resalta **qué heurístico** disparó (badge + motivo) cuando la
+  decisión fue determinista; si no, la etiqueta del modelo. Desplegado al sensor.
 - **Vista de arquitectura lista para demo**: la topología ya existe (horizontal, por
-  fases); asegurar que carga bien a pantalla completa para proyectar.
-- **Panel de "datos auténticos"**: enlazar en la GUI la línea base y los parámetros
-  (pps, umbrales) para responder en vivo "los datos no están manipulados".
-- Confirmar que la columna **Acción (PERMIT/LIMIT/BLOCK)** se ve con el motor nuevo.
+  fases); **QA de pantalla completa pendiente en el ensayo** (B3.2).
+- **Parámetros a la vista** (B3.1 ✅): el bloque de heurísticos del panel cita los
+  **umbrales exactos + `VERSION_UMBRALES` 2026-10-06.1**; Variables ya muestra
+  paso/historia/esquema y valores reales del dataset. Desplegado al sensor.
+- Columna **Acción (PERMIT/LIMIT/BLOCK)**: ✅ confirmada con el motor nuevo.
+
+> **Nota de despliegue:** B2.1 y B3.1 ya están en el fichero del sensor
+> (`scripts/engine/dashboard.py`, respaldo `.bak-20261006`), pero **tomarán efecto
+> al reiniciar** el servicio: `sudo systemctl restart ppi-dashboard` (sudo de Mark).
