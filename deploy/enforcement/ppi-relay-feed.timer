@@ -1,0 +1,10 @@
+[Unit]
+Description=CyberFlow - relay del feed cada minuto
+
+[Timer]
+OnCalendar=minutely
+AccuracySec=5s
+Persistent=false
+
+[Install]
+WantedBy=timers.target
