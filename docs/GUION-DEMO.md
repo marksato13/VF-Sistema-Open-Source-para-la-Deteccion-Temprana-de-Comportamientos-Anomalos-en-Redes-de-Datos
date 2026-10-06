@@ -50,9 +50,11 @@ pensado para responder, en vivo, los diez puntos técnicos del profesor.
 
 **Hero del demo** (el más limpio y rápido: `port_scan`→BLOCK).
 
-1. En la Kali, lanzar el escaneo contra el host DMZ:
+1. En la Kali, lanzar el escaneo contra el host DMZ (acotado a 1-1000 para que sea
+   rápido; el catálogo del panel usa la variante completa `-p-`):
    ```
-   nmap -sT -T4 --max-retries 1 -p 1-1000 10.10.30.10
+   nmap -sT -T4 --max-retries 1 -p 1-1000 --open 10.10.30.10
+   # variante del catálogo: nmap -sT -sV -T4 -p- --open 10.10.30.10
    ```
 2. En el panel, sección **Actividad** y **Decisiones recientes**: aparece la
    entidad 10.10.20.30 con **Acción = BLOCK** y, en *Motivo*, el badge del
@@ -77,8 +79,12 @@ Demostrar la **acción diferenciada** (no todo es BLOCK) y la anomalía **sin
 firma** que Suricata (ET Open) **no** cazó (comparación, nota 26: CyberFlow 3/3,
 Suricata 0/9).
 
-1. En la Kali, ráfaga de consultas DNS con nombres tipo DGA (ver
-   `configs/escenarios.json`, escenario DNS).
+1. En la Kali, ráfaga de consultas DNS tipo DGA contra el **resolver 10.10.10.20**
+   (no al DMZ): nombres aleatorios de un TLD inexistente → todas únicas y NXDOMAIN.
+   ```
+   for i in $(seq 1 40); do dig +time=1 +tries=1 @10.10.10.20 x$RANDOM$RANDOM.invalid A >/dev/null 2>&1; done
+   ```
+   (dispara `dns_entropy`: ≥20 consultas/60s con ≥45 % únicas o ≥50 % NXDOMAIN.)
 2. En **Decisiones**: entidad con **Acción = LIMIT**, motivo `dns_entropy`.
    Explicar por qué **LIMIT y no BLOCK**: ambiguo (podría ser uso legítimo) →
    degradar, no cortar. Con FPR 4,45 % en red real, degradar es más barato que
