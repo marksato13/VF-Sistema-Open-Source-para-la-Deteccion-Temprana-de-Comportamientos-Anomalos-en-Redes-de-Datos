@@ -80,11 +80,14 @@ firma** que Suricata (ET Open) **no** cazó (comparación, nota 26: CyberFlow 3/
 Suricata 0/9).
 
 1. En la Kali, ráfaga de consultas DNS tipo DGA contra el **resolver 10.10.10.20**
-   (no al DMZ): nombres aleatorios de un TLD inexistente → todas únicas y NXDOMAIN.
+   (no al DMZ): nombres aleatorios → casi todos distintos.
    ```
    for i in $(seq 1 40); do dig +time=1 +tries=1 @10.10.10.20 x$RANDOM$RANDOM.invalid A >/dev/null 2>&1; done
    ```
-   (dispara `dns_entropy`: ≥20 consultas/60s con ≥45 % únicas o ≥50 % NXDOMAIN.)
+   (dispara `dns_entropy`: ≥20 consultas/60s con ≥45 % nombres únicos **o** ≥50 %
+   NXDOMAIN. **Validado en vivo 2026-10-06**: 82 consultas/60s, 50 % únicos →
+   LIMIT en ~2 s. Fira por la rama de unicidad; el 50 % —no ~100 %— es la
+   duplicación del espejo, por eso el umbral es 0,45 y no 0,9.)
 2. En **Decisiones**: entidad con **Acción = LIMIT**, motivo `dns_entropy`.
    Explicar por qué **LIMIT y no BLOCK**: ambiguo (podría ser uso legítimo) →
    degradar, no cortar. Con FPR 4,45 % en red real, degradar es más barato que
