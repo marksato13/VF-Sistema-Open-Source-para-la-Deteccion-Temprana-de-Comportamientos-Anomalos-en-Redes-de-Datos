@@ -25,7 +25,11 @@ from __future__ import annotations
 
 # Subir esta versión cada vez que cambien los umbrales; queda en el registro y en
 # el feed para poder reproducir por qué se tomó una decisión.
-VERSION_UMBRALES = "2026-09-30.1"
+VERSION_UMBRALES = "2026-10-06.1"
+# 2026-10-06: el espejo SPAN duplica cada trama, así que los ratios "todo único"
+# (puertos de un escaneo, nombres de un DGA) topan en ~0,5, no en 1,0. Los umbrales
+# de unicidad se bajan de 0,9/0,5 a 0,45. Validado: port_scan 3/3 y dns_entropy en
+# el ataque, con FPR 0/527 sobre la línea base. Ver notas 23/24/26 de orquestación.
 
 # Umbrales por defecto. Se pueden sobreescribir por config (.toml [heuristicos]).
 UMBRALES_POR_DEFECTO: dict[str, dict] = {
@@ -41,7 +45,7 @@ UMBRALES_POR_DEFECTO: dict[str, dict] = {
     # pocas conexiones completadas. Reconocimiento claro -> BLOCK.
     "port_scan": {
         "min_flow_attempt_30s": 20,
-        "min_unique_dst_port_ratio_30s": 0.5,
+        "min_unique_dst_port_ratio_30s": 0.45,
         "max_syn_completion_ratio_10s": 0.3,
         "accion": "BLOCK",
     },
@@ -59,7 +63,7 @@ UMBRALES_POR_DEFECTO: dict[str, dict] = {
     "dns_entropy": {
         "min_dns_query_60s": 20,
         "min_nxdomain_ratio_60s": 0.5,
-        "min_unique_dns_name_ratio_60s": 0.9,
+        "min_unique_dns_name_ratio_60s": 0.45,
         "accion": "LIMIT",
     },
 }
