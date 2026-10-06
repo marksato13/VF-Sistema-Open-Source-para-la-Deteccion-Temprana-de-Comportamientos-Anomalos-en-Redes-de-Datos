@@ -44,7 +44,7 @@ la redacción de la metodología los lleva el compañero — **no** entran aquí
 | 6 | Qué anomalías (concreto) | ✅ | 4 familias: escaneo, DGA/DNS alta entropía, flood HTTP, fuerza bruta (nota 21) |
 | 7 | Datos no manipulados / parámetros válidos | ✅ | **línea base medida** (nota 24) + umbrales **justificados** + **replay de PCAP reproducible** (el PCAP es el artefacto verificable) |
 | 8 | Sim → real / falsos positivos | ✅ | **recalibración EN la red real**: FPR 92,4 %→4,45 % (nota L); es la respuesta al distribution shift |
-| 9 | Variables de capa 2 | ◐ | la dedup del espejo usa L2 (VLAN/ip_id); **confirmar si el modelo desplegado (v2, 28 features) incluye features L2** o solo v3 |
+| 9 | Variables de capa 2 | ◐ documentado | **El modelo desplegado (v2, 28 features) NO usa L2** — solo L3/L4/L7 (confirmado en `multilayer-v2.json`). La L2 se usa en la **deduplicación del espejo** (VLAN + ip_id para quitar copias) y el extractor **v3** añade features L2, pero v3 **no está desplegado**. Incorporar L2 al *scoring* exige **reentrenar + recalibrar** (v3) — siguiente paso, no en esta versión. |
 | 10 | Grabar y convertir en mejoras | ⏳ | organizativo (grabar la sesión del jueves) |
 
 ## 3. Respuestas técnicas que hay que dejar claras (para la demo)
