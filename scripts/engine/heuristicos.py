@@ -25,11 +25,16 @@ from __future__ import annotations
 
 # Subir esta versión cada vez que cambien los umbrales; queda en el registro y en
 # el feed para poder reproducir por qué se tomó una decisión.
-VERSION_UMBRALES = "2026-10-06.1"
-# 2026-10-06: el espejo SPAN duplica cada trama, así que los ratios "todo único"
+VERSION_UMBRALES = "2026-10-06.2"
+# 2026-10-06.1: el espejo SPAN duplica cada trama, así que los ratios "todo único"
 # (puertos de un escaneo, nombres de un DGA) topan en ~0,5, no en 1,0. Los umbrales
-# de unicidad se bajan de 0,9/0,5 a 0,45. Validado: port_scan 3/3 y dns_entropy en
-# el ataque, con FPR 0/527 sobre la línea base. Ver notas 23/24/26 de orquestación.
+# de unicidad se bajan de 0,9/0,5 a 0,45. Validado: dns_entropy en el ataque, con
+# FPR 0/527 sobre la línea base. Ver notas 23/24/26 de orquestación.
+# 2026-10-06.2: port_scan disparaba solo 1/3 (nota 26): en un escaneo corto el
+# unique_dst_port_ratio queda bordeando 0,45-0,50 (tope del espejo) y a veces cae.
+# Se añade una rama OR para la ráfaga inequívoca (>=200 intentos/30s con <=10 %
+# completados) que NO depende del ratio. FPR validado offline: +5 disparos en
+# 712 450 ventanas de línea base (0,011 %->0,012 %, neutro). Ver docs/MEJORA-PORT-SCAN.md.
 
 # Umbrales por defecto. Se pueden sobreescribir por config (.toml [heuristicos]).
 UMBRALES_POR_DEFECTO: dict[str, dict] = {
@@ -47,6 +52,10 @@ UMBRALES_POR_DEFECTO: dict[str, dict] = {
         "min_flow_attempt_30s": 20,
         "min_unique_dst_port_ratio_30s": 0.45,
         "max_syn_completion_ratio_10s": 0.3,
+        # Rama OR: ráfaga masiva de baja completitud (independiente del ratio de
+        # unicidad, que el espejo distorsiona). Inequívocamente un escaneo.
+        "min_flow_attempt_burst_30s": 200,
+        "max_syn_completion_burst_10s": 0.1,
         "accion": "BLOCK",
     },
     # Abuso HTTP (flood / scraping): volumen alto de peticiones SIN que sea fuerza
@@ -90,12 +99,19 @@ def _brute_force(row: dict, u: dict) -> str | None:
 
 
 def _port_scan(row: dict, u: dict) -> str | None:
-    if (_n(row, "flow_attempt_count_30s") >= u["min_flow_attempt_30s"]
-            and _n(row, "unique_dst_port_ratio_30s") >= u["min_unique_dst_port_ratio_30s"]
-            and _n(row, "syn_completion_ratio_10s") <= u["max_syn_completion_ratio_10s"]):
-        return "%.0f intentos/30s a muchos puertos, %.0f%% completados" % (
-            _n(row, "flow_attempt_count_30s"),
-            100 * _n(row, "syn_completion_ratio_10s"))
+    fa = _n(row, "flow_attempt_count_30s")
+    up = _n(row, "unique_dst_port_ratio_30s")
+    sc = _n(row, "syn_completion_ratio_10s")
+    # Regla normal: muchos puertos distintos y pocas conexiones completadas.
+    normal = (fa >= u["min_flow_attempt_30s"]
+              and up >= u["min_unique_dst_port_ratio_30s"]
+              and sc <= u["max_syn_completion_ratio_10s"])
+    # Rama OR: ráfaga masiva de baja completitud. No depende del ratio de unicidad
+    # (el espejo SPAN lo topa en ~0,5 y lo deja bordeando 0,45, de ahí el 1/3).
+    rafaga = (fa >= u.get("min_flow_attempt_burst_30s", 200)
+              and sc <= u.get("max_syn_completion_burst_10s", 0.1))
+    if normal or rafaga:
+        return "%.0f intentos/30s a muchos puertos, %.0f%% completados" % (fa, 100 * sc)
     return None
 
 

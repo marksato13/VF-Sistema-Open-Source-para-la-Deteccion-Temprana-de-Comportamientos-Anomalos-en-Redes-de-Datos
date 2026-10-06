@@ -1,7 +1,9 @@
 # Mejora propuesta: robustez del heurístico `port_scan`
 
-**Estado:** analizado y validado en FPR (offline). **Implementación + despliegue
-PENDIENTES de tu OK** (cambia el enforcement en vivo).
+**Estado:** ✅ **IMPLEMENTADO, desplegado y validado en vivo** (2026-10-06,
+`VERSION_UMBRALES=2026-10-06.2`). Tras el fix, un escaneo disparó `port_scan`→BLOCK
+("1593 intentos/30s a muchos puertos, 0% completados") con el motor reiniciado.
+Tests: `tests/test_heuristicos.py` (4 casos) + suite 92/92.
 
 ## Problema
 `port_scan` disparó solo **1/3** en la batería (nota 26 de orquestación): un
@@ -44,11 +46,12 @@ ambigüedad, pase lo que pase con la unicidad. Subir `VERSION_UMBRALES` a `2026-
 → La condición OR añade **+5 disparos en 712 450** ventanas: **neutra en FPR**. Y
 sobre el escaneo medido, la ventana pico (2007, syn 0) la cumple → disparo robusto.
 
-## Plan de despliegue (GATED — necesita tu OK)
-1. Editar `scripts/engine/heuristicos.py` (`_port_scan` + `VERSION_UMBRALES=2026-10-06.2`).
-2. `py_compile` + `unittest` local (añadir caso: ráfaga masiva dispara aunque uratio<0,45).
-3. `scp` al sensor + `sudo -n systemctl restart ppi-motor` (es NOPASSWD).
-4. Re-correr la batería de escaneo para confirmar **3/3** y FPR estable.
+## Despliegue (HECHO 2026-10-06)
+1. ✅ `scripts/engine/heuristicos.py` (`_port_scan` con rama OR + `VERSION_UMBRALES=2026-10-06.2`).
+2. ✅ `py_compile` + `tests/test_heuristicos.py` (4 casos, incl. ráfaga con uratio<0,45) + suite 92/92.
+3. ✅ `scp` al sensor (respaldo `heuristicos.py.bak-20261006-2`) + `sudo -n systemctl restart ppi-motor` → `active`.
+4. ✅ Escaneo de verificación: `port_scan`→BLOCK disparó (1593 intentos/30s, 0% completados).
 
-Nada de esto se ha tocado aún en el producto desplegado. Di "adelante con el fix de
-port_scan" y lo implemento, pruebo y despliego con esos gates.
+Pendiente menor: re-correr la batería N=3 de escaneo para confirmar que pasa de
+1/3 a 3/3 de forma consistente (el fix lo predice; validación formal con la tubería
+de la nota 26).
