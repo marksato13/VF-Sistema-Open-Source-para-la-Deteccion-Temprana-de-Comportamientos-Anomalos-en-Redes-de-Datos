@@ -1,0 +1,322 @@
+#!/usr/bin/env python3
+"""Word del informe de evaluacion critica (Sesion 01, momento CREA).
+
+El .md de la carpeta es la fuente DETALLADA. Este Word es la version PRECISA
+para el docente, con la estructura exacta que pide la consigna y dentro del
+limite de 2-4 paginas.
+
+    python3 scripts/entregables/generar_evaluacion_critica_word.py
+"""
+from __future__ import annotations
+from pathlib import Path
+from docx import Document
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+import re
+from docx.shared import Cm, Pt, RGBColor
+
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _docx_estilo import rematar, bloque_enlaces
+
+REPO = Path(__file__).resolve().parents[2]
+LOGO = REPO / "docs/entregables/assets/logo-upeu.png"
+GRAF = REPO / "docs/entregables/graficas"
+OUT = REPO / "docs/entregables/01-evaluacion-critica/Informe-evaluacion-critica.docx"
+
+INK, DIM = RGBColor(0x13, 0x1B, 0x2E), RGBColor(0x5B, 0x6B, 0x8C)
+ACCENT, WHITE = RGBColor(0x1F, 0x4E, 0x79), RGBColor(0xFF, 0xFF, 0xFF)
+F_HEAD, F_ZEBRA, F_OK, F_AMBER, F_RED = "1F4E79", "EEF3FA", "E0F3E6", "FDECD2", "FBE3E1"
+
+
+_MARCAS = re.compile(r"(\*\*.+?\*\*|\*.+?\*|`.+?`)")
+
+
+def _tramos(txt):
+    """Parte el texto en (contenido, negrita, cursiva, monoespaciado).
+
+    Los helpers solo entendian **negrita**; *cursiva* y `codigo` se escribian
+    tal cual y el lector veia los asteriscos y las comillas.
+    """
+    for t in _MARCAS.split(str(txt)):
+        if not t:
+            continue
+        limpio = lambda x: x.replace("**", "").replace("*", "").replace("`", "")
+        if t.startswith("**") and t.endswith("**") and len(t) > 4:
+            yield limpio(t[2:-2]), True, False, False
+        elif t.startswith("*") and t.endswith("*") and len(t) > 2:
+            yield limpio(t[1:-1]), False, True, False
+        elif t.startswith("`") and t.endswith("`") and len(t) > 2:
+            yield limpio(t[1:-1]), False, False, True
+        else:
+            yield t, False, False, False
+
+
+def shade(cell, hx):
+    el = OxmlElement("w:shd"); el.set(qn("w:val"), "clear"); el.set(qn("w:fill"), hx)
+    cell._tc.get_or_add_tcPr().append(el)
+
+
+def h1(doc, n, txt):
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(11); p.paragraph_format.space_after = Pt(4)
+    r = p.add_run(f"{n}  {_MARCAS.sub(lambda m: m.group(0).strip("*`"), txt)}")
+    r.font.size = Pt(12.5); r.font.bold = True; r.font.color.rgb = ACCENT
+    return p
+
+
+def par(doc, txt, size=9.2, italic=False, color=INK, after=5, align=WD_ALIGN_PARAGRAPH.JUSTIFY):
+    p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(after); p.alignment = align
+    for t, _b, _i, _m in _tramos(txt):
+        r = p.add_run(t)
+        r.font.size = Pt(size); r.font.color.rgb = color
+        r.font.italic = italic; r.font.bold = _b
+        r.font.italic = r.font.italic or _i
+        r.font.name = "Consolas" if _m else r.font.name
+    return p
+
+
+def tabla(doc, cab, filas, anchos, fondos=None):
+    t = doc.add_table(rows=1, cols=len(cab))
+    t.alignment = WD_TABLE_ALIGNMENT.CENTER; t.autofit = False
+    for c, (txt, w) in enumerate(zip(cab, anchos)):
+        cell = t.rows[0].cells[c]; cell.width = Cm(w); cell.text = ""
+        r = cell.paragraphs[0].add_run(txt)
+        r.font.bold = True; r.font.size = Pt(8.4); r.font.color.rgb = WHITE
+        shade(cell, F_HEAD)
+    for i, fila in enumerate(filas):
+        row = t.add_row()
+        for c, txt in enumerate(fila):
+            cell = row.cells[c]; cell.width = Cm(anchos[c]); cell.text = ""
+            p = cell.paragraphs[0]; p.paragraph_format.space_after = Pt(1)
+            for tr, _b, _i, _m in _tramos(txt):
+                r = p.add_run(tr)
+                r.font.size = Pt(8.2); r.font.bold = _b
+                r.font.italic = r.font.italic or _i
+                r.font.name = "Consolas" if _m else r.font.name; r.font.color.rgb = INK
+            if fondos and fondos[i]:
+                shade(cell, fondos[i])
+            elif i % 2 == 0:
+                shade(cell, F_ZEBRA)
+    doc.add_paragraph().paragraph_format.space_after = Pt(2)
+
+
+def figura(doc, nombre, pie, ancho=13.0):
+    f = GRAF / nombre
+    if not f.exists():
+        raise SystemExit(f"falta la figura: {f}")
+    doc.add_picture(str(f), width=Cm(ancho))
+    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.paragraphs[-1].paragraph_format.space_after = Pt(1)
+    par(doc, pie, size=7.8, italic=True, color=DIM, after=7, align=WD_ALIGN_PARAGRAPH.CENTER)
+
+
+def main() -> None:
+    if not LOGO.exists():
+        raise SystemExit(f"falta el logo: {LOGO}")
+    doc = Document()
+    s = doc.sections[0]
+    s.top_margin = s.bottom_margin = Cm(1.4); s.left_margin = s.right_margin = Cm(1.8)
+    doc.styles["Normal"].font.name = "Calibri"
+
+    doc.add_picture(str(LOGO), width=Cm(4.6))
+    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    for txt, sz, col, b in [("Universidad Peruana Unión", 10, INK, True),
+                            ("Facultad de Ingeniería y Arquitectura · E.P. de Ingeniería de Sistemas", 8.4, DIM, False),
+                            ("Investigación V · Sesión 01", 8.4, DIM, False)]:
+        p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.space_after = Pt(1)
+        r = p.add_run(txt); r.font.size = Pt(sz); r.font.color.rgb = col; r.font.bold = b
+
+    p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_before = Pt(7); p.paragraph_format.space_after = Pt(2)
+    r = p.add_run("INFORME DE EVALUACIÓN CRÍTICA DE RESULTADOS")
+    r.font.size = Pt(14.5); r.font.bold = True; r.font.color.rgb = ACCENT
+    par(doc, "Sistema open source para la detección temprana de comportamientos anómalos "
+             "en redes de datos\nRubén Mark Salazar Tocas · Uziel Elias Sauñe Fernandez\nAsesores: Ing. Nemias Saboya Ríos · Ing. Fernando Manuel Asin Gómez",
+        size=9, color=DIM, after=9, align=WD_ALIGN_PARAGRAPH.CENTER)
+    par(doc, "**Entregable de la Sesión 01.** Este documento es el informe de resultados y evaluación crítica; "
+             "el plan prospectivo de la Sesión 02 está en `07-plan-de-validacion/plan-de-validacion-de-resultados.md`.",
+        size=8.2, color=DIM, after=7, align=WD_ALIGN_PARAGRAPH.CENTER)
+
+    # ---------------------------------------------------------------- 1
+    h1(doc, "1 ·", "Lo que está listo: qué se abordó de manera objetiva")
+    par(doc, "El producto es un sistema desplegado que detecta comportamiento anómalo y "
+             "**bloquea la IP ofensora en el propio router**, validado sobre tráfico real de "
+             "laboratorio. Toda cifra procede de artefactos verificables; ninguna se transcribe "
+             "a mano. La evaluación se ordena por los **criterios de validez y confiabilidad** "
+             "trabajados en la sesión.")
+    tabla(doc, ["Criterio de la sesión", "Cómo se abordó en este proyecto", "Estado"], [
+        ["**Validez interna**\n*¿El resultado se debe a lo que decimos, o algo lo contamina?*",
+         "**Nuestros datos** se reparten por corrida completa, no al azar: así el modelo no "
+         "puede reconocer la corrida en vez del ataque. Detectamos una fuga real y la "
+         "corregimos.", "Abordada"],
+        ["**Validez externa**\n*¿Funcionaría fuera de nuestro laboratorio?*",
+         "**Nuestro modelo** se probó con validación cruzada de 5 pliegues y 58 corridas en la "
+         "red real. Falta una jornada nueva: hasta tenerla **no afirmamos** que funcione en "
+         "otra red.", "Parcial"],
+        ["**Confiabilidad**\n*Si repetimos la medición, ¿da lo mismo?*",
+         "**Nuestro sistema es determinista**: 10 ajustes repetidos dieron el mismo modelo y el "
+         "mismo umbral. Dos pases completos de validación dieron resultados equivalentes.",
+         "Abordada"],
+        ["**Validez de constructo**\n*Lo que medimos, ¿mide lo que decimos?*",
+         "**Nuestras 28 variables** están definidas una por una con su fórmula, ventana y "
+         "fuente, generadas desde el código que corre. Ninguna se describe de memoria.",
+         "Abordada"],
+        ["**α de Cronbach / Kappa**\n*¿Por qué no las usamos?*",
+         "**Nuestro producto no es un cuestionario** ni tiene jueces clasificando, así que "
+         "ninguna de las dos aplica. El Alfa se calculará sobre el SUS, que sí tiene 10 ítems.",
+         "Justificado"],
+    ], [4.0, 9.2, 4.2])
+    par(doc, "**ISO/IEC 25010 — características evaluadas con evidencia:** *adecuación funcional* "
+             "(detecta y bloquea, 88,8 % de detección), *eficiencia de desempeño* (bloqueo en "
+             "mediana de 8,0 s), *confiabilidad* (cero caídas en 58 corridas, determinismo "
+             "verificado) y *seguridad* (trazabilidad por SHA-256). **Sin evidencia todavía**: "
+             "*usabilidad* —el SUS está pendiente—, *compatibilidad*, *mantenibilidad* y "
+             "*portabilidad*.", size=8.8)
+    par(doc, "**Ya resuelto en agosto**, sin capturar datos nuevos ni reentrenar: intervalos de "
+             "Wilson en toda proporción y McNemar con corrección de Holm; ablación por capas y "
+             "comparación de 14 contra 28 variables; diccionario de las 28 variables; dataset, "
+             "manifiesto y 7 modelos publicados con sus checksums; datasheet, model card y system "
+             "card; declaración de la selección posterior; validación cruzada y bootstrap.",
+        size=8.8)
+    par(doc, "**Resultados medidos:**", size=9.2)
+    tabla(doc, ["Resultado medido", "Valor obtenido", "Cómo se verificó"], [
+        ["**Capacidad discriminante**", "**ROC-AUC 0,974**", "Re-puntuando el modelo congelado"],
+        ["**Detección de ataques genuinos**", "**88,8 %** [83,0 – 92,8]", "Evaluación bloqueada de un solo paso, con intervalo de Wilson"],
+        ["**Respuesta en tiempo real**", "Bloqueo en mediana de **8,0 s**; rango 6,1–13,7 s (n = 8)", "58 corridas con el motor activo; 8 bloqueos con tiempo observable"],
+        ["**Disponibilidad**", "**Cero caídas registradas**; 55 de 58 corridas con verificación explícita", "Registro de servicios antes y después de cada corrida"],
+        ["**Aporte de las variables multicapa**", "De **66,5 % a 88,8 %** de detección, p < 0,001", "Ablación por capas con McNemar exacto"],
+        ["**Superioridad del modelo elegido**", "Las **6 comparaciones** del OCSVM son significativas", "McNemar + corrección de Holm sobre 21 pares"],
+        ["**Reproducibilidad**", "Dataset, manifiesto y **los 7 modelos** publicados y verificables. **No es replicabilidad**: eso exige datos nuevos y es P-2/P-4", "sha256sum -c · licencias MIT y CC BY 4.0"],
+    ], [4.4, 5.4, 7.6])
+
+    # ---------------------------------------------------------------- 2
+    h1(doc, "2 ·", "Lo que NO está listo")
+    par(doc, "Solo lo que sigue abierto hoy. **Lo ya resuelto está en la sección 1 y no se repite "
+             "aquí.** Las cinco están medidas, no supuestas.")
+    tabla(doc, ["", "Qué falta", "Evidencia de que falta", "Gravedad"], [
+        ["**P-1**", "**El sistema bloquea tráfico legítimo pesado**", "En laboratorio se equivoca el 4,71 % de las veces; en operación, 25,81 % y 22,97 %. Una transferencia legítima de 200 Mbit/s bloqueó a un cliente real durante 120 s", "Crítica"],
+        ["**P-2**", "**El modelo se eligió mirando el examen final** *(replicabilidad)*", "Se compararon 7 candidatos sobre el mismo conjunto de prueba y se escogió el mejor. El 88,8 % es un máximo, no una estimación limpia", "Crítica"],
+        ["**P-3**", "**Nadie ha usado el panel salvo el equipo** *(pertinencia)*", "El instrumento SUS está preparado, pero el archivo de respuestas tiene 0 filas: no se ha aplicado", "Alta"],
+        ["**P-4**", "**No se sabe si funciona en otra jornada** *(replicabilidad)*", "Los 44 perfiles aparecen en las tres particiones. Falta una captura nueva que el modelo no haya visto", "Alta"],
+        # N-04: decía «4 escenarios» donde el registro de debilidades (D-10), el .md de
+        # este informe y el informe 02 dicen SEIS. Encoger una debilidad abierta que el
+        # jurado ya señaló es lo peor que se puede llevar a la defensa.
+        ["**P-5**", "**Faltan 6 escenarios legítimos del jurado**", "SSH, SCP/SFTP, SMB, respaldo, streaming y actualizaciones no están en el dataset, y no hay captura multi-SO", "Media"],
+    ], [1.5, 4.6, 8.4, 2.1], fondos=[F_RED, F_RED, F_AMBER, F_AMBER, F_ZEBRA])
+
+    # ---------------------------------------------------------------- 3
+    h1(doc, "3 ·", "Cómo se va a abordar")
+    par(doc, "Una acción por cada pendiente de la sección 2, con el mismo identificador. Todas "
+             "caben en el laboratorio actual: **ninguna exige equipo ni presupuesto nuevo**. "
+             "**P-2 y P-4 se resuelven con la misma campaña.**")
+    tabla(doc, ["", "Qué se hará", "¿Lo resuelve del todo?", "Cuándo"], [
+        ["**P-1**", "Reentrenar incluyendo la transferencia de 200 Mbit/s como tráfico **normal** y repetir las 29 corridas de validación", "Sí, si el error baja. Si no baja, queda declarado como límite del sistema", "26 sep"],
+        ["**P-2**", "Recolectar una **jornada nueva** que el modelo no vea nunca, y medir sobre ella", "Sí. Es la única corrección real: no se arregla escribiendo", "24 oct"],
+        ["**P-3**", "Sesión de 2 h con 5–8 evaluadores usando el instrumento SUS ya preparado", "Sí", "9 sep"],
+        ["**P-4**", "**La misma jornada nueva de P-2** sirve para las dos cosas", "Sí", "24 oct"],
+        # N-04: la campaña cubre cuatro de los seis. SMB, streaming y la captura
+        # multi-SO quedan fuera, así que la columna no puede decir «Sí».
+        ["**P-5**", "Una campaña F1 más: SSH, SCP/SFTP, respaldo y actualizaciones", "Parcial — quedan fuera SMB, streaming y la captura multi-SO", "19 sep"],
+    ], [1.5, 7.2, 5.4, 2.0])
+    # -------------------------------------------------------- cronograma
+    h1(doc, "4 ·", "En qué tiempo: cronograma comprometido")
+    par(doc, "*Propuesta del equipo del 2 de septiembre de 2026, pendiente del visto bueno de "
+             "los asesores.* **La fecha que ordena todo es el 30 de septiembre:** IJIES sube su "
+             "APC de USD 300 a 400 el 1 de octubre y lo paga la universidad. Un envío el 28 de "
+             "septiembre proyecta primera decisión hacia el 8 de noviembre.")
+    par(doc, "**Dos riesgos declarados.** El envío deja **3 días de margen** antes de que "
+             "suba el APC. Y **P-1 y P-2 se cierran después del envío**, con el artículo ya en "
+             "revisión: es deliberado, porque el artículo se escribe con el resultado ya "
+             "bloqueado.", size=8.6, italic=True, color=DIM)
+    tabla(doc, ["Fecha", "", "Qué se hace", "Responsable", "Estado"], [
+        # Reordenado tras la observación del asesor: el sistema se cierra ANTES de
+        # traer evaluadores. Evaluar un sistema con debilidades abiertas mide una
+        # versión que no es la que se defiende.
+        ["**vie 4 sep 2026**", "P-2", "Declarar la selección posterior en el documento de tesis (mitiga; la corrección real es el 24 de octubre)", "Salazar", "PLANIFICADA"],
+        ["**sáb 19 sep 2026**", "**P-5**", "Campaña F1: SSH, SCP/SFTP, respaldo y actualizaciones", "Sauñe", "PLANIFICADA"],
+        ["**mié 23 sep 2026**", "+P-3", "Juicio experto con 3 evaluadores. **Refuerza P-3, no lo cierra**: lo cierra la sesión del 27 de septiembre", "Salazar · asesores", "PLANIFICADA"],
+        ["**sáb 26 sep 2026**", "**P-1**", "**Recalibrar** con tráfico pesado como normalidad y repetir las 29 corridas. **Cierra la debilidad mayor antes de evaluar con usuarios**", "Salazar", "PLANIFICADA"],
+        ["**dom 27 sep 2026**", "**P-3**", "**Sesión de usabilidad y aceptación**: SUS más **TAM** (utilidad percibida) con 5–8 evaluadores, sobre el sistema ya cerrado", "Salazar · Sauñe", "PLANIFICADA"],
+        ["**lun 28 sep 2026**", "—", "**Envío del artículo a IJIES.** Hito, no un pendiente: el artículo no espera a P-1 ni a P-2", "Salazar · Sauñe", "PLANIFICADA"],
+        ["**sáb 24 oct 2026**", "**P-2 · P-4**", "**Jornada nueva** en fecha distinta, sin reutilizar episodios. Cierra los dos", "Salazar · Sauñe", "PLANIFICADA"],
+    ], [2.9, 1.9, 6.4, 2.4, 2.3])
+    par(doc, "**El sistema se cierra antes de evaluarlo con usuarios.** Es la observación del asesor y reordena todo: recalibrar el 26 y evaluar el 27, no al revés. Traer evaluadores a un sistema con debilidades abiertas mide una versión que no es la que se defiende. La sesión sigue siendo urgente porque es **el único cero absoluto que queda**: cero en la ficha de "
+             "auditoría, cero en el eje de pertinencia y `D-18` en el registro. Cuesta dos horas y "
+             "sube la ficha de 82,4 % a 88,2 %. El juicio experto va después a propósito: los "
+             "expertos juzgan mejor con los resultados de los usuarios delante.", italic=True)
+    par(doc, "**El artículo no espera a P-1 ni a P-2.** La sección de resultados se escribe "
+             "con lo que ya está bloqueado y no va a cambiar; si algo se retrasa, sale igual con "
+             "la limitación declarada. **Ningún pendiente condiciona la sustentación más allá "
+             "del 24 de octubre.**", italic=True)
+
+    # ------------------------------------------------------- limitaciones
+    h1(doc, "5 ·", "Amenazas a la validez (*Threats to Validity*)")
+    par(doc, "La sesión advierte que esta sección es **obligatoria en las revistas indexadas de "
+             "Ingeniería de Software**. Se declara aquí y se trasladará al artículo.", size=8.8)
+    tabla(doc, ["Tipo de amenaza", "Amenaza concreta en este trabajo", "Cómo se mitiga o declara"], [
+        ["**Validez interna**", "El modelo se eligió observando el conjunto de prueba: **selección "
+         "posterior**, la misma familia de error que el HARKing", "Declarada en la *model card* "
+         "antes de cualquier métrica. La corrección exige evaluación nueva y reservada"],
+        ["**Validez externa**", "Entorno artificial de laboratorio, un solo dataset y **sin "
+         "jornada de holdout externa**: los 44 perfiles aparecen en las tres particiones",
+         "Se recolecta jornada nueva el 24 de octubre. Hasta entonces **no se afirma "
+         "generalización**"],
+        ["**Validez de conclusión**", "Los intervalos por ventana son **descriptivos**: las "
+         "ventanas de un episodio comparten historia y no son observaciones independientes",
+         "Se reportan como descriptivos, no como prueba inferencial; la comparación entre "
+         "modelos usa McNemar con corrección de Holm"],
+        ["**Validez de constructo**", "*«¿el FPR de laboratorio mide el FPR de operación?»* — "
+         "**la medición dice que no**: 4,71 % frente a 25,81 % (pase 1) y 22,97 % (pase 2)", "Se reportan ambos por "
+         "separado y se declara la brecha como el hallazgo principal"],
+    ], [3.4, 6.6, 7.4])
+
+    # ---------------------------------------------------------------- 5
+    h1(doc, "6 ·", "Conclusión")
+    par(doc, "Se demostró con evidencia que el sistema **detecta y bloquea en tiempo real** sobre "
+             "una red enrutada, con ROC-AUC de 0,974, detección del 88,8 % sobre ataques genuinos "
+             "y bloqueo en una mediana de 8 segundos, sin ninguna caída de servicio registrada.")
+    par(doc, "**No se demostró** que lo haga con una tasa de falsos positivos aceptable sobre "
+             "tráfico legítimo pesado: en esa condición el sistema todavía no es apto para "
+             "operación desatendida.")
+    par(doc, "Delimitar esa frontera con medición —y no ocultarla— es el resultado de esta "
+             "evaluación. Un hallazgo negativo verificado vale más que una conclusión favorable "
+             "sin respaldo.", italic=True, color=DIM)
+    par(doc, "**Cualquiera puede descargarlo y ejecutarlo.** Repositorio público: "
+             "`github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-"
+             "Comportamientos-Anomalos-en-Redes-de-Datos` — con el dataset, los 7 modelos, los "
+             "scripts que generan cada cifra de este informe y el entorno con versiones "
+             "exactas.", size=8.8)
+    bloque_enlaces(doc, "Evidencia en el repositorio", [
+        ("Informe detallado, con las 11 figuras y la trazabilidad de cada cifra",
+         "docs/entregables/01-evaluacion-critica/informe-evaluacion-critica.md"),
+        ("Ablación por capas y comparación 14 vs. 28 variables",
+         "docs/fase04-modelado/07-ablacion-multicapa.md"),
+        ("Significancia estadística entre los siete modelos",
+         "docs/fase04-modelado/08-significancia-entre-modelos.md"),
+        ("Validación del sistema desplegado (F6)",
+         "docs/fase07-validacion-final/02-resultados-f6.md"),
+        ("Las 11 gráficas, generadas por script desde los datos reales",
+         "docs/entregables/graficas"),
+    ])
+
+    rematar(doc,
+
+            "Informe de evaluación crítica de resultados",
+
+            "Investigación V · Sesión 01 · Evaluación crítica de los resultados de la tesis",
+
+            "Informe de evaluación crítica · Salazar Tocas & Sauñe Fernandez",
+
+            "Investigación V · Sesión 01 · UPeU")
+
+    doc.save(OUT)
+    print(f"Generado: {OUT.relative_to(REPO)}")
+
+
+if __name__ == "__main__":
+    main()

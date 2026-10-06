@@ -1,0 +1,29 @@
+---
+- name: Configurar herramientas de generación F1 en VM05 Cliente
+  hosts: ppi-client
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Instalar herramientas del cliente experimental
+      ansible.builtin.apt:
+        name:
+          - curl
+          - dnsutils
+          - iperf3
+          - jq
+          - openssh-client
+          - wget
+        state: present
+        update_cache: true
+
+    - name: Verificar binarios requeridos
+      ansible.builtin.command: "{{ item }}"
+      changed_when: false
+      loop:
+        - curl --version
+        - dig -v
+        - iperf3 --version
+        - jq --version
+        - ssh -V
+        - wget --version

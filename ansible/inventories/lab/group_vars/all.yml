@@ -1,0 +1,24 @@
+---
+ppi_environment: lab
+ppi_domain: ppi.test
+
+ppi_networks:
+  management:
+    name: PPI-MGMT
+    cidr: 10.10.10.0/24
+    gateway: null
+  lan:
+    name: PPI-LAN
+    cidr: 10.20.0.0/24
+    gateway: 10.20.0.1
+  dmz:
+    name: PPI-DMZ
+    cidr: 10.30.0.0/24
+    gateway: 10.30.0.1
+
+ppi_expected_hosts:
+  ppi-sensor: 10.10.10.20
+  ppi-server: 10.10.10.30
+  ppi-kali: 10.10.10.40
+  ppi-client: 10.10.10.50
+
