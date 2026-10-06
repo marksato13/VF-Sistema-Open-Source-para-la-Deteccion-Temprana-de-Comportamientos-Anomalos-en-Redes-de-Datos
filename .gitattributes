@@ -1,0 +1,15 @@
+# Normalización de saltos de línea.
+# Por defecto: detecta texto y guárdalo con LF en el repo.
+* text=auto
+
+# Los scripts de shell SIEMPRE con LF, pase lo que pase con core.autocrlf en
+# Windows: con CRLF, bash en Linux falla con "syntax error near unexpected
+# token $'\r'" (el sensor corre estos scripts). Igual para los .py por higiene.
+*.sh   text eol=lf
+*.py   text eol=lf
+
+# Binarios que no deben normalizarse.
+*.joblib binary
+*.pcap   binary
+*.png    binary
+*.pdf    binary
