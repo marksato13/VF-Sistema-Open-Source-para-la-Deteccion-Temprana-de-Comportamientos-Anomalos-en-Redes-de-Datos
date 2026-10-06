@@ -118,14 +118,16 @@ class MultilayerFeatureTests(unittest.TestCase):
                 "event_type": "dns",
                 "src_ip": self.client,
                 "dest_ip": self.server,
-                "dns": {"type": "request", "rcode": "NOERROR"},
+                "dns": {"type": "query", "rcode": "NOERROR"},
             },
             {
+                # Suricata emite "answer" (no "response") con las direcciones del
+                # FLUJO: src sigue siendo el cliente que preguntó, no el servidor.
                 "timestamp": iso_timestamp(1004.2),
                 "event_type": "dns",
-                "src_ip": self.server,
-                "dest_ip": self.client,
-                "dns": {"type": "response", "rcode": "NXDOMAIN"},
+                "src_ip": self.client,
+                "dest_ip": self.server,
+                "dns": {"type": "answer", "rcode": "NXDOMAIN"},
             },
             {
                 "timestamp": iso_timestamp(1004.3),
