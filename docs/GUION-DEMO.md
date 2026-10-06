@@ -60,11 +60,14 @@ pensado para responder, en vivo, los diez puntos técnicos del profesor.
    entidad 10.10.20.30 con **Acción = BLOCK** y, en *Motivo*, el badge del
    heurístico **`port_scan`** + "N intentos/30s…" (detección **sin firma**).
 3. **Los tres tiempos** (medidos, doc `evidencias/tiempos-2026-10-06.md`):
-   - **detección** ≈ **1–9 s** (el motor marca en el tick de 10 s),
-   - **decisión** ≈ **17–18 s** (el feed firmado emite la acción),
-   - **respuesta** ≈ **51–57 s** (el agente aplica `nft` en el host).
-   Diferenciarlos explícitamente: el cómputo es de segundos; el resto es la
-   **cadencia del feed firmado** (seguridad > latencia), y es **configurable**.
+   - **detección** ≈ **2–40 s** (acotada por la ventana de 30 s del conteo de flujos),
+   - **decisión**: el feed firmado emite la acción en el siguiente tick (minutely),
+   - **respuesta total hasta el BLOCK** ≈ **1–2,5 min** (medido: hasta 141 s).
+   Diferenciarlos explícitamente: el **cómputo** es rápido (detecta en decenas de
+   segundos); la **respuesta** tarda 1–2,5 min porque está **desacoplada y firmada**
+   (seguridad > latencia), y es **configurable** (bajar la cadencia la acorta).
+   **No prometer "bloqueo en segundos".** Truco: lanzar el escaneo al principio y
+   mostrar el corte cuando aterrice, mientras se explica el resto.
 4. **Corte real en el host** (no es teatro del panel):
    ```
    # en el host DMZ:
