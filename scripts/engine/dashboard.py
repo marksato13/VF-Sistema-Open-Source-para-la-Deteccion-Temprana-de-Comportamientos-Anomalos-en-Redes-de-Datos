@@ -1408,13 +1408,13 @@ const TOPO_TEXTO = {
   },
   heuristicos: {
     que: 'Reglas deterministas sobre las mismas variables de la ventana, complemento del modelo: fuerza bruta, escaneo de puertos, abuso HTTP y DNS de alta entropía.',
-    nota: 'Cubren huecos donde el modelo mide flojo (p.ej. DNS-entropy). Validado: disparan en 47/104 ventanas de ataque y solo 0,08 % en tráfico normal. Umbrales versionados, criterio razonado (NO calibrados como el modelo).',
-    flujoTit: 'Las cuatro reglas',
+    nota: 'Cubren huecos donde el modelo mide flojo (p.ej. DNS-entropy). Umbrales VERSIONADOS (versión 2026-10-06.1, queda en el registro y el feed para reproducir cada decisión) y de criterio razonado, NO calibrados como el modelo. En 2026-10-06 los ratios de unicidad bajaron a 0,45 porque el espejo SPAN duplica cada trama y topan en ~0,5, no en 1,0; validado con FPR 0/527 sobre la línea base.',
+    flujoTit: 'Las cuatro reglas (umbrales exactos, versión 2026-10-06.1)',
     flujo: [
-      {paso: 'Fuerza bruta', fichero: 'heuristicos.py', garantia: '≥5 req/60s con ≥80% de fallo de auth → BLOCK'},
-      {paso: 'Escaneo de puertos', fichero: 'heuristicos.py', garantia: 'muchos puertos, pocas conexiones completadas → BLOCK'},
-      {paso: 'Abuso HTTP', fichero: 'heuristicos.py', garantia: 'volumen alto sin fallos de auth → LIMIT'},
-      {paso: 'DNS-entropy', fichero: 'heuristicos.py', garantia: 'muchas consultas, casi todas únicas/NXDOMAIN → LIMIT'},
+      {paso: 'Fuerza bruta', fichero: 'heuristicos.py', garantia: '≥5 req HTTP/60s y ≥80% de fallo de auth → BLOCK'},
+      {paso: 'Escaneo de puertos', fichero: 'heuristicos.py', garantia: '≥20 intentos/30s, ratio de puertos únicos ≥0,45 y ≤30% de conexiones completadas → BLOCK'},
+      {paso: 'Abuso HTTP', fichero: 'heuristicos.py', garantia: '≥100 req/60s con <80% de fallo de auth (no es fuerza bruta) → LIMIT'},
+      {paso: 'DNS-entropy', fichero: 'heuristicos.py', garantia: '≥20 consultas/60s con ≥45% de nombres únicos o ≥50% de NXDOMAIN → LIMIT'},
     ],
   },
   control: {
