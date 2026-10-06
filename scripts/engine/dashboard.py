@@ -1173,8 +1173,13 @@ function renderDecisionsTable() {
     const scoreCell = d.score != null
       ? `<span class="score-cell"><span>${d.score.toFixed(4)}</span>${miniBarraScore(d.score)}</span>`
       : '&mdash;';
+    // Si disparo un heuristico (deteccion SIN firma), se muestra cual y su motivo;
+    // si no, la etiqueta del detector/modelo.
+    const motivoTxt = (d.heuristico && d.heuristico.heuristico)
+      ? `<span class="badge heur" title="heurístico determinista — detección sin firma">${d.heuristico.heuristico}</span> ${d.heuristico.motivo || ''}`
+      : (DETECTOR_LABEL[d.detector_name] || d.detector_name);
     return `<tr class="${isAlert ? 'row-alert' : ''}"><td>${fmtTime(d.logged_at)}</td><td class="ip">${d.entity_ip}</td>` +
-      `<td>${badge}</td><td>${accBadge}</td><td class="why">${DETECTOR_LABEL[d.detector_name] || d.detector_name}</td>` +
+      `<td>${badge}</td><td>${accBadge}</td><td class="why">${motivoTxt}</td>` +
       `<td class="num">${scoreCell}</td><td class="num">${d.packet_count_10s}</td></tr>`;
   }).join('') : `<tr class="empty-row"><td colspan="7">${query ? 'Ninguna decisión coincide con el filtro.' : 'Sin decisiones recientes.'}</td></tr>`;
 }
