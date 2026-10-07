@@ -96,6 +96,25 @@ Suricata 0/9).
    degradar, no cortar. Con FPR 4,45 % en red real, degradar es más barato que
    cortar en falso.
 
+## 4-bis. Fuerza bruta → BLOCK (2 min) — *4ª familia, responde req. 5, 6*
+
+Cierra la tabla de familias. Requiere el endpoint 401 y la **regla pfSense de 8081
+abierta** (ver `demo/brute/`).
+
+1. En el host DMZ, levantar el endpoint 401 (puerto alto, sin sudo):
+   ```
+   python3 endpoint_401.py --port 8081    # responde 401 a todo intento
+   ```
+2. En la Kali, ráfaga de logins fallidos (Basic Auth equivocada):
+   ```
+   for i in $(seq 1 120); do curl -s -o /dev/null -m2 -u admin:malo$i http://10.10.30.10:8081/ ; done
+   ```
+3. En **Decisiones**: entidad con **Acción = BLOCK**, motivo `brute_force`.
+   **Validado en vivo 2026-10-06**: "240 req HTTP/60s con 100% de fallo de auth".
+   Explicar: aquí el **modelo** mide flojo (punto débil declarado 50–55%); quien la
+   caza es el **heurístico** `brute_force` → ejemplo perfecto de la complementariedad
+   modelo+reglas (ablación, nota 31).
+
 ## 5. Datos auténticos y traslado sim→real (2 min) — *responde req. 7, 8*
 
 1. **Variables por capa** muestra valores **reales** tomados del dataset de la
