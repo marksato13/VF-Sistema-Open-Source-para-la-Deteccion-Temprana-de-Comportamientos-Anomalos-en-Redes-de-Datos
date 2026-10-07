@@ -22,14 +22,11 @@ Umbral del heurístico (`heuristicos.py`, versión 2026-10-06.1):
    Sin credenciales reales: todo intento es 401. (Opcional para un "login correcto"
    en la demo: `DEMO_OK_USER`/`DEMO_OK_PASS` de laboratorio.)
 
-   > **CONFIRMADO (2026-10-06):** el endpoint arranca y responde 401 *en el propio
-   > DMZ*, pero desde la Kali (VLAN 20) el puerto **8081 está bloqueado** (curl
-   > devuelve 000). El cortafuegos solo deja **80/443** hacia 10.10.30.10 (por eso
-   > el flood por :80 sí funcionó). Para correr B4 en vivo, una de dos:
-   > **(a)** permitir 8081 de VLAN 20 → 10.10.30.10 (nftables del host **y**, si
-   > filtra entre VLANs, una regla en pfSense — que es de Franco, coordinar), o
-   > **(b)** durante la demo, parar el servicio de :80 y arrancar el endpoint con
-   > `--port 80` (sudo; interrumpe brevemente el tráfico legítimo de los generadores).
+   > **RESUELTO (2026-10-06):** inicialmente 8081 estaba filtrado por pfSense entre
+   > VLAN 20 y la DMZ (solo 80/443). Mark aplicó una regla en pfSense (VLAN20 →
+   > 10.10.30.10:8081) y quedó alcanzable (curl desde la Kali devuelve 401).
+   > **B4 validado en vivo:** `brute_force`→BLOCK ("240 req HTTP/60s con 100% de
+   > fallo de auth"). Regla temporal: quitarla tras la demo si no se deja fija.
 
 2. **Medir** (desde el bastión, con el endpoint arriba):
    ```
