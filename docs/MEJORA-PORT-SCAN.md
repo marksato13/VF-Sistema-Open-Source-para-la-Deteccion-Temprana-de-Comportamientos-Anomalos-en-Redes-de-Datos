@@ -52,6 +52,5 @@ sobre el escaneo medido, la ventana pico (2007, syn 0) la cumple → disparo rob
 3. ✅ `scp` al sensor (respaldo `heuristicos.py.bak-20261006-2`) + `sudo -n systemctl restart ppi-motor` → `active`.
 4. ✅ Escaneo de verificación: `port_scan`→BLOCK disparó (1593 intentos/30s, 0% completados).
 
-Pendiente menor: re-correr la batería N=3 de escaneo para confirmar que pasa de
-1/3 a 3/3 de forma consistente (el fix lo predice; validación formal con la tubería
-de la nota 26).
+✅ **Confirmado N=3 (2026-10-06): 3/3** (antes 1/3). Batería de 3 escaneos
+`nmap -sT -p 1-1000`, los tres dispararon `port_scan`→BLOCK en el motor.
