@@ -1,5 +1,12 @@
 # Detección temprana de anomalías en redes, con respuesta inline
 
+> **Esta rama (`as-deployed-sensor-20261006`) es el snapshot de lo que corre en Sensor1**
+> —incluido el panel con tres vistas, visor de código y «Pruebas previas»—. La
+> **documentación canónica** del producto está en
+> [`main`](https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/tree/01b6f3fa71bb4daca320b8928ef912e5f4dc8dc2)
+> (`01b6f3f`). Las cards de `docs/dataset/` de esta rama son de la versión anterior; las
+> vigentes son las de `main`.
+
 Detecta tráfico anómalo con aprendizaje **no supervisado** y **responde de forma
 graduada** —PERMIT, LIMIT o BLOCK— aplicando `nftables` en el host protegido a
 través de un **feed firmado**. No solo avisa: degrada o corta, con caducidad
