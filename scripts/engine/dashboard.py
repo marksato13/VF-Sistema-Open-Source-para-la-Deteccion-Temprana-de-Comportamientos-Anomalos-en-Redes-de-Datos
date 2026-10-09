@@ -1327,7 +1327,7 @@ const TOPO_VISTAS = {
       { id: 'motor',     x: 806, y: 110, w: 176, h: 58, icono: 'cpu',    titulo: 'Atribución de flujo', tag: 'SERVICIO' },
       { id: 'variables', x: 806, y: 250, w: 176, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s',   tag: 'L2·L3·L4·L7' },
       { id: 'descartes', x: 806, y: 388, w: 176, h: 48, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO', clase: 'sumidero' },
-      { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Reentrenamiento', tag: 'MENSUAL / POR DERIVA' },
+      { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Reentrenamiento', tag: 'POLÍTICA PROPUESTA' },
       { id: 'modelo',    x: 1060, y: 158, w: 176, h: 58, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
       { id: 'heuristicos', x: 1060, y: 276, w: 176, h: 58, icono: 'reglas', titulo: 'Heurísticos',     tag: 'DETERMINISTAS' },
       { id: 'control',   x: 1336, y: 158, w: 176, h: 58, icono: 'decision', titulo: 'Decisión',        tag: 'PERMIT / LIMIT / BLOCK' },
@@ -1403,11 +1403,11 @@ const TOPO_VISTAS = {
     nodos: [
       { id: 'e_datos', x: 32,   y: 118, w: 196, h: 62, icono: 'disco',    titulo: 'Datos acumulados',    tag: 'multilayer-v3.csv' },
       { id: 'e_part',  x: 262,  y: 118, w: 196, h: 62, icono: 'tabla',    titulo: 'Partición 60/20/20',  tag: 'sin fuga temporal' },
-      { id: 'e_comp',  x: 492,  y: 118, w: 196, h: 62, icono: 'modelo',   titulo: 'Comparar 7 modelos',  tag: 'elegir el mejor' },
+      { id: 'e_comp',  x: 492,  y: 118, w: 196, h: 62, icono: 'modelo',   titulo: 'Comparar candidatos', tag: 'validación, criterio fijo' },
       { id: 'e_train', x: 722,  y: 118, w: 196, h: 62, icono: 'cpu',      titulo: 'Entrenar + congelar', tag: 'umbral α=0,05' },
-      { id: 'e_eval',  x: 952,  y: 118, w: 196, h: 62, icono: 'lupa',     titulo: 'Evaluar FPR / TPR',   tag: 'test ciego + Kali' },
-      { id: 'e_antes', x: 1182, y: 118, w: 196, h: 62, icono: 'ciclo',    titulo: 'Antes vs después',    tag: '¿mejora?' },
-      { id: 'e_dec',   x: 1412, y: 118, w: 196, h: 62, icono: 'decision', titulo: 'Desplegar o conservar', tag: 'criterio' },
+      { id: 'e_eval',  x: 952,  y: 118, w: 196, h: 62, icono: 'lupa',     titulo: 'Evaluar una vez',     tag: 'test reservado + Kali' },
+      { id: 'e_antes', x: 1182, y: 118, w: 196, h: 62, icono: 'ciclo',    titulo: 'Antes vs después',    tag: 'mismos datos y métricas' },
+      { id: 'e_dec',   x: 1412, y: 118, w: 196, h: 62, icono: 'decision', titulo: 'Decidir despliegue', tag: 'cobertura ≥, FPR ≤' },
     ],
     aristas: [
       { d: 'M228,149 L262,149',   desde: 'e_datos', hasta: 'e_part' },
@@ -1416,7 +1416,7 @@ const TOPO_VISTAS = {
       { d: 'M918,149 L952,149',   desde: 'e_train', hasta: 'e_eval' },
       { d: 'M1148,149 L1182,149', desde: 'e_eval',  hasta: 'e_antes' },
       { d: 'M1378,149 L1412,149', desde: 'e_antes', hasta: 'e_dec' },
-      { d: 'M1510,180 C1510,300 130,300 130,180', desde: 'e_dec', hasta: 'e_datos', tipo: 'descarte', etiqueta: 'reentrenar: mensual / por deriva', ex: 815, ey: 296 },
+      { d: 'M1510,180 C1510,300 130,300 130,180', desde: 'e_dec', hasta: 'e_datos', tipo: 'descarte', etiqueta: 'reentrenar: mensual o por deriva (política propuesta, manual)', ex: 815, ey: 296 },
     ],
   },
 };
@@ -1465,7 +1465,7 @@ const TOPO_TEXTO = {
       {paso: 'Modelo + manifiesto', fichero: 'if_recalibrado_desplegable.joblib', garantia: 'hashes que fijan la reproducibilidad'},
       {paso: 'Promoción', fichero: 'misma verificación', garantia: 'FPR y partición revisados; nunca a ciegas'},
     ],
-    nota: 'Cadencia: mensual como suelo, pero el disparador real es la deriva del FPR, y es OBLIGATORIO al cambiar la red (nueva VLAN, Wazuh, AAA). La automatización prepara el candidato; promocionarlo pasa por la misma verificación, nunca a ciegas.',
+    nota: 'Política PROPUESTA, no automatizada: mensual como suelo o por deriva del FPR, y obligatoria al cambiar la red (nueva VLAN, Wazuh, AAA). Lo automatizado hoy es solo la acumulación de la línea base; el entrenamiento y la promoción se hacen a mano, en seco y con la misma verificación, nunca a ciegas.',
   },
   nic: {
     que: 'La interfaz que recibe el espejo, sin dirección IP y en modo promiscuo.',
@@ -1612,14 +1612,14 @@ const TOPO_TEXTO = {
     nota: 'No se usa 80/20 porque el umbral se calibra en validación; elegirlo sobre el test inflaría los resultados.',
   },
   e_comp: {
-    que: 'La "prueba previa" que pide el jurado: se comparan 7 modelos candidatos con métricas y se elige el mejor por desempeño medido, NO a ciegas.',
+    que: 'Los candidatos se comparan en VALIDACIÓN con un criterio fijado antes de mirar el test; el test queda reservado para una sola evaluación final.',
     flujoTit: 'Comparación y selección',
     flujo: [
       {paso: '7 candidatos', fichero: 'compare_frozen_models_metrics.py', garantia: 'mismas features, misma partición'},
       {paso: 'Ablación', fichero: '31-ABLACION-RESULTADO.md', garantia: 'modelo 6/9 · heurísticos 7/9 · combinado 9/9'},
       {paso: 'Significancia', fichero: 'significancia_modelos.py', garantia: 'McNemar + corrección de Holm'},
     ],
-    nota: 'De aquí sale la justificación de por qué este modelo (Isolation Forest híbrido) y no otro.',
+    nota: 'Histórico: la comparación de 7 candidatos del laboratorio promovió el OCSVM DESPUÉS de ver el test (sesgo declarado). El Isolation Forest actual no ganó esa comparación: se recalibró porque el OCSVM no transfirió a esta red. El 9/9 es del stack (modelo + heurísticos), no del modelo solo.',
   },
   e_train: {
     que: 'Se entrena el Isolation Forest sobre el conjunto de train y se congela el umbral como el percentil α=0,05 de validación (score_samples −0,568892).',
@@ -1632,8 +1632,8 @@ const TOPO_TEXTO = {
     nota: 'El umbral se congela ANTES de tocar el test: elegirlo después sería trampa.',
   },
   e_eval: {
-    que: 'Se mide el FPR sobre el test ciego (objetivo 5 %, medido 4,45 %) y la detección (TPR) sobre ataques reales de la Kali (100 % HTTP, 69 % global).',
-    nota: 'En operación el FPR sube (~25 %): el tráfico pesado se apiña cerca del umbral. Declarado como limitación.',
+    que: 'Se mide una sola vez el FPR sobre el test reservado (objetivo 5 %, medido 4,45 % sobre 65 421 ventanas normales) y la detección sobre ataques reales de la Kali (54/78 = 69 % global; HTTP 27/27).',
+    nota: 'El 4,45 % es del modelo sobre tráfico normal, no del sistema completo. El ~23–26 % en operación fue del OCSVM en F6, otro modelo y escenario: no se atribuye a este.',
   },
   e_antes: {
     que: 'Lo que pide el profesor: comparar el modelo ANTES vs DESPUÉS del reentrenamiento. Muestra FPR, umbral, features y TPR con sus variaciones.',
@@ -1646,7 +1646,7 @@ const TOPO_TEXTO = {
   },
   e_dec: {
     que: 'Se despliega el modelo reentrenado SOLO si mejora o iguala la cobertura y no empeora el FPR; si no, se conserva el actual. Siempre con rollback.',
-    nota: 'Cadencia: mensual como suelo, pero el disparador real es la deriva del FPR, y es obligatorio al cambiar la red. Ver RUNBOOK-REENTRENAMIENTO-DEMO.md y PLAN-REENTRENAMIENTO.md.',
+    nota: 'Cadencia propuesta, no automatizada: mensual como suelo o por deriva del FPR, y obligatoria al cambiar de red. Hoy solo se automatiza la acumulación de la línea base; el ciclo se ejecuta a mano y en seco. Ver RUNBOOK-REENTRENAMIENTO-DEMO.md y PLAN-REENTRENAMIENTO.md.',
   },
 };
 
@@ -1788,10 +1788,10 @@ function topoEstado(id, s) {
     case 'panel':
       return { estado: 'ok', valor: 'solo lectura', datos: { 'Refresco': '5 s' } };
     case 'reentrenamiento':
-      return { estado: '', valor: 'periódico', datos: {
-        'Cadencia base': 'mensual',
-        'Disparador real': 'deriva del FPR',
-        'Obligatorio': 'al cambiar la red' } };
+      return { estado: '', valor: 'política propuesta', datos: {
+        'Cadencia propuesta': 'mensual o por deriva del FPR',
+        'Obligatorio': 'al cambiar la red',
+        'Automatizado': 'solo la acumulación de la línea base' } };
     case 'heuristicos':
       return { estado: '', valor: '4 reglas deterministas', datos: {
         'Cubren': 'brute-force · port-scan · http-abuse · dns-entropy',
