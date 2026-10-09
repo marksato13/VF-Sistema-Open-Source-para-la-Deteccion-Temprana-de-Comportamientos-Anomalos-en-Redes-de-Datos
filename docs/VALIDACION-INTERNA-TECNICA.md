@@ -66,15 +66,13 @@ la redacción de la metodología los lleva el compañero — **no** entran aquí
 
 ## 4. Actividades técnicas pendientes (producto)
 
-- **Medir los 3 tiempos limpios** (detección, decisión, bloqueo) y mostrarlos — el
-  profe lo pidió explícito (audio 6). Ya tenemos detección; falta decisión+bloqueo.
+- **Mostrar los 3 tiempos por separado** (detección, decisión/publicación, respuesta/bloqueo) con el alcance y episodio de `evidencias/tiempos-2026-10-06.md`. El documento registra tiempos operativos; repetirlos en otro episodio si se quiere estimar variabilidad, sin presentar un único ensayo como ley general.
 - **Decidir "cuarentena/aislar"**: ¿se añade una acción de aislamiento (p. ej. BLOCK
   total de la entidad, no solo del flujo) o se documenta que LIMIT/BLOCK ya cubren el
   espectro? (audio 5).
 - **Confirmar capa 2** en el modelo desplegado (audio 5/7): si el v2 no la usa,
   documentar que la L2 entra vía la deduplicación y/o el v3, y el porqué.
-- **E2-brute**: preparar un endpoint con **401** en el servidor y correr la familia
-  de fuerza bruta (completa la tabla y la acción BLOCK por auth-fail).
+- **E2-brute**: ya se confirmó fuerza bruta real contra endpoint 401 y BLOCK en vivo (N=1). Falta repetir y compararla por replay con Suricata bajo el mismo PCAP.
 - **Guion de demo**: escenario → ataque → detección (panel) → acción LIMIT/BLOCK →
   corte real en el host, con los tiempos a la vista.
 
@@ -89,10 +87,12 @@ la redacción de la metodología los lleva el compañero — **no** entran aquí
 - **Vista de arquitectura lista para demo**: la topología ya existe (horizontal, por
   fases); **QA de pantalla completa pendiente en el ensayo** (B3.2).
 - **Parámetros a la vista** (B3.1 ✅): el bloque de heurísticos del panel cita los
-  **umbrales exactos + `VERSION_UMBRALES` 2026-10-06.1**; Variables ya muestra
-  paso/historia/esquema y valores reales del dataset. Desplegado al sensor.
+  **umbrales exactos**; Variables muestra paso/historia/esquema. El módulo vivo declara
+  `VERSION_UMBRALES=2026-10-06.2` y el servicio publicador aún usa la etiqueta
+  `--umbrales 2026-10-06.1`: conciliar antes de declarar trazabilidad por versión.
 - Columna **Acción (PERMIT/LIMIT/BLOCK)**: ✅ confirmada con el motor nuevo.
 
-> **Nota de despliegue:** B2.1 y B3.1 ya están en el fichero del sensor
-> (`scripts/engine/dashboard.py`, respaldo `.bak-20261006`), pero **tomarán efecto
-> al reiniciar** el servicio: `sudo systemctl restart ppi-dashboard` (sudo de Mark).
+> **Nota de despliegue (2026-10-09):** el archivo `dashboard.py` local y el vivo
+> tienen SHA-256 distintos. El servicio actual está activo, pero las nuevas vistas,
+> visor y correcciones de detector requieren comparación, respaldo, QA y despliegue
+> controlado; reiniciar sin copiar el código nuevo no los habilita.

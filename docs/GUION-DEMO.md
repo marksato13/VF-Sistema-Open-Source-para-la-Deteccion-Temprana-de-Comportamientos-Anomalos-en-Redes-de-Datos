@@ -1,22 +1,27 @@
 # Guion de demo — validación interna técnica (CyberFlow)
 
-Guion **reproducible** para la sesión del jueves. Objetivo: que el producto se
+Guion **reproducible** para la próxima sesión confirmada con el profesor. Objetivo: que el producto se
 vea FUNCIONANDO y que cada afirmación tenga su evidencia a la vista. Orden
 pensado para responder, en vivo, los diez puntos técnicos del profesor.
 
 > Regla de oro de la demo: **nada de "es rápido" / "detecta anomalías"** a secas.
 > Cada cosa con su número y su sitio en el panel.
+> **Estado 2026-10-09:** el `dashboard.py` vivo y el archivo local tienen hashes
+> distintos. No prometer tres vistas, visor ni Pruebas previas sin desplegar y
+> comprobar el panel nuevo. El ensayo de reentrenamiento real sigue pendiente.
 
 ## 0. Antes de empezar (checklist, 5 min)
 
-- [ ] **Reiniciar el panel** para cargar los cambios nuevos (heurístico visible +
-      umbrales): en el sensor `sudo systemctl restart ppi-dashboard`. **(sudo de Mark)**
+- [ ] Comparar y respaldar `dashboard.py` vivo, desplegar solo el archivo validado;
+      **después** Mark reinicia `ppi-dashboard`. Reiniciar sin copiarlo no activa
+      las vistas nuevas.
 - [ ] Abrir el panel a pantalla completa: `cf-panel.cmd` → `https://10.10.60.11:8788`
       (certificado autofirmado; aceptar la huella). Login como **admin**, modo
       **desarrollador** (para que se vean Topología, Variables, Alcance, Modelo).
 - [ ] Verificar que el motor y Suricata están **verdes** en *Salud del sistema*.
-- [ ] Dejar `nft list table inet cyberflow` limpio en el host DMZ (sin bloqueos
-      heredados): `sudo nft flush set inet cyberflow cyberflow_bloqueados`.
+- [ ] **Consultar** el estado `nft list table inet cyberflow` y esperar la
+      caducidad de acciones anteriores. Un vaciado manual alteraría la evidencia
+      y no forma parte del preflight.
 - [ ] Tener a mano la terminal de la Kali (10.10.20.30) y una del host DMZ.
 - [ ] **Empezar a grabar** la sesión (requisito del profe, audio 10).
 
@@ -40,11 +45,13 @@ pensado para responder, en vivo, los diez puntos técnicos del profesor.
    aprendizaje**: congelado en operación (reproducible) + reentrenamiento
    periódico; **no** aprende en caliente (un ataque sostenido no se "normaliza").
    Mostrar el **punto débil declarado**: fuerza bruta 50–55 %.
-2. Sección **heurísticos** (en la topología): las **cuatro reglas** con sus
-   **umbrales exactos y versión `2026-10-06.1`**. Es la respuesta a "¿de dónde
-   salen esos umbrales?": versionados y trazables, no mágicos.
-3. **Anomalía desconocida (sin firma)**: lo coge el modelo one-class + los
-   heurísticos. Es el aporte frente a Suricata (firmas). → se demuestra en §3.
+2. Sección **heurísticos** (en la topología): las cuatro reglas con sus umbrales
+   y la rama OR de `port_scan` del motor `2026-10-06.2`. La unidad publicadora
+   aún etiqueta el feed `2026-10-06.1`; explicar/reconciliar la diferencia
+   antes de atribuir una sola versión a toda la cadena.
+3. **Escenarios sin alerta ET Open en esta configuración**: el stack híbrido
+   detectó 9/9 frente a 0/9 de Suricata (tres familias, N=3), pero el modelo
+   solo detectó 6/9. No prometer detección universal de ataques desconocidos.
 
 ## 3. Escenario en vivo: escaneo → BLOCK (5 min) — *responde req. 1, 3, 4, 5*
 
@@ -59,13 +66,15 @@ pensado para responder, en vivo, los diez puntos técnicos del profesor.
 2. En el panel, sección **Actividad** y **Decisiones recientes**: aparece la
    entidad 10.10.20.30 con **Acción = BLOCK** y, en *Motivo*, el badge del
    heurístico **`port_scan`** + "N intentos/30s…" (detección **sin firma**).
-3. **Los tres tiempos** (medidos, doc `evidencias/tiempos-2026-10-06.md`):
+3. **Los tres tiempos** (diferenciar detección, publicación/decisión y respuesta;
+   mostrar la evidencia fechada del ensayo y su alcance):
    - **detección** ≈ **2–40 s** (acotada por la ventana de 30 s del conteo de flujos),
    - **decisión**: el feed firmado emite la acción en el siguiente tick (minutely),
    - **respuesta total hasta el BLOCK** ≈ **1–2,5 min** (medido: hasta 141 s).
    Diferenciarlos explícitamente: el **cómputo** es rápido (detecta en decenas de
    segundos); la **respuesta** tarda 1–2,5 min porque está **desacoplada y firmada**
-   (seguridad > latencia), y es **configurable** (bajar la cadencia la acorta).
+   (publicación/relay/agente cada minuto), y es **configurable**, aunque no se
+   cambió la cadencia como parte de esta validación.
    **No prometer "bloqueo en segundos".** Truco: lanzar el escaneo al principio y
    mostrar el corte cuando aterrice, mientras se explica el resto.
 4. **Corte real en el host** (no es teatro del panel):
@@ -121,8 +130,10 @@ abierta** (ver `demo/brute/`).
    línea base que se está acumulando (no cifras inventadas).
 2. El dato fuerte del traslado **sim→real**: la **recalibración en esta red
    bajó el FPR del 92,4 % al 4,45 %**. Es la respuesta concreta al
-   *distribution shift*: el umbral de otra red daba 92 % de falsos; recalibrado
-   aquí, 4,45 %.
+   *distribution shift*: antes de recalibrar, el detector anterior alertaba al
+   92,4 % del normal observado al llegar a esta red; el IF recalibrado obtuvo
+   4,45 % **en test normal retenido**. Son configuraciones y conjuntos distintos;
+   4,45 % no es garantía de FPR continuo de producción.
 3. El experimento es **reproducible**: método de **replay de PCAP** (mismo PCAP a
    CyberFlow y a Suricata, reloj anclado al sensor) — el PCAP es el artefacto
    verificable (orquestación, notas 19–26).
@@ -149,8 +160,8 @@ abierta** (ver `demo/brute/`).
 
 | Pendiente | De quién | Bloquea |
 |---|---|---|
-| `sudo systemctl restart ppi-dashboard` (cargar panel nuevo) | Mark | §0, que se vean heurístico+umbrales |
-| Instalar timers systemd del enforcement (si no están) | Mark (sudo) | §3 respuesta automática |
+| Diferencia local/vivo de `dashboard.py`: QA, respaldo, copia revisada y reinicio solo del panel | Mark con apoyo técnico | §0, vistas, visor y tarjeta de detector |
+| Comprobar que los timers `ppi-publicar-feed`, `ppi-relay-feed` y `ppi-enforce-agent` siguen activos | Equipo técnico, solo lectura | §3 respuesta automática; ya estaban activos al revisar el 9-oct |
 | Endpoint **401** en el host DMZ | Mark | §4-bis fuerza bruta (B4) — opcional en la demo |
 | Decisión **cuarentena** A/B | Mark | discurso de "aislar" (req. 5) |
 | Ensayo e2e cronometrado completo | conjunto | cerrar B6 |
