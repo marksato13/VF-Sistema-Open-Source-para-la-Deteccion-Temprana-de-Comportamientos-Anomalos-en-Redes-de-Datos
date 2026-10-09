@@ -20,6 +20,13 @@ cambian el cableado y lo que el sistema puede hacer.
 | Riesgo | ninguno sobre la red | un falso positivo corta tráfico legítimo |
 | `motor.modo` en la configuración | `"observacion"` | `"bloqueo"` |
 
+> **Despliegue vigente: observación + enforcement distribuido.** En Sensor1 el sensor va
+> en `observacion` (espejo SPAN) y la respuesta la aplica un **agente en el host
+> protegido** (`scripts/enforce/agente_enforce.py`) a partir del feed firmado que publica
+> `scripts/engine/publicar_feed.py`: PERMIT / LIMIT / BLOCK con caducidad 300 s (LIMIT) y
+> 300/1800/3600 s (BLOCK). La expiración de 120 s de la tabla es **solo** del modo bloqueo
+> local. Ver [`FICHA-TECNICA-DESPLIEGUE-VIGENTE.md`](FICHA-TECNICA-DESPLIEGUE-VIGENTE.md).
+
 > **El error más caro es elegir «bloqueo» con un espejo.** Con un puerto SPAN el
 > sensor **observa pero no está en el camino del tráfico**: las reglas de
 > `nftables` en esa máquina solo afectan a lo que entra y sale de ella misma. El
@@ -331,6 +338,9 @@ Una decisión tiene esta forma:
  "threshold":1.8126,"packet_count_10s":184,"window_end_utc":"..."}
 ```
 
+(Ejemplo con el perfil genérico, OCSVM de laboratorio. Con el Isolation Forest
+recalibrado el `threshold` es `-0.568892` y los `score` son negativos.)
+
 En modo bloqueo, además:
 
 ```bash
@@ -505,8 +515,11 @@ que la ponderación se haya perdido.
 
 ### Qué hacer
 
-- **Para desplegar y ver el sistema funcionando**, 3.12 sirve. El OCSVM, que es
-  lo que corre el motor, reproduce exacto.
+- **Para desplegar y ver el sistema funcionando**, 3.12 sirve **con el perfil
+  genérico**: el OCSVM que corre el motor en ese perfil reproduce exacto. Un Isolation
+  Forest recalibrado —como el de Sensor1— debe ejecutarse en el mismo entorno congelado
+  en que se entrenó: este anexo muestra que un IF bajo otra versión de scikit-learn
+  cambia de resultado sin avisar.
 - **Para calibrar, reentrenar o publicar cualquier cifra**, use 3.14.4. El
   guardarraíl `EXPECTED_PYTHON` del script de calibración se lo va a exigir, y
   está ahí por esto.

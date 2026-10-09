@@ -26,19 +26,23 @@ En GitHub: **Releases** → **Create a new release**.
 
 ```
 Tag        v1.0.0
-Título     v1.0.0 — dataset multilayer-v2, OCSVM congelado y motor validado
+Título     v1.0.0 — dataset multilayer-v2, modelo de laboratorio y motor con respuesta graduada
 ```
 
-En la descripción, resuma lo que incluye y **las limitaciones medidas**:
+En la descripción, resuma lo que incluye y **las limitaciones medidas** (es la misma
+que trae `.zenodo.json`):
 
 > Dataset de 220 episodios y 1.373 ventanas con 28 variables L3/L4/L7 (27
-> observables), modelo OCSVM congelado con umbral 1,8126 calibrado solo con
-> validación, motor en tiempo real con bloqueo por nftables, y validación
-> operacional sobre 58 corridas.
+> observables); modelo de laboratorio OCSVM (histórico, umbral 1,8126 calibrado solo
+> con validación) con su protocolo de reproducción; model card del modelo desplegado
+> (Isolation Forest recalibrado en la red, no publicado: se publican su hash y la
+> verificación de su umbral); motor en tiempo real con respuesta PERMIT/LIMIT/BLOCK
+> por feed firmado; y validación operacional histórica F6 sobre 58 corridas.
 >
-> Limitaciones declaradas: el FPR benigno de 4,71 % en laboratorio no se
-> sostiene en operación, donde se midió 25,81 % y 22,97 %. El motor se atrasa
-> hasta 161 s bajo carga sostenida.
+> Limitaciones declaradas: el FPR de 4,45 % del modelo desplegado es sobre tráfico
+> normal retenido, no el del sistema completo; en F6 el modelo de laboratorio pasó de
+> 4,71 % a 25,81 % y 22,97 %. La detección depende del escenario (DNS 0/8 con el
+> modelo solo).
 
 **Publish release.** En unos minutos Zenodo crea el depósito y emite el DOI.
 

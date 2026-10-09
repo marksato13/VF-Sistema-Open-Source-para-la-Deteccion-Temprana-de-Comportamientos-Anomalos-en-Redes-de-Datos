@@ -68,12 +68,21 @@ modo = "observacion"
 
 paso_segundos = 10
 historia_segundos = 230
+# PERFIL GENERICO (historico): umbral, modelo y manifiesto de este fichero son
+# los del OCSVM de laboratorio, sin calibrar en ninguna red. NO describen el
+# despliegue vigente: Sensor1 usa configs/cyberflow.local.toml con el Isolation
+# Forest recalibrado (umbral score_samples -0.568892, calibrado = true). Ver
+# docs/FICHA-TECNICA-DESPLIEGUE-VIGENTE.md. No regenere las unidades de un
+# sensor ya calibrado con este perfil.
 umbral = 1.8126087939765134
 
 # false = el umbral viene de otra red. El panel lo advierte y pide tratar las
 # alertas como ruido. Ponlo en true SOLO despues de recalibrar con trafico
 # propio: es lo que separa una demostracion de una medicion.
 calibrado_en_esta_red = false
+# Solo modo "bloqueo" (sensor en el camino). El enforcement distribuido por feed
+# firmado no usa este valor: su caducidad es la escalera de scripts/engine/
+# escalada.py (LIMIT 300 s; BLOCK 300/1800/3600 s).
 bloqueo_segundos = 120
 
 [rutas]
@@ -115,9 +124,10 @@ campana = "piloto-con-dns"
 #   ssh -L 8788:10.10.60.11:8788 gadmin@10.10.10.30
 activo = true
 # "127.0.0.1": solo en local; se ve con un tunel SSH (ver-panel.ps1).
-# Otra direccion: expuesto en la red. El panel NO tiene autenticacion, asi que
-# entonces es obligatorio "permitir": el generador crea una regla nftables que
-# solo deja pasar a esos origenes, y el panel no arranca si la regla falla.
+# Otra direccion: expuesto en la red. Entonces "permitir" es obligatorio AUNQUE
+# haya login (seccion de autenticacion, abajo): el generador crea una regla
+# nftables que solo deja pasar a esos origenes -segunda capa- y el panel no
+# arranca si la regla falla.
 direccion = "10.10.60.11"
 puerto = 8788
 # Si llega por Tailscale a traves de un enrutador de subred, el sensor ve la

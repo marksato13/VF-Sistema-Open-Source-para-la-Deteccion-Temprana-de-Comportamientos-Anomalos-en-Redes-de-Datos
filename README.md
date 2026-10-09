@@ -1,19 +1,28 @@
-# Detección temprana de anomalías en redes, con bloqueo en línea
+# Detección temprana de anomalías en redes, con respuesta graduada
 
-Detecta tráfico anómalo con aprendizaje **no supervisado** y **bloquea la IP
-ofensora** por `nftables` en el propio router, con expiración automática de
-120 segundos. No solo avisa: corta.
+Detecta tráfico anómalo con aprendizaje **no supervisado** y **responde de forma
+graduada** —PERMIT, LIMIT o BLOCK— aplicando `nftables` en el host protegido a
+través de un **feed firmado**, con caducidad escalonada y sin bloqueos infinitos.
+No solo avisa: degrada o corta.
 
 [![DOI](https://img.shields.io/badge/DOI-pendiente-lightgrey.svg)](docs/dataset/DOI-ZENODO.md)
 [![Licencia](https://img.shields.io/badge/código-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
 
 ```
-Cliente ─┐
-          ├─► Sensor (Suricata + motor) ─► Servidor protegido
-Atacante ─┘        │
-                   └─► nftables: bloquea 120 s
+Despliegue vigente (sensor por SPAN, enforcement distribuido):
+
+Clientes ─┐                 copia SPAN      ┌───────────────────┐  feed firmado
+          ├─► troncal ───────────────────► │ Sensor: Suricata + │─────────────┐
+Atacante ─┘      │                          │ motor + publicador │             │
+                 ▼                          └───────────────────┘   relay (bastión)
+          Host protegido ◄── agente: nftables PERMIT/LIMIT/BLOCK ◄──────────────┘
 ```
+
+> El sensor **observa una copia y no bloquea** el tráfico espejado: **decide** y
+> publica; el **agente del host** aplica la acción. El esquema clásico
+> «sensor → nftables, 120 s» es la **modalidad de laboratorio** evaluada en F6 (ver
+> abajo).
 
 ---
 
@@ -21,10 +30,21 @@ Atacante ─┘        │
 
 | | |
 |---|---|
-| **Extrae** | 28 variables de capas 3, 4 y 7 por ventana temporal e IP — **27 efectivas y 1 no observable** |
-| **Puntúa** | One-Class SVM congelado, `nu = 0,05`, umbral `1,8126` |
-| **Bloquea** | `nftables` en el router, expiración nativa de 120 s |
-| **Muestra** | Panel web de solo lectura en `127.0.0.1:8788` |
+| **Extrae** | 31 variables de capas 2/3/4/7 por ventana e IP (extractor v3); el modelo usa **28** (contrato v2), **27 observables** |
+| **Puntúa** | Isolation Forest **recalibrado en la red**, umbral `score_samples < −0,568892`, más cuatro heurísticos deterministas |
+| **Responde** | PERMIT · LIMIT · BLOCK vía feed firmado y agente `nftables` en el host; caducidad 300 / 1800 / 3600 s, nunca ∞ |
+| **Muestra** | Panel web de solo lectura con **TLS, login y roles** (modo demo aparte) |
+
+Fuente de verdad del despliegue: [`docs/FICHA-TECNICA-DESPLIEGUE-VIGENTE.md`](docs/FICHA-TECNICA-DESPLIEGUE-VIGENTE.md).
+
+### Dos modalidades — no mezclar sus cifras
+
+| | **A — Laboratorio (histórica, F6)** | **B — Distribuida (vigente)** |
+|---|---|---|
+| Sensor | En línea; enruta y bloquea con `nftables` local | Por **SPAN**, sin IP; no bloquea el tráfico copiado |
+| Modelo | OCSVM (`1,8126`), [model card histórica](docs/dataset/MODEL_CARD_OCSVM.md) | Isolation Forest recalibrado, [model card](docs/dataset/MODEL_CARD_IF_RECALIBRADO.md) |
+| Respuesta | Bloqueo binario, 120 s | PERMIT / LIMIT / BLOCK con escalera de caducidad |
+| Métricas | Mediana de bloqueo 8,0 s; cero caídas en 58 corridas | Se miden aparte (ver «Antes de confiar en él») |
 
 Es **no supervisado**: aprende de tráfico normal, sin necesitar ejemplos
 etiquetados de cada ataque. Por eso detecta comportamientos que no estaban en
@@ -73,10 +93,15 @@ de más abajo.
 ## Requisitos
 
 ```
-Python 3.11 o superior · Suricata 7 u 8 · nftables
-La versión exacta importa: ver docs/INSTALACION.md, anexo B
-Linux con reenvío IP en el equipo que hace de router
+Demo y herramientas:  Python 3.11 o superior (solo librería estándar)
+Modelo congelado:     las versiones EXACTAS de requirements-model.txt
+                      (CPython 3.14.4; ver docs/INSTALACION.md, anexo B)
+Sensor:               Linux · Suricata 7 u 8 · interfaz de captura sin IP
+Host protegido:       nftables (lo gestiona el agente en una tabla propia)
 ```
+
+El demo admite cualquier Python 3.11+; el modelo congelado no: con otras versiones de
+scikit-learn el resultado cambia sin dar error (ver anexo B).
 
 Para el laboratorio completo hace falta además un hipervisor. Sin él puede
 usar el motor sobre una máquina que ya enrute tráfico.
@@ -121,10 +146,14 @@ está decidiendo.
 > ```
 > Desde la raíz del repositorio. **Si un solo hash no cuadra, pare.**
 
-> **Elija el modo antes de instalar.** `bloqueo` solo tiene sentido si esta
-> máquina está **en el camino** del tráfico. Con un espejo SPAN observa pero no
-> enruta: `nftables` ahí solo afecta a la propia máquina, y no daría ningún
-> error. El instalador lo comprueba mirando `ip_forward`.
+> **Elija el modo antes de instalar.** `bloqueo` (modalidad A) solo tiene sentido si
+> esta máquina está **en el camino** del tráfico. Con un espejo SPAN observa pero no
+> enruta: `nftables` ahí solo afecta a la propia máquina, y no daría ningún error. El
+> instalador lo comprueba mirando `ip_forward`. Con SPAN (modalidad B) el sensor va en
+> `observacion` y la respuesta la aplica el **agente del host**
+> (`scripts/enforce/agente_enforce.py`) a partir del feed que firma
+> `scripts/engine/publicar_feed.py`; diseño en
+> [`DISENO-ENFORCEMENT.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/bb6e91d784622aab52f8b9f579186e50484dfdf6/01-arquitectura/DISENO-ENFORCEMENT.md).
 
 Para redes sin salida a Internet, o si el espejo aún no llega al sensor, la
 guía larga está en [`docs/INSTALACION.md`](docs/INSTALACION.md).
@@ -155,6 +184,15 @@ ese es el paso que hace el sistema *replicable*, no solo reproducible. Pipeline 
    promociona el modelo y su umbral a producción y arranca el panel con
    `--calibrado-en-esta-red`. Hasta entonces el panel **avisa en ámbar** de que las
    alertas son ruido.
+5. **Comprueba la escala del umbral al promocionar.** El informe da el umbral en
+   `decision_function`; el motor puntúa con `score_samples` (difieren en el `offset_`
+   del Isolation Forest, −0,5). Antes de dar el modelo por bueno:
+   ```bash
+   python3 scripts/modeling/verificar_equivalencia_umbral.py \
+     --modelo <joblib promocionado> --manifiesto <su manifiesto> \
+     --detector <nombre> --umbral-decision <umbral del informe>
+   ```
+   Debe responder `EQUIVALENTE`.
 
 Detalle y advertencias en [`docs/INSTALACION.md`](docs/INSTALACION.md) §8.
 
@@ -182,27 +220,36 @@ systemctl is-active cyberflow-capture-nic ppi-motor-capture ppi-motor suricata
 tail -f logs/motor_decision.log
 ```
 
-En modo bloqueo, además: `sudo nft list set inet ppi_enforce bloqueadas`
+Modalidad A (bloqueo en el sensor): `sudo nft list set inet ppi_enforce bloqueadas`.
+Modalidad B, **en el host protegido**: `sudo nft list set inet cyberflow cyberflow_bloqueados`
+y `sudo nft list set inet cyberflow cyberflow_limitados`.
 
 ---
 
 ## Uso diario
 
-**Ver el panel.** Escucha solo en loopback; desde otra máquina, por túnel SSH:
+**Ver el panel.** En el despliegue vigente escucha en la red de gestión con **TLS y
+login** (cuentas `admin` y `lector`, creadas con `scripts/setup/cyberflow_usuarios.py`),
+y una regla `nftables` solo admite el origen autorizado (el bastión) como segunda capa:
 
-```bash
-ssh -L 8788:127.0.0.1:8788 usuario@sensor
-# y abra http://127.0.0.1:8788
+```
+https://<sensor>:8788        # p. ej. https://10.10.60.11:8788, desde el bastión
 ```
 
-Muestra salud de los servicios, el umbral leído del manifiesto —no está
-escrito en el código—, las IP bloqueadas en vivo y la actividad reciente. Es
-de **solo lectura**: no ejecuta ninguna acción.
+Si se configura `direccion = "127.0.0.1"`, escucha solo en local y se ve con un túnel
+SSH. El modo demo (`scripts/demo.sh`) no tiene login y usa datos de ejemplo.
 
-**Desbloquear una IP antes de tiempo:**
+Muestra salud de los servicios, el umbral leído del manifiesto —no está escrito en el
+código—, las IP con acción vigente y la actividad reciente. Es de **solo lectura** para
+todo rol: no ejecuta ninguna acción. El rol `lector` no ve las secciones de desarrollador.
+
+**Quitar una acción antes de tiempo:**
 
 ```bash
-sudo nft delete element inet ppi_enforce bloqueadas { 10.20.0.20 }
+# modalidad B, en el host protegido:
+sudo nft delete element inet cyberflow cyberflow_bloqueados { 10.10.20.30 }
+# modalidad A, en el sensor:
+sudo nft delete element inet ppi_enforce bloqueadas { 10.10.20.30 }
 ```
 
 **Ver qué está decidiendo el motor:**
@@ -215,38 +262,57 @@ journalctl -u ppi-motor.service -f
 
 ## Adaptarlo a otra red
 
-El modelo está entrenado con tráfico de un laboratorio concreto. En otra red
-**el umbral casi seguro necesita recalibrarse**: lo que allí es normal aquí
-puede no serlo.
+El modelo publicado en `artifacts/model/` es el **OCSVM de laboratorio**; el desplegado
+en Sensor1 es un **Isolation Forest recalibrado con el tráfico de esa red**. En otra red
+**el umbral casi seguro necesita recalibrarse**: lo que allí es normal aquí puede no
+serlo. El camino es el de [«Adaptar a tu red»](#adaptar-a-tu-red-replicabilidad)
+(pipeline v3). El protocolo de laboratorio que reproduce el modelo publicado es otro:
 
 ```bash
 python scripts/features/extract_multilayer_v2.py --help
 python scripts/modeling/calibrate_multilayer_v2_v1.py --help
 ```
 
-Recoja tráfico normal de **su** red, extraiga variables y recalibre. Use solo
-datos de validación para fijar el umbral, nunca los de prueba.
+Use solo datos de **validación** para fijar el umbral, nunca los de **prueba**.
 
 ---
 
 ## Antes de confiar en él
 
-Tres limitaciones **medidas**, no estimadas:
+Limitaciones **medidas**, cada una con su modelo y su escenario (no intercambiarlas):
 
-**El falso positivo sube mucho en operación.** En laboratorio es del 4,71 %;
-en campaña real se midió **25,81 %** y **22,97 %**. Y en un despliegue sobre
-una **red distinta sin recalibrar**, el **92,4 %** — marcando como anómalas las
-interfaces del propio cortafuegos emitiendo sus anuncios CARP, sin ningún
-ataque en curso. Un `iperf` legítimo a 200 Mbit/s llegó a bloquear al cliente.
+**El falso positivo depende del modelo, los datos y la configuración.**
+- OCSVM de laboratorio: **4,71 %** en evaluación bloqueada y **25,81 % / 22,97 %** en la
+  campaña F6 (modalidad A). Un `iperf` legítimo a 200 Mbit/s llegó a bloquear al cliente.
+- OCSVM llevado **sin recalibrar** a la red de Sensor1: **92,4 %** de ALERT en los
+  primeros minutos, sin ataques — en su mayoría las interfaces del cortafuegos emitiendo
+  CARP.
+- Isolation Forest recalibrado: **4,45 %** sobre **test normal retenido** (65 421
+  ventanas). Es el FPR **del modelo**, no el del sistema completo con heurísticos y
+  enforcement, que se mide aparte.
+- **92,4 % → 4,45 % no es el efecto aislado de recalibrar:** entre ambas mediciones
+  cambiaron el modelo, los datos y el alcance (se excluyó el plano de control y se
+  deduplicó el espejo). Para atribuir la mejora habría que puntuar ambos modelos sobre el
+  mismo conjunto retenido.
 
-> El umbral publicado está calibrado para un laboratorio concreto. **En otra
-> red hay que recalibrar antes de creerse una sola alerta.**
+> El umbral publicado está calibrado para un laboratorio concreto. **En otra red hay que
+> recalibrar antes de creerse una sola alerta.**
 
-**Se atrasa bajo carga sostenida**, hasta 161 s, porque reparsea el anillo de
-PCAP completo en cada ciclo.
+**La detección es por escenario, no global.** IF recalibrado sobre la Kali: 54/78
+ventanas (69 %); HTTP 27/27, escaneo 27/43, DNS 0/8 (el ensayo apuntó a un host que no
+era el resolver). La cobertura 9/9 por episodio es del **stack** (modelo + heurísticos);
+el modelo solo, 6/9.
 
-**Una de las 28 variables no es observable** en esta configuración y queda
-constante. Las otras 27 tienen variación.
+**Disponibilidad y tiempos son de F6.** «Cero caídas en 58 corridas (55 verificadas)» y
+la mediana de bloqueo de 8,0 s se midieron en la modalidad A con el OCSVM; no demuestran
+la disponibilidad ni los tiempos del despliegue distribuido, cuya acción depende de
+timers con cadencia de un minuto.
+
+**El motor usa un buffer incremental**, no reparsea todo el anillo de PCAP; los atrasos
+bajo carga medidos en F6 (hasta 208 s) son de aquella versión y deben medirse de nuevo.
+
+**Una de las 28 variables del modelo no es observable** (`tls_handshake_failure_ratio_60s`)
+y queda constante; las otras 27 varían. La capa 2 del extractor v3 no entra al scoring.
 
 ---
 
@@ -265,10 +331,13 @@ constante. Las otras 27 tienen variación.
 
 | | |
 |---|---|
+| [`docs/FICHA-TECNICA-DESPLIEGUE-VIGENTE.md`](docs/FICHA-TECNICA-DESPLIEGUE-VIGENTE.md) | **Fuente de verdad** del despliegue vigente |
+| [`docs/RECONCILIACION-MANIFIESTO-MOTOR.md`](docs/RECONCILIACION-MANIFIESTO-MOTOR.md) | Qué declara cada artefacto frente a lo que corre |
+| [`docs/dataset/MODEL_CARD_IF_RECALIBRADO.md`](docs/dataset/MODEL_CARD_IF_RECALIBRADO.md) | El modelo operativo (IF recalibrado), alcance y límites |
+| [`docs/dataset/SYSTEM_CARD_MOTOR.md`](docs/dataset/SYSTEM_CARD_MOTOR.md) | El sistema: parte A (F6, histórica) y parte B (vigente) |
+| [`docs/dataset/MODEL_CARD_OCSVM.md`](docs/dataset/MODEL_CARD_OCSVM.md) | El modelo de laboratorio (OCSVM) — **histórico** |
 | [`docs/dataset/DATASHEET_MULTILAYER_V2.md`](docs/dataset/DATASHEET_MULTILAYER_V2.md) | Qué contiene el dataset y cómo se hizo |
-| [`docs/dataset/DICCIONARIO_VARIABLES.md`](docs/dataset/DICCIONARIO_VARIABLES.md) | Las 28 variables, con fórmula y unidades |
-| [`docs/dataset/MODEL_CARD_OCSVM.md`](docs/dataset/MODEL_CARD_OCSVM.md) | El modelo, su alcance y sus límites |
-| [`docs/dataset/SYSTEM_CARD_MOTOR.md`](docs/dataset/SYSTEM_CARD_MOTOR.md) | El motor en producción |
+| [`docs/dataset/DICCIONARIO_VARIABLES.md`](docs/dataset/DICCIONARIO_VARIABLES.md) | Las 28 variables del contrato, con fórmula y unidades |
 | [`REPLICACION.md`](REPLICACION.md) | Qué se reproduce y qué no |
 | [`CITATION.cff`](CITATION.cff) | Cómo citarlo |
 

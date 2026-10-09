@@ -9,10 +9,13 @@ Si aún no está instalado, vaya a [INSTALACION.md](INSTALACION.md).
 
 ## Qué hace, en una frase
 
-Cada 10 segundos agrupa el tráfico por IP, calcula 28 variables de las capas 3,
-4 y 7, y puntúa cada IP con un modelo **no supervisado**. Si la puntuación baja
-del umbral, la marca como anómala — y, en modo bloqueo, corta esa IP durante
-120 segundos.
+Cada 10 segundos agrupa el tráfico por IP, calcula las variables de las capas 3,
+4 y 7 que usa el modelo (28), y puntúa cada IP con un modelo **no supervisado**, junto
+con cuatro heurísticos deterministas. Si hay señal, decide **LIMIT** o **BLOCK**. En el
+despliegue vigente (sensor por SPAN) el sensor **publica** esa decisión en un feed
+firmado y el **agente del host protegido** la aplica con `nftables`, con caducidad de
+300 s (LIMIT) o 300/1800/3600 s (BLOCK, si reincide). En el modo bloqueo local
+—sensor en el camino del tráfico— corta la IP durante 120 segundos.
 
 **No supervisado** significa que aprendió de tráfico normal, sin ejemplos
 etiquetados de cada ataque. Por eso puede señalar comportamientos que nadie le
@@ -37,6 +40,10 @@ Cada decisión es una línea JSON:
  "threshold":1.8126,"packet_count_10s":184,
  "history_coverage_s":230.0,"window_end_utc":"2026-09-17T19:46:20+00:00"}
 ```
+
+> El ejemplo es del **perfil genérico** (OCSVM de laboratorio, umbral `1.8126`). Con el
+> Isolation Forest recalibrado de Sensor1 el campo `threshold` vale `-0.568892` y los
+> `score` son negativos: cada umbral solo tiene sentido con su modelo.
 
 | Campo | Qué significa |
 |---|---|
@@ -67,17 +74,21 @@ cualquier medición de ese periodo está sesgada.
 
 ### El panel
 
-Escucha solo en loopback. Desde otra máquina:
+En el despliegue vigente escucha en la red de gestión con **TLS y login** (cuentas
+`admin` y `lector`, creadas con `scripts/setup/cyberflow_usuarios.py`):
+`https://10.10.60.11:8788`, desde el bastión. Si `direccion = "127.0.0.1"`, escucha solo
+en local y se abre con un túnel:
 
 ```bash
 ssh -L 8788:127.0.0.1:8788 usuario@sensor
-# y abra http://127.0.0.1:8788
+# y abra https://127.0.0.1:8788 (o http:// si no hay login configurado)
 ```
 
-Es de **solo lectura**: no ejecuta ninguna acción.
+Es de **solo lectura** para todo rol: no ejecuta ninguna acción. El `lector` no recibe
+las secciones de desarrollador (el servidor responde 403).
 
-**Verlo desde la red, sin túnel.** El panel no tiene autenticación, así que
-exponerlo exige decir quién puede entrar:
+**Verlo desde la red.** El login **no sustituye** a la lista de orígenes: exponerlo exige
+además decir quién puede llegar:
 
 ```toml
 [panel]
@@ -99,7 +110,18 @@ cualquier otro origen la conexión se descarta.
 
 ### Desbloquear una IP antes de tiempo
 
-Solo en modo bloqueo:
+Despliegue distribuido (vigente), **en el host protegido**:
+
+```bash
+sudo nft list set inet cyberflow cyberflow_bloqueados
+sudo nft list set inet cyberflow cyberflow_limitados
+sudo nft delete element inet cyberflow cyberflow_bloqueados { 10.10.20.15 }
+```
+
+El agente vuelve a sincronizar los sets con el feed en cada ciclo, así que una IP que
+siga en el feed reaparecerá hasta que caduque su entrada.
+
+Modo bloqueo local (sensor en el camino), en el sensor:
 
 ```bash
 sudo nft list set inet ppi_enforce bloqueadas
@@ -157,8 +179,11 @@ Un `iperf` legítimo a 200 Mbit/s llegó a bloquear al cliente.
 
 ### 2 · Se atrasa bajo carga sostenida
 
-Hasta 161 s de retraso medidos, porque reparsea el anillo de PCAP. Un bloqueo
-que llega 161 segundos tarde se aplica sobre tráfico que ya pasó.
+En F6, con una versión anterior del motor, el atraso llegó a minutos (mediana 45 s,
+máximo 208 s; ver la system card). El motor actual mantiene un **buffer incremental** y
+no reparsea el anillo completo en cada ciclo, pero su atraso bajo carga **no se ha vuelto
+a medir**. Una acción que llega tarde se aplica sobre tráfico que ya pasó; en el
+despliegue distribuido se suma la cadencia de un minuto de los timers.
 
 ### 3 · Una de las 28 variables no es observable
 

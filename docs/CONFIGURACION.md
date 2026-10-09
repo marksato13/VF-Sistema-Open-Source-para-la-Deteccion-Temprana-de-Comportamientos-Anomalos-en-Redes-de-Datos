@@ -71,8 +71,8 @@ puede defender igual.
 | `modo` | `"observacion"` | `observacion` puntúa y registra · `bloqueo` añade `--enforce` |
 | `paso_segundos` | `10` | Cada cuánto se evalúa una ventana |
 | `historia_segundos` | `230` | Cuánta historia pide el motor. **Debe ser menor que el anillo** |
-| `umbral` | `1.8126…` | Por debajo es `ALERT`. Sale del manifiesto del modelo |
-| `bloqueo_segundos` | `120` | Expiración nativa del bloqueo en `nftables`. Solo en modo bloqueo |
+| `umbral` | `1.8126…` | Por debajo es `ALERT`. Sale del manifiesto del modelo. El `1.8126` es del **perfil genérico** (OCSVM de laboratorio); el despliegue de Sensor1 usa el IF recalibrado, `−0.568892` en escala `score_samples` |
+| `bloqueo_segundos` | `120` | Expiración nativa del bloqueo en `nftables`. **Solo en modo bloqueo** (sensor en el camino). El enforcement distribuido usa la escalera de `scripts/engine/escalada.py` |
 
 > `historia_segundos` mayor o igual que `anillo_archivos × anillo_segundos`
 > significa pedir historia que **ya rotó fuera del búfer**. El validador lo
@@ -108,11 +108,22 @@ El modo `bloqueo` además cambia el endurecimiento de la unidad:
 | Clave | Por omisión | Qué es |
 |---|---|---|
 | `activo` | `false` | Si `true`, genera también `ppi-dashboard.service` |
-| `direccion` | `127.0.0.1` | **Déjelo en loopback.** Para verlo desde fuera, túnel SSH |
+| `direccion` | `127.0.0.1` | En loopback se ve con un túnel SSH. Otra dirección lo expone en la red y obliga a `permitir` |
 | `puerto` | `8788` | |
+| `permitir` | — | Orígenes admitidos por una regla `nftables` propia. **Obligatorio si se expone**, también con login: son dos capas |
+| `autenticacion` | — | `true` activa el login con las cuentas `admin` y `lector` |
+| `usuarios` | — | Fichero de cuentas (hash scrypt). Se crea en la máquina con `scripts/setup/cyberflow_usuarios.py`, modo `0600`; **nunca** en este repositorio |
+| `clave_sesion` | — | Clave HMAC de la cookie de sesión, creada por el mismo guion, `0600` |
+| `tls_cert` · `tls_key` | — | Certificado autofirmado del panel. **TLS obligatorio con login**: el tráfico bastión–sensor cruza el troncal espejado y una contraseña en claro acabaría en el anillo de PCAP |
+| `auditoria` | — | Registro de entradas, salidas e intentos fallidos (JSONL) |
+| `sesion_minutos` · `intentos_max` · `bloqueo_minutos` | — | Caducidad de la sesión y cerrojo por fuerza bruta (480 min, 5 intentos, 15 min en el ejemplo) |
+
+El rol `lector` recibe la vista operativa recortada **en el servidor** (403 en los
+endpoints de desarrollador); el `admin` puede conmutar a la vista de desarrollo. Ningún
+rol ejecuta acciones: el panel es de solo lectura.
 
 ```bash
-ssh -L 8788:127.0.0.1:8788 usuario@sensor
+ssh -L 8788:127.0.0.1:8788 usuario@sensor      # solo si direccion = "127.0.0.1"
 ```
 
 ---

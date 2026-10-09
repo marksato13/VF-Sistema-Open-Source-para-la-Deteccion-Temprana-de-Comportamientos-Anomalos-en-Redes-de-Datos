@@ -8,9 +8,10 @@ métricas del modelo es lo que hace que ninguna de las dos cosas quede clara.
 | Documento | Responde por |
 |---|---|
 | [`DATASHEET_MULTILAYER_V2.md`](DATASHEET_MULTILAYER_V2.md) | **Los datos** — procedencia, estructura, particiones, calidad, sesgos y privacidad |
-| [`../fase02-features-multicapa/03-diccionario-multicapa-v2.md`](../fase02-features-multicapa/03-diccionario-multicapa-v2.md) | **Las variables** — fórmula, denominador, rangos, observabilidad y coste |
-| [`MODEL_CARD_OCSVM.md`](MODEL_CARD_OCSVM.md) | **El modelo** — hiperparámetros, umbral, métricas por familia, comparación de los siete candidatos y la selección posterior declarada |
-| [`SYSTEM_CARD_MOTOR.md`](SYSTEM_CARD_MOTOR.md) | **El sistema desplegado** — detectores, acción de control, desempeño en operación y modos de fallo |
+| [`DICCIONARIO_VARIABLES.md`](DICCIONARIO_VARIABLES.md) | **Las variables** — fórmula, denominador, rangos, observabilidad y coste |
+| [`MODEL_CARD_IF_RECALIBRADO.md`](MODEL_CARD_IF_RECALIBRADO.md) | **El modelo operativo** — Isolation Forest recalibrado en Sensor1: umbral en sus dos escalas, FPR sobre test normal, detección por escenario y límites |
+| [`MODEL_CARD_OCSVM.md`](MODEL_CARD_OCSVM.md) | **El modelo de laboratorio (histórico)** — hiperparámetros, umbral, métricas por familia, comparación de los siete candidatos y la selección posterior declarada |
+| [`SYSTEM_CARD_MOTOR.md`](SYSTEM_CARD_MOTOR.md) | **El sistema** — parte A: la validación F6 (histórica, sensor en línea); parte B: el despliegue vigente (SPAN y enforcement distribuido) |
 
 Las tres responden por cosas distintas a propósito: mezclar la procedencia de
 los datos con las métricas del modelo y con el comportamiento del sistema
