@@ -1,8 +1,10 @@
-# Model card — OCSVM `multilayer-v2`
+# Model card — OCSVM `multilayer-v2` (histórica, laboratorio)
 
 > **Generada**, no redactada a mano: `scripts/entregables/generar_cards.py`, desde `artifacts/model/manifest.json`.
 
-Responde por **el modelo**. Los datos están en [`DATASHEET_MULTILAYER_V2.md`](DATASHEET_MULTILAYER_V2.md) y el sistema desplegado en [`SYSTEM_CARD_MOTOR.md`](SYSTEM_CARD_MOTOR.md).
+> **Modelo histórico.** Es el modelo de laboratorio de la versión anterior y el que se evaluó en F6. **No es el detector desplegado hoy**: el motor vivo ejecuta el **Isolation Forest recalibrado** (`if_recalibrado_2026_09`), descrito en [`MODEL_CARD_IF_RECALIBRADO.md`](MODEL_CARD_IF_RECALIBRADO.md) y en la [ficha técnica del despliegue](../FICHA-TECNICA-DESPLIEGUE-VIGENTE.md). Sus cifras valen para el conjunto y la versión en que se midieron; no se trasladan al IF.
+
+Responde por **el modelo de laboratorio**. Los datos están en [`DATASHEET_MULTILAYER_V2.md`](DATASHEET_MULTILAYER_V2.md) y el sistema en [`SYSTEM_CARD_MOTOR.md`](SYSTEM_CARD_MOTOR.md).
 
 ---
 
@@ -118,8 +120,8 @@ Los siete objetos ajustados se publican en `artifacts/model/candidates/`, verifi
 | 3 | **Validación interna, no externa.** Se ejecutaron 5 pliegues agrupados por episodio normal sobre el mismo pipeline OCSVM, pero las mismas anomalías se reutilizan en todos los pliegues. No mide generalización a otra red o fecha. |
 | 4 | **Estabilidad interna del umbral medida.** El bootstrap por episodio (`B = 1000`) dio CV 4,10 % y banda percentil [1,6496 – 1,8132]. No sustituye una validación externa. |
 | 5 | **Ajustado sin ponderación** pese a que 5 de 132 episodios concentran el 31,7 % de las filas de entrenamiento, y los cinco son transferencias lentas de 1 GB. |
-| 6 | **La significancia entre modelos ya está medida**: las 6 comparaciones del OCSVM son significativas tras Holm, pero **ninguna diferencia de falso positivo lo es**. Ver [`08-significancia-entre-modelos.md`](../fase04-modelado/08-significancia-entre-modelos.md). |
-| 7 | **La ablación por capas ya está ejecutada** y matiza este contrato: la expansión multicapa es significativa (p < 0,001), pero las 8 variables L7 nuevas **no aportan detección medible y cuestan 5 falsos positivos**. Ver [`07-ablacion-multicapa.md`](../fase04-modelado/07-ablacion-multicapa.md). |
+| 6 | **La significancia entre modelos ya está medida**: las 6 comparaciones del OCSVM son significativas tras Holm, pero **ninguna diferencia de falso positivo lo es**. Ver [`08-significancia-entre-modelos.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase04-modelado/08-significancia-entre-modelos.md). |
+| 7 | **La ablación por capas ya está ejecutada** y matiza este contrato: la expansión multicapa es significativa (p < 0,001), pero las 8 variables L7 nuevas **no aportan detección medible y cuestan 5 falsos positivos**. Ver [`07-ablacion-multicapa.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase04-modelado/07-ablacion-multicapa.md). |
 | 8 | **Un solo punto de operación.** No hay segundo umbral, así que la respuesta es binaria: permitir o bloquear. |
 | 9 | **Una de sus entradas venía corrupta en producción.** Sobre un espejo SPAN, la sesión enseña la misma trama dos veces y `tcp_retransmission_ratio_10s` las contaba como retransmisiones: **0,1488 medido, 0,0000 tras deduplicar**. El modelo nunca vio esa distorsión en entrenamiento, así que toda puntuación anterior a la corrección usó esa variable fuera de su distribución. Ver system card §8.3. |
 | 10 | **Ciego a la capa 2 y al tráfico dentro de una misma VLAN.** Las 28 variables descartan toda trama que no sea IPv4, así que nunca ven una ARP; y el espejo solo cruza lo que va entre VLAN. Hay un caso medido de una máquina real invisible para este modelo. El extractor `multilayer-v3` añade tres variables de enlace, pero **este modelo no está entrenado con ellas**. |
