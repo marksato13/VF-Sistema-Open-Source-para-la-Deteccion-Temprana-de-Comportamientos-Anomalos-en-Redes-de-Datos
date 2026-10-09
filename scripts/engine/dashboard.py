@@ -596,6 +596,15 @@ HTML = """<!doctype html>
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg><h2>Modelo congelado</h2></div>
     <div class="grid" id="model"></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="16.5" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Punto débil conocido:</strong> este modelo detecta peor la fuerza bruta de contraseñas (50&ndash;55%) que el resto de familias de ataque (&gt;80%). Una decisión PERMIT en ese escenario es menos confiable que en otros.</span></div>
+
+    <p class="lede-small" style="margin-top:1.4rem"><strong style="color:var(--text)">Pruebas previas &mdash; por qué este modelo y no otro.</strong> El modelo no se eligió a ciegas: se compararon <strong>7 candidatos</strong> con las mismas variables y la misma partición (<code>compare_frozen_models_metrics.py</code>, auditable desde <em>Topología &rarr; Ver contenido</em>). El conjunto positivo son 179 ventanas de anomalía; el negativo, 276 ventanas normales de prueba. Se rankean por F1, MCC, ROC&#8209;AUC y precisión media, sin reentrenar y verificando cada modelo contra el manifiesto.</p>
+    <p class="lede-small">Y la detección no la hace el modelo solo. La <strong>ablación por capas de decisión</strong> mide qué aporta cada pieza sobre 9 escenarios de ataque:</p>
+    <div class="grid">
+      <div class="card"><div class="label">Modelo solo</div><div class="value">6 / 9</div></div>
+      <div class="card"><div class="label">Heurísticos solos</div><div class="value">7 / 9</div></div>
+      <div class="card accent"><div class="label">Modelo + heurísticos</div><div class="value">9 / 9</div></div>
+    </div>
+    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span>La <strong>complementariedad es el resultado medido</strong>, no un supuesto: el modelo caza la anomalía sin firma (p.&nbsp;ej. DNS de alta entropía) y los heurísticos cazan la fuerza bruta que el modelo mide flojo. Juntos cubren los 9 escenarios. El enfrentamiento con Suricata y el detalle por escenario están en <code>docs/GUION-DEMO.md</code> y <code>docs/RUNBOOK-REENTRENAMIENTO-DEMO.md</code>.</span></div>
   </section>
 
   <section id="s-alcance">
