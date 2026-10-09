@@ -1,5 +1,7 @@
 # Model card — OCSVM `multilayer-v2`
 
+> **Ficha histórica del laboratorio.** El Sensor1 ejecuta actualmente `if_recalibrado_2026_09` (Isolation Forest recalibrado). Ver [ficha operativa](MODEL_CARD_IF_RECALIBRADO.md) y [reconciliación](../RECONCILIACION-MANIFIESTO-MOTOR.md). Las cifras de esta ficha no describen el modelo vivo.
+
 > **Generada**, no redactada a mano: `scripts/entregables/generar_cards.py`, desde `artifacts/model/manifest.json`.
 
 Responde por **el modelo**. Los datos están en [`DATASHEET_MULTILAYER_V2.md`](DATASHEET_MULTILAYER_V2.md) y el sistema desplegado en [`SYSTEM_CARD_MOTOR.md`](SYSTEM_CARD_MOTOR.md).

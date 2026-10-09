@@ -9,7 +9,8 @@ métricas del modelo es lo que hace que ninguna de las dos cosas quede clara.
 |---|---|
 | [`DATASHEET_MULTILAYER_V2.md`](DATASHEET_MULTILAYER_V2.md) | **Los datos** — procedencia, estructura, particiones, calidad, sesgos y privacidad |
 | [`../fase02-features-multicapa/03-diccionario-multicapa-v2.md`](../fase02-features-multicapa/03-diccionario-multicapa-v2.md) | **Las variables** — fórmula, denominador, rangos, observabilidad y coste |
-| [`MODEL_CARD_OCSVM.md`](MODEL_CARD_OCSVM.md) | **El modelo** — hiperparámetros, umbral, métricas por familia, comparación de los siete candidatos y la selección posterior declarada |
+| [`MODEL_CARD_OCSVM.md`](MODEL_CARD_OCSVM.md) | **Modelo histórico del laboratorio v2** — comparación de candidatos y limitaciones de selección |
+| [`MODEL_CARD_IF_RECALIBRADO.md`](MODEL_CARD_IF_RECALIBRADO.md) | **Detector desplegado en Sensor1** — Isolation Forest recalibrado, métricas y alcance |
 | [`SYSTEM_CARD_MOTOR.md`](SYSTEM_CARD_MOTOR.md) | **El sistema desplegado** — detectores, acción de control, desempeño en operación y modos de fallo |
 
 Las tres responden por cosas distintas a propósito: mezclar la procedencia de
