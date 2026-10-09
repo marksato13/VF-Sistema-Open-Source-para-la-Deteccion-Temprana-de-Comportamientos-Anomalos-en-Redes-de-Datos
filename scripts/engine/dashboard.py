@@ -674,6 +674,25 @@ HTML = """<!doctype html>
   </section>
 </div>
 
+<style>
+.ver-codigo{margin-top:6px;background:#15202c;border:1px solid #2b3a4a;color:#9fd0ff;border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer}
+.ver-codigo:hover{background:#1b2a39;border-color:#3a5169}
+.code-modal{position:fixed;inset:0;background:rgba(2,6,12,.72);z-index:300;display:flex;align-items:center;justify-content:center;padding:26px}
+.code-modal[hidden]{display:none}
+.code-box{background:#0f1720;border:1px solid #27333f;border-radius:12px;width:min(1000px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.code-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid #27333f;font-weight:600;color:#e6eef7}
+.code-head button{background:none;border:none;color:#8aa0b2;font-size:24px;line-height:1;cursor:pointer}
+.code-head button:hover{color:#fff}
+.code-sub{padding:7px 16px;font:11px ui-monospace,SFMono-Regular,Menlo,monospace;color:#7d93a6;border-bottom:1px solid #1b2530}
+.code-pre{margin:0;padding:14px 16px;overflow:auto;white-space:pre;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#d6e2ee;background:#0a1118;border-radius:0 0 12px 12px}
+</style>
+<div class="code-modal" id="codeModal" hidden>
+  <div class="code-box">
+    <div class="code-head"><span id="codeTitle"></span><button id="codeClose" type="button" aria-label="Cerrar">&times;</button></div>
+    <div class="code-sub" id="codeSub"></div>
+    <pre class="code-pre"><code id="codeBody"></code></pre>
+  </div>
+</div>
 <button class="tour-fab" id="tourBtn" title="Recorrido guiado">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.2a2.6 2.6 0 1 1 3.7 2.4c-.8.4-1.1 1-1.1 1.8"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
   Guía
@@ -2084,7 +2103,7 @@ function fmtBytes(b) {
 }
 
 function nombreFichero(ruta) {
-  const p = ruta.split('/');
+  const p = String(ruta).split(/[\\\\/]/);
   return p[p.length - 1] || ruta;
 }
 
@@ -2107,8 +2126,11 @@ function filesHTML(nodeId) {
            f.mtime ? 'modif. ' + new Date(f.mtime * 1000).toLocaleString() : null]
             .filter(Boolean).join(' · ')
         : '<span class="aus">no existe todavía</span>';
+      const verbtn = f.existe
+        ? `<button class="ver-codigo" data-ruta="${String(f.ruta).replace(/"/g, '&quot;')}">◎ Ver contenido</button>`
+        : '';
       html += `<div class="topo-file-det"><div class="ruta">${f.ruta}</div>`
-        + `<div>${f.que}</div><div>${estado}</div></div>`;
+        + `<div>${f.que}</div><div>${estado}</div>${verbtn}</div>`;
     }
   }
   return html + '</div>';
@@ -2191,12 +2213,42 @@ on('topoArchivosBtn', 'click', async () => {
   if (topoUltimo) renderTopologia(topoUltimo);
 });
 
-on('topoDetail', 'click', (ev) => {
+on('topoDetail', 'click', async (ev) => {
+  const vc = ev.target.closest('.ver-codigo');
+  if (vc) { await verCodigo(vc.dataset.ruta); return; }
   const f = ev.target.closest('.topo-file');
   if (!f) return;
   const clave = f.dataset.file;
   if (filesAbiertos.has(clave)) filesAbiertos.delete(clave); else filesAbiertos.add(clave);
   renderTopoDetalle();
+});
+
+// Modo desarrollador: abre un modal con el CONTENIDO del script (solo lectura).
+async function verCodigo(ruta) {
+  const modal = document.getElementById('codeModal');
+  document.getElementById('codeTitle').textContent = nombreFichero(ruta);
+  document.getElementById('codeSub').textContent = ruta;
+  document.getElementById('codeBody').textContent = 'cargando…';
+  modal.hidden = false;
+  try {
+    const r = await fetch('/api/archivo?ruta=' + encodeURIComponent(ruta));
+    const d = await r.json();
+    if (!d || d.contenido == null) {
+      document.getElementById('codeBody').textContent = (d && d.nota) || 'no disponible';
+    } else {
+      document.getElementById('codeBody').textContent =
+        d.contenido + (d.truncado ? '\\n\\n…(archivo truncado: se muestran los primeros 512 KB)…' : '');
+      document.getElementById('codeSub').textContent =
+        ruta + '  ·  ' + (d.bytes || 0) + ' bytes';
+    }
+  } catch (e) {
+    document.getElementById('codeBody').textContent = 'error al cargar el archivo';
+  }
+}
+on('codeClose', 'click', () => { document.getElementById('codeModal').hidden = true; });
+on('codeModal', 'click', (ev) => { if (ev.target.id === 'codeModal') ev.currentTarget.hidden = true; });
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') { const m = document.getElementById('codeModal'); if (m) m.hidden = true; }
 });
 
 on('topo', 'click', (ev) => {
@@ -2749,7 +2801,7 @@ ROLES = ("admin", "lector")
 # Rutas que solo sirve el administrador. La lista es explicita y una prueba
 # recorre las que el servidor despacha de verdad: si se anade un endpoint y
 # nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
-RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios"})
+RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios", "/api/archivo"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -3594,6 +3646,40 @@ def main() -> int:
             if path == "/api/score-histogram":
                 decisions = read_decisions(args.log_path, limit=500)
                 self._send_json(histogram_scores(decisions, model_summary["threshold"]))
+                return
+            if path == "/api/archivo":
+                # Modo desarrollador: muestra el CONTENIDO de un script del
+                # pipeline. Whitelist estricta -solo rutas que estado_artefactos
+                # declara- y solo tipos de TEXTO: ni path traversal, ni binarios.
+                import urllib.parse as _u
+                params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+                ruta = _u.unquote(params.get("ruta", ""))
+                mapa = estado_artefactos(
+                    args.eve_path, args.dataset, args.manifest_path, args.log_path,
+                    args.schema_extra, args.descripciones)
+                permitidas = {}
+                for lst in mapa.values():
+                    for art in lst:
+                        if art.get("ruta"):
+                            permitidas[art["ruta"]] = art.get("tipo", "")
+                if ruta not in permitidas:
+                    self.send_error(403)
+                    return
+                tipo = permitidas[ruta]
+                TEXTO = {"py", "sh", "toml", "md", "json", "log", "yml", "yaml", "cfg", "txt"}
+                fp = Path(ruta)
+                if tipo not in TEXTO or not fp.is_file():
+                    self._send_json({"ruta": ruta, "tipo": tipo, "contenido": None,
+                                     "nota": "no es texto legible, o no existe en este despliegue"})
+                    return
+                try:
+                    crudo = fp.read_bytes()
+                    contenido = crudo[:524288].decode("utf-8", errors="replace")
+                    self._send_json({"ruta": ruta, "tipo": tipo, "contenido": contenido,
+                                     "truncado": len(crudo) > 524288, "bytes": len(crudo)})
+                except OSError:
+                    self._send_json({"ruta": ruta, "tipo": tipo, "contenido": None,
+                                     "nota": "no se pudo leer"})
                 return
             self.send_error(404)
 
