@@ -597,14 +597,14 @@ HTML = """<!doctype html>
     <div class="grid" id="model"></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="16.5" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Punto débil conocido:</strong> este modelo detecta peor la fuerza bruta de contraseñas (50&ndash;55%) que el resto de familias de ataque (&gt;80%). Una decisión PERMIT en ese escenario es menos confiable que en otros.</span></div>
 
-    <p class="lede-small" style="margin-top:1.4rem"><strong style="color:var(--text)">Pruebas previas &mdash; por qué este modelo y no otro.</strong> El modelo no se eligió a ciegas: se compararon <strong>7 candidatos</strong> con las mismas variables y la misma partición (<code>compare_frozen_models_metrics.py</code>, auditable desde <em>Topología &rarr; Ver contenido</em>). El conjunto positivo son 179 ventanas de anomalía; el negativo, 276 ventanas normales de prueba. Se rankean por F1, MCC, ROC&#8209;AUC y precisión media, sin reentrenar y verificando cada modelo contra el manifiesto.</p>
-    <p class="lede-small">Y la detección no la hace el modelo solo. La <strong>ablación por capas de decisión</strong> mide qué aporta cada pieza sobre 9 escenarios de ataque:</p>
+    <p class="lede-small" id="pruebasPrevias" style="margin-top:1.4rem"><strong style="color:var(--text)">Pruebas previas &mdash; comparación exploratoria de modelos.</strong> Se compararon <strong>7 candidatos</strong> con las mismas variables y la misma partición (<code>compare_frozen_models_metrics.py</code>, auditable desde <em>Topología &rarr; Ver contenido</em>). El conjunto positivo son 179 ventanas de anomalía; el negativo, 276 ventanas normales de prueba. Se reportan F1, MCC, ROC&#8209;AUC y precisión media, sin reentrenar y verificando cada modelo contra el manifiesto. La selección posterior a ver resultados de prueba limita la estimación de generalización.</p>
+    <p class="lede-small">Y la detección no la hace el modelo solo. La <strong>ablación por componentes</strong> mide qué aporta cada pieza sobre 9 episodios (3 familias con 3 repeticiones):</p>
     <div class="grid">
       <div class="card"><div class="label">Modelo solo</div><div class="value">6 / 9</div></div>
       <div class="card"><div class="label">Heurísticos solos</div><div class="value">7 / 9</div></div>
       <div class="card accent"><div class="label">Modelo + heurísticos</div><div class="value">9 / 9</div></div>
     </div>
-    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span>La <strong>complementariedad es el resultado medido</strong>, no un supuesto: el modelo caza la anomalía sin firma (p.&nbsp;ej. DNS de alta entropía) y los heurísticos cazan la fuerza bruta que el modelo mide flojo. Juntos cubren los 9 escenarios. El enfrentamiento con Suricata y el detalle por escenario están en <code>docs/GUION-DEMO.md</code> y <code>docs/RUNBOOK-REENTRENAMIENTO-DEMO.md</code>.</span></div>
+    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span>La <strong>complementariedad es el resultado medido</strong>: el modelo detectó flood HTTP y escaneo en esta batería, pero <strong>0/3 DNS</strong>; el heurístico DNS cubrió ese hueco. La fuerza bruta en vivo la confirma el heurístico <code>brute_force</code>. La combinación cubrió 9/9 episodios de las tres primeras familias; no significa que el modelo solo los cubra. La comparación con Suricata y sus límites están en la nota 32 del repositorio de orquestación.</span></div>
   </section>
 
   <section id="s-alcance">
@@ -728,6 +728,7 @@ const DETECTOR_LABEL = {
   no_live_packets_heuristic: 'sin paquetes aún (heurístico)',
   ocsvm_scaled: 'modelo (OCSVM)',
   if_recalibrado_2026_09: 'modelo recalibrado (IsolationForest)',
+  if_recalibrado: 'modelo recalibrado (IsolationForest)',
   auth_failure_heuristic: 'fuerza bruta (heurístico)',
   brute_force: 'fuerza bruta (heurístico)',
   port_scan: 'escaneo de puertos (heurístico)',
@@ -1000,8 +1001,11 @@ function on(id, evento, fn) {
 // pasos cuyo elemento no existe -por rol o vista- se saltan solos.
 const TOUR_PASOS = [
   { sel: '#kpis', t: 'Las cifras clave', d: 'Cuatro números de un vistazo: entidades vigiladas, ventanas analizadas por hora, cuántos scores rozan el umbral y las alertas reales de la última hora.' },
-  { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo → decisión → bloqueo. Pulsa cualquier componente para ver qué hace y qué mide.' },
-  { sel: '#s-modelo', t: 'El modelo y su umbral', d: 'Un One-Class SVM entrenado solo con tráfico normal. Su umbral separa lo normal de lo anómalo; aquí ves sus métricas.' },
+  { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo y heurísticos → decisión → respuesta en el host. Pulsa cualquier componente para ver qué hace.' },
+  { sel: '#topoVista', t: 'Tres vistas del sistema', d: 'Operacional: cómo funciona en vivo. Metodológica: cómo se construyó por fases. Entrenamiento: datos, partición, comparación y reentrenamiento.' },
+  { sel: '#topoArchivosBtn', t: 'Código auditable', d: 'En modo desarrollador, pulsa Ver archivos, elige un componente y un archivo; en su ficha pulsa ◎ Ver contenido. El visor es de solo lectura y solo muestra rutas permitidas.' },
+  { sel: '#s-modelo', t: 'El detector activo y su umbral', d: 'El detector desplegado aprende la normalidad de esta red; el umbral se fijó con validación. Aquí ves el modelo activo y sus métricas, no una etiqueta fija de OCSVM.' },
+  { sel: '#pruebasPrevias', t: 'Pruebas previas', d: 'Siete modelos se compararon en el estudio; la ablación sobre nueve episodios separa modelo solo (6), heurísticos solos (7) y ambos combinados (9). No confundas el 9/9 del sistema con el modelo solo.' },
   { sel: '#s-scores', t: 'Distribución de scores', d: 'No solo si alertó o no, sino cuánto margen hubo respecto al umbral. Rojo = ALERT, verde = PERMIT.' },
   { sel: '#s-decisiones', t: 'Las decisiones', d: 'Cada ventana con su decisión, su score frente al umbral (la mini-barra) y el motivo. Filtrable por IP y exportable.' },
   { sel: '#s-simulacion', t: 'Escenarios guiados', d: 'Comandos listos para provocar tráfico normal o un ataque y ver cómo responde el modelo. El panel no ejecuta: copias el comando y observas.' },
@@ -1109,7 +1113,7 @@ async function refresh() {
     if (modelEl) {
       const m = status.model;
       modelEl.innerHTML = [
-        card('Detector', 'OCSVM'),
+        card('Detector', escSimple(DETECTOR_LABEL[m.detector_name] || m.detector_name || 'no disponible')),
         card('Umbral', m.threshold.toFixed(4), 'accent'),
         card('FPR benigno', (m.test_fpr * 100).toFixed(2) + '%'),
         card('Detección global', (m.detection_rate * 100).toFixed(1) + '%', 'accent'),
@@ -1492,11 +1496,11 @@ const TOPO_TEXTO = {
   },
   heuristicos: {
     que: 'Reglas deterministas sobre las mismas variables de la ventana, complemento del modelo: fuerza bruta, escaneo de puertos, abuso HTTP y DNS de alta entropía.',
-    nota: 'Cubren huecos donde el modelo mide flojo (p.ej. DNS-entropy). Umbrales VERSIONADOS (versión 2026-10-06.1, queda en el registro y el feed para reproducir cada decisión) y de criterio razonado, NO calibrados como el modelo. En 2026-10-06 los ratios de unicidad bajaron a 0,45 porque el espejo SPAN duplica cada trama y topan en ~0,5, no en 1,0; validado con FPR 0/527 sobre la línea base.',
-    flujoTit: 'Las cuatro reglas (umbrales exactos, versión 2026-10-06.1)',
+    nota: 'Cubren huecos donde el modelo mide flojo (p.ej. DNS-entropy). El motor del sensor declara VERSION_UMBRALES 2026-10-06.2; la unidad del publicador todavía etiqueta el feed como 2026-10-06.1. La discrepancia de trazabilidad debe corregirse antes de atribuir una versión única al flujo. Los ratios de unicidad de 0,45 consideran copias del espejo SPAN; la rama de ráfaga de port_scan es posterior al piloto 1/3.',
+    flujoTit: 'Las cuatro reglas (umbrales; versión del motor 2026-10-06.2)',
     flujo: [
       {paso: 'Fuerza bruta', fichero: 'heuristicos.py', garantia: '≥5 req HTTP/60s y ≥80% de fallo de auth → BLOCK'},
-      {paso: 'Escaneo de puertos', fichero: 'heuristicos.py', garantia: '≥20 intentos/30s, ratio de puertos únicos ≥0,45 y ≤30% de conexiones completadas → BLOCK'},
+      {paso: 'Escaneo de puertos', fichero: 'heuristicos.py', garantia: '≥20 intentos/30s, unicidad ≥0,45 y ≤30% completadas; O ráfaga ≥200/30s y ≤10% completadas → BLOCK'},
       {paso: 'Abuso HTTP', fichero: 'heuristicos.py', garantia: '≥100 req/60s con <80% de fallo de auth (no es fuerza bruta) → LIMIT'},
       {paso: 'DNS-entropy', fichero: 'heuristicos.py', garantia: '≥20 consultas/60s con ≥45% de nombres únicos o ≥50% de NXDOMAIN → LIMIT'},
     ],
@@ -3223,10 +3227,25 @@ def _stat_fichero(ruta: Path, tipo: str, que: str) -> dict:
     return info
 
 
+def ruta_modelo_activo(manifest_path: Path, detector_name: str, raiz: Path) -> Path:
+    """Ubica el artefacto declarado para el detector activo sin cargar el joblib."""
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        declarado = manifest.get("detectors", {}).get(detector_name, {}).get("model_path")
+        if isinstance(declarado, str) and declarado.strip():
+            ruta = Path(declarado)
+            return ruta if ruta.is_absolute() else raiz / ruta
+    except (OSError, ValueError, TypeError):
+        pass
+    # Manifiestos históricos: el artefacto vivía junto al manifiesto.
+    return manifest_path.parent / (detector_name + ".joblib")
+
+
 def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
                       log_path: Path, schema_extra: Path | None,
                       descripciones: Path, raiz: Path | None = None,
-                      capture_dir: Path = Path("/var/lib/ppi-motor-capture")) -> dict:
+                      capture_dir: Path = Path("/var/lib/ppi-motor-capture"),
+                      detector_name: str = "ocsvm_scaled") -> dict:
     """Los ficheros que cada componente USA de verdad, con su estado en vivo.
 
     Da nombre y forma al mapa de artefactos del panel: por cada nodo de la
@@ -3250,7 +3269,9 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
     except OSError:
         pass
 
-    modelo_dir = manifest_path.parent
+    modelo_activo = ruta_modelo_activo(manifest_path, detector_name, r)
+    config_local = r / "configs/cyberflow.local.toml"
+    config_usada = config_local if config_local.is_file() else r / "configs/cyberflow.toml"
     return {
         "captura": [anillo,
                     rel("scripts/setup/cyberflow_config.py", "py",
@@ -3261,7 +3282,7 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
                       "atribuye, extrae y puntua cada ventana"),
                   rel("scripts/features/extract_multilayer_v2.py", "py",
                       "extractor congelado de las 28 variables"),
-                  rel("configs/cyberflow.toml", "toml", "alcance, umbral, rutas")],
+                   _stat_fichero(config_usada, "toml", "configuracion de este despliegue")],
         "variables": [_stat_fichero(schema_extra, "json", "contrato de las 31 variables")
                       if schema_extra else rel("configs/features/multilayer-v3.json",
                                                "json", "contrato de las 31 variables"),
@@ -3271,8 +3292,8 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
                       (_stat_fichero(dataset, "csv", "dataset acumulado")
                        if dataset else rel("artifacts/linea-base/multilayer-v3.csv",
                                            "csv", "dataset acumulado"))],
-        "modelo": [_stat_fichero(modelo_dir / "ocsvm_scaled.joblib", "joblib",
-                                 "modelo entrenado, umbral congelado"),
+        "modelo": [_stat_fichero(modelo_activo, "joblib",
+                                  "artefacto del detector activo; umbral en el manifiesto"),
                    _stat_fichero(manifest_path, "json", "hashes y evaluacion")],
         "reentrenamiento": [rel("scripts/dataset/particionar_linea_base.py", "py",
                                 "parte sin fuga temporal"),
@@ -3626,7 +3647,7 @@ def main() -> int:
             if path == "/api/artefactos":
                 self._send_json(estado_artefactos(
                     args.eve_path, args.dataset, args.manifest_path, args.log_path,
-                    args.schema_extra, args.descripciones))
+                    args.schema_extra, args.descripciones, detector_name=args.detector_name))
                 return
             if path == "/api/escenarios":
                 self._send_json(cargar_escenarios(args.escenarios))
@@ -3665,7 +3686,7 @@ def main() -> int:
                 ruta = _u.unquote(params.get("ruta", ""))
                 mapa = estado_artefactos(
                     args.eve_path, args.dataset, args.manifest_path, args.log_path,
-                    args.schema_extra, args.descripciones)
+                    args.schema_extra, args.descripciones, detector_name=args.detector_name)
                 permitidas = {}
                 for lst in mapa.values():
                     for art in lst:
