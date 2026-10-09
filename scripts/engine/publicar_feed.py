@@ -19,11 +19,14 @@ import json
 import time
 from pathlib import Path
 
+import sys
+
 try:
-    from scripts.engine import escalada, feed
+    from scripts.engine import escalada, feed, heuristicos
 except ImportError:  # ejecutado desde scripts/engine/
     import escalada
     import feed
+    import heuristicos
 
 # Infra que NUNCA se bloquea, pase lo que pase (coincide con responder_iptables).
 NUNCA_BLOQUEAR_POR_DEFECTO = {
@@ -98,6 +101,22 @@ def decisiones_a_entradas(decisiones: list[dict], estado: dict, ahora: float,
     return entradas
 
 
+def version_umbrales(declarada: str | None) -> tuple[str, str | None]:
+    """Versión de heurísticos con la que se etiqueta el feed, y un aviso si procede.
+
+    La etiqueta describe las reglas que de verdad aplica el código instalado, así
+    que sale de `heuristicos.VERSION_UMBRALES`, no del argumento. Antes se tomaba
+    tal cual de `--umbrales`, y una unidad que pasaba un valor viejo dejó feeds
+    etiquetados `2026-10-06.1` mientras el motor aplicaba `.2`: la traza mentía
+    sin que nada fallara. Si el argumento no coincide, se avisa y gana el código.
+    """
+    vigente = heuristicos.VERSION_UMBRALES
+    if declarada and declarada != vigente:
+        return vigente, ("--umbrales %r no coincide con la versión del código %r; "
+                         "el feed se etiqueta con la del código" % (declarada, vigente))
+    return vigente, None
+
+
 def _leer_decisiones(log_path: Path, desde: float) -> list[dict]:
     out = []
     if not log_path.exists():
@@ -122,7 +141,9 @@ def main() -> int:
     p.add_argument("--salida-firma", type=Path, required=True)
     p.add_argument("--ventana-segundos", type=int, default=120,
                    help="solo decisiones de los últimos N s")
-    p.add_argument("--umbrales", default="", help="versión de heurísticos, para trazar")
+    p.add_argument("--umbrales", default="",
+                   help="obsoleto: la versión se toma de heuristicos.VERSION_UMBRALES; "
+                        "si se pasa y no coincide, se avisa")
     a = p.parse_args()
 
     ahora = time.time()
@@ -136,7 +157,10 @@ def main() -> int:
                                      NUNCA_BLOQUEAR_POR_DEFECTO)
     escalada.podar(estado, ahora)
 
-    feed_obj = feed.construir(entradas, ahora=ahora, umbrales=a.umbrales)
+    umbrales, aviso = version_umbrales(a.umbrales)
+    if aviso:
+        print("AVISO: " + aviso, file=sys.stderr)
+    feed_obj = feed.construir(entradas, ahora=ahora, umbrales=umbrales)
     datos = feed.serializar(feed_obj)
     firma = feed.firmar(datos, str(a.clave_privada))
 
