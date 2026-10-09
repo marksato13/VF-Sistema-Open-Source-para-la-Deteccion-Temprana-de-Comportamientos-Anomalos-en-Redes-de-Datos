@@ -9,7 +9,8 @@
 Cierra el requisito del jurado de «diccionario, fórmulas, unidades y ventanas»
 para las variables 15–28, que hasta ahora solo existían en el código.
 El de las 14 primeras se mantiene en
-`01-diccionario-multicapa-G5.md` (versión G5 de 14 variables, en `VF-PPI-TESIS-ORQUESTACION/investigacion/fase02-features-multicapa/`).
+[`01-diccionario-multicapa-G5.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase02-features-multicapa/01-diccionario-multicapa-G5.md)
+(versión G5 de 14 variables, en el histórico del laboratorio de `VF-PPI-TESIS-ORQUESTACION`).
 
 ## Unidad de observación
 - Una fila por **IP iniciadora** y cierre de ventana `T`, emitida cada **10 s**.
@@ -349,7 +350,7 @@ $$ \|\{p \in P_{10} : MF \lor offset > 0\}\| / \|P_{10}\| $$
 | **Rango observado** | mín 0.0000 · máx 0.9970 · media 0.0128 · mediana 0.0000 |
 | **Observabilidad** | completa |
 | **Coste en línea** | O(n) |
-| **Estado** | efectiva · dejó de ser constante tras la calibración de fragmentación IP real; ver `docs/fase03-dataset/174-cierre-calibracion-fragmentacion-ip-real.md` |
+| **Estado** | efectiva · dejó de ser constante tras la calibración de fragmentación IP real; ver [`fase03-dataset/174-cierre-calibracion-fragmentacion-ip-real.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase03-dataset/174-cierre-calibracion-fragmentacion-ip-real.md) |
 
 #### 17. `protocol_diversity_30s`
 
@@ -523,7 +524,7 @@ $$ \|\{t \in TLS_{60} : version = \emptyset\}\| / \|TLS_{60}\| $$
 | **Rango observado** | mín 0.0000 · máx 0.0000 · media 0.0000 · mediana 0.0000 |
 | **Observabilidad** | **no observable en esta configuración**: Suricata 8.0.3 no emite el evento `tls` intermedio de un handshake fallido, así que el numerador nunca puede ser distinto de cero |
 | **Coste en línea** | O(e) |
-| **Estado** | **NO OBSERVABLE** · constante 0.0 en las 1 552 ventanas. Ver `docs/fase03-dataset/175-limite-tls-handshake-failure-ratio.md` |
+| **Estado** | **NO OBSERVABLE** · constante 0.0 en las 1 552 ventanas. Ver [`fase03-dataset/175-limite-tls-handshake-failure-ratio.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase03-dataset/175-limite-tls-handshake-failure-ratio.md) |
 
 #### 27. `tls_version_ratio_60s`
 

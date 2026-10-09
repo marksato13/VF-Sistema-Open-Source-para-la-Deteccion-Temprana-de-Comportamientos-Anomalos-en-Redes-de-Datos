@@ -47,7 +47,7 @@ Sigue **las once secciones de la rúbrica de datasheet**, en ese orden, para que
 |---|---|---|
 | 1.0 | 25 de agosto de 2026 | Primer datasheet canónico. El corpus no cambia; se documenta |
 
-El historial del corpus, campaña por campaña, está en [`docs/fase03-dataset/README.md`](../fase03-dataset/README.md).
+El historial del corpus, campaña por campaña, está en [`fase03-dataset/README.md` (histórico del laboratorio)](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase03-dataset/README.md).
 
 ---
 
@@ -217,7 +217,7 @@ Es la debilidad más importante del diseño muestral y se declara antes que cual
 ## 7 · Diccionario de variables
 
 El diccionario científico completo —fórmula, tipo, fuente exacta, denominador, comportamiento con denominador cero, rango teórico y observado, observabilidad, coste en línea y estado— está en
-[`docs/fase02-features-multicapa/03-diccionario-multicapa-v2.md`](../fase02-features-multicapa/03-diccionario-multicapa-v2.md), **generado desde el extractor congelado**.
+[`DICCIONARIO_VARIABLES.md`](DICCIONARIO_VARIABLES.md), **generado desde el extractor congelado**.
 
 | Capa | Variables | Qué observa |
 |---|---:|---|
@@ -397,11 +397,11 @@ El registro de debilidades abiertas, con prioridad e impacto, está en [`docs/en
 
 | Tema | Documento |
 |---|---|
-| Diccionario de las 28 variables | `docs/fase02-features-multicapa/03-diccionario-multicapa-v2.md` |
-| Historial campaña por campaña | `docs/fase03-dataset/README.md` |
-| Límite de `tls_handshake_failure_ratio_60s` | `docs/fase03-dataset/175-limite-tls-handshake-failure-ratio.md` |
-| Corrección del catálogo y los gates | `docs/fase03-dataset/181-correccion-catalogo-auditoria-y-gates.md` |
-| Modelo congelado y su calibración | `docs/fase04-modelado/06-modelo-final-congelado-ocsvm.md` |
-| Validación en operación | `docs/fase07-validacion-final/02-resultados-f6.md` |
+| Diccionario de las 28 variables | `docs/dataset/DICCIONARIO_VARIABLES.md` |
+| Historial campaña por campaña | [`fase03-dataset/README.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase03-dataset/README.md) |
+| Límite de `tls_handshake_failure_ratio_60s` | [`fase03-dataset/175-limite-tls-handshake-failure-ratio.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase03-dataset/175-limite-tls-handshake-failure-ratio.md) |
+| Corrección del catálogo y los gates | [`fase03-dataset/181-correccion-catalogo-auditoria-y-gates.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase03-dataset/181-correccion-catalogo-auditoria-y-gates.md) |
+| Modelo congelado y su calibración | [`fase04-modelado/06-modelo-final-congelado-ocsvm.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase04-modelado/06-modelo-final-congelado-ocsvm.md) |
+| Validación en operación | [`fase07-validacion-final/02-resultados-f6.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase07-validacion-final/02-resultados-f6.md) |
 | Requisitos del jurado | `docs/requisitos-jurado/README.md` |
 | Revisión adversarial de cada campaña | `docs/revisiones-claude/README.md` |

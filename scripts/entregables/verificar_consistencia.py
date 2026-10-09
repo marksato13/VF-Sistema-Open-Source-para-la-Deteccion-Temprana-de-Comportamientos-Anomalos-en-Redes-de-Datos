@@ -3,8 +3,8 @@
 
 Dos comprobaciones:
   1. RASTROS OBSOLETOS: afirmaciones de versiones anteriores del sistema que ya
-     son falsas (Isolation Forest como modelo desplegado, umbrales del MVP,
-     iptables, cifras de auditoria superadas...).
+     son falsas (OCSVM como modelo desplegado, umbrales del MVP, bloqueo de
+     120 s como respuesta vigente, iptables, cifras de auditoria superadas...).
   2. CIFRAS CLAVE: que los numeros citados coincidan con el manifiesto y el
      dataset. Ninguna se compara contra otro documento: siempre contra el
      artefacto.
@@ -30,13 +30,23 @@ EXCLUIR = ("docs/revisiones-claude", "docs/fase03-dataset", "docs/fase00", "docs
 # (etiqueta, patron, por que es un rastro obsoleto)
 OBSOLETOS = [
     ("umbral del MVP", r"-0[.,]4459|-0[.,]6027|\bτ1\b|\bτ2\b",
-     "umbrales del sistema anterior; el vigente es 1,8126"),
+     "umbrales del MVP; el del modelo de laboratorio es 1,8126 y el del desplegado "
+     "score_samples -0,568892"),
     ("iptables/ipset como mecanismo", r"(?<!de )\b(iptables|ipset)\b(?!\.netfilter)",
      "el sistema usa nftables; solo vale como cita ajena o bibliografia"),
     ("14 variables como contrato vigente", r"\b14 (features|variables|caracter[ií]sticas) (del modelo|actuales|vigentes)",
      "el contrato vigente tiene 28 definidas y 27 efectivas"),
-    ("IF como modelo desplegado", r"(modelo|detector) (final |congelado )?(es|será) (un )?Isolation Forest",
-     "el modelo congelado es OCSVM"),
+    # Invertida el 2026-10-09: el detector desplegado ES un Isolation Forest
+    # recalibrado (verificado por SSH en Sensor1). Lo obsoleto es presentar el
+    # OCSVM de laboratorio como lo que corre hoy. Hablar del OCSVM como modelo
+    # congelado del laboratorio sigue siendo correcto y no se marca.
+    ("OCSVM como modelo desplegado",
+     r"(modelo|detector) (desplegado|vigente|activo|en producci[oó]n|del motor) (es|será) "
+     r"(un |el )?(OCSVM|One-Class SVM)|motor despliega `?ocsvm",
+     "el desplegado es el Isolation Forest recalibrado; el OCSVM es el modelo de laboratorio"),
+    ("bloqueo de 120 s como respuesta vigente",
+     r"(no hay|sin) nivel intermedio",
+     "la respuesta vigente es PERMIT/LIMIT/BLOCK; lo binario fue la modalidad de laboratorio"),
     ("38 perfiles", r"\b38 perfiles",
      "son 44, verificado sobre el CSV congelado"),
     ("57 corridas", r"\b57 corridas",

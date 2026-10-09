@@ -106,7 +106,7 @@ D = {
  "0.0 · ventana sin paquetes", "float ∈ [0,1]",
  "PCAP · bit *More Fragments* y campo *fragment offset* IPv4",
  "completa", "O(n)",
- "efectiva · dejó de ser constante tras la calibración de fragmentación IP real; ver `docs/fase03-dataset/174-cierre-calibracion-fragmentacion-ip-real.md`"),
+ "efectiva · dejó de ser constante tras la calibración de fragmentación IP real; ver [`fase03-dataset/174-cierre-calibracion-fragmentacion-ip-real.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase03-dataset/174-cierre-calibracion-fragmentacion-ip-real.md)"),
 "protocol_diversity_30s": (
  r"\|\{proto(p) : p \in P_{30}\}\| / \|P_{30}\|", r"\|P_{30}\|",
  "0.0 · ventana sin paquetes", "float ∈ (0,1]",
@@ -167,7 +167,7 @@ D = {
  "EVE · ausencia del campo `tls.version`",
  "**no observable en esta configuración**: Suricata 8.0.3 no emite el evento `tls` intermedio de un handshake fallido, así que el numerador nunca puede ser distinto de cero",
  "O(e)",
- "**NO OBSERVABLE** · constante 0.0 en las 1 552 ventanas. Ver `docs/fase03-dataset/175-limite-tls-handshake-failure-ratio.md`"),
+ "**NO OBSERVABLE** · constante 0.0 en las 1 552 ventanas. Ver [`fase03-dataset/175-limite-tls-handshake-failure-ratio.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase03-dataset/175-limite-tls-handshake-failure-ratio.md)"),
 "tls_version_ratio_60s": (
  r"\|\{t : \text{«1.3»} \in version(t)\}\| / \|\{t \in TLS_{60} : version \ne \emptyset\}\|",
  "eventos TLS con versión conocida",

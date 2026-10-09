@@ -18,7 +18,8 @@
   `partition=evaluation_only` y `label=anomaly`; nunca se agrega al CSV normal.
 - `run_v2_anomaly_kali.py` es el equivalente para las anomalías reales
   originadas en Kali (`10.20.0.100`), vía `scripts/campaign/run-f1-kali.sh` —
-  ver `docs/fase03-dataset/` para el detalle de cada familia de ataque.
+  ver el [historial del corpus](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase03-dataset/README.md)
+  (histórico del laboratorio) para el detalle de cada familia de ataque.
 - `audit_multilayer_v2.py` audita el CSV consolidado (esquema, particiones,
   duplicados, cobertura de features) sin escribir nada; es el gate que corren
   también el calibrador (`scripts/modeling/calibrate_multilayer_v2_v1.py`) y
@@ -31,9 +32,9 @@ Extracción por campaña individual: `scripts/features/extract_multilayer_v2.py`
 
 `build_f1_dataset.py` es el ensamblador del dataset **anterior** (14 features,
 `f1-normal-v2`, 145 celdas), superado por `multilayer-v2`. Se conserva sin
-modificar porque construyó la evidencia histórica de `docs/fase03-dataset/01`
-a `05` y `docs/fase04-modelado/01-protocolo-modelado-F1-v2.md`; no se usa
-para trabajo nuevo.
+modificar porque construyó la evidencia histórica de los informes 01 a 05 de la
+fase 3 y del [protocolo de modelado F1-v2](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/f2f0ffdb8f423cf9ac7ec48fb8390011a0d0eece/02-metodologia/historico-laboratorio/fase04-modelado/01-protocolo-modelado-F1-v2.md)
+(registro de investigación); no se usa para trabajo nuevo.
 
 ```bash
 export PPI_ARTIFACTS_ROOT=/srv/ppi-evidence/artifacts
