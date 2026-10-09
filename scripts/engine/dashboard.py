@@ -547,13 +547,14 @@ HTML = """<!doctype html>
   <!--ADMIN-->
   <section id="s-topologia">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg><h2>Topología y flujo</h2></div>
-    <p class="lede-small">El camino que recorre un paquete desde el troncal hasta la decisión. Pulsa un componente para ver qué hace, qué mide y de dónde sale ese número.</p>
+    <p class="lede-small">Tres vistas del sistema. <strong>Operacional</strong>: cómo funciona en vivo (el camino del paquete). <strong>Metodológica</strong>: cómo se construyó (las fases del método). <strong>Entrenamiento</strong>: el ciclo de datos → comparación de modelos → entrenar → reentrenar. Pulsa cualquier componente para ver su detalle y su flujo interno.</p>
     <div class="topo-wrap" id="topoWrap">
       <div class="topo-canvas" id="topoCanvas">
         <div class="topo-bar">
           <div class="range-toggle" id="topoVista">
-            <button data-vista="esencial" class="active">Esencial</button>
-            <button data-vista="completa">Completa</button>
+            <button data-vista="completa" class="active">Operacional</button>
+            <button data-vista="metodologica">Metodológica</button>
+            <button data-vista="entrenamiento">Entrenamiento</button>
           </div>
           <div class="topo-zoom">
             <button id="topoMenos" title="Reducir" aria-label="Reducir">&minus;</button>
@@ -1331,9 +1332,64 @@ const TOPO_VISTAS = {
       { d: 'M1660,206 C1585,270 1585,330 1660,352', desde: 'registro', hasta: 'wazuh', etiqueta: 'syslog', ex: 1642, ey: 336 },
     ],
   },
+  // --- Vista METODOLOGICA: como se CONSTRUYO (las 7 fases del metodo) -------
+  metodologica: {
+    w: 1632, h: 300,
+    packet: 'M32,149 L1608,149',
+    grupos: [
+      { x: 20,   y: 20, w: 210, h: 240, txt: 'Datos y línea base',  n: 1 },
+      { x: 250,  y: 20, w: 210, h: 240, txt: 'Preproceso y features', n: 2 },
+      { x: 480,  y: 20, w: 210, h: 240, txt: 'Modelado híbrido',    n: 3 },
+      { x: 710,  y: 20, w: 210, h: 240, txt: 'Experimento y eval.', n: 4 },
+      { x: 940,  y: 20, w: 210, h: 240, txt: 'Respuesta',           n: 5 },
+      { x: 1170, y: 20, w: 210, h: 240, txt: 'Despliegue',          n: 6 },
+      { x: 1400, y: 20, w: 210, h: 240, txt: 'Validación',          n: 7 },
+    ],
+    nodos: [
+      { id: 'm_datos',  x: 32,   y: 118, w: 196, h: 62, icono: 'disco',    titulo: 'Línea base real',       tag: 'SPAN · PCAP · eve' },
+      { id: 'm_feat',   x: 262,  y: 118, w: 196, h: 62, icono: 'tabla',    titulo: '28 features L3/L4/L7',  tag: 'extractor congelado' },
+      { id: 'm_modelo', x: 492,  y: 118, w: 196, h: 62, icono: 'modelo',   titulo: 'IF + heurísticos',      tag: 'híbrido' },
+      { id: 'm_eval',   x: 722,  y: 118, w: 196, h: 62, icono: 'lupa',     titulo: 'Replay vs Suricata',    tag: '9/9 vs 0/9' },
+      { id: 'm_resp',   x: 952,  y: 118, w: 196, h: 62, icono: 'escudo',   titulo: 'PERMIT/LIMIT/BLOCK',    tag: 'feed firmado' },
+      { id: 'm_desp',   x: 1182, y: 118, w: 196, h: 62, icono: 'nic',      titulo: 'Desplegado en sensor',  tag: 'systemd · replicable' },
+      { id: 'm_valid',  x: 1412, y: 118, w: 196, h: 62, icono: 'ojo',      titulo: 'Interna + externa',     tag: 'demo · TAM' },
+    ],
+    aristas: [
+      { d: 'M228,149 L262,149',   desde: 'm_datos',  hasta: 'm_feat' },
+      { d: 'M458,149 L492,149',   desde: 'm_feat',   hasta: 'm_modelo' },
+      { d: 'M688,149 L722,149',   desde: 'm_modelo', hasta: 'm_eval' },
+      { d: 'M918,149 L952,149',   desde: 'm_eval',   hasta: 'm_resp' },
+      { d: 'M1148,149 L1182,149', desde: 'm_resp',   hasta: 'm_desp' },
+      { d: 'M1378,149 L1412,149', desde: 'm_desp',   hasta: 'm_valid' },
+    ],
+  },
+  // --- Vista ENTRENAMIENTO: el CICLO (datos -> comparar -> entrenar -> reentrenar)
+  entrenamiento: {
+    w: 1632, h: 340,
+    packet: 'M32,149 L1608,149',
+    grupos: [],
+    nodos: [
+      { id: 'e_datos', x: 32,   y: 118, w: 196, h: 62, icono: 'disco',    titulo: 'Datos acumulados',    tag: 'multilayer-v3.csv' },
+      { id: 'e_part',  x: 262,  y: 118, w: 196, h: 62, icono: 'tabla',    titulo: 'Partición 60/20/20',  tag: 'sin fuga temporal' },
+      { id: 'e_comp',  x: 492,  y: 118, w: 196, h: 62, icono: 'modelo',   titulo: 'Comparar 7 modelos',  tag: 'elegir el mejor' },
+      { id: 'e_train', x: 722,  y: 118, w: 196, h: 62, icono: 'cpu',      titulo: 'Entrenar + congelar', tag: 'umbral α=0,05' },
+      { id: 'e_eval',  x: 952,  y: 118, w: 196, h: 62, icono: 'lupa',     titulo: 'Evaluar FPR / TPR',   tag: 'test ciego + Kali' },
+      { id: 'e_antes', x: 1182, y: 118, w: 196, h: 62, icono: 'ciclo',    titulo: 'Antes vs después',    tag: '¿mejora?' },
+      { id: 'e_dec',   x: 1412, y: 118, w: 196, h: 62, icono: 'decision', titulo: 'Desplegar o conservar', tag: 'criterio' },
+    ],
+    aristas: [
+      { d: 'M228,149 L262,149',   desde: 'e_datos', hasta: 'e_part' },
+      { d: 'M458,149 L492,149',   desde: 'e_part',  hasta: 'e_comp' },
+      { d: 'M688,149 L722,149',   desde: 'e_comp',  hasta: 'e_train' },
+      { d: 'M918,149 L952,149',   desde: 'e_train', hasta: 'e_eval' },
+      { d: 'M1148,149 L1182,149', desde: 'e_eval',  hasta: 'e_antes' },
+      { d: 'M1378,149 L1412,149', desde: 'e_antes', hasta: 'e_dec' },
+      { d: 'M1510,180 C1510,300 130,300 130,180', desde: 'e_dec', hasta: 'e_datos', tipo: 'descarte', etiqueta: 'reentrenar: mensual / por deriva', ex: 815, ey: 296 },
+    ],
+  },
 };
 
-let topoVista = 'esencial';
+let topoVista = 'completa';
 // Mapa de artefactos: los ficheros de cada componente. Se pide solo cuando se
 // activa "Ver archivos" -es de admin- y se guarda; los chips abiertos se
 // recuerdan entre repintados.
@@ -1479,6 +1535,86 @@ const TOPO_TEXTO = {
   panel: {
     que: 'Lee el registro del motor, el estado de los servicios y la tabla nftables. No ejecuta ninguna acción.',
     nota: 'Solo lectura a propósito. Un panel que pudiera desbloquear una IP sería otro camino hacia el cortafuegos, y con su propia superficie de ataque.',
+  },
+  // ---- Vista METODOLOGICA (como se construyo) ----
+  m_datos: {
+    que: 'F1. La línea base se genera y captura en la propia red por espejo SPAN: no es un dataset público. La recalibración sobre tráfico propio bajó el FPR del 92,4 % al 4,45 %.',
+    nota: 'Datos reales, no simulados: cierra el salto simulación→realidad que casi ningún trabajo del estado del arte aborda.',
+  },
+  m_feat: {
+    que: 'F2. El extractor congelado convierte los paquetes y las señales de Suricata en 28 variables multicapa (L3/L4/L7) por IP iniciadora, en ventanas de 10/30/60 s. Sin imputación: las ausencias son ceros estructurales.',
+    nota: 'Limpieza = deduplicación del espejo + validación fail-closed. 27 de 28 variables con variación observable.',
+  },
+  m_modelo: {
+    que: 'F3. Detector híbrido: Isolation Forest recalibrado (umbral −0,568892) + heurísticos deterministas. La ablación lo justifica: modelo solo 6/9, heurísticos 7/9, combinado 9/9.',
+    nota: 'El modelo se elige comparando 7 candidatos (no a ciegas); el umbral se calibra en validación y se congela antes del test.',
+  },
+  m_eval: {
+    que: 'F4. Evaluación justa por replay del MISMO PCAP a CyberFlow y a Suricata, anclando al reloj del paquete. Resultado sin firma: 9/9 vs 0/9.',
+    nota: 'Complementario a Suricata: él bloquea lo que tiene firma; CyberFlow detecta lo que no la tiene.',
+  },
+  m_resp: {
+    que: 'F5 (aporte). La decisión se convierte en acción: PERMIT/LIMIT/BLOCK con feed firmado (ed25519), caducidad escalada, aplicada por agentes en los hosts (nftables).',
+    nota: 'Actuar, no solo detectar: es lo que casi ningún artículo del estado del arte alcanza.',
+  },
+  m_desp: {
+    que: 'F6 (aporte). Desplegado sobre el sensor con systemd, instalación turnkey offline, verificado en un segundo sensor. 58 corridas sin caídas.',
+    nota: 'Nadie de los 15 artículos despliega su sistema en operación real.',
+  },
+  m_valid: {
+    que: 'F7 (aporte). Validación interna (demo técnica en vivo) + externa (TAM + juicio de expertos, Cronbach/Aiken).',
+    nota: 'Se demuestra y se acredita; no son solo palabras.',
+  },
+  // ---- Vista ENTRENAMIENTO (el ciclo) ----
+  e_datos: {
+    que: 'El punto de partida: la línea base que el temporizador va acumulando con tráfico limpio verificado. El modelo envejece, por eso se reentrena con datos nuevos.',
+    nota: 'Solo tráfico benigno verificado entra al entrenamiento del detector de una sola clase.',
+  },
+  e_part: {
+    que: 'Se divide en entrenamiento/validación/prueba (~60/20/20). Tres grupos porque, además de entrenar, hay que calibrar el umbral: la validación lo fija y la prueba queda ciega.',
+    flujoTit: 'Partición sin fuga temporal',
+    flujo: [
+      {paso: 'Bloques horarios', fichero: 'particionar_linea_base.py', garantia: 'reparto cíclico que cubre el ciclo diario'},
+      {paso: 'Banda de guarda 60 s', fichero: 'particionar_linea_base.py', garantia: 'ninguna ventana comparte paquetes entre grupos'},
+    ],
+    nota: 'No se usa 80/20 porque el umbral se calibra en validación; elegirlo sobre el test inflaría los resultados.',
+  },
+  e_comp: {
+    que: 'La "prueba previa" que pide el jurado: se comparan 7 modelos candidatos con métricas y se elige el mejor por desempeño medido, NO a ciegas.',
+    flujoTit: 'Comparación y selección',
+    flujo: [
+      {paso: '7 candidatos', fichero: 'compare_frozen_models_metrics.py', garantia: 'mismas features, misma partición'},
+      {paso: 'Ablación', fichero: '31-ABLACION-RESULTADO.md', garantia: 'modelo 6/9 · heurísticos 7/9 · combinado 9/9'},
+      {paso: 'Significancia', fichero: 'significancia_modelos.py', garantia: 'McNemar + corrección de Holm'},
+    ],
+    nota: 'De aquí sale la justificación de por qué este modelo (Isolation Forest híbrido) y no otro.',
+  },
+  e_train: {
+    que: 'Se entrena el Isolation Forest sobre el conjunto de train y se congela el umbral como el percentil α=0,05 de validación (score_samples −0,568892).',
+    flujoTit: 'Entrenar y congelar',
+    flujo: [
+      {paso: 'Entrenar IF', fichero: 'entrenar_preliminar.py', garantia: '500 árboles, solo tráfico normal'},
+      {paso: 'Congelar umbral', fichero: 'entrenar_preliminar.py', garantia: 'desde validación, antes de ver el test'},
+      {paso: 'Modelo + manifiesto', fichero: 'if_recalibrado_desplegable.joblib', garantia: 'hashes que fijan la reproducibilidad'},
+    ],
+    nota: 'El umbral se congela ANTES de tocar el test: elegirlo después sería trampa.',
+  },
+  e_eval: {
+    que: 'Se mide el FPR sobre el test ciego (objetivo 5 %, medido 4,45 %) y la detección (TPR) sobre ataques reales de la Kali (100 % HTTP, 69 % global).',
+    nota: 'En operación el FPR sube (~25 %): el tráfico pesado se apiña cerca del umbral. Declarado como limitación.',
+  },
+  e_antes: {
+    que: 'Lo que pide el profesor: comparar el modelo ANTES vs DESPUÉS del reentrenamiento. Muestra FPR, umbral, features y TPR con sus variaciones.',
+    flujoTit: 'Comparación antes / después',
+    flujo: [
+      {paso: 'Tabla de cambios', fichero: 'comparar_reentrenamiento.py', garantia: 'métricas previas vs posteriores + Δ'},
+      {paso: 'Evidencia', fichero: 'comparacion-reentrenamiento.md', garantia: 'queda en negro sobre blanco'},
+    ],
+    nota: 'Sin esta comparación, el reentrenamiento sería una caja negra: hay que VER qué cambió.',
+  },
+  e_dec: {
+    que: 'Se despliega el modelo reentrenado SOLO si mejora o iguala la cobertura y no empeora el FPR; si no, se conserva el actual. Siempre con rollback.',
+    nota: 'Cadencia: mensual como suelo, pero el disparador real es la deriva del FPR, y es obligatorio al cambiar la red. Ver RUNBOOK-REENTRENAMIENTO-DEMO.md y PLAN-REENTRENAMIENTO.md.',
   },
 };
 
@@ -1797,8 +1933,11 @@ on('topoVista', 'click', (ev) => {
   topoVista = b.dataset.vista;
   document.querySelectorAll('#topoVista button').forEach(x => x.classList.toggle('active', x === b));
   topoZoom = null;   // cada vista tiene otro tamano: se reajusta
-  // Si el nodo seleccionado no existe en la vista nueva, se cae al motor.
-  if (!TOPO_VISTAS[topoVista].nodos.some(n => n.id === topoSel)) topoSel = 'motor';
+  // Si el nodo seleccionado no existe en la vista nueva, se cae al primero.
+  if (!TOPO_VISTAS[topoVista].nodos.some(n => n.id === topoSel)) {
+    const prim = TOPO_VISTAS[topoVista].nodos.find(n => !n.host) || TOPO_VISTAS[topoVista].nodos[0];
+    topoSel = prim ? prim.id : null;
+  }
   if (topoUltimo) renderTopologia(topoUltimo);
 });
 
