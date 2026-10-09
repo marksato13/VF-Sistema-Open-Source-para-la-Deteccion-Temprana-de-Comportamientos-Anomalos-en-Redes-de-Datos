@@ -69,5 +69,25 @@ class DecisionesAEntradas(unittest.TestCase):
         self.assertEqual(e2[0]["hasta"], 1100 + 1800)
 
 
+class VersionDeUmbrales(unittest.TestCase):
+    """La etiqueta del feed debe describir las reglas del código instalado."""
+
+    def test_sin_argumento_usa_la_del_codigo(self):
+        v, aviso = pf.version_umbrales("")
+        self.assertEqual(v, pf.heuristicos.VERSION_UMBRALES)
+        self.assertIsNone(aviso)
+
+    def test_argumento_coincidente_no_avisa(self):
+        v, aviso = pf.version_umbrales(pf.heuristicos.VERSION_UMBRALES)
+        self.assertEqual(v, pf.heuristicos.VERSION_UMBRALES)
+        self.assertIsNone(aviso)
+
+    def test_argumento_viejo_avisa_y_gana_el_codigo(self):
+        # El caso real de Sensor1: la unidad pasaba 2026-10-06.1 con el motor en .2.
+        v, aviso = pf.version_umbrales("2026-10-06.1")
+        self.assertEqual(v, pf.heuristicos.VERSION_UMBRALES)
+        self.assertIn("2026-10-06.1", aviso)
+
+
 if __name__ == "__main__":
     unittest.main()
