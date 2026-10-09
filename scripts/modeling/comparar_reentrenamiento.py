@@ -16,7 +16,7 @@ modifica; esto demuestra el MECANISMO del reentrenamiento, no lo despliega.
         [--salida artifacts/preliminar/comparacion-reentrenamiento.md]
 """
 from __future__ import annotations
-import argparse, json
+import argparse, json, sys
 from pathlib import Path
 
 
@@ -62,6 +62,8 @@ def main() -> int:
     ap.add_argument("--despues", type=Path, required=True, help="informe del modelo reentrenado")
     ap.add_argument("--tpr-antes", type=Path, help="informe de puntuar_deteccion del modelo actual")
     ap.add_argument("--tpr-despues", type=Path, help="informe de puntuar_deteccion del reentrenado")
+    ap.add_argument("--fpr-antes", type=Path, help="evaluación pareada del actual sobre normal reservado")
+    ap.add_argument("--fpr-despues", type=Path, help="evaluación pareada del candidato sobre EL MISMO normal")
     ap.add_argument("--salida", type=Path, help="guardar la tabla en Markdown")
     a = ap.parse_args()
 
@@ -76,6 +78,21 @@ def main() -> int:
     umb_A = g(A, "umbral_decision_function", "umbral")
     umb_B = g(B, "umbral_decision_function", "umbral")
 
+    mismo_esquema = (g(A, "schema", "esquema") is not None
+                    and g(A, "schema", "esquema") == g(B, "schema", "esquema")
+                    and g(A, "n_features") == g(B, "n_features")
+                    and A.get("features") == B.get("features"))
+    misma_base = (A.get("entrada_sha256") is not None
+                  and A.get("entrada_sha256") == B.get("entrada_sha256"))
+    mismo_normal = False
+    if a.fpr_antes and a.fpr_despues:
+        FA, FB = leer(a.fpr_antes), leer(a.fpr_despues)
+        mismo_normal = (FA.get("csv_sha256") is not None
+                        and FA.get("csv_sha256") == FB.get("csv_sha256")
+                        and FA.get("particion") == FB.get("particion")
+                        and FA.get("tipo") == FB.get("tipo") == "normal"
+                        and FA.get("features") == FB.get("features") == A.get("features"))
+        fprt_A, fprt_B = FA.get("fpr"), FB.get("fpr")
     filas = [
         ("Esquema (features)", g(A, "schema", "esquema", defecto="—"), g(B, "schema", "esquema", defecto="—"), "—"),
         ("Nº de features", g(A, "n_features", defecto="—"), g(B, "n_features", defecto="—"), "—"),
@@ -89,10 +106,15 @@ def main() -> int:
         ("FPR test (ciego)", pct(fprt_A), pct(fprt_B), delta(fprt_A, fprt_B, "menor")),
     ]
 
+    tprA = tprB = None
+    mismo_ataque = False
     if a.tpr_antes and a.tpr_despues:
         TA, TB = leer(a.tpr_antes), leer(a.tpr_despues)
-        tprA = g(TA, "tpr", "tpr_global", "deteccion")
-        tprB = g(TB, "tpr", "tpr_global", "deteccion")
+        tprA = g(TA, "tpr", "tpr_global", "tasa_deteccion")
+        tprB = g(TB, "tpr", "tpr_global", "tasa_deteccion")
+        mismo_ataque = (TA.get("csv_sha256") is not None and TA.get("csv_sha256") == TB.get("csv_sha256")
+                       and TA.get("tipo") == TB.get("tipo") == "anomalias"
+                       and TA.get("features") == TB.get("features") == A.get("features"))
         filas.append(("TPR (detección)", pct(tprA), pct(tprB), delta(tprA, tprB, "mayor")))
 
     anchos = [max(len(str(r[i])) for r in [("Métrica", "ANTES", "DESPUÉS", "Δ (después−antes)")] + filas) for i in range(4)]
@@ -108,18 +130,29 @@ def main() -> int:
     for r in filas:
         out.append(fila(r))
 
-    # criterio de aceptación (del PLAN-REENTRENAMIENTO)
-    acepta = None
-    if fnum(fprt_A) is not None and fnum(fprt_B) is not None:
-        acepta = fnum(fprt_B) <= fnum(fprt_A) + 1e-9
     out.append("")
-    out.append("**Criterio (PLAN-REENTRENAMIENTO):** desplegar solo si el reentrenado "
-               "iguala o mejora cobertura y NO empeora el FPR.")
-    if acepta is not None:
-        out.append("**FPR:** %s" % ("✅ no empeora → candidato a desplegar (revisar también cobertura/ARP/DNS)."
-                                    if acepta else "⚠️ empeora el FPR → NO desplegar; quedarse con el modelo actual."))
+    out.append("**Comparabilidad:** mismo esquema/orden: %s; misma base de entrenamiento: %s; "
+               "mismo normal reservado (SHA-256): %s; mismos ataques (SHA-256): %s." %
+               ("sí" if mismo_esquema else "NO", "sí" if misma_base else "NO",
+                "sí" if mismo_normal else "NO", "sí" if mismo_ataque else "NO"))
+    out.append("**Criterio:** cobertura/TPR ≥ actual y FPR ≤ actual **sobre conjuntos comparables**. "
+               "Un FPR de otro test es descriptivo, no prueba de mejora.")
+    completo = (mismo_esquema and mismo_normal and mismo_ataque
+                and fnum(fprt_A) is not None and fnum(fprt_B) is not None
+                and fnum(tprA) is not None and fnum(tprB) is not None)
+    if not completo:
+        out.append("**Veredicto: EVALUACIÓN INCOMPLETA — NO PROMOVER.** Falta un conjunto común "
+                   "o una métrica necesaria. Comparar ambos modelos sobre el mismo hold-out y los "
+                   "mismos episodios antes de emitir un juicio de promoción.")
+    elif fnum(fprt_B) <= fnum(fprt_A) + 1e-9 and fnum(tprB) >= fnum(tprA) - 1e-9:
+        out.append("**Veredicto: candidato para revisión manual**, no despliegue automático. "
+                   "Verificar además cobertura por familia y estabilidad.")
+    else:
+        out.append("**Veredicto: NO PROMOVER.** Empeora FPR o TPR en la comparación pareada.")
 
     texto = "\n".join(out) + "\n"
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     print(texto)
     if a.salida:
         a.salida.parent.mkdir(parents=True, exist_ok=True)

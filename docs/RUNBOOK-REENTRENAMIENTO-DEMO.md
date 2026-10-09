@@ -1,87 +1,69 @@
-# Runbook — Demostración del reentrenamiento (ensayo en seco)
+# Reentrenamiento demostrable — ensayo en seco
 
-**Para la validación interna.** El profesor pide que el **entrenamiento y el
-reentrenamiento** sean **visibles, medibles y reproducibles** (no una caja negra):
-hay que mostrar la entrada de datos, la partición, la comparación de modelos, la
-selección, las métricas, el reentrenamiento y **qué cambia (antes/después)**.
+**Estado:** el contrato y el pipeline se probaron de punta a punta **con datos sintéticos aislados** mediante `python -m unittest discover -s tests -p test_retraining_demo.py`. Eso demuestra que los comandos y formatos encajan; **no es una medición nueva de Sensor1**. La ejecución con datos reales aún debe programarse en una copia aislada. El modelo vivo no se modifica.
 
-> **Este runbook NO despliega nada y NO toca el modelo congelado.** Demuestra el
-> **mecanismo** del ciclo sobre una copia (`/tmp` o `artifacts/preliminar/`). El
-> despliegue real está en `PLAN-REENTRENAMIENTO.md` y va **después** de la validación.
+## Qué se muestra al profesor
 
-## El ciclo, en una imagen
-
-```
-datos acumulados (línea base)  →  partición sin fuga  →  entrenar IF
-   →  congelar umbral (percentil α=0,05 en validación)  →  evaluar (FPR test, TPR Kali)
-   →  COMPARAR antes vs después  →  ¿pasa el criterio?  →  (desplegar | conservar)
+```text
+normal acumulado → partición con guarda → IF candidato entrenado solo con train
+                  → umbral fijado en validation → FPR test descriptivo
+normal EXTERNO y ataques NO usados para ajustar → puntuar ANTES y DESPUÉS
+                  → tabla pareada + decisión manual (o evaluación incompleta)
 ```
 
-## 1. Por qué se reentrena (disparadores) — política definida
+El modelo en Sensor1 está **congelado**, no aprende cada paquete. Un candidato se prepara periódicamente o tras deriva sostenida; nunca se promociona automáticamente. No confundir la tabla de **siete modelos históricos** con una comparación antes/después del reentrenamiento operativo.
 
-Se reentrena en **dos casos**, nunca "porque sí":
+## Precondiciones
 
-| Disparador | Condición concreta |
-|---|---|
-| **Programado** | Semanal (o mensual) sobre la línea base que `cyberflow-acumular.timer` va acumulando. |
-| **Por deriva (*drift*)** | Cuando el **FPR en operación** se sostiene por encima del objetivo, o cuando entra **tráfico nuevo representativo** (nuevas entidades/servicios) que el modelo actual no vio. |
+1. Usar un entorno aislado con Python/scikit-learn/joblib compatibles con el artefacto desplegado. Verificar **SHA-256 antes de `joblib.load`**; un joblib es código ejecutable. No entrenar una VM productiva ocupada ni sustituir el modelo vivo. Dejar al menos espacio para el CSV acumulado (hoy >300 MB), partición, modelo y logs.
+2. Copiar, con autorización y por ruta interna, **solo los artefactos necesarios**: esquema v2, CSV de línea base, modelo Pipeline desplegado, manifiesto operativo y `ensayo-if-v2.json`. Este último es el informe ANTES real de Sensor1 (SHA-256 `ec3ed06304fdbe6367ab1b69e40498980e6eed6df890f67ae5c4001f98c86421`), no el inexistente `artifacts/model/if_recalibrado_desplegable.json`.
+3. Reservar **dos CSV nuevos** no usados por ninguno de los candidatos para entrenar, calibrar, seleccionar reglas ni ajustar umbral: uno de normalidad y otro de episodios anómalos, con las 28 columnas del esquema v2. Validar procedencia/ventanas/etiquetas y guardar hashes; si no existen, la comparación de promoción queda **incompleta**. Un cambio a esquema v3/L2 exige reentrenamiento y evaluación aparte; no comparar sus scores crudos con v2.
 
-En ambos casos el reentrenamiento es **en seco primero**: solo se despliega si
-**mejora o iguala** sin empeorar el FPR (criterio del paso 5).
+## Comandos en la copia aislada (desde la raíz del producto)
 
-## 2. Pasos reproducibles (en el sensor, sin tocar producción)
+Los nombres entre `<...>` son rutas de entrada verificadas por el operador; no son datos incluidos en Git. El ejemplo de salida en `out` tampoco se publica automáticamente.
 
 ```bash
-cd /home/m4rk/cyberflow
-V=$(date +%Y%m%d)
+mkdir -p /tmp/cf-reentreno-demo
+R=/tmp/cf-reentreno-demo
+sha256sum <modelo-IF-desplegado.joblib> <manifest-IF.json> <ensayo-if-v2.json> <normal-entrenamiento.csv> <normal-externo.csv> <ataques-externos.csv>
 
-# (1) Datos: la línea base acumulada (no se toca el modelo vivo)
-ls -la artifacts/linea-base/multilayer-v3.csv
-
-# (2) Partición sin fuga temporal (bloques horarios + banda de guarda)
 python3 scripts/dataset/particionar_linea_base.py \
-  --entrada artifacts/linea-base/multilayer-v3.csv \
-  --salida  /tmp/recal/particionado-$V.csv \
-  --informe /tmp/recal/particion-$V.json
+  --entrada <normal-entrenamiento.csv> --salida "$R/particionado.csv" \
+  --informe "$R/particion.json" --solo-elegibles
 
-# (3) Entrenar + congelar umbral (percentil α=0,05 en validación) → informe con FPR
 python3 scripts/modeling/entrenar_preliminar.py \
-  --entrada /tmp/recal/particionado-$V.csv \
-  --schema  configs/features/multilayer-v3.json \
-  --salida  artifacts/preliminar/if-$V.joblib \
-  --informe artifacts/preliminar/if-$V.json
+  --entrada "$R/particionado.csv" --schema configs/features/multilayer-v2.json \
+  --salida "$R/candidato.joblib" --informe "$R/candidato.json"
 
-# (4) (opcional) Detección: puntuar los ataques de la Kali con el modelo nuevo
-python3 scripts/modeling/puntuar_deteccion.py \
-  --modelo artifacts/preliminar/if-$V.joblib \
-  --anomalias artifacts/dataset/multilayer-v2-anomalies.csv \
-  --informe artifacts/preliminar/det-$V.json      # si el script lo soporta
+# Los DOS modelos puntúan el MISMO normal externo, sin volver a calibrar umbrales.
+python3 scripts/modeling/puntuar_deteccion.py --modelo <modelo-IF-desplegado.joblib> \
+  --manifest <manifest-IF.json> --detector-name if_recalibrado_2026_09 \
+  --schema configs/features/multilayer-v2.json --csv <normal-externo.csv> \
+  --tipo normal --informe "$R/fpr-antes.json"
+python3 scripts/modeling/puntuar_deteccion.py --modelo "$R/candidato.joblib" \
+  --csv <normal-externo.csv> --tipo normal --informe "$R/fpr-despues.json"
 
-# (5) COMPARAR antes (modelo congelado) vs después (reentrenado)
+# Los DOS modelos puntúan los MISMOS episodios nuevos (si existen).
+python3 scripts/modeling/puntuar_deteccion.py --modelo <modelo-IF-desplegado.joblib> \
+  --manifest <manifest-IF.json> --detector-name if_recalibrado_2026_09 \
+  --schema configs/features/multilayer-v2.json --csv <ataques-externos.csv> \
+  --tipo anomalias --informe "$R/tpr-antes.json"
+python3 scripts/modeling/puntuar_deteccion.py --modelo "$R/candidato.joblib" \
+  --csv <ataques-externos.csv> --tipo anomalias --informe "$R/tpr-despues.json"
+
 python3 scripts/modeling/comparar_reentrenamiento.py \
-  --antes   artifacts/model/if_recalibrado_desplegable.json \
-  --despues artifacts/preliminar/if-$V.json \
-  --salida  artifacts/preliminar/comparacion-$V.md
-#   (añade --tpr-antes/--tpr-despues si corriste el paso 4)
+  --antes <ensayo-if-v2.json> --despues "$R/candidato.json" \
+  --fpr-antes "$R/fpr-antes.json" --fpr-despues "$R/fpr-despues.json" \
+  --tpr-antes "$R/tpr-antes.json" --tpr-despues "$R/tpr-despues.json" \
+  --salida "$R/comparacion.md"
 ```
 
-## 3. Qué demuestra cada artefacto (evidencia para el profesor)
+`puntuar_deteccion.py` ya acepta ambos formatos: Pipeline activo con `--manifest --detector-name --schema` y paquete preliminar (`modelo` + `escalador`). No hace imputación: una feature inválida detiene el ensayo. Produce `csv_sha256` para impedir emparejar fuentes diferentes. Al comparar un modelo entrenado con datos nuevos, el FPR de los informes de entrenamiento **no es directamente pareable**: para decidir se usan exclusivamente los dos informes `fpr-*` sobre el mismo hold-out independiente.
 
-| Artefacto | Qué acredita |
-|---|---|
-| `particion-$V.json` | Cómo se separó train/validación/prueba **sin fuga temporal** |
-| `if-$V.json` | Que el entrenamiento **existe y es reproducible** (α, umbral, FPR, hashes) |
-| `det-$V.json` | La **detección (TPR)** del modelo nuevo sobre ataques reales |
-| `comparacion-$V.md` | **Qué cambió** (antes/después) y si **se conserva o se sustituye** el modelo |
+## Interpretación y cierre
 
-## 4. Criterio de aceptación (del `PLAN-REENTRENAMIENTO.md`)
-
-Desplegar el modelo reentrenado **solo si**: cobertura ≥ actual **y** FPR ≤ actual
-(y mejoran ARP/DNS). Si no, **se conserva el congelado** (hay rollback en un `cp`).
-
-## 5. Comparación de modelos (la "prueba previa" que pide el profesor)
-
-La selección del modelo actual **ya está evidenciada** (no se eligió "el mejor" a
-ciegas): ver `scripts/analysis/compare_frozen_models_metrics.py` (7 candidatos) y la
-**ablación** (modelo 6/9 · heurísticos 7/9 · combinado 9/9). Esa tabla es la que se
-muestra como "pruebas previas / comparación de modelos".
+- Conjuntos de train/validation/test, hashes, orden de features, hiperparámetros y umbrales deben acompañar la tabla. El informe preliminar ANTES (`ensayo-if-v2.json`) tiene FPR test **0,044527** y umbral `decision_function=-0,06889178778834089`; el Pipeline vivo usa `score_samples=-0,568892`. No restar umbrales de escalas distintas como una «mejora».
+- `comparar_reentrenamiento.py` informa **EVALUACIÓN INCOMPLETA — NO PROMOVER** si falta alguno de los pares externos, difiere el hash de los CSV o cambia el esquema/orden. Si FPR no empeora y TPR no baja en pares válidos, devuelve **candidato a revisión manual**, no despliegue. La cobertura por familia, estabilidad y ausencia de fuga se evalúan antes de cualquier decisión real.
+- El ensayo sintético de `tests/test_retraining_demo.py` genera datos temporales y verifica partición, entrenamiento, puntuación de ambos formatos y rechazo de reportes sin par o con hash distinto. **No usar sus cifras en la tesis.** Un resultado real desfavorable también es evidencia válida y conserva el modelo desplegado.
+- El reentrenamiento v3 con L2 se rige por `docs/PLAN-REENTRENAMIENTO.md` y **queda fuera de la demo en seco**. No reiniciar `ppi-motor` ni editar joblib, manifiesto o `.toml` vivo durante esta prueba.
