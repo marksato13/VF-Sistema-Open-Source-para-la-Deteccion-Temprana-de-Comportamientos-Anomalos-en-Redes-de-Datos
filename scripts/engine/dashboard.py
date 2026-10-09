@@ -972,7 +972,7 @@ function on(id, evento, fn) {
 const TOUR_PASOS = [
   { sel: '#kpis', t: 'Las cifras clave', d: 'Cuatro números de un vistazo: entidades vigiladas, ventanas analizadas por hora, cuántos scores rozan el umbral y las alertas reales de la última hora.' },
   { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo → decisión → bloqueo. Pulsa cualquier componente para ver qué hace y qué mide.' },
-  { sel: '#s-modelo', t: 'El modelo y su umbral', d: 'Un One-Class SVM entrenado solo con tráfico normal. Su umbral separa lo normal de lo anómalo; aquí ves sus métricas.' },
+  { sel: '#s-modelo', t: 'El modelo y su umbral', d: 'El detector desplegado (su nombre real aparece en la tarjeta Detector) aprende solo con tráfico normal; su umbral, fijado en validación, separa lo normal de lo anómalo. Aquí ves sus métricas.' },
   { sel: '#s-scores', t: 'Distribución de scores', d: 'No solo si alertó o no, sino cuánto margen hubo respecto al umbral. Rojo = ALERT, verde = PERMIT.' },
   { sel: '#s-decisiones', t: 'Las decisiones', d: 'Cada ventana con su decisión, su score frente al umbral (la mini-barra) y el motivo. Filtrable por IP y exportable.' },
   { sel: '#s-simulacion', t: 'Escenarios guiados', d: 'Comandos listos para provocar tráfico normal o un ataque y ver cómo responde el modelo. El panel no ejecuta: copias el comando y observas.' },
@@ -1080,7 +1080,7 @@ async function refresh() {
     if (modelEl) {
       const m = status.model;
       modelEl.innerHTML = [
-        card('Detector', 'OCSVM'),
+        card('Detector', DETECTOR_LABEL[m.detector_name] || m.detector_name),
         card('Umbral', m.threshold.toFixed(4), 'accent'),
         card('FPR benigno', (m.test_fpr * 100).toFixed(2) + '%'),
         card('Detección global', (m.detection_rate * 100).toFixed(1) + '%', 'accent'),
