@@ -58,8 +58,14 @@ def sha256(ruta: Path) -> str:
 
 
 def _modulo(nombre: str, ruta: Path):
+    if nombre in sys.modules:
+        return sys.modules[nombre]
     spec = importlib.util.spec_from_file_location(nombre, ruta)
     mod = importlib.util.module_from_spec(spec)
+    # Registrar ANTES de ejecutar: el extractor usa @dataclass con anotaciones
+    # diferidas, que resuelve buscando su módulo en sys.modules. Sin esto falla en un
+    # proceso limpio (así se detectó, en Sensor1), aunque pase si otro import ya lo cargó.
+    sys.modules[nombre] = mod
     spec.loader.exec_module(mod)
     return mod
 
