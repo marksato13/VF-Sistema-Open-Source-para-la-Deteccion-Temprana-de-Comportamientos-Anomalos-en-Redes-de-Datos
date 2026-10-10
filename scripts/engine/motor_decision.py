@@ -41,10 +41,11 @@ LAN y DMZ (``ip_forward=1`` + nftables), asi que un ALERT real del modelo
 otra maquina, sin credencial nueva entre VMs. Ese helper agrega una tabla
 nftables SEPARADA y aditiva (prioridad -300 en el hook forward), con
 expiracion nativa del bloqueo (sin cron ni limpieza manual) y su propia
-whitelist interna (nunca confia solo en el llamador). Solo hay UN umbral
-calibrado (PM-multilayer-v2-v1); no existe un nivel intermedio tipo LIMIT
-todavia porque eso exigiria un segundo umbral sin calibrar -- se documenta
-como limitacion, no se inventa un numero.
+whitelist interna (nunca confia solo en el llamador). Ese enforcement LOCAL es
+binario: el motor tiene un solo umbral calibrado y no inventa un segundo. El
+nivel intermedio LIMIT existe en el enforcement DISTRIBUIDO (modalidad vigente
+por SPAN): publicar_feed.py traduce un ALERT del modelo en LIMIT y el de un
+heuristico en la accion de su regla, y el agente del host lo aplica.
 """
 
 from __future__ import annotations

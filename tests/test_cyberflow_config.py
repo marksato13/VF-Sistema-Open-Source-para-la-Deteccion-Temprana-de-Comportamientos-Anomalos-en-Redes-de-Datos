@@ -113,6 +113,15 @@ class Generacion(unittest.TestCase):
         p = cc.render(cfg(panel__activo=True))["ppi-dashboard.service"]
         self.assertIn("--manifest-path /no/existe/cyberflow/artifacts/model/manifest.json", p)
 
+    def test_el_panel_recibe_el_mismo_detector_que_el_motor(self):
+        # Sin --detector-name el panel caia al valor por omision (ocsvm_scaled) y,
+        # con el motor ejecutando otro detector, mostraba umbral, FPR y deteccion
+        # del modelo equivocado y contaba sus ALERT con el nombre equivocado.
+        c = cfg(panel__activo=True, motor__detector="if_recalibrado_2026_09")
+        u = cc.render(c)
+        self.assertIn("--detector-name if_recalibrado_2026_09", u["ppi-dashboard.service"])
+        self.assertIn("--detector-name if_recalibrado_2026_09", u["ppi-motor.service"])
+
     def test_el_panel_recibe_los_escenarios(self):
         # Sin --escenarios explicito el panel caeria al valor por omision, que se
         # resuelve contra WorkingDirectory; pasarlo con la raiz lo hace
