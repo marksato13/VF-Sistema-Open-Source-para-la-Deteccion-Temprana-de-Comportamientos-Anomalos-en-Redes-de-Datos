@@ -684,7 +684,7 @@ HTML = """<!doctype html>
 
   <section id="s-vivo">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 2-6 2 3h6"/></svg><h2>Datos en vivo: del registro a la variable</h2></div>
-    <p class="lede-small">Captura en vivo, como Wireshark, de las dos fuentes que salen del mismo puerto espejo (SPAN): las <strong>tramas PCAP</strong> que escribe tcpdump y los <strong>eventos de eve.json</strong> que escribe Suricata tras procesar esas mismas tramas. Cada segundo llega lo nuevo de cada fichero. Una fila aparece en cuanto se captura con lo que se sabe de ella sola (provisional) y pasa a <strong>confirmada</strong> cuando la cadena del motor (atribución a quien inicia el flujo, ventanas de 10/30/60 s) la procesa: entonces muestra el valor real de la variable en su ventana.</p>
+    <p class="lede-small">Las dos fuentes del puerto espejo, en vivo: <strong>tramas PCAP</strong> (tcpdump) y <strong>eventos eve.json</strong> (Suricata). Cada fila aparece al capturarse, <em>provisional</em>, y queda <strong>confirmada</strong> cuando el motor la procesa y calcula el valor real de la variable.</p>
     <div class="vivo-medidor" id="vivoMedidor">
       <div class="vm-estado"><span class="vm-dot" id="vmDot"></span><b id="vmTitulo">Conectando&hellip;</b><span id="vmSub"></span></div>
       <div class="vm-fuente"><div class="vm-cab">PCAP &middot; tcpdump</div><div class="vm-num"><b id="vmPcapTasa">—</b> tramas/s</div><svg id="vmPcapSpark" class="vm-spark" viewBox="0 0 120 28" preserveAspectRatio="none"></svg><div class="vm-pie" id="vmPcapPie">—</div></div>
@@ -698,7 +698,7 @@ HTML = """<!doctype html>
         <button data-vtab="matriz">Matriz de trazabilidad</button>
       </div>
       <input type="text" id="vivoFiltro" class="ip-filter" placeholder="Filtrar: IP, protocolo, variable...">
-      <label class="vivo-chk" id="vivoTodosLbl" title="Por omisión solo se listan los registros que aportan a alguna variable"><input type="checkbox" id="vivoTodos"> mostrar también lo que no aporta</label>
+      <label class="vivo-chk" id="vivoTodosLbl" title="Por omisión solo se listan los registros que aportan a alguna variable"><input type="checkbox" id="vivoTodos"> ver todo</label>
       <label class="vivo-chk" title="Bajar solo con cada registro nuevo, como Wireshark"><input type="checkbox" id="vivoSeguir" checked> seguir</label>
       <button id="vivoPausa" class="export-btn" type="button">Pausar</button>
       <button id="vivoLimpiar" class="export-btn" type="button">Limpiar</button>
@@ -1863,6 +1863,25 @@ let topoUltimo = null;
 // llevaba por delante el primer pintado entero del panel.
 let varDatos = null;
 
+// pcaps_ilegibles es un ACUMULADO desde que arranco el motor, no el estado de
+// ahora. El caso conocido -tcpdump -Z deja el primer fichero de cada arranque a
+// tcpdump:tcpdump y el motor no puede leerlo- da PermissionError una sola vez
+// y deja el contador en 1 hasta el siguiente reinicio del motor: es ambar, no
+// rojo. Cualquier otro motivo, o mas de uno, si es rojo.
+function ilegiblesEstado(al) {
+  const ile = al.pcaps_ilegibles;
+  if (ile == null) return { estado: '', valor: 'sin medir', datos: { 'Ficheros ilegibles': 'sin medir' } };
+  if (!ile) return { estado: 'ok', valor: 'anillo íntegro', datos: { 'Ficheros ilegibles': '0' } };
+  const motivos = al.pcaps_ilegibles_motivo || {};
+  const tipos = Object.keys(motivos);
+  const conocido = ile === 1 && tipos.length === 1 && tipos[0] === 'PermissionError';
+  const datos = { 'Ficheros ilegibles (acumulado desde que arrancó el motor)': String(ile) };
+  tipos.forEach(t => { datos['Motivo ' + t] = motivos[t]; });
+  if (conocido) datos['Lectura'] = 'primer fichero tras arrancar tcpdump (-Z lo deja a tcpdump:tcpdump); el resto del anillo se lee';
+  return { estado: conocido ? 'warn' : 'bad',
+           valor: conocido ? 'anillo legible · 1 histórico' : ile + ' ficheros ilegibles', datos: datos };
+}
+
 function topoEstado(id, s) {
   const sv = s.services || {};
   const cm = s.capture_metrics;
@@ -1890,13 +1909,11 @@ function topoEstado(id, s) {
       };
     case 'captura': {
       const on = !!sv['ppi-motor-capture.service'];
-      const ile = al.pcaps_ilegibles;
-      const mal = on && ile != null && ile > 0;
+      const il = ilegiblesEstado(al);
       return {
-        estado: !on ? 'bad' : (mal ? 'bad' : 'ok'),
-        valor: !on ? 'inactivo' : (ile == null ? 'activo' : (mal ? num(ile) + ' ficheros ilegibles' : 'anillo íntegro')),
-        datos: { 'Servicio': on ? 'activo' : 'inactivo',
-                 'Ficheros ilegibles': ile == null ? 'sin medir' : num(ile) },
+        estado: !on ? 'bad' : il.estado,
+        valor: !on ? 'inactivo' : il.valor,
+        datos: Object.assign({ 'Servicio': on ? 'activo' : 'inactivo' }, il.datos),
       };
     }
     case 'suricata': {
@@ -1939,12 +1956,8 @@ function topoEstado(id, s) {
       };
     }
     case 'pcap': {
-      const ile = al.pcaps_ilegibles;
-      return {
-        estado: ile == null ? '' : (ile > 0 ? 'bad' : 'ok'),
-        valor: ile == null ? 'sin medir' : (ile > 0 ? num(ile) + ' ilegibles' : 'íntegro'),
-        datos: { 'Ficheros que el motor no pudo leer': ile == null ? 'sin medir' : num(ile) },
-      };
+      const il = ilegiblesEstado(al);
+      return { estado: il.estado, valor: il.valor, datos: il.datos };
     }
     case 'eve': {
       const drops = cm ? (cm.kernel_drops + cm.kernel_ifdrops) : null;
@@ -2845,16 +2858,16 @@ function vivoResumenTexto() {
   const cuenta = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => v + ' ' + k).join(' · ') || 'nada aún';
   const mi = vivo.motorInfo;
   if (vivo.tab === 'eve') {
-    res.textContent = 'Eventos recibidos por tipo: ' + cuenta(vivo.tipos) + '. ' +
-      (todos ? 'Se listan todos.' : 'Se listan solo los que aportan: el motor usa http, dns (consulta y NXDOMAIN) y tls.');
-    pie.textContent = 'Valor: confirmado por la cadena del motor' + (mi ? ' (último cálculo ' + vivoHora(mi.calculado) + ' UTC)' : '') +
-      ' · * parcial: la ventana de 60 s empieza antes del tramo leído · gris en cursiva: provisional.';
+    res.textContent = 'Recibidos: ' + cuenta(vivo.tipos) + '. ' +
+      (todos ? 'Se listan todos.' : 'Se listan los que usa el motor (http, dns, tls).');
+    pie.textContent = 'Verde: confirmado por el motor' + (mi ? ' (' + vivoHora(mi.calculado) + ' UTC)' : '') +
+      ' · cursiva: provisional · *: ventana parcial.';
   } else {
-    res.textContent = 'Tramas recibidas: ' + cuenta(vivo.estados) + '. ' + (todos ? 'Se listan todas.'
-      : 'Se listan las que aportan con una señal propia (SYN, SYN-ACK, RST, ICMP, fragmento, ARP); el resto suma a packet_rate y byte_rate y se ve con «mostrar también lo que no aporta».');
-    pie.textContent = 'El motor procesa cada fichero del anillo al cerrarse (rota cada 15 s): hasta entonces la fila es provisional y el valor «…»' +
-      (mi && mi.pcap.tramo ? '. Último cálculo hasta ' + vivoHora(mi.pcap.tramo.hasta) + ' UTC' : '') +
-      ' · borde: color de protocolo como en Wireshark (gris SYN/FIN, rojo RST).';
+    res.textContent = 'Recibidas: ' + cuenta(vivo.estados) + '. ' + (todos ? 'Se listan todas.'
+      : 'Se listan las de señal propia (SYN, SYN-ACK, RST, ICMP, fragmento, ARP).');
+    pie.textContent = '«…»: pendiente hasta que el fichero se cierre (cada 15 s)' +
+      (mi && mi.pcap.tramo ? ' · motor al día hasta ' + vivoHora(mi.pcap.tramo.hasta) + ' UTC' : '') +
+      ' · colores como en Wireshark.';
   }
 }
 
