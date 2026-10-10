@@ -33,6 +33,10 @@ tail -f logs/motor_decision.log
 journalctl -u ppi-motor.service -f
 ```
 
+![Figura G.1. Las decisiones del motor en vivo, con su score y el umbral](img/guia/G-01-decisiones.png)
+
+*Figura G.1. Las decisiones del motor en vivo, con su score y el umbral*
+
 Cada decisión es una línea JSON:
 
 ```json
@@ -90,8 +94,20 @@ ssh -L 8788:127.0.0.1:8788 usuario@sensor
 # y abra https://127.0.0.1:8788 (o http:// si no hay login configurado)
 ```
 
+![Figura G.2. Panel, cuenta admin en modo operativo: salud, actividad, bloqueos, decisiones y scores](img/guia/G-02-panel-operativo.png)
+
+*Figura G.2. Panel, cuenta `admin` en modo operativo: salud, actividad, bloqueos, decisiones y scores*
+
+![Figura G.3. Panel en modo desarrollador: topología, variables, alcance y modelo](img/guia/G-03-panel-desarrollador.png)
+
+*Figura G.3. Panel en modo desarrollador: topología, variables, alcance y modelo*
+
 Es de **solo lectura** para todo rol: no ejecuta ninguna acción. El `lector` no recibe
 las secciones de desarrollador (el servidor responde 403).
+
+![Figura G.4. Cuenta lector: sin secciones de desarrollador](img/guia/G-04-panel-lector.png)
+
+*Figura G.4. Cuenta `lector`: sin secciones de desarrollador*
 
 **Verlo desde la red.** El login **no sustituye** a la lista de orígenes: exponerlo exige
 además decir quién puede llegar:
@@ -124,6 +140,10 @@ sudo nft list set inet cyberflow cyberflow_limitados
 sudo nft delete element inet cyberflow cyberflow_bloqueados { 10.10.20.15 }
 ```
 
+![Figura G.5. Sets de bloqueo y limitación en el host protegido](img/guia/G-05-desbloquear.png)
+
+*Figura G.5. Sets de bloqueo y limitación en el host protegido*
+
 El agente vuelve a sincronizar los sets con el feed en cada ciclo, así que una IP que
 siga en el feed reaparecerá hasta que caduque su entrada.
 
@@ -144,6 +164,10 @@ python3 scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml 
 sudo python3 scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml --escribir
 sudo systemctl daemon-reload && sudo systemctl restart ppi-motor
 ```
+
+![Figura G.6. Un cambio de configuración validado y aplicado](img/guia/G-06-config.png)
+
+*Figura G.6. Un cambio de configuración validado y aplicado*
 
 ### Permisos del operador
 

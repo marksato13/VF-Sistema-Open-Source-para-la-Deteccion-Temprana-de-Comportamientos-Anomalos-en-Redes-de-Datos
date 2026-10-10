@@ -73,6 +73,10 @@ monitor session 1 source interface Gi1/0/23 both
 monitor session 1 destination interface Gi2/0/19 encapsulation replicate
 ```
 
+![Figura 2.1. Sesión SPAN configurada en el switch](img/instalacion/02-01-span-switch.png)
+
+*Figura 2.1. Sesión SPAN configurada en el switch*
+
 **`encapsulation replicate` no es opcional**: conserva la etiqueta 802.1Q
 original, y sin ella se pierde la distribución por VLAN.
 
@@ -102,6 +106,10 @@ variables de tasa.
 show interfaces GigabitEthernet2/0/19 counters errors
 ```
 
+![Figura 2.2. Contadores del puerto destino con OutDiscards en 0](img/instalacion/02-02-outdiscards.png)
+
+*Figura 2.2. Contadores del puerto destino con `OutDiscards` en 0*
+
 **Si `OutDiscards` deja de ser 0, el dataset de esa sesión está contaminado.**
 Compruébelo antes y después de cada captura y regístrelo: es evidencia.
 
@@ -120,6 +128,10 @@ necesita los cuatro valores:
 | Cambios de dirección MAC | **Aceptar** |
 | Transmisiones falsificadas | **Aceptar** |
 
+![Figura 2.3. Grupo de puertos de la interfaz de captura: VLAN 4095 y las tres opciones en «Aceptar»](img/instalacion/02-03-grupo-puertos.png)
+
+*Figura 2.3. Grupo de puertos de la interfaz de captura: VLAN 4095 y las tres opciones en «Aceptar»*
+
 **Lo que manda es el ajuste del grupo de puertos, no el del vSwitch.** Ponerlo
 en el vSwitch y no en el grupo de puertos es la causa más común del fallo.
 
@@ -137,6 +149,10 @@ interfaz en modo promiscuo.
 ```bash
 ip -br link            # identifique la interfaz POR SU MAC, no por su nombre
 ```
+
+![Figura 3.1. La interfaz de captura identificada por su MAC y sin dirección IP](img/instalacion/03-01-ip-br-link.png)
+
+*Figura 3.1. La interfaz de captura identificada por su MAC y sin dirección IP*
 
 > **Linux renumera las interfaces.** Al añadir o quitar un adaptador, lo que hoy
 > es `ens37` puede no serlo mañana. Anote la MAC y compárela con la que muestra
@@ -184,6 +200,14 @@ cat /sys/class/net/ens37/statistics/rx_packets; sleep 10
 cat /sys/class/net/ens37/statistics/rx_packets
 sudo tcpdump -i ens37 -e -nn -c 20
 ```
+
+![Figura 4.1. rx_packets crece entre dos lecturas: llega el espejo](img/instalacion/04-01-rx-packets.png)
+
+*Figura 4.1. `rx_packets` crece entre dos lecturas: llega el espejo*
+
+![Figura 4.2. tcpdump -e: MAC de origen y destino y etiquetas vlan N](img/instalacion/04-02-tcpdump-vlan.png)
+
+*Figura 4.2. `tcpdump -e`: MAC de origen y destino y etiquetas `vlan N`*
 
 Tiene que cumplirse **todo**:
 
@@ -244,6 +268,14 @@ sudo systemctl enable --now suricata
 wc -l /var/log/suricata/eve.json; sleep 60; wc -l /var/log/suricata/eve.json
 ```
 
+![Figura 5.1. suricata -T sin errores y el servicio activo](img/instalacion/05-01-suricata-test.png)
+
+*Figura 5.1. `suricata -T` sin errores y el servicio activo*
+
+![Figura 5.2. eve.json crece y contiene direcciones de la red](img/instalacion/05-02-eve-crece.png)
+
+*Figura 5.2. `eve.json` crece y contiene direcciones de la red*
+
 El fichero tiene que **crecer** y contener direcciones de su red.
 
 > El paquete de Ubuntu trae `/etc/default/suricata` con `RUN=no`,
@@ -279,6 +311,22 @@ frecuencia ni límite de tamaño**:
 > El resto de esta sección explica qué hace por dentro, por si prefiere ir a
 > mano o algo falla.
 
+![Figura 6.1. Asistente configurar.sh: interfaz, MAC y red detectadas](img/instalacion/06-01-asistente.png)
+
+*Figura 6.1. Asistente `configurar.sh`: interfaz, MAC y red detectadas*
+
+![Figura 6.2. instalar.sh --comprobar: diagnóstico previo sin fallos](img/instalacion/06-02-instalar-comprobar.png)
+
+*Figura 6.2. `instalar.sh --comprobar`: diagnóstico previo sin fallos*
+
+![Figura 6.3. instalar.sh: pasos 1 a 9 en verde](img/instalacion/06-03-instalar.png)
+
+*Figura 6.3. `instalar.sh`: pasos 1 a 9 en verde*
+
+![Figura 6.4. Final de la instalación: «Instalado» y los siguientes pasos](img/instalacion/06-04-instalado.png)
+
+*Figura 6.4. Final de la instalación: «Instalado» y los siguientes pasos*
+
 
 ```bash
 git clone <este-repositorio> cyberflow && cd cyberflow
@@ -294,6 +342,10 @@ python3 -m venv .venv
 ```bash
 sha256sum -c docs/dataset/SHA256SUMS
 ```
+
+![Figura 6.5. Todos los artefactos publicados verificados (OK)](img/instalacion/06-05-sha256.png)
+
+*Figura 6.5. Todos los artefactos publicados verificados (`OK`)*
 
 Si un solo hash no cuadra, pare.
 
@@ -314,6 +366,10 @@ python3 scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml 
 python3 scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml --mostrar
 ```
 
+![Figura 6.6. Configuración validada antes de escribir nada](img/instalacion/06-06-config-mostrar.png)
+
+*Figura 6.6. Configuración validada antes de escribir nada*
+
 **Genere e instale las unidades:**
 
 ```bash
@@ -324,6 +380,24 @@ sudo systemctl enable --now cyberflow-capture-nic ppi-motor-capture ppi-motor
 
 Guarda una copia `.anterior` de cada unidad que sobrescribe.
 
+### El panel: clave de sesión, certificado y cuentas
+
+El instalador no crea las cuentas: las contraseñas se teclean, nunca van en un
+fichero ni en un argumento. Cuatro comandos, una vez:
+
+```bash
+sudo python3 scripts/setup/cyberflow_usuarios.py --clave-sesion
+sudo python3 scripts/setup/cyberflow_usuarios.py --certificado --nombre <IP-o-nombre-del-sensor>
+sudo python3 scripts/setup/cyberflow_usuarios.py --crear admin  --rol admin
+sudo python3 scripts/setup/cyberflow_usuarios.py --crear lector --rol lector
+```
+
+![Figura 6.7. Clave de sesión, certificado y cuentas admin y lector del panel](img/instalacion/06-07-cuentas-panel.png)
+
+*Figura 6.7. Clave de sesión, certificado y cuentas `admin` y `lector` del panel*
+
+`admin` ve también las secciones de desarrollador; `lector`, solo la operación.
+
 ---
 
 ## 7 · Comprobar que funciona
@@ -332,6 +406,10 @@ Guarda una copia `.anterior` de cada unidad que sobrescribe.
 bash scripts/setup/doctor.sh                # todo de una vez; solo lee
 ```
 
+![Figura 7.1. doctor.sh: los ocho bloques y el resumen](img/instalacion/07-01-doctor.png)
+
+*Figura 7.1. `doctor.sh`: los ocho bloques y el resumen*
+
 O pieza a pieza:
 
 ```bash
@@ -339,6 +417,14 @@ systemctl is-active cyberflow-capture-nic ppi-motor-capture ppi-motor
 ls -la /var/lib/ppi-motor-capture/          # ficheros live-*.pcap rotando
 tail -f logs/motor_decision.log             # decisiones, una por línea JSON
 ```
+
+![Figura 7.2. El anillo de PCAP rotando cada 15 s](img/instalacion/07-02-anillo.png)
+
+*Figura 7.2. El anillo de PCAP rotando cada 15 s*
+
+![Figura 7.3. El motor decidiendo: una línea JSON por IP y ventana](img/instalacion/07-03-decisiones.png)
+
+*Figura 7.3. El motor decidiendo: una línea JSON por IP y ventana*
 
 Una decisión tiene esta forma:
 
@@ -355,6 +441,10 @@ En modo bloqueo, además:
 ```bash
 sudo nft list set inet ppi_enforce bloqueadas
 ```
+
+![Figura 7.4. El panel: pantalla de acceso](img/instalacion/07-04-panel-login.png)
+
+*Figura 7.4. El panel: pantalla de acceso*
 
 ---
 
@@ -445,6 +535,10 @@ es lo correcto.
 > de control —STP, CARP, pfsync— y el modelo aprendería que lo normal es el
 > latido de los switches.
 
+![Figura 8.1. Resultado de la recalibración: FPR en validación y prueba, umbral congelado](img/instalacion/08-01-recalibracion.png)
+
+*Figura 8.1. Resultado de la recalibración: FPR en validación y prueba, umbral congelado*
+
 ---
 
 ## Anexo A · Instalar sin salida a Internet
@@ -491,6 +585,14 @@ pip download --platform manylinux2014_x86_64 --python-version 3.12 \
 # transfiera la carpeta y luego, en el sensor:
 .venv/bin/python -m pip install --no-index --find-links ruedas -r requirements-model.txt
 ```
+
+![Figura A.1. Bundle offline preparado: debs/, ruedas/ y python3.14.tar.gz](img/instalacion/A-01-bundle.png)
+
+*Figura A.1. Bundle offline preparado: `debs/`, `ruedas/` y `python3.14.tar.gz`*
+
+![Figura A.2. Instalación sin Internet desde ruedas/](img/instalacion/A-02-offline.png)
+
+*Figura A.2. Instalación sin Internet desde `ruedas/`*
 
 ---
 

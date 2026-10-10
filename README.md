@@ -79,6 +79,10 @@ Desde un clon recién hecho, **sin red ni sensor**:
 bash scripts/demo.sh          # abre http://127.0.0.1:8788
 ```
 
+![Figura R.1. Modo demo: el panel con decisiones de ejemplo, sin red ni sensor](docs/img/readme/R-01-demo.png)
+
+*Figura R.1. Modo demo: el panel con decisiones de ejemplo, sin red ni sensor*
+
 > Solo necesita **Python 3.11+** (librería estándar, **sin dependencias que
 > instalar** ni salida a Internet). Verificado en Ubuntu 24.04 con Python 3.12.
 
@@ -233,6 +237,10 @@ sudo bash scripts/setup/desinstalar.sh             # quita CyberFlow
 sudo bash scripts/setup/desinstalar.sh --todo      # y además Suricata
 sudo bash scripts/setup/instalar.sh                # vuelve a dejarlo todo
 ```
+
+![Figura R.2. desinstalar.sh --simular y el resultado «Limpio»](docs/img/readme/R-02-desinstalar.png)
+
+*Figura R.2. `desinstalar.sh --simular` y el resultado «Limpio»*
 
 Nunca toca la red, la sesión SPAN del switch, el hipervisor ni el usuario:
 no los creó CyberFlow, y romperlos deja la máquina ciega o incomunicada.
