@@ -18,6 +18,11 @@ estructurada (Suricata la escribe tras procesar esas mismas tramas).
 No escribe nada salvo un temporal con las líneas de eve.json que analiza, y no
 ejecuta ninguna acción. Los valores se calculan sobre el tramo reciente: en las
 ventanas cuyo inicio queda antes del tramo, el valor es parcial y se marca así.
+
+`flujo()` es la otra mitad: la lista «tipo Wireshark» que el panel pide cada
+segundo. Lee solo lo escrito desde un cursor (también el fichero que tcpdump
+está escribiendo) y devuelve cada trama y cada evento con lo que se sabe de él
+solo; el panel lo confirma después con `calcular()` por la misma clave.
 """
 from __future__ import annotations
 
@@ -27,6 +32,7 @@ import json
 import math
 import os
 import re
+import struct
 import sys
 import tempfile
 import time
@@ -240,11 +246,14 @@ def notable(o) -> bool:
                 or o.fragmented or o.protocol == 1)
 
 
+def nombre_flags(f: int) -> str:
+    return "-".join(n for b, n in ((TCP_SYN, "SYN"), (TCP_FIN, "FIN"), (TCP_RST, "RST"),
+                                   (TCP_PSH, "PSH"), (TCP_ACK, "ACK")) if f & b)
+
+
 def evento_paquete(p, o) -> str:
     if p.protocol == 6:
-        f = p.tcp_flags
-        nombre = "-".join(n for b, n in ((TCP_SYN, "SYN"), (TCP_FIN, "FIN"), (TCP_RST, "RST"),
-                                         (TCP_PSH, "PSH"), (TCP_ACK, "ACK")) if f & b) or "TCP"
+        nombre = nombre_flags(p.tcp_flags) or "TCP"
         if o.retransmission:
             return f"{nombre} retransmisión"
         return f"{nombre} {p.tcp_payload_length} B datos" if p.tcp_payload_length else nombre
@@ -282,6 +291,37 @@ def aportes_evento(a) -> tuple[str, list[tuple[str, str]]]:
 
 
 _KIND_DE_EVENTO = {"http": {"http"}, "dns": {"dns_query", "dns_nxdomain"}, "tls": {"tls"}}
+
+
+def _apps_de(eventos, red) -> list:
+    """Pasa las líneas por el parser de eventos del motor (v2.load_app_observations)."""
+    if not eventos:
+        return []
+    fd, tmp = tempfile.mkstemp(prefix="cyberflow-vivo-", suffix=".json")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
+            for _, linea, _ in eventos:
+                fh.write(linea + "\n")
+        return v2.load_app_observations(Path(tmp), red)
+    finally:
+        os.unlink(tmp)
+
+
+def _emparejar_eve(eventos, apps):
+    """Cada observación con su evento: el parser las emite en el orden del fichero."""
+    pares, k, ignorados = [], 0, collections.Counter()
+    for pos, _linea, ev in eventos:
+        tipo = ev.get("event_type")
+        if k < len(apps):
+            a = apps[k]
+            if (a.kind in _KIND_DE_EVENTO.get(tipo, ())
+                    and a.timestamp == v2.parse_eve_timestamp(ev["timestamp"])
+                    and a.entity_ip in (ev.get("src_ip"), ev.get("dest_ip"))):
+                pares.append((pos, ev, a))
+                k += 1
+                continue
+        ignorados[tipo or "sin tipo"] += 1
+    return pares, ignorados
 
 
 # ----------------------------------------------------------------- cálculo
@@ -373,28 +413,8 @@ def calcular(eve_path: Path, cfg: dict, segundos_pcap: float = 45, segundos_eve:
 
     # --- eve.json -------------------------------------------------------------
     eventos = eve_reciente(eve_path, segundos_eve) if eve_path and eve_path.exists() else []
-    apps = []
-    if eventos:
-        fd, tmp = tempfile.mkstemp(prefix="cyberflow-vivo-", suffix=".json")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
-                for _, linea, _ in eventos:
-                    fh.write(linea + "\n")
-            apps = v2.load_app_observations(Path(tmp), red)
-        finally:
-            os.unlink(tmp)
-    pares_eve, k, ignorados = [], 0, collections.Counter()
-    for pos, linea, ev in eventos:
-        tipo = ev.get("event_type")
-        if k < len(apps):
-            a = apps[k]
-            if (a.kind in _KIND_DE_EVENTO.get(tipo, ())
-                    and a.timestamp == v2.parse_eve_timestamp(ev["timestamp"])
-                    and a.entity_ip in (ev.get("src_ip"), ev.get("dest_ip"))):
-                pares_eve.append((pos, ev, a))
-                k += 1
-                continue
-        ignorados[tipo or "sin tipo"] += 1
+    apps = _apps_de(eventos, red)
+    pares_eve, ignorados = _emparejar_eve(eventos, apps)
 
     # --- filas reales de features (v3 = v2 + capa 2) --------------------------
     marcas = [o.timestamp for o in obs] + [a.timestamp for a in apps] + [x.timestamp for x in l2]
@@ -501,12 +521,13 @@ def calcular(eve_path: Path, cfg: dict, segundos_pcap: float = 45, segundos_eve:
 _CACHE: dict = {}
 
 
-def calcular_con_cache(eve_path: Path, cfg: dict, todos: bool = False, ttl: float = 8.0) -> dict:
+def calcular_con_cache(eve_path: Path, cfg: dict, todos: bool = False, ttl: float = 8.0,
+                       limite: int = 150) -> dict:
     """Evita recalcular en cada refresco del panel: la clave son los ficheros y su tamaño."""
     try:
         firma = (tuple((f.name, f.stat().st_mtime) for f in
                        pcap_recientes(Path(cfg["directorio"]), cfg["anillo_glob"], 45)),
-                 eve_path.stat().st_size if eve_path and eve_path.exists() else 0, todos)
+                 eve_path.stat().st_size if eve_path and eve_path.exists() else 0, todos, limite)
     except OSError:
         firma = None
     ahora = time.time()
@@ -514,6 +535,349 @@ def calcular_con_cache(eve_path: Path, cfg: dict, todos: bool = False, ttl: floa
     if previo is not None and firma is not None and _CACHE.get("firma") == firma \
             and ahora - _CACHE.get("t", 0) < ttl:
         return previo
-    valor = calcular(eve_path, cfg, todos=todos)
+    valor = calcular(eve_path, cfg, todos=todos, limite=limite)
     _CACHE.update(valor=valor, firma=firma, t=ahora)
     return valor
+
+
+# ------------------------------------------------------------------- flujo
+# La vista «tipo Wireshark»: cada llamada lee SOLO lo que se ha escrito desde la
+# anterior, a partir de un cursor que guarda el navegador (fichero, byte y número
+# de trama del anillo; byte de eve.json). El servidor no guarda estado, así que
+# dos administradores mirando a la vez no se pisan.
+#
+# Incluye el fichero del anillo que tcpdump está escribiendo: la unidad lo lanza
+# con -U, que vacía cada paquete al disco, así que la trama aparece en cuanto se
+# captura. Se lee hasta el último registro completo y el resto queda para la
+# siguiente llamada.
+#
+# Lo que se puede saber trama a trama sin estado se muestra en el acto, marcado
+# como PROVISIONAL: la entidad y el aporte según las flags. Lo que necesita
+# contexto -quién inició el flujo, si es retransmisión, el valor de la variable
+# en su ventana- solo lo sabe la cadena del motor, que trabaja con ficheros
+# cerrados; el panel lo cruza después con /api/vivo por la clave fichero#trama
+# (PCAP) o por el byte (eve.json), y la fila pasa a «confirmada».
+
+ETHERTYPE = {0x0806: "ARP", 0x86DD: "IPv6", 0x88CC: "LLDP", 0x8809: "LACP", 0x88A8: "QinQ"}
+MAX_LECTURA = 8 << 20          # bytes por fuente y llamada
+MAX_RETRASO = 32 << 20         # si se acumula más, se salta al presente y se dice
+MAX_CAPTURADA = 262144         # snaplen máximo de tcpdump; más es un registro roto
+
+
+def _leer_registros(f: Path, desde: int, max_bytes: int = MAX_LECTURA):
+    """Tramas completas de un PCAP a partir del byte `desde`. Devuelve (tramas, byte siguiente)."""
+    with f.open("rb") as fh:
+        cab = fh.read(24)
+        if len(cab) < 24:
+            return [], 0                       # tcpdump aún no escribió la cabecera
+        endian, div = v2._pcap_format(cab[:4])
+        pos = max(desde, 24)
+        fh.seek(pos)
+        datos = fh.read(max_bytes)
+    reg = struct.Struct(endian + "IIII")
+    tramas, i = [], 0
+    while i + 16 <= len(datos):
+        seg, frac, cap, _ = reg.unpack_from(datos, i)
+        if cap > MAX_CAPTURADA:
+            raise ValueError("registro PCAP corrupto")
+        if i + 16 + cap > len(datos):
+            break                              # registro a medio escribir
+        tramas.append((seg + frac / div, datos[i + 16:i + 16 + cap]))
+        i += 16 + cap
+    return tramas, pos + i
+
+
+def _ethertype(frame: bytes) -> tuple[int, int, int]:
+    """(ethertype, VLAN exterior, desplazamiento de la carga)."""
+    if len(frame) < 14:
+        return 0, 0, 14
+    et, off, vlan = struct.unpack("!H", frame[12:14])[0], 14, 0
+    while et in (0x8100, 0x88A8) and len(frame) >= off + 4:
+        if not vlan:
+            vlan = struct.unpack("!H", frame[off:off + 2])[0] & 0x0FFF
+        et = struct.unpack("!H", frame[off + 2:off + 4])[0]
+        off += 4
+    return et, vlan, off
+
+
+def _feat(feature: str, aporte: str) -> dict:
+    return {"feature": feature, "aporte": aporte, "ventana_s": ventana_de(feature),
+            "uso": ("modelo" if feature in EN_MODELO else
+                    "conteo" if feature in CONTEOS else "capa 2 (fuera del scoring)")}
+
+
+def _trama_flujo(ts, frame, fichero, n, red, protos, excluida) -> tuple[dict, object]:
+    et, vlan, off = _ethertype(frame)
+    r = {"k": f"{fichero}#{n}", "fichero": fichero, "trama": n, "ts": ts, "hora": _hora(ts),
+         "vlan": vlan or None, "mac_src": v3.format_mac(frame[6:12]),
+         "mac_dst": v3.format_mac(frame[0:6]), "capturada": len(frame),
+         "ip_src": "", "ip_dst": "", "puerto_src": 0, "puerto_dst": 0, "flags": "",
+         "longitud": None, "ttl": None, "entidad": None, "aportes": [], "notable": False}
+    ctx = v3.parse_con_contexto(ts, frame) if et == 0x0800 else None
+    if ctx is not None:
+        p = ctx.packet
+        r.update(ip_src=p.src_ip, ip_dst=p.dst_ip, puerto_src=p.src_port, puerto_dst=p.dst_port,
+                 proto=PROTO.get(p.protocol, f"IP/{p.protocol}"), longitud=p.ip_length, ttl=p.ttl,
+                 ip_id=ctx.ip_id, fragmentada=p.fragmented)
+        syn = syn_ack = rst = False
+        if p.protocol == 6:
+            r.update(flags=nombre_flags(p.tcp_flags), seq=p.tcp_seq, datos=p.tcp_payload_length)
+            syn = bool(p.tcp_flags & TCP_SYN) and not p.tcp_flags & TCP_ACK
+            syn_ack = bool(p.tcp_flags & TCP_SYN) and bool(p.tcp_flags & TCP_ACK)
+            rst = bool(p.tcp_flags & TCP_RST)
+            r["info"] = (f"{p.src_port} → {p.dst_port} [{r['flags'] or '—'}]"
+                         + (f" {p.tcp_payload_length} B datos" if p.tcp_payload_length else ""))
+        elif p.protocol == 17:
+            r["info"] = f"{p.src_port} → {p.dst_port}"
+        elif p.protocol == 1:
+            r["info"] = f"tipo {p.icmp_type}"
+        else:
+            r["info"] = f"protocolo IP {p.protocol}"
+        en_src, en_dst = v2._in_scope(p.src_ip, red), v2._in_scope(p.dst_ip, red)
+        if p.protocol in protos:
+            r["estado"] = "plano de control"
+            return r, None
+        if not (en_src or en_dst):
+            r["estado"] = "fuera de la red de entidades"
+            return r, ctx
+        # Sin estado no se sabe quién inició el flujo: el SYN lo inicia quien lo
+        # envía y el SYN-ACK lo recibe quien lo inició; en lo demás, la IP de la red.
+        entidad = p.dst_ip if (syn_ack and en_dst) or not en_src else p.src_ip
+        r["entidad"] = entidad
+        if excluida(entidad):
+            r["estado"] = "entidad excluida"
+            return r, ctx
+        a = [_feat("packet_rate_10s", "+1"), _feat("byte_rate_10s", f"+{p.ip_length} B")]
+        if syn:
+            a += [_feat("flow_attempt_rate_10s", "+1"), _feat("syn_rate_10s", "+1"),
+                  _feat("syn_completion_ratio_10s", "+1 intento")]
+        if syn_ack:
+            a.append(_feat("syn_completion_ratio_10s", "+1 completado"))
+        if rst:
+            a.append(_feat("rst_ratio_10s", "+1 RST"))
+        if p.fragmented:
+            a.append(_feat("fragment_ratio_10s", "+1"))
+        if p.protocol == 1:
+            a.append(_feat("icmp_ratio_10s", "+1"))
+        if 500 <= p.ip_length <= 1500:
+            a.append(_feat("large_ip_ratio_10s", "+1"))
+        r.update(estado="aporta", aportes=a,
+                 notable=syn or syn_ack or rst or p.fragmented or p.protocol == 1)
+        return r, ctx
+    r["proto"] = ETHERTYPE.get(et, f"0x{et:04x}")
+    if et == 0x0806 and len(frame) >= off + 28:
+        oper = struct.unpack("!H", frame[off + 6:off + 8])[0]
+        spa = ".".join(str(b) for b in frame[off + 14:off + 18])
+        tpa = ".".join(str(b) for b in frame[off + 24:off + 28])
+        r.update(ip_src=spa, ip_dst=tpa, info=(f"¿quién tiene {tpa}? dile a {spa}" if oper == 1
+                                               else f"{spa} está en {r['mac_src']}"))
+        o2 = v3.l2_en_alcance(ts, frame, red, protos)
+        if o2 is None:
+            r["estado"] = "fuera de la red de entidades"
+        elif excluida(spa):
+            r.update(entidad=spa, estado="entidad excluida")
+        elif o2.arp_request:
+            r.update(entidad=spa, estado="aporta", notable=True,
+                     aportes=[_feat("arp_request_rate_10s", "+1"),
+                              _feat("unique_src_mac_30s", o2.src_mac)])
+        else:
+            r.update(entidad=spa, estado="respuesta ARP (no aporta)")
+        return r, None
+    r.update(info="", estado="sin IPv4 (no aporta)")
+    return r, None
+
+
+def _info_evento(ev: dict) -> str:
+    tipo = ev.get("event_type")
+    if tipo == "http":
+        h = ev.get("http") or {}
+        return (f"{h.get('http_method', '?')} {h.get('hostname', '')}{h.get('url', '')}"
+                f" → {h.get('status', '—')}")
+    if tipo == "dns":
+        d = ev.get("dns") or {}
+        nombre = v2._dns_query_name(d)
+        if d.get("type") == "answer":
+            return f"respuesta {d.get('rcode', '')} {nombre}".strip()
+        return f"consulta {d.get('rrtype', '')} {nombre}".strip()
+    if tipo == "tls":
+        t = ev.get("tls") or {}
+        return f"{t.get('version') or 'sin versión'} SNI {t.get('sni') or '—'}"
+    if tipo == "flow":
+        f = ev.get("flow") or {}
+        return (f"{ev.get('app_proto', '')} {f.get('pkts_toserver', 0)}+{f.get('pkts_toclient', 0)} pkts, "
+                f"{f.get('state', '')}").strip()
+    if tipo == "alert":
+        return (ev.get("alert") or {}).get("signature", "")
+    if tipo == "stats":
+        return "estadísticas internas de Suricata"
+    return ""
+
+
+def _flujo_pcap(cfg, cur, red, protos, excluida, todos, max_filas) -> tuple[dict, dict]:
+    directorio, patron = Path(cfg["directorio"]), cfg["anillo_glob"]
+    ficheros = sorted(directorio.glob(patron))
+    salida = {"ficheros": len(ficheros), "activo": None, "tam_activo": 0, "nuevas": 0,
+              "bytes": 0, "omitido_bytes": 0, "aportan": 0, "estados": {}, "filas": [],
+              "ultimo_ts": None, "ilegibles": []}
+    if not ficheros:
+        return salida, {}
+    nombres = [f.name for f in ficheros]
+    activo = ficheros[-1]
+    salida["activo"] = activo.name
+    try:
+        salida["tam_activo"] = activo.stat().st_size
+    except OSError:
+        pass
+    pf, po, pn = cur.get("pf"), int(cur.get("po") or 0), int(cur.get("pn") or 0)
+    if pf is None:
+        idx, po, pn = len(ficheros) - 1, 0, 0       # primera llamada: el fichero en curso
+    elif pf in nombres:
+        idx = nombres.index(pf)
+    else:                                           # podado: el siguiente que siga existiendo
+        idx = next((i for i, n in enumerate(nombres) if n > pf), len(ficheros) - 1)
+        po, pn = 0, 0
+    try:
+        pendiente = sum(f.stat().st_size for f in ficheros[idx:]) - po
+    except OSError:
+        pendiente = 0
+    if pendiente > MAX_RETRASO:                     # demasiado atrás: al presente
+        salida["omitido_bytes"] = pendiente
+        idx, po, pn = len(ficheros) - 1, 0, 0
+
+    estados = collections.Counter()
+    filas, contextos, presupuesto = [], [], MAX_LECTURA
+    while idx < len(ficheros) and presupuesto > 0:
+        f = ficheros[idx]
+        try:
+            tramas, nuevo = _leer_registros(f, po, presupuesto)
+        except (OSError, ValueError) as exc:
+            salida["ilegibles"].append({"fichero": f.name, "motivo": type(exc).__name__})
+            tramas, nuevo = [], None
+        for ts, frame in tramas:
+            pn += 1
+            r, ctx = _trama_flujo(ts, frame, f.name, pn, red, protos, excluida)
+            filas.append(r)
+            if ctx is not None:
+                contextos.append((ctx, r))
+        if nuevo is not None:
+            presupuesto -= max(0, nuevo - max(po, 24))
+            salida["bytes"] += max(0, nuevo - max(po, 24))
+        if idx == len(ficheros) - 1:
+            po = nuevo if nuevo is not None else po
+            break
+        try:
+            completo = nuevo is None or nuevo >= f.stat().st_size
+        except OSError:
+            completo = True
+        if not completo and tramas:                 # se acabó el presupuesto: seguir ahí
+            po = nuevo
+            break
+        # Cerrado y leído entero, o con una cola truncada que nunca se completará.
+        idx, po, pn = idx + 1, 0, 0                 # fichero cerrado y leído entero
+
+    # Copias del espejo dentro de lo leído: la misma función del motor.
+    if contextos:
+        conservados, _ = v3.deduplicar_espejo([c for c, _ in contextos])
+        vivos = {id(p) for p in conservados}
+        for c, r in contextos:
+            if id(c.packet) not in vivos:
+                r.update(estado="copia del espejo (descartada)", aportes=[], notable=False)
+    for r in filas:
+        estados[r["estado"]] += 1
+    salida.update(nuevas=len(filas), aportan=estados["aporta"], estados=dict(estados),
+                  ultimo_ts=max((r["ts"] for r in filas), default=None))
+    elegidas = [r for r in filas if todos or (r["estado"] == "aporta" and r["notable"])]
+    salida["filas"] = elegidas[-max_filas:]
+    salida["no_enviadas"] = max(0, len(elegidas) - max_filas)
+    return salida, {"pf": ficheros[idx].name if idx < len(ficheros) else activo.name,
+                    "po": po, "pn": pn}
+
+
+def _flujo_eve(eve_path, cur, red, excluida, todos, max_filas) -> tuple[dict, dict]:
+    salida = {"fichero": str(eve_path) if eve_path else None, "tam": 0, "nuevos": 0,
+              "bytes": 0, "omitido_bytes": 0, "aportan": 0, "tipos": {}, "filas": [],
+              "ultimo_ts": None}
+    if not eve_path or not eve_path.exists():
+        return salida, {}
+    tam = eve_path.stat().st_size
+    salida["tam"] = tam
+    eo = cur.get("eo")
+    eo = None if eo is None else int(eo)
+    alinear = False
+    if eo is None:
+        eo, alinear = max(0, tam - (128 << 10)), True   # primera llamada: un poco de historia
+    elif eo > tam:
+        eo = 0                                          # eve.json rotado
+    if tam - eo > MAX_RETRASO:
+        salida["omitido_bytes"] = tam - eo
+        eo, alinear = tam - (1 << 20), True
+    with eve_path.open("rb") as fh:
+        fh.seek(eo)
+        datos = fh.read(MAX_LECTURA)
+    if alinear and eo > 0:
+        corte = datos.find(b"\n") + 1
+        datos, eo = datos[corte:], eo + corte
+    fin = datos.rfind(b"\n") + 1                        # la última línea puede ir a medias
+    datos = datos[:fin]
+    eventos, tipos, pos = [], collections.Counter(), eo
+    for raw in datos.split(b"\n"):
+        limpia = raw.strip()
+        if limpia:
+            try:
+                ev = json.loads(limpia)
+                if ev.get("timestamp"):
+                    eventos.append((pos, limpia.decode("utf-8", "replace"), ev))
+                    tipos[ev.get("event_type") or "sin tipo"] += 1
+            except (ValueError, UnicodeDecodeError):
+                pass
+        pos += len(raw) + 1
+    pares, _ = _emparejar_eve(eventos, _apps_de(eventos, red))
+    por_pos = {pos_: a for pos_, _, a in pares}
+    filas = []
+    for pos_, linea, ev in eventos:
+        ts = v2.parse_eve_timestamp(ev["timestamp"])
+        a = por_pos.get(pos_)
+        r = {"k": str(pos_), "byte": pos_, "ts": ts, "hora": _hora(ts), "tipo": ev.get("event_type"),
+             "origen": f"{ev.get('src_ip', '')}:{ev.get('src_port', '')}".rstrip(":"),
+             "destino": f"{ev.get('dest_ip', '')}:{ev.get('dest_port', '')}".rstrip(":"),
+             "proto": ev.get("proto") or "", "info": _info_evento(ev), "entidad": None,
+             "evento": ev.get("event_type"), "aportes": [],
+             "crudo": linea if len(linea) <= 1500 else linea[:1500] + " …"}
+        if a is not None:
+            titulo, aportes = aportes_evento(a)
+            r.update(entidad=a.entity_ip, evento=titulo)
+            if excluida(a.entity_ip):
+                r["estado"] = "entidad excluida"
+            else:
+                r.update(estado="aporta", aportes=[_feat(f_, ap) for f_, ap in aportes])
+        else:
+            r["estado"] = ("no lo usa el motor" if ev.get("event_type") not in _KIND_DE_EVENTO
+                           else "fuera de la red de entidades o sin aporte")
+        filas.append(r)
+    elegidas = [r for r in filas if todos or r["estado"] == "aporta"]
+    salida.update(nuevos=len(eventos), bytes=len(datos), tipos=dict(tipos.most_common()),
+                  aportan=sum(1 for r in filas if r["estado"] == "aporta"),
+                  ultimo_ts=max((r["ts"] for r in filas), default=None),
+                  filas=elegidas[-max_filas:], no_enviadas=max(0, len(elegidas) - max_filas))
+    return salida, {"eo": eo + len(datos)}
+
+
+def flujo(eve_path: Path | None, cfg: dict, cursor: dict | None = None, todos: bool = False,
+          max_filas: int = 300) -> dict:
+    """Lo nuevo desde `cursor` en las dos fuentes, y el cursor para la siguiente llamada."""
+    t0 = time.time()
+    red = ipaddress.ip_network(cfg["red_entidades"], strict=False)
+    protos = frozenset(int(p) for p in cfg.get("excluir_protocolos") or [])
+    redes_excluidas = [ipaddress.ip_network(r, strict=False) for r in cfg.get("excluir") or []]
+
+    def excluida(ip: str) -> bool:
+        try:
+            return any(ipaddress.ip_address(ip) in r for r in redes_excluidas)
+        except ValueError:
+            return False
+
+    cur = dict(cursor or {})
+    pcap, cur_p = _flujo_pcap(cfg, cur, red, protos, excluida, todos, max_filas)
+    eve, cur_e = _flujo_eve(eve_path, cur, red, excluida, todos, max_filas)
+    return {"servidor": time.time(), "segundos_calculo": round(time.time() - t0, 3),
+            "cursor": {**cur_p, **cur_e}, "pcap": pcap, "eve": eve}

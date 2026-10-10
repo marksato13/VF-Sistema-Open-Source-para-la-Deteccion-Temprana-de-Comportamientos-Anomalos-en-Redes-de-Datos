@@ -196,9 +196,97 @@ class VistaVivo(unittest.TestCase):
             self.assertEqual(vista_vivo.config(raiz, directorio="/y")["directorio"], "/y")
 
     def test_rutas_solo_admin_y_seccion_recortada(self):
-        self.assertTrue({"/api/vivo", "/api/trazabilidad"} <= dashboard.RUTAS_ADMIN)
+        self.assertTrue({"/api/vivo", "/api/vivo/flujo", "/api/trazabilidad"} <= dashboard.RUTAS_ADMIN)
         self.assertNotIn('id="s-vivo"', dashboard.html_por_rol(dashboard.HTML, "lector"))
         self.assertIn('id="s-vivo"', dashboard.html_por_rol(dashboard.HTML, "admin"))
+
+    def test_flujo_usa_las_mismas_claves_que_el_motor(self):
+        # La fila provisional se confirma cruzándola con /api/vivo: fichero#trama
+        # y byte de eve.json tienen que coincidir.
+        eve = Path(self.cfg["directorio"]).parent / "eve.json"
+        f = vista_vivo.flujo(eve, self.cfg, {"pf": "live-0001.pcap", "po": 0, "pn": 0, "eo": 0},
+                             todos=True)
+        claves = {r["k"] for r in f["pcap"]["filas"]}
+        for t in self.todos["tramas"]:
+            self.assertIn(f"{t['fuente']['fichero']}#{t['fuente']['trama']}", claves)
+        bytes_eve = {r["k"] for r in f["eve"]["filas"] if r["estado"] == "aporta"}
+        self.assertEqual(bytes_eve, {str(e["fuente"]["byte"]) for e in self.r["eventos"]})
+
+
+class FlujoVivo(unittest.TestCase):
+    """La lista tipo Wireshark: solo lo nuevo, también del fichero que se escribe."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        raiz = Path(self.tmp.name)
+        self.anillo = raiz / "anillo"
+        self.anillo.mkdir()
+        self.eve = raiz / "eve.json"
+        self.cfg = {"red_entidades": "10.10.0.0/16", "excluir": [EXCLUIDA + "/32"],
+                    "excluir_protocolos": [112, 240], "directorio": str(self.anillo),
+                    "anillo_glob": "live-*.pcap"}
+        c2s = lambda cuerpo, **k: _eth(MAC_S, MAC_C, _ipv4(CLIENTE, SERVIDOR, 6, cuerpo, **k))
+        s2c = lambda cuerpo, **k: _eth(MAC_C, MAC_S, _ipv4(SERVIDOR, CLIENTE, 6, cuerpo, **k))
+        self.syn = c2s(_tcp(40000, 80, 1000, 0x02), ip_id=10)
+        self.copia = c2s(_tcp(40000, 80, 1000, 0x02), ttl=63, ip_id=10)
+        self.syn_ack = s2c(_tcp(80, 40000, 5000, 0x12), ip_id=20)
+        self.ack = c2s(_tcp(40000, 80, 1001, 0x10), ip_id=11)
+        self.carp = _eth(MAC_S, MAC_C, _ipv4("10.10.20.2", "224.0.0.18", 112, b"\x00" * 20))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    @staticmethod
+    def _registro(ts, frame):
+        seg = int(ts)
+        return struct.pack("<IIII", seg, int(round((ts - seg) * 1e6)), len(frame), len(frame)) + frame
+
+    def test_lee_el_fichero_en_curso_y_solo_lo_nuevo(self):
+        activo = self.anillo / "live-0001.pcap"
+        _pcap(activo, [(T0 + 0.1, self.syn), (T0 + 0.1002, self.copia)])
+        tercero = self._registro(T0 + 0.2, self.syn_ack)
+        with open(activo, "ab") as fh:
+            fh.write(tercero[:20])                       # tcpdump a medio escribir
+        a = vista_vivo.flujo(None, self.cfg, todos=True)
+        self.assertEqual([r["trama"] for r in a["pcap"]["filas"]], [1, 2])
+        self.assertEqual(a["pcap"]["filas"][1]["estado"], "copia del espejo (descartada)")
+        with open(activo, "ab") as fh:
+            fh.write(tercero[20:] + self._registro(T0 + 0.3, self.ack))
+        b = vista_vivo.flujo(None, self.cfg, a["cursor"], todos=True)
+        filas = b["pcap"]["filas"]
+        self.assertEqual([r["trama"] for r in filas], [3, 4])
+        # Sin estado: el SYN-ACK se apunta a quien lo recibe, que es quien inició.
+        self.assertEqual((filas[0]["flags"], filas[0]["entidad"]), ("SYN-ACK", CLIENTE))
+        self.assertIn("syn_completion_ratio_10s", [x["feature"] for x in filas[0]["aportes"]])
+        self.assertEqual(vista_vivo.flujo(None, self.cfg, b["cursor"])["pcap"]["nuevas"], 0)
+
+    def test_sigue_al_fichero_siguiente_al_rotar(self):
+        _pcap(self.anillo / "live-0001.pcap", [(T0 + 0.1, self.syn)])
+        a = vista_vivo.flujo(None, self.cfg)
+        with open(self.anillo / "live-0001.pcap", "ab") as fh:
+            fh.write(self._registro(T0 + 0.2, self.carp))
+        _pcap(self.anillo / "live-0002.pcap", [(T0 + 15.1, self.ack)])
+        b = vista_vivo.flujo(None, self.cfg, a["cursor"], todos=True)
+        self.assertEqual([r["k"] for r in b["pcap"]["filas"]], ["live-0001.pcap#2", "live-0002.pcap#1"])
+        self.assertEqual(b["pcap"]["filas"][0]["estado"], "plano de control")
+        self.assertEqual(b["cursor"]["pf"], "live-0002.pcap")
+        # Por omisión solo lo que aporta con señal propia: el ACK puro no sale.
+        self.assertEqual(vista_vivo.flujo(None, self.cfg, a["cursor"])["pcap"]["filas"], [])
+
+    def test_eve_no_parte_lineas_a_medias(self):
+        base = {"src_ip": CLIENTE, "src_port": 40001, "dest_ip": SERVIDOR, "dest_port": 80}
+        uno = json.dumps(dict(base, timestamp=_iso(T0), event_type="http",
+                              http={"http_method": "GET", "status": 404})) + "\n"
+        dos = json.dumps(dict(base, timestamp=_iso(T0 + 1), event_type="flow")) + "\n"
+        self.eve.write_bytes(uno.encode() + dos.encode()[:15])
+        a = vista_vivo.flujo(self.eve, self.cfg, todos=True)
+        self.assertEqual([r["tipo"] for r in a["eve"]["filas"]], ["http"])
+        self.assertIn("http_error_ratio_60s", [x["feature"] for x in a["eve"]["filas"][0]["aportes"]])
+        with open(self.eve, "ab") as fh:
+            fh.write(dos.encode()[15:])
+        b = vista_vivo.flujo(self.eve, self.cfg, a["cursor"], todos=True)
+        self.assertEqual([(r["tipo"], r["byte"]) for r in b["eve"]["filas"]], [("flow", len(uno))])
+        self.assertEqual(b["eve"]["filas"][0]["estado"], "no lo usa el motor")
 
 
 if __name__ == "__main__":

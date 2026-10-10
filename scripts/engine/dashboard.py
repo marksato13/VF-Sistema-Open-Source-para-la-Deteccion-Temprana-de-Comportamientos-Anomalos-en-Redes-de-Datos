@@ -527,6 +527,69 @@ HTML = """<!doctype html>
   .vivo-tabla .matriz td:nth-child(2) { min-width: 14rem; }
   .vivo-tabla .matriz td.m { white-space: normal; }
   .vivo-tabla .heur { color: var(--amber); font-family: var(--mono); font-size: 0.74rem; }
+
+  /* Captura en vivo: medidor de ingesta y lista tipo Wireshark. */
+  .vivo-medidor { display: grid; grid-template-columns: minmax(12rem, 1.2fr) repeat(3, minmax(10rem, 1fr));
+    gap: 0.6rem; margin: 0.4rem 0 0.8rem; }
+  @media (max-width: 900px) { .vivo-medidor { grid-template-columns: 1fr 1fr; } }
+  .vivo-medidor > div { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.55rem 0.7rem; min-width: 0; }
+  .vm-estado { display: flex; flex-direction: column; justify-content: center; gap: 0.15rem; }
+  .vm-estado b { font-size: 0.95rem; }
+  .vm-estado span:last-child { color: var(--text-dim); font-size: 0.74rem; }
+  .vm-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-dim); display: inline-block; }
+  .vm-dot.ok { background: var(--ok); box-shadow: 0 0 0 0 var(--ok); animation: vmPulso 1.4s infinite; }
+  .vm-dot.lento { background: var(--amber); }
+  .vm-dot.parado { background: var(--danger); }
+  @keyframes vmPulso { 0% { box-shadow: 0 0 0 0 rgba(74,222,128,.6); } 100% { box-shadow: 0 0 0 9px rgba(74,222,128,0); } }
+  .vm-cab { color: var(--text-dim); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; }
+  .vm-num { font-family: var(--mono); font-size: 0.8rem; color: var(--text-dim); }
+  .vm-num b { font-size: 1.25rem; color: var(--text); }
+  .vm-spark { width: 100%; height: 28px; display: block; }
+  .vm-spark polyline { fill: none; stroke: var(--accent); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+  .vm-spark polygon { fill: rgba(94,234,212,.12); stroke: none; }
+  .vm-pie { font-family: var(--mono); font-size: 0.7rem; color: var(--text-dim); overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .vm-pie .crece { color: var(--ok); }
+  .vivo-tabla.ws { max-height: 460px; }
+  .vivo-tabla.ws table { font-size: 0.72rem; }
+  .vivo-tabla.ws .fl { max-width: 12.5rem; overflow: hidden; text-overflow: ellipsis; }
+  .vivo-tabla.ws td { padding: 0.2rem 0.45rem; font-family: var(--mono); white-space: nowrap; }
+  .vivo-tabla.ws th { padding-left: 0.45rem; padding-right: 0.45rem; }
+  .vivo-tabla.ws td.txt { font-family: var(--sans); white-space: normal; }
+  .vivo-tabla.ws tbody tr { cursor: pointer; border-left: 3px solid transparent; }
+  .vivo-tabla.ws tbody tr.sel { outline: 1px solid var(--accent); outline-offset: -1px; }
+  .vivo-tabla.ws .fl { display: block; line-height: 1.35; }
+  .vivo-tabla.ws .fl b { color: var(--accent); font-weight: 600; }
+  .vivo-tabla.ws .fl.l2 b { color: var(--capa-c); }
+  .vivo-tabla.ws .fl.cnt b { color: var(--amber); }
+  .vivo-tabla.ws td.txt { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vivo-tabla.ws .mas { margin-left: 0.35rem; padding: 0 0.3rem; border-radius: 5px; background: var(--surface-2);
+    border: 1px solid var(--border); color: var(--text-dim); font-size: 0.68rem; }
+  .vivo-tabla.ws .pend { color: var(--text-dim); }
+  .vivo-tabla.ws .conf { color: var(--ok); }
+  .vivo-tabla.ws .prov { color: var(--text-dim); font-style: italic; }
+  /* Reglas de color al estilo de Wireshark, en tinte para el tema oscuro. */
+  tr.c-tcp  { background: rgba(141,129,255,.10); border-left-color: rgba(141,129,255,.7) !important; }
+  tr.c-syn  { background: rgba(160,160,160,.16); border-left-color: #a0a0a0 !important; }
+  tr.c-rst  { background: rgba(248,113,113,.18); border-left-color: var(--danger) !important; }
+  tr.c-udp  { background: rgba(96,165,250,.10); border-left-color: rgba(96,165,250,.7) !important; }
+  tr.c-icmp { background: rgba(244,114,182,.13); border-left-color: var(--capa-d) !important; }
+  tr.c-arp  { background: rgba(240,180,41,.12); border-left-color: var(--amber) !important; }
+  tr.c-http { background: rgba(74,222,128,.12); border-left-color: var(--ok) !important; }
+  tr.c-dns  { background: rgba(96,165,250,.13); border-left-color: var(--capa-b) !important; }
+  tr.c-tls  { background: rgba(192,132,252,.12); border-left-color: var(--capa-c) !important; }
+  tr.c-alert { background: rgba(248,113,113,.22); border-left-color: var(--danger) !important; }
+  tr.c-fuera td { opacity: .55; }
+  tr.nueva { animation: wsNueva 1.2s ease-out; }
+  @keyframes wsNueva { from { box-shadow: inset 0 0 0 999px rgba(94,234,212,.28); } to { box-shadow: inset 0 0 0 999px rgba(94,234,212,0); } }
+  .ws-detalle { margin-top: 0.5rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.6rem 0.8rem; font-family: var(--mono); font-size: 0.76rem; max-height: 340px; overflow: auto; }
+  .ws-detalle details { margin: 0.1rem 0; }
+  .ws-detalle summary { cursor: pointer; color: var(--text); }
+  .ws-detalle .kv { padding-left: 1.2rem; color: var(--text-dim); white-space: pre-wrap; word-break: break-all; }
+  .ws-detalle .kv b { color: var(--text); font-weight: 500; }
+  .ws-detalle pre { margin: 0.3rem 0 0 1.2rem; white-space: pre-wrap; word-break: break-all; color: var(--text-dim); }
 </style>
 
 <div class="shell">
@@ -621,19 +684,28 @@ HTML = """<!doctype html>
 
   <section id="s-vivo">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 2-6 2 3h6"/></svg><h2>Datos en vivo: del registro a la variable</h2></div>
-    <p class="lede-small">Las dos fuentes salen del mismo puerto espejo (SPAN): el <strong>PCAP</strong> es la captura cruda de tcpdump y <strong>eve.json</strong> los eventos que Suricata escribe tras procesar esas mismas tramas. Aquí se ve un tramo reciente de cada una pasado por <em>la misma cadena del motor</em> (parser, atribución a la entidad que inicia el flujo, ventanas de 10/30/60 s), y solo se listan los registros que <strong>aportan a alguna variable</strong>: cuál actualizan, con qué aporte y cuánto vale la variable en la ventana que los incorpora.</p>
+    <p class="lede-small">Captura en vivo, como Wireshark, de las dos fuentes que salen del mismo puerto espejo (SPAN): las <strong>tramas PCAP</strong> que escribe tcpdump y los <strong>eventos de eve.json</strong> que escribe Suricata tras procesar esas mismas tramas. Cada segundo llega lo nuevo de cada fichero. Una fila aparece en cuanto se captura con lo que se sabe de ella sola (provisional) y pasa a <strong>confirmada</strong> cuando la cadena del motor (atribución a quien inicia el flujo, ventanas de 10/30/60 s) la procesa: entonces muestra el valor real de la variable en su ventana.</p>
+    <div class="vivo-medidor" id="vivoMedidor">
+      <div class="vm-estado"><span class="vm-dot" id="vmDot"></span><b id="vmTitulo">Conectando&hellip;</b><span id="vmSub"></span></div>
+      <div class="vm-fuente"><div class="vm-cab">PCAP &middot; tcpdump</div><div class="vm-num"><b id="vmPcapTasa">—</b> tramas/s</div><svg id="vmPcapSpark" class="vm-spark" viewBox="0 0 120 28" preserveAspectRatio="none"></svg><div class="vm-pie" id="vmPcapPie">—</div></div>
+      <div class="vm-fuente"><div class="vm-cab">eve.json &middot; Suricata</div><div class="vm-num"><b id="vmEveTasa">—</b> eventos/s</div><svg id="vmEveSpark" class="vm-spark" viewBox="0 0 120 28" preserveAspectRatio="none"></svg><div class="vm-pie" id="vmEvePie">—</div></div>
+      <div class="vm-fuente"><div class="vm-cab">Desde que abriste la vista</div><div class="vm-num"><b id="vmTotal">0</b></div><div class="vm-pie" id="vmTotalPie">—</div></div>
+    </div>
     <div class="vivo-bar">
       <div class="range-toggle" id="vivoTabs">
         <button data-vtab="eve" class="active">Eventos eve.json</button>
         <button data-vtab="pcap">Tramas PCAP</button>
         <button data-vtab="matriz">Matriz de trazabilidad</button>
       </div>
-      <input type="text" id="vivoFiltro" class="ip-filter" placeholder="Filtrar por IP o variable...">
-      <label class="vivo-chk" id="vivoTodosLbl"><input type="checkbox" id="vivoTodos"> todas las tramas</label>
+      <input type="text" id="vivoFiltro" class="ip-filter" placeholder="Filtrar: IP, protocolo, variable...">
+      <label class="vivo-chk" id="vivoTodosLbl" title="Por omisión solo se listan los registros que aportan a alguna variable"><input type="checkbox" id="vivoTodos"> mostrar también lo que no aporta</label>
+      <label class="vivo-chk" title="Bajar solo con cada registro nuevo, como Wireshark"><input type="checkbox" id="vivoSeguir" checked> seguir</label>
       <button id="vivoPausa" class="export-btn" type="button">Pausar</button>
+      <button id="vivoLimpiar" class="export-btn" type="button">Limpiar</button>
     </div>
     <p class="toolbar-hint" id="vivoResumen">Cargando&hellip;</p>
-    <div class="tbl-wrap tbl-scroll vivo-tabla" id="vivoTabla"></div>
+    <div class="tbl-wrap tbl-scroll vivo-tabla ws" id="vivoTabla"></div>
+    <div class="ws-detalle" id="vivoDetalle" hidden></div>
     <p class="toolbar-hint" id="vivoPie"></p>
   </section>
 
@@ -2607,26 +2679,118 @@ if (document.getElementById('varTabla')) {
 if (document.getElementById('simGrid')) cargarEscenarios();
 
 // ---- Datos en vivo -------------------------------------------------------
-// Tres pestañas sobre /api/vivo y /api/trazabilidad (solo admin). Se refresca
-// cada 10 s mientras la seccion esta visible y no esta en pausa; la matriz se
-// pide una vez porque sale del esquema y del codigo, no del trafico.
-let vivoTab = 'eve', vivoDatos = null, vivoMatriz = null, vivoPausa = false;
+// Captura en vivo al estilo de Wireshark. Tres llamadas, todas solo admin:
+//  - /api/vivo/flujo cada 1 s: SOLO lo escrito desde la llamada anterior en el
+//    anillo PCAP y en eve.json (el cursor lo guarda esta pagina). Las filas
+//    llegan con lo que se sabe de cada registro solo: son provisionales.
+//  - /api/vivo cada 10 s: la cadena del motor sobre el tramo reciente. Lo que
+//    devuelve se cruza por fichero#trama o por byte y la fila pasa a confirmada,
+//    con la entidad que atribuye el motor y el valor real de cada variable.
+//  - /api/trazabilidad una vez: la matriz sale del esquema y del codigo.
+// El medidor cuenta TODO lo que entra, aunque el filtro oculte filas: es la
+// prueba de que la ingesta no se detiene.
+const VIVO_MAX = 1500;
+const vivo = {
+  tab: 'eve', pausa: false, cursor: {}, matriz: null, error: null, enCurso: false,
+  filas: {eve: [], pcap: []}, porClave: {eve: new Map(), pcap: new Map()},
+  motor: {eve: new Map(), pcap: new Map()}, motorInfo: null,
+  num: {eve: 0, pcap: 0}, total: {eve: 0, pcap: 0, aportan: 0},
+  estados: {}, tipos: {}, hist: [], prev: null, visto: {eve: null, pcap: null},
+  sel: null, desde: null,
+};
 
-function vfChip(f) {
-  const cls = f.uso === 'modelo' ? '' : (f.uso === 'conteo' ? ' cnt' : ' l2');
-  const val = f.valor === null ? '—' : String(f.valor);
-  const tip = f.feature + ' · ventana ' + f.ventana_s + ' s · uso: ' + f.uso +
-    (f.parcial ? ' · valor PARCIAL: la ventana empieza antes del tramo leído' : '');
-  return '<span class="vf' + cls + '" title="' + varEsc(tip) + '"><b>' + varEsc(f.feature) +
-    '</b> <span class="ap">' + varEsc(f.aporte) + '</span> → ' + varEsc(val) +
-    (f.parcial ? '<span class="par">*</span>' : '') + '</span>';
+const vivoHora = (s) => s ? s.slice(11, 19) : '—';
+const vivoUso = (f) => f.uso === 'modelo' ? '' : (f.uso === 'conteo' ? ' cnt' : ' l2');
+function vivoNum(v) {
+  if (v === null || v === undefined) return '—';
+  const n = Number(v);
+  return Math.abs(n) >= 100 ? n.toFixed(0) : String(+n.toFixed(4));
+}
+function vivoMB(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : (b / 1024).toFixed(0) + ' KB'; }
+function vivoTasa(n) { return n >= 100 ? n.toFixed(0) : n.toFixed(1); }
+
+function vivoClase(r, fuente) {
+  let c = '';
+  if (fuente === 'eve') {
+    c = {http: 'c-http', dns: 'c-dns', tls: 'c-tls', alert: 'c-alert'}[r.tipo] || '';
+  } else if (r.proto === 'TCP') {
+    c = r.flags.includes('RST') ? 'c-rst' : (r.flags.includes('SYN') || r.flags.includes('FIN') ? 'c-syn' : 'c-tcp');
+  } else if (r.proto === 'UDP') {
+    c = (r.puerto_src === 53 || r.puerto_dst === 53) ? 'c-dns' : 'c-udp';
+  } else if (r.proto === 'ICMP') c = 'c-icmp';
+  else if (r.proto === 'ARP') c = 'c-arp';
+  return c + (r.estado === 'aporta' ? '' : ' c-fuera');
 }
 
 function vivoPasa(r, q) {
   if (!q) return true;
-  const txt = [r.entidad, r.ip_src, r.ip_dst, r.origen, r.destino, r.evento]
-    .concat((r.features || []).map(f => f.feature)).join(' ').toLowerCase();
+  const m = vivo.motor[vivo.tab].get(r.k);
+  const feats = (m ? m.features : r.aportes) || [];
+  const txt = [r.entidad, m && m.entidad, r.ip_src, r.ip_dst, r.origen, r.destino, r.evento, r.info,
+    r.proto, r.tipo, r.flags, r.mac_src, r.vlan, r.estado].concat(feats.map(f => f.feature)).join(' ').toLowerCase();
   return txt.includes(q);
+}
+
+// Variable, ventana y valor: una linea por variable en tres columnas alineadas.
+// En la lista van las dos mas especificas; todas, en el detalle (clic en la fila).
+// Las genericas (toda trama suma a packet_rate y byte_rate) van al final.
+const VIVO_GENERICAS = ['packet_rate_10s', 'byte_rate_10s', 'large_ip_ratio_10s', 'flow_attempt_count_30s',
+  'http_request_count_60s', 'dns_query_count_60s', 'unique_dst_ip_ratio_30s', 'unique_dst_port_ratio_30s'];
+function vivoOrden(feats) {
+  const g = (f) => VIVO_GENERICAS.indexOf(f.feature);
+  return feats.slice().sort((a, b) => (g(a) >= 0) - (g(b) >= 0) || g(a) - g(b));
+}
+function vivoCeldasVar(r, fuente) {
+  const m = vivo.motor[fuente].get(r.k);
+  const todas = vivoOrden(m ? m.features : (r.aportes || []));
+  if (!todas.length) return '<td class="txt prov">' + varEsc(r.estado) + '</td><td></td><td></td>';
+  const feats = todas.slice(0, 2), resto = todas.length - feats.length;
+  const tip = (f) => varEsc(f.feature + ' · ventana ' + f.ventana_s + ' s · uso: ' + f.uso);
+  const mas = resto ? '<span class="mas" title="' + varEsc(todas.slice(2).map(f => f.feature).join(', ')) +
+    '">+' + resto + '</span>' : '';
+  return '<td>' + feats.map((f, i) => '<span class="fl' + vivoUso(f) + '" title="' + tip(f) + '"><b>' +
+      varEsc(f.feature) + '</b> ' + varEsc(f.aporte) + (i === 0 ? mas : '') + '</span>').join('') + '</td>' +
+    '<td>' + feats.map(f => '<span class="fl"' + (m ? ' title="ventana que termina ' + vivoHora(m.ventana_fin) +
+      ' UTC"' : '') + '>' + f.ventana_s + ' s</span>').join('') + '</td>' +
+    '<td>' + feats.map(f => m
+      ? '<span class="fl conf" title="Valor real de la variable en esa ventana (build_rows del motor)' +
+        (f.parcial ? ': PARCIAL, la ventana empieza antes del tramo leído' : '') + '">' +
+        vivoNum(f.valor) + (f.parcial ? '*' : '') + '</span>'
+      : '<span class="fl pend" title="Pendiente: el motor procesa la trama cuando su fichero se cierra (rota cada 15 s)">…</span>').join('') + '</td>';
+}
+
+function vivoFila(r, fuente, nueva) {
+  const m = vivo.motor[fuente].get(r.k);
+  const ent = m ? '<span class="conf" title="Atribuida por la cadena del motor">' + varEsc(m.entidad) + '</span>'
+    : (r.entidad ? '<span class="prov" title="Provisional: sin estado no se sabe quién inició el flujo">' + varEsc(r.entidad) + '</span>' : '—');
+  const cls = vivoClase(r, fuente) + (nueva ? ' nueva' : '') + (vivo.sel === r.k ? ' sel' : '');
+  const ini = '<tr data-k="' + varEsc(r.k) + '" data-c="' + (m ? 1 : 0) + '" class="' + cls + '"><td>' + r.no + '</td><td>' + varEsc(r.hora) + '</td>';
+  if (fuente === 'eve') {
+    return ini + '<td>' + ent + '</td><td class="txt" title="' + varEsc(r.info || '') + '">' +
+      varEsc(r.evento || r.tipo) + '</td><td>' + varEsc(r.origen) + '<div class="sub">→ ' + varEsc(r.destino) +
+      '</div></td>' + vivoCeldasVar(r, fuente) + '<td title="eve.json, byte ' + r.byte + '">@' + r.byte + '</td></tr>';
+  }
+  const ip = (a, p) => varEsc(a || '') + (p ? ':' + p : '');
+  // La entidad no es columna de esta vista: va en el titulo de la IP y en el detalle.
+  const entTxt = m ? m.entidad + ' (motor)' : (r.entidad ? r.entidad + ' (provisional)' : 'sin entidad');
+  return ini + '<td>' + (r.vlan || '—') + '</td><td>' + varEsc(r.mac_src) + '</td><td title="Entidad: ' +
+    varEsc(entTxt) + '">' + ip(r.ip_src, r.puerto_src) + '<div class="sub">→ ' + ip(r.ip_dst, r.puerto_dst) + '</div></td><td>' +
+    varEsc(r.proto || '') + '</td><td>' + varEsc(r.flags || '') + '</td><td>' +
+    (r.longitud === null ? r.capturada : r.longitud) + '</td>' + vivoCeldasVar(r, fuente) + '<td title="' +
+    varEsc(r.fichero) + ', trama ' + r.trama + '">…' + varEsc(r.fichero.replace(/[.]pcap$/, '').slice(-6)) +
+    ' #' + r.trama + '</td></tr>';
+}
+
+function vivoCabecera(fuente) {
+  const cols = fuente === 'eve'
+    ? ['No.', 'Hora UTC', 'Entidad', 'Evento', 'Origen → destino', 'Variable · aporte', 'Vent.', 'Valor', 'Fuente']
+    : ['No.', 'Hora UTC', 'VLAN', 'MAC origen', 'IP origen → destino', 'Proto', 'Flags', 'Long.',
+       'Variable · aporte', 'Vent.', 'Valor', 'Archivo'];
+  return '<table><thead><tr>' + cols.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody></tbody></table>';
+}
+
+function vivoAlFinal(caja) {
+  if (document.getElementById('vivoSeguir').checked) caja.scrollTop = caja.scrollHeight;
 }
 
 function renderVivo() {
@@ -2634,16 +2798,21 @@ function renderVivo() {
   const res = document.getElementById('vivoResumen');
   const pie = document.getElementById('vivoPie');
   if (!caja) return;
-  document.getElementById('vivoTodosLbl').style.display = vivoTab === 'pcap' ? '' : 'none';
   const q = (document.getElementById('vivoFiltro').value || '').trim().toLowerCase();
-  const hora = (s) => s ? s.slice(11, 19) : '—';
+  const enMatriz = vivo.tab === 'matriz';
+  for (const id of ['vivoTodosLbl', 'vivoSeguir', 'vivoLimpiar']) {
+    const el = document.getElementById(id);
+    (el.closest('label') || el).style.display = enMatriz ? 'none' : '';
+  }
+  document.getElementById('vivoDetalle').hidden = enMatriz || !vivo.sel;
 
-  if (vivoTab === 'matriz') {
-    if (!vivoMatriz) { caja.innerHTML = '<p class="var-vacio">Cargando matriz…</p>'; return; }
-    const filas = vivoMatriz.filter(m => !q || (m.feature + ' ' + m.registro + ' ' + m.fuente).toLowerCase().includes(q));
+  if (enMatriz) {
+    if (!vivo.matriz) { caja.innerHTML = '<p class="var-vacio">Cargando matriz…</p>'; return; }
+    const filas = vivo.matriz.filter(m => !q || (m.feature + ' ' + m.registro + ' ' + m.fuente).toLowerCase().includes(q));
     res.textContent = 'Fuente → registro → parser → variable → ventana → uso. Construida del esquema ' +
       '(multilayer-v2/v3), de build_rows y del código de heuristicos.py: si cambia el código, cambia la matriz. ' +
       'Las variables de PCAP se calculan después de quitar el plano de control y las copias del espejo.';
+    caja.classList.remove('ws');
     caja.innerHTML = '<table class="matriz"><thead><tr><th>Fuente</th><th>Registro que la alimenta</th><th>Parser</th>' +
       '<th>Variable</th><th>Capa</th><th>Ventana</th><th>Uso</th><th>Heurísticos</th></tr></thead><tbody>' +
       filas.map(m => '<tr><td>' + varEsc(m.fuente) + '</td><td>' + varEsc(m.registro) + '</td><td class="m">' +
@@ -2654,73 +2823,222 @@ function renderVivo() {
       'y 3 son conteos que solo leen los heurísticos.';
     return;
   }
-
-  if (!vivoDatos) { caja.innerHTML = '<p class="var-vacio">Cargando…</p>'; return; }
-  if (vivoDatos.error) {
-    caja.innerHTML = '<p class="var-vacio">' + varEsc(vivoDatos.error) + '</p>';
+  caja.classList.add('ws');
+  if (vivo.error) {
+    caja.innerHTML = '<p class="var-vacio">' + varEsc(vivo.error) + '</p>';
     res.textContent = ''; pie.textContent = ''; return;
   }
-  const d = vivoDatos;
-  const cfg = 'Red ' + d.config.red_entidades + ' · excluidas ' + (d.config.excluir.join(', ') || 'ninguna') +
-    ' · protocolos fuera ' + (d.config.excluir_protocolos.join(', ') || 'ninguno') + ' (de ' + d.config.fuente + ')';
-
-  if (vivoTab === 'eve') {
-    const e = d.eve;
-    const ign = Object.entries(e.ignorados || {}).map(([k, v]) => k + ' ' + v).join(', ');
-    res.textContent = 'Tramo ' + (e.tramo ? hora(e.tramo.desde) + '–' + hora(e.tramo.hasta) + ' UTC' : 'vacío') +
-      ' · ' + e.eventos + ' eventos leídos, ' + e.aportan + ' aportan a variables · ignorados: ' + (ign || 'ninguno') +
-      '. El motor solo usa http, dns (consulta y NXDOMAIN) y tls.';
-    const filas = d.eventos.filter(r => vivoPasa(r, q));
-    caja.innerHTML = '<table><thead><tr><th>Hora UTC</th><th>Entidad</th><th>Evento</th><th>Origen → destino</th>' +
-      '<th>Variable · aporte → valor en la ventana</th><th>Ventana</th><th>Fuente</th></tr></thead><tbody>' +
-      filas.map(r => '<tr><td class="m">' + varEsc(r.hora) + '</td><td class="m">' + varEsc(r.entidad) +
-        '</td><td>' + varEsc(r.evento) + '<div class="sub">' + varEsc(r.tipo) + (r.vlan ? ' · VLAN ' + r.vlan : '') +
-        '</div></td><td class="m">' + varEsc(r.origen) + '<div class="sub">→ ' + varEsc(r.destino) + '</div></td><td>' +
-        r.features.map(vfChip).join('') + '</td><td class="m">hasta ' + hora(r.ventana_fin) + '</td><td class="m">' +
-        varEsc(r.fuente.fichero) + '<div class="sub">byte ' + r.fuente.byte + '</div></td></tr>').join('') +
-      '</tbody></table>';
-    pie.textContent = cfg + ' · * valor parcial (la ventana de 60 s empieza antes del tramo leído).';
-  } else {
-    const p = d.pcap;
-    res.textContent = 'Tramo ' + (p.tramo ? hora(p.tramo.desde) + '–' + hora(p.tramo.hasta) + ' UTC' : 'vacío') +
-      ' · ' + p.ficheros.length + ' ficheros cerrados del anillo, ' + p.tramas + ' tramas: ' + p.no_ipv4 +
-      ' sin IPv4, ' + p.plano_control + ' de plano de control, ' + p.duplicados_espejo + ' copias del espejo, ' +
-      p.fuera_de_alcance + ' de entidades fuera de la red, ' + p.atribuidas + ' atribuidas (' + p.entidad_excluida +
-      ' de entidades excluidas). Mostrando: ' + p.filtro + '.' +
-      (p.ilegibles.length ? ' No legibles: ' + p.ilegibles.map(x => x.fichero).join(', ') + '.' : '');
-    const filas = d.tramas.filter(r => vivoPasa(r, q));
-    caja.innerHTML = '<table><thead><tr><th>Hora UTC</th><th>VLAN</th><th>MAC origen → destino</th>' +
-      '<th>IP origen → destino</th><th>Proto · flags</th><th>Long.</th><th>Variable · aporte → valor en la ventana</th>' +
-      '<th>Ventana</th><th>Fichero</th></tr></thead><tbody>' +
-      filas.map(r => '<tr><td class="m">' + varEsc(r.hora) + '</td><td class="m">' + (r.vlan || '—') +
-        '</td><td class="m">' + varEsc(r.mac_src || '') + '<div class="sub">→ ' + varEsc(r.mac_dst || '') +
-        '</div></td><td class="m">' + varEsc(r.ip_src) + (r.puerto_src ? ':' + r.puerto_src : '') +
-        '<div class="sub">→ ' + varEsc(r.ip_dst) + (r.puerto_dst ? ':' + r.puerto_dst : '') +
-        ' · entidad ' + varEsc(r.entidad) + ' (' + r.sentido + ')</div></td><td>' + varEsc(r.proto) +
-        '<div class="sub">' + varEsc(r.evento) + '</div></td><td class="m">' + (r.longitud === null ? '—' : r.longitud + ' B') +
-        '</td><td>' + r.features.map(vfChip).join('') + '</td><td class="m">hasta ' + hora(r.ventana_fin) +
-        '</td><td class="m">' + varEsc(r.fuente.fichero || '') + '<div class="sub">trama ' + r.fuente.trama +
-        '</div></td></tr>').join('') + '</tbody></table>';
-    pie.textContent = cfg + ' · * valor parcial · borde discontinuo: capa 2, se acumula pero no se puntúa · ' +
-      'ámbar: conteo que solo leen los heurísticos.';
-  }
-  if (!caja.querySelector('tbody tr')) caja.innerHTML = '<p class="var-vacio">Sin registros que aporten en este tramo' +
-    (q ? ' con ese filtro' : '') + '.</p>';
+  const fuente = vivo.tab;
+  caja.innerHTML = vivoCabecera(fuente);
+  const filas = vivo.filas[fuente].filter(r => vivoPasa(r, q));
+  caja.querySelector('tbody').innerHTML = filas.map(r => vivoFila(r, fuente, false)).join('');
+  if (!filas.length) caja.insertAdjacentHTML('beforeend', '<p class="var-vacio">Esperando registros' +
+    (q ? ' que pasen el filtro' : ' que aporten a alguna variable') + '…</p>');
+  vivoResumenTexto();
+  vivoAlFinal(caja);
 }
 
-async function cargarVivo(forzar) {
-  const sec = document.getElementById('s-vivo');
-  if (!sec || (!forzar && (vivoPausa || sec.hidden))) return;
-  try {
-    if (vivoTab === 'matriz') {
-      if (!vivoMatriz) vivoMatriz = (await (await fetch('/api/trazabilidad')).json()).filas || [];
-    } else {
-      const todos = document.getElementById('vivoTodos').checked ? '1' : '0';
-      vivoDatos = await (await fetch('/api/vivo?todos=' + todos)).json();
-    }
-  } catch (e) {
-    vivoDatos = {error: 'No se pudo leer /api/vivo: ' + e};
+function vivoResumenTexto() {
+  const res = document.getElementById('vivoResumen');
+  const pie = document.getElementById('vivoPie');
+  const todos = document.getElementById('vivoTodos').checked;
+  const cuenta = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => v + ' ' + k).join(' · ') || 'nada aún';
+  const mi = vivo.motorInfo;
+  if (vivo.tab === 'eve') {
+    res.textContent = 'Eventos recibidos por tipo: ' + cuenta(vivo.tipos) + '. ' +
+      (todos ? 'Se listan todos.' : 'Se listan solo los que aportan: el motor usa http, dns (consulta y NXDOMAIN) y tls.');
+    pie.textContent = 'Valor: confirmado por la cadena del motor' + (mi ? ' (último cálculo ' + vivoHora(mi.calculado) + ' UTC)' : '') +
+      ' · * parcial: la ventana de 60 s empieza antes del tramo leído · gris en cursiva: provisional.';
+  } else {
+    res.textContent = 'Tramas recibidas: ' + cuenta(vivo.estados) + '. ' + (todos ? 'Se listan todas.'
+      : 'Se listan las que aportan con una señal propia (SYN, SYN-ACK, RST, ICMP, fragmento, ARP); el resto suma a packet_rate y byte_rate y se ve con «mostrar también lo que no aporta».');
+    pie.textContent = 'El motor procesa cada fichero del anillo al cerrarse (rota cada 15 s): hasta entonces la fila es provisional y el valor «…»' +
+      (mi && mi.pcap.tramo ? '. Último cálculo hasta ' + vivoHora(mi.pcap.tramo.hasta) + ' UTC' : '') +
+      ' · borde: color de protocolo como en Wireshark (gris SYN/FIN, rojo RST).';
   }
+}
+
+function vivoIngerir(d) {
+  const q = (document.getElementById('vivoFiltro').value || '').trim().toLowerCase();
+  const caja = document.getElementById('vivoTabla');
+  const tbody = caja ? caja.querySelector('tbody') : null;
+  for (const fuente of ['pcap', 'eve']) {
+    const f = d[fuente];
+    if (f.ultimo_ts) vivo.visto[fuente] = f.ultimo_ts;
+    vivo.total[fuente] += fuente === 'pcap' ? f.nuevas : f.nuevos;
+    vivo.total.aportan += f.aportan;
+    const acum = fuente === 'pcap' ? vivo.estados : vivo.tipos;
+    for (const [k, v] of Object.entries(fuente === 'pcap' ? f.estados : f.tipos)) acum[k] = (acum[k] || 0) + v;
+    const lista = vivo.filas[fuente], idx = vivo.porClave[fuente];
+    const nuevas = [];
+    for (const r of f.filas) {
+      if (idx.has(r.k)) continue;
+      r.no = ++vivo.num[fuente];
+      lista.push(r); idx.set(r.k, r); nuevas.push(r);
+    }
+    while (lista.length > VIVO_MAX) idx.delete(lista.shift().k);
+    if (fuente === vivo.tab && tbody && !vivo.error) {
+      const html = nuevas.filter(r => vivoPasa(r, q)).map(r => vivoFila(r, fuente, true)).join('');
+      if (html) {
+        const vacio = caja.querySelector('.var-vacio');
+        if (vacio) vacio.remove();
+        tbody.insertAdjacentHTML('beforeend', html);
+        while (tbody.rows.length > VIVO_MAX) tbody.deleteRow(0);
+        vivoAlFinal(caja);
+      }
+    }
+  }
+  vivoMedidor(d);
+  if (vivo.tab !== 'matriz') vivoResumenTexto();
+}
+
+function vivoSpark(id, serie) {
+  const svg = document.getElementById(id);
+  if (!svg) return;
+  const max = Math.max(1, ...serie);
+  const pts = serie.map((v, i) => (i * 120 / Math.max(1, serie.length - 1)).toFixed(1) + ',' + (27 - v / max * 25).toFixed(1));
+  svg.innerHTML = serie.length < 2 ? '' : '<polygon points="0,28 ' + pts.join(' ') + ' 120,28"/><polyline points="' + pts.join(' ') + '"/>';
+}
+
+function vivoMedidor(d) {
+  const ahora = d.servidor, prev = vivo.prev;
+  let tp = 0, te = 0, bp = 0, be = 0;
+  if (prev) {
+    const dt = Math.max(0.2, ahora - prev.servidor);
+    tp = d.pcap.nuevas / dt; te = d.eve.nuevos / dt;
+    bp = d.pcap.bytes / dt; be = d.eve.bytes / dt;
+    vivo.hist.push({p: tp, e: te});
+    if (vivo.hist.length > 120) vivo.hist.shift();
+  }
+  vivo.prev = d;
+  if (!vivo.desde) vivo.desde = ahora;
+  const txt = (id, s) => { const el = document.getElementById(id); if (el) el.innerHTML = s; };
+  txt('vmPcapTasa', prev ? vivoTasa(tp) : '…');
+  txt('vmEveTasa', prev ? vivoTasa(te) : '…');
+  vivoSpark('vmPcapSpark', vivo.hist.map(h => h.p));
+  vivoSpark('vmEveSpark', vivo.hist.map(h => h.e));
+  txt('vmPcapPie', d.pcap.activo ? varEsc(d.pcap.activo) + ' · ' + vivoMB(d.pcap.tam_activo) +
+    (bp > 0 ? ' <span class="crece">+' + vivoMB(bp) + '/s</span>' : '') : 'sin ficheros en el anillo');
+  txt('vmEvePie', d.eve.fichero ? 'eve.json · ' + vivoMB(d.eve.tam) +
+    (be > 0 ? ' <span class="crece">+' + vivoMB(be) + '/s</span>' : '') : 'sin eve.json');
+  const tot = vivo.total.pcap + vivo.total.eve;
+  txt('vmTotal', tot.toLocaleString('es'));
+  const min = Math.max(0, Math.round((ahora - vivo.desde) / 60));
+  txt('vmTotalPie', vivo.total.pcap.toLocaleString('es') + ' tramas · ' + vivo.total.eve.toLocaleString('es') +
+    ' eventos · ' + vivo.total.aportan.toLocaleString('es') + ' aportan · ' + min + ' min');
+  // Edad del ultimo registro de cada fuente, con el reloj del sensor.
+  const edad = (ts) => ts ? Math.max(0, ahora - ts) : Infinity;
+  const ep = edad(vivo.visto.pcap), ee = edad(vivo.visto.eve), peor = Math.max(ep, ee);
+  const fmt = (s) => s === Infinity ? 'nunca' : (s < 60 ? 'hace ' + s.toFixed(1) + ' s' : 'hace ' + Math.round(s / 60) + ' min');
+  const dot = document.getElementById('vmDot');
+  dot.className = 'vm-dot ' + (peor < 5 ? 'ok' : (peor < 30 ? 'lento' : 'parado'));
+  txt('vmTitulo', peor < 5 ? 'EN VIVO · entrando datos' : (peor < 30 ? 'Ingesta lenta' : 'Sin datos nuevos'));
+  txt('vmSub', 'última trama ' + fmt(ep) + ' · último evento ' + fmt(ee) +
+    (d.pcap.omitido_bytes || d.eve.omitido_bytes ? ' · se saltó retraso acumulado' : ''));
+}
+
+function vivoDetalle(r, fuente) {
+  const caja = document.getElementById('vivoDetalle');
+  if (!r) { caja.hidden = true; return; }
+  const m = vivo.motor[fuente].get(r.k);
+  const kv = (k, v) => '<div class="kv">' + k + ': <b>' + varEsc(String(v)) + '</b></div>';
+  const rama = (t, cuerpo, abierta) => '<details' + (abierta ? ' open' : '') + '><summary>' + t + '</summary>' + cuerpo + '</details>';
+  let h = '';
+  if (fuente === 'pcap') {
+    h += rama('Trama ' + r.trama + ' de ' + varEsc(r.fichero) + ': ' + r.capturada + ' bytes capturados',
+      kv('Hora (UTC)', r.hora) + kv('Clave', r.k), false);
+    h += rama('Ethernet II: ' + varEsc(r.mac_src) + ' → ' + varEsc(r.mac_dst),
+      kv('Origen', r.mac_src) + kv('Destino', r.mac_dst), false);
+    if (r.vlan) h += rama('802.1Q: VLAN ' + r.vlan, kv('VLAN', r.vlan), false);
+    if (r.proto === 'ARP') {
+      h += rama('ARP: ' + varEsc(r.info), kv('Emisor', r.ip_src) + kv('Objetivo', r.ip_dst), true);
+    } else if (r.longitud !== null) {
+      h += rama('IPv4: ' + varEsc(r.ip_src) + ' → ' + varEsc(r.ip_dst),
+        kv('Longitud total', r.longitud + ' B') + kv('TTL', r.ttl) + kv('Identificación', r.ip_id) +
+        kv('Fragmentada', r.fragmentada ? 'sí' : 'no'), true);
+      if (r.proto === 'TCP') h += rama('TCP: ' + r.puerto_src + ' → ' + r.puerto_dst + ' [' + varEsc(r.flags || '—') + ']',
+        kv('Flags', r.flags || '—') + kv('Secuencia', r.seq) + kv('Datos', r.datos + ' B'), true);
+      else if (r.proto === 'UDP') h += rama('UDP: ' + r.puerto_src + ' → ' + r.puerto_dst, '', false);
+      else h += rama(varEsc(r.proto) + ': ' + varEsc(r.info || ''), '', false);
+    } else {
+      h += rama(varEsc(r.proto || 'otro') + ' (sin IPv4)', '', false);
+    }
+  } else {
+    h += rama('Evento ' + varEsc(r.tipo) + ' en eve.json, byte ' + r.byte, kv('Hora (UTC)', r.hora) +
+      kv('Origen', r.origen) + kv('Destino', r.destino) + kv('Protocolo', r.proto) + kv('Resumen', r.info || '—'), true);
+    let crudo = r.crudo;
+    try { crudo = JSON.stringify(JSON.parse(r.crudo), null, 2); } catch (e) { /* recortado */ }
+    h += rama('Línea JSON tal como la escribió Suricata', '<pre>' + varEsc(crudo) + '</pre>', false);
+  }
+  const feats = m ? m.features : (r.aportes || []);
+  const cf = kv('Estado', r.estado) +
+    kv('Entidad', m ? m.entidad + ' (atribuida por el motor)' : (r.entidad ? r.entidad + ' (provisional)' : '—')) +
+    (m ? kv('Ventana', 'termina ' + vivoHora(m.ventana_fin) + ' UTC') : kv('Motor', 'pendiente: aún no procesado')) +
+    feats.map(f => kv(f.feature, f.aporte + ' · ventana ' + f.ventana_s + ' s · ' + f.uso +
+      (m ? ' · valor ' + vivoNum(f.valor) + (f.parcial ? ' (parcial)' : '') : ''))).join('');
+  h += rama('CyberFlow: ' + (feats.length ? feats.length + ' variable(s)' : 'no aporta') + (m ? ' · confirmada' : ' · provisional'), cf, true);
+  caja.innerHTML = h;
+  caja.hidden = false;
+}
+
+async function vivoPoll() {
+  const sec = document.getElementById('s-vivo');
+  if (!sec || sec.hidden || vivo.pausa || vivo.enCurso) return;
+  vivo.enCurso = true;
+  try {
+    const qs = new URLSearchParams({todos: document.getElementById('vivoTodos').checked ? '1' : '0'});
+    for (const k of ['pf', 'po', 'pn', 'eo']) if (vivo.cursor[k] !== undefined) qs.set(k, vivo.cursor[k]);
+    const d = await (await fetch('/api/vivo/flujo?' + qs.toString())).json();
+    if (d.error) {
+      if (vivo.error !== d.error) { vivo.error = d.error; renderVivo(); }
+      document.getElementById('vmTitulo').textContent = 'Sin captura';
+      document.getElementById('vmSub').textContent = d.error;
+      document.getElementById('vmDot').className = 'vm-dot parado';
+      return;
+    }
+    const habiaError = vivo.error;
+    vivo.error = null;
+    vivo.cursor = d.cursor;
+    if (habiaError) renderVivo();
+    vivoIngerir(d);
+  } catch (e) {
+    document.getElementById('vmTitulo').textContent = 'Sin conexión con el panel';
+    document.getElementById('vmDot').className = 'vm-dot parado';
+  } finally {
+    vivo.enCurso = false;
+  }
+}
+
+async function vivoMotor() {
+  const sec = document.getElementById('s-vivo');
+  if (!sec || sec.hidden || vivo.pausa || vivo.error) return;
+  try {
+    const d = await (await fetch('/api/vivo?todos=1&limite=3000')).json();
+    if (d.error) return;
+    vivo.motorInfo = d;
+    for (const r of d.tramas) vivo.motor.pcap.set(r.fuente.fichero + '#' + r.fuente.trama, r);
+    for (const r of d.eventos) vivo.motor.eve.set(String(r.fuente.byte), r);
+    for (const fuente of ['pcap', 'eve']) {
+      const mp = vivo.motor[fuente];
+      while (mp.size > 8000) mp.delete(mp.keys().next().value);
+    }
+  } catch (e) { return; }
+  // Las filas ya pintadas que ahora tienen confirmacion se repintan en su sitio.
+  const caja = document.getElementById('vivoTabla');
+  if (vivo.tab === 'matriz' || !caja) return;
+  for (const tr of Array.from(caja.querySelectorAll('tbody tr[data-c="0"]'))) {
+    if (!vivo.motor[vivo.tab].has(tr.dataset.k)) continue;
+    const r = vivo.porClave[vivo.tab].get(tr.dataset.k);
+    if (r) tr.outerHTML = vivoFila(r, vivo.tab, false);
+  }
+  if (vivo.sel && vivo.motor[vivo.tab].has(vivo.sel)) vivoDetalle(vivo.porClave[vivo.tab].get(vivo.sel), vivo.tab);
+  vivoResumenTexto();
+}
+
+async function vivoCargarMatriz() {
+  if (vivo.matriz) return;
+  try { vivo.matriz = (await (await fetch('/api/trazabilidad')).json()).filas || []; }
+  catch (e) { vivo.matriz = []; }
   renderVivo();
 }
 
@@ -2728,17 +3046,37 @@ if (document.getElementById('vivoTabla')) {
   on('vivoTabs', 'click', (ev) => {
     const b = ev.target.closest('button[data-vtab]');
     if (!b) return;
-    vivoTab = b.dataset.vtab;
+    vivo.tab = b.dataset.vtab;
+    vivo.sel = null;
     document.querySelectorAll('#vivoTabs button').forEach(x => x.classList.toggle('active', x === b));
     renderVivo();
-    cargarVivo(true);
+    if (vivo.tab === 'matriz') vivoCargarMatriz();
   });
   on('vivoFiltro', 'input', renderVivo);
-  on('vivoTodos', 'change', () => cargarVivo(true));
+  on('vivoTodos', 'change', renderVivo);
+  on('vivoSeguir', 'change', () => vivoAlFinal(document.getElementById('vivoTabla')));
   on('vivoPausa', 'click', () => {
-    vivoPausa = !vivoPausa;
-    document.getElementById('vivoPausa').textContent = vivoPausa ? 'Reanudar' : 'Pausar';
-    if (!vivoPausa) cargarVivo(true);
+    vivo.pausa = !vivo.pausa;
+    document.getElementById('vivoPausa').textContent = vivo.pausa ? 'Reanudar' : 'Pausar';
+    if (vivo.pausa) {
+      document.getElementById('vmTitulo').textContent = 'En pausa';
+      document.getElementById('vmDot').className = 'vm-dot';
+    } else vivoPoll();
+  });
+  on('vivoLimpiar', 'click', () => {
+    vivo.filas = {eve: [], pcap: []};
+    vivo.porClave = {eve: new Map(), pcap: new Map()};
+    vivo.sel = null;
+    renderVivo();
+  });
+  on('vivoTabla', 'click', (ev) => {
+    const tr = ev.target.closest('tbody tr[data-k]');
+    if (!tr || vivo.tab === 'matriz') return;
+    vivo.sel = tr.dataset.k;
+    document.querySelectorAll('#vivoTabla tr.sel').forEach(x => x.classList.remove('sel'));
+    tr.classList.add('sel');
+    document.getElementById('vivoSeguir').checked = false;
+    vivoDetalle(vivo.porClave[vivo.tab].get(vivo.sel), vivo.tab);
   });
   // Enlaces "Ver en vivo" del diagrama: abren la pestaña de su fuente.
   document.addEventListener('click', (ev) => {
@@ -2747,8 +3085,10 @@ if (document.getElementById('vivoTabla')) {
     const b = document.querySelector('#vivoTabs button[data-vtab="' + a.dataset.vtab + '"]');
     if (b) b.click();
   });
-  cargarVivo(true);
-  setInterval(() => cargarVivo(false), 10000);
+  renderVivo();
+  vivoPoll().then(vivoMotor);
+  setInterval(vivoPoll, 1000);
+  setInterval(vivoMotor, 10000);
 }
 
 // ---- Sesion: quien eres y en que modo miras ------------------------------
@@ -3118,7 +3458,7 @@ ROLES = ("admin", "lector")
 # recorre las que el servidor despacha de verdad: si se anade un endpoint y
 # nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
 RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios", "/api/archivo",
-                         "/api/vivo", "/api/trazabilidad"})
+                         "/api/vivo", "/api/vivo/flujo", "/api/trazabilidad"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -4027,7 +4367,7 @@ def main() -> int:
             if path == "/api/escenarios":
                 self._send_json(cargar_escenarios(args.escenarios))
                 return
-            if path in ("/api/vivo", "/api/trazabilidad"):
+            if path in ("/api/vivo", "/api/vivo/flujo", "/api/trazabilidad"):
                 # Se importa aquí: el panel arranca igual aunque falte el
                 # extractor, y solo esta sección lo necesita.
                 try:
@@ -4056,8 +4396,24 @@ def main() -> int:
                                               "o [red] red_entidades)"})
                     return
                 try:
+                    if path == "/api/vivo/flujo":
+                        # El cursor lo guarda el navegador. Del fichero solo se
+                        # acepta el NOMBRE, y vista_vivo lo busca entre los del
+                        # anillo: no hay ruta que se pueda colar.
+                        cursor = {}
+                        pf = urllib.parse.unquote(params.get("pf", ""))
+                        if pf and "/" not in pf and "\\" not in pf:
+                            cursor["pf"] = pf
+                        for clave in ("po", "pn", "eo"):
+                            if params.get(clave, "").isdigit():
+                                cursor[clave] = int(params[clave])
+                        self._send_json(vista_vivo.flujo(
+                            args.eve_path, cfg, cursor, todos=params.get("todos") == "1"))
+                        return
+                    limite = params.get("limite", "150")
                     self._send_json(vista_vivo.calcular_con_cache(
-                        args.eve_path, cfg, todos=params.get("todos") == "1"))
+                        args.eve_path, cfg, todos=params.get("todos") == "1",
+                        limite=min(int(limite), 3000) if limite.isdigit() else 150))
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"error": "%s: %s" % (type(exc).__name__, exc)})
                 return
