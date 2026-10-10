@@ -2,8 +2,10 @@
 
 import importlib.util
 import json
+import shutil
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -19,12 +21,22 @@ dashboard = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dashboard)
 
 
+def _script_servido() -> str:
+    html = dashboard.html_por_rol(dashboard.HTML, "admin")
+    return html.split("<script>", 1)[1].split("</script>", 1)[0]
+
+
 class DashboardGuiContract(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("node"), "sin node en esta máquina: no se puede "
+                         "comprobar la sintaxis del JS servido")
+    def test_served_script_parses_with_node(self):
+        # El HTML/JS vive en una cadena Python: un \n mal escapado rompe TODO el script
+        # del panel sin que Python se queje. Solo un parser de JS lo detecta.
+        subprocess.run([shutil.which("node"), "--check", "-"], input=_script_servido(),
+                       text=True, encoding="utf-8", check=True, capture_output=True, timeout=15)
+
     def test_served_script_parses_and_uses_active_detector(self):
-        html = dashboard.html_por_rol(dashboard.HTML, "admin")
-        script = html.split("<script>", 1)[1].split("</script>", 1)[0]
-        subprocess.run(["node", "--check", "-"], input=script, text=True, encoding="utf-8",
-                       check=True, capture_output=True, timeout=15)
+        script = _script_servido()
         self.assertIn("DETECTOR_LABEL[m.detector_name]", script)
         self.assertNotIn("card('Detector', 'OCSVM')", script)
         self.assertIn("#topoVista", script)
@@ -68,7 +80,7 @@ class DashboardGuiContract(unittest.TestCase):
                 listener.bind(("127.0.0.1", 0))
                 port = listener.getsockname()[1]
             proc = subprocess.Popen([
-                "python", str(REPO / "scripts/engine/dashboard.py"), "--demo",
+                sys.executable, str(REPO / "scripts/engine/dashboard.py"), "--demo",
                 "--host", "127.0.0.1", "--port", str(port), "--manifest-path", str(manifest),
                 "--detector-name", "if_recalibrado_2026_09", "--log-path", str(temp / "log.jsonl"),
                 "--eve-path", str(temp / "eve.json")

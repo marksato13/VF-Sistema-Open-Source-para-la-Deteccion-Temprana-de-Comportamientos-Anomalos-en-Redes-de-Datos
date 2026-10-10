@@ -61,6 +61,12 @@ fecha y función de score, y nunca se intercambian:**
   laboratorio).
 - **Activo hoy:** `if_recalibrado_2026_09` (esta ficha).
 
+**Cómo se produce un artefacto así.** `entrenar_preliminar.py` (con el contrato v2)
+guarda un paquete; `scripts/modeling/promover_preliminar.py` lo convierte en el
+`Pipeline` y el manifiesto que carga el motor, verificando orden de variables, hashes y
+equivalencia. El artefacto vivo se generó el 30-sep con esa misma receta, ejecutada a
+mano en el sensor (runbook de congelado en orquestación); el guion publica ahora el paso.
+
 **Equivalencia de escalas (punto 10).** `entrenar_preliminar.py` informa
 `decision_function`; el motor usa `score_samples`. En un Isolation Forest de sklearn
 `decision_function = score_samples − offset_`, y con `contamination="auto"`
@@ -145,6 +151,14 @@ configuración por despliegue (mejora abierta).
   respondiendo por HTTPS desde el bastión (401 sin login). Respaldo de la versión
   anterior: `dashboard.py.bak-20261010-002127`. **[V]** QA autenticada por rol con
   capturas fechadas.
+- ⚠️ **Detector que muestra el panel [S, 2026-10-10].** La unidad `ppi-dashboard` de
+  Sensor1 **no pasa `--detector-name`**, así que el panel usa el valor por omisión
+  `ocsvm_scaled`: su sección Modelo muestra umbral, FPR y detección **del OCSVM** y cuenta
+  los ALERT del modelo con ese nombre, aunque el motor ejecute el IF recalibrado. Está
+  corregido en el código (el generador pasa el mismo detector al motor y al panel; el
+  panel lee el umbral de donde lo lee el motor), pero **en Sensor1 falta regenerar la
+  unidad** (`cyberflow_config.py --escribir`, requiere sudo con contraseña). Mientras
+  tanto, las cifras de esa sección del panel vivo no son las del modelo desplegado.
 
 ## 9. Servicios y versión de heurísticos
 

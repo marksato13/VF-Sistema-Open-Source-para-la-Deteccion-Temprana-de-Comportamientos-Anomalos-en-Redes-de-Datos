@@ -160,6 +160,7 @@ WorkingDirectory={raiz}
 ExecStart={python} {raiz}/scripts/engine/dashboard.py \\
     --log-path {raiz}/{registro} \\
     --manifest-path {raiz}/{manifiesto} \\
+    --detector-name {detector} \\
     --eve-path {eve} \\
     --schema {raiz}/{esquema} \\
     --schema-extra {raiz}/{esquema_extra} \\

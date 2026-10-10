@@ -1112,12 +1112,15 @@ async function refresh() {
     const modelEl = document.getElementById('model');
     if (modelEl) {
       const m = status.model;
+      // Una métrica que el manifiesto no trae llega como null: se muestra «—»,
+      // no un 0 % que parecería una medición.
+      const pct = (v, d) => (v == null ? '—' : (v * 100).toFixed(d) + '%');
       modelEl.innerHTML = [
         card('Detector', escSimple(DETECTOR_LABEL[m.detector_name] || m.detector_name || 'no disponible')),
         card('Umbral', m.threshold.toFixed(4), 'accent'),
-        card('FPR benigno', (m.test_fpr * 100).toFixed(2) + '%'),
-        card('Detección global', (m.detection_rate * 100).toFixed(1) + '%', 'accent'),
-        card('Detección Kali-real', (m.kali_real_detection_rate * 100).toFixed(1) + '%', 'accent'),
+        card('FPR benigno', pct(m.test_fpr, 2)),
+        card('Detección global', pct(m.detection_rate, 1), 'accent'),
+        card('Detección Kali-real', pct(m.kali_real_detection_rate, 1), 'accent'),
       ].join('');
     }
 
@@ -2784,14 +2787,35 @@ def suricata_metrics(command: str) -> dict | None:
 
 
 def load_model_summary(manifest_path: Path, detector_name: str) -> dict:
+    """Resumen del detector para el panel.
+
+    El umbral se lee de donde lo lee el motor (`detectors.<nombre>.calibration`,
+    ver `motor_decision.load_threshold`); solo si el manifiesto es de laboratorio y no
+    lo trae ahí se usa `evaluation.<nombre>.threshold_used`. Las métricas que el
+    manifiesto no tenga quedan en None y el panel muestra «—»: mostrar un 0 % o las
+    cifras de otro detector sería peor que no mostrar nada.
+    """
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    detector_eval = manifest["evaluation"][detector_name]
+    det = (manifest.get("detectors") or {}).get(detector_name) or {}
+    cal = det.get("calibration") or {}
+    ev = (manifest.get("evaluation") or {}).get(detector_name) or {}
+    if "threshold" in cal:
+        threshold = float(cal["threshold"])
+    elif "threshold_used" in ev:
+        threshold = float(ev["threshold_used"])
+    else:
+        raise KeyError(f"el manifiesto no tiene umbral para el detector {detector_name!r}")
+
+    def num(v):
+        return None if v is None else float(v)
+
+    an = ev.get("anomalies") or {}
     return {
         "detector_name": detector_name,
-        "threshold": float(detector_eval["threshold_used"]),
-        "test_fpr": float(detector_eval["test"]["fpr"]),
-        "detection_rate": float(detector_eval["anomalies"]["detection_rate"]),
-        "kali_real_detection_rate": float(detector_eval["anomalies"]["kali_real_detection_rate"]),
+        "threshold": threshold,
+        "test_fpr": num((ev.get("test") or {}).get("fpr")),
+        "detection_rate": num(an.get("detection_rate")),
+        "kali_real_detection_rate": num(an.get("kali_real_detection_rate")),
     }
 
 
