@@ -46,12 +46,17 @@ por episodio**, no del modelo solo.
   [L](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/bb6e91d784622aab52f8b9f579186e50484dfdf6/04-evidencias/cyberflow/L-recalibracion-seco-sensor1-2026-09-29.md),
   [M](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/bb6e91d784622aab52f8b9f579186e50484dfdf6/04-evidencias/cyberflow/M-deteccion-kali-sensor1-2026-09-30.md).
 
-## Pendiente de publicar
+## Equivalencia verificada (2026-10-10)
 
-El manifiesto operativo, el informe de calibración y la salida de
 [`scripts/modeling/verificar_equivalencia_umbral.py`](../scripts/modeling/verificar_equivalencia_umbral.py)
-ejecutado sobre el artefacto vivo se publicarán como evidencia en orquestación (son
-JSON de métricas, sin secretos). El joblib no se publica; queda su hash.
+ejecutado sobre el artefacto vivo en Sensor1: **`EQUIVALENTE`**. El motor lee el umbral
+de `detectors.if_recalibrado_2026_09.calibration.threshold` (−0,568892, regla
+`score < threshold`); con `offset_ = −0,5` corresponde al −0,06889178778834089 del
+informe de calibración, salvo 2,1·10⁻⁷ de redondeo a seis decimales. SHA-256 del
+manifiesto: `564b3a080e22f20731d3a9ec8bde251cc166ce37be8e78e5247e4e3ed1e8fb5e`. Salida
+completa:
+[nota P](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/2e4f9accdf0b3b3352baf59b89fbc5934be8b66e/04-evidencias/cyberflow/P-equivalencia-umbral-sensor1-2026-10-10.md).
+El joblib no se publica; queda su hash.
 
 ## Decisión pendiente
 
