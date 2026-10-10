@@ -151,11 +151,12 @@ configuración por despliegue (mejora abierta).
   datos de ejemplo.
 - **Solo lectura para todo rol:** no hay endpoints de escritura [C]. El rol `lector`
   recibe **403** en los endpoints de desarrollador.
-- Versión desplegada en Sensor1 (2026-10-10) [S]: `dashboard.py` del commit
-  `3ce0f01` de la rama `as-deployed-sensor-20261006`, **byte a byte** (SHA-256
-  `d4a7358b01657c4d1020b3b4af71375abd77d48b79ff2190873ab40652b93582`); servicio `active` y
-  respondiendo por HTTPS desde el bastión (401 sin login). Respaldo de la versión
-  anterior: `dashboard.py.bak-20261010-002127`. **[V]** QA autenticada por rol con
+- Versión desplegada en Sensor1 (2026-10-10, 04:29 UTC) [S]: `dashboard.py` del commit
+  `4be3b76` de la rama `as-deployed-sensor-20261006`, **byte a byte** (SHA-256
+  `ef56b24f8050fbc4abd8478866357361b1e6c20cf8a08132e9bbd7e891162864`): incluye la lectura
+  del umbral desde `detectors.<nombre>.calibration` y «—» para métricas ausentes. Servicio
+  `active` y respondiendo por HTTPS desde el bastión (401 sin login). Respaldo de la
+  versión anterior: `dashboard.py.bak-20261010-042924`. **[V]** QA autenticada por rol con
   capturas fechadas.
 - ⚠️ **Detector que muestra el panel [S, 2026-10-10].** La unidad `ppi-dashboard` de
   Sensor1 **no pasa `--detector-name`**, así que el panel usa el valor por omisión
