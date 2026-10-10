@@ -132,6 +132,18 @@ class CadenaDePromocion(unittest.TestCase):
         with self.assertRaises(ValueError):
             promover.promover(self.paquete, "if_x", d / "mx.joblib", d / "manx.json", self.informe_v3)
 
+    def test_funciona_en_un_proceso_limpio(self):
+        # En el mismo proceso el motor ya importó el extractor y eso ocultaba un fallo
+        # de carga que solo aparecía en un proceso nuevo (como en Sensor1).
+        d = Path(self.tmp.name)
+        r = subprocess.run([sys.executable, str(REPO / "scripts/modeling/promover_preliminar.py"),
+                            "--paquete", str(self.paquete), "--informe", str(self.informe),
+                            "--detector", "if_limpio", "--salida-modelo", str(d / "limpio.joblib"),
+                            "--salida-manifiesto", str(d / "limpio.json")],
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["equivalencia"], "EQUIVALENTE")
+
     def test_main_imprime_el_resumen(self):
         d = Path(self.tmp.name)
         with contextlib.redirect_stdout(io.StringIO()) as out:
