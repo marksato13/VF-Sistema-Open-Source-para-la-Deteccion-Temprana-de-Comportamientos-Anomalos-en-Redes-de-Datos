@@ -112,8 +112,10 @@ def promover(paquete_path: Path, detector: str, salida_modelo: Path, salida_mani
     umbral_df = float(paquete["umbral"])
     umbral_ss = umbral_df + offset          # decision_function = score_samples - offset_
     # Nombres de paso iguales a los del artefacto desplegado el 30-sep (runbook de
-    # congelado): así, con los mismos objetos y el mismo entorno, el resultado es el
-    # mismo fichero byte a byte y la promoción se puede auditar por hash.
+    # congelado). Reproducido en Sensor1 desde el mismo paquete (2026-10-10): el
+    # Pipeline resultante puntúa EXACTAMENTE igual que el desplegado (diferencia 0,0
+    # en 5000 filas), pero el pickle NO es byte a byte el mismo fichero; por eso la
+    # auditoría se hace por comportamiento y umbral, y el hash identifica cada artefacto.
     pipeline = Pipeline([("scaler", escalador), ("model", modelo)])
 
     # Comprobación con filas en la escala cruda que recibe el motor.
