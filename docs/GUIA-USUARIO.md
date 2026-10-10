@@ -57,6 +57,12 @@ Cada decisión es una línea JSON:
 ### Comprobar la salud
 
 ```bash
+bash scripts/setup/doctor.sh       # servicios, captura, Suricata, motor, disco, calibración, panel
+```
+
+Si algo sale en ámbar o rojo, a mano:
+
+```bash
 systemctl is-active cyberflow-capture-nic ppi-motor-capture ppi-motor suricata
 ls -la /var/lib/ppi-motor-capture/          # los live-*.pcap deben rotar
 cat /sys/class/net/<interfaz>/statistics/rx_packets   # debe crecer

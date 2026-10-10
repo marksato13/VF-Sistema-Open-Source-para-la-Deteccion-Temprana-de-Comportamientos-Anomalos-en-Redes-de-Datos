@@ -267,11 +267,14 @@ frecuencia ni límite de tamaño**:
 
 ## 6 · Instalar CyberFlow
 
-> **La vía corta.** Si los pasos 1 a 5 están hechos, todo lo que sigue lo hace
-> un comando, y antes se diagnostica solo:
+> **La vía corta.** Si los pasos 1 a 5 están hechos, todo lo que sigue lo hacen
+> tres comandos: el asistente escribe la configuración, el instalador se
+> diagnostica solo y luego instala.
 > ```bash
-> sudo bash scripts/setup/instalar.sh --comprobar
-> sudo bash scripts/setup/instalar.sh
+> bash scripts/setup/configurar.sh                 # escribe configs/cyberflow.local.toml
+> sudo bash scripts/setup/instalar.sh --comprobar  # diagnostica, no toca nada
+> sudo bash scripts/setup/instalar.sh              # instala y arranca
+> bash scripts/setup/doctor.sh                     # salud, ya en marcha
 > ```
 > El resto de esta sección explica qué hace por dentro, por si prefiere ir a
 > mano o algo falla.
@@ -324,6 +327,12 @@ Guarda una copia `.anterior` de cada unidad que sobrescribe.
 ---
 
 ## 7 · Comprobar que funciona
+
+```bash
+bash scripts/setup/doctor.sh                # todo de una vez; solo lee
+```
+
+O pieza a pieza:
 
 ```bash
 systemctl is-active cyberflow-capture-nic ppi-motor-capture ppi-motor

@@ -244,10 +244,14 @@ el panel respondiendo.
 ### Comprobar que sigue funcionando
 
 ```bash
-sudo bash scripts/setup/instalar.sh --comprobar
-systemctl is-active cyberflow-capture-nic ppi-motor-capture ppi-motor suricata
+bash scripts/setup/doctor.sh       # salud del sistema EN MARCHA; solo lee
 tail -f logs/motor_decision.log
 ```
+
+`doctor.sh` revisa servicios, captura, Suricata, motor, línea base, disco,
+calibración y panel, y termina en «Todo sano», «Operativo, con N avisos» o
+«N fallos». No confundirlo con `instalar.sh --comprobar`, que valida la máquina
+**antes** de instalar.
 
 Modalidad A (bloqueo en el sensor): `sudo nft list set inet ppi_enforce bloqueadas`.
 Modalidad B, **en el host protegido**: `sudo nft list set inet cyberflow cyberflow_bloqueados`
