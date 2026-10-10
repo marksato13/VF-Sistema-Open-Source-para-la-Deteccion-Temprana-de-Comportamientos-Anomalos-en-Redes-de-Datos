@@ -66,6 +66,12 @@ guarda un paquete; `scripts/modeling/promover_preliminar.py` lo convierte en el
 `Pipeline` y el manifiesto que carga el motor, verificando orden de variables, hashes y
 equivalencia. El artefacto vivo se generó el 30-sep con esa misma receta, ejecutada a
 mano en el sensor (runbook de congelado en orquestación); el guion publica ahora el paso.
+**[S] Reproducido el 2026-10-10** desde el paquete original
+(`ensayo-if-v2.joblib`, SHA-256 `9a4e0264…`): el `Pipeline` resultante puntúa igual que el
+vivo (diferencia 0,0 en 5000 filas, 0 decisiones distintas, mismo orden de variables),
+aunque el fichero no es byte a byte el mismo. Evidencia, con el **manifiesto operativo** y
+el **informe de calibración** publicados:
+[nota Q](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/2255f7fa631561991b28919a888aba0925dc0832/04-evidencias/cyberflow/Q-promocion-reproducible-sensor1-2026-10-10/README.md).
 
 **Equivalencia de escalas (punto 10).** `entrenar_preliminar.py` informa
 `decision_function`; el motor usa `score_samples`. En un Isolation Forest de sklearn

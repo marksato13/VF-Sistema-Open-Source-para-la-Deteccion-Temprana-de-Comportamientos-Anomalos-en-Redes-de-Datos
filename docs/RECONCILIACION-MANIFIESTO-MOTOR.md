@@ -9,7 +9,7 @@ cambia artefactos, umbrales ni servicios**. Ficha consolidada:
 | `systemctl cat ppi-motor` | Descripción textual «OCSVM», pero `ExecStart` apunta a `artifacts/preliminar/if_recalibrado_desplegable.joblib`, `manifest-if-recalibrado.json` y `--detector-name if_recalibrado_2026_09` | Isolation Forest recalibrado, servicio activo | Corregir la descripción al planificar un despliegue; no editar la unidad viva para una demo. |
 | [`configs/cyberflow.toml`](../configs/cyberflow.toml) (perfil genérico) | `modelo=artifacts/model/ocsvm_scaled.joblib`, `manifiesto=artifacts/model/manifest.json`, `umbral=1.8126087939765134`, `calibrado_en_esta_red=false` | Sensor1 usa `configs/cyberflow.local.toml`: IF y `calibrado=true` | Conservar como perfil histórico / instalación no calibrada. No regenerar systemd con él en Sensor1. |
 | [`artifacts/model/manifest.json`](../artifacts/model/manifest.json) del laboratorio | `if_primary_weighted` como conclusión principal; `ocsvm_scaled` como comparador | No es el manifiesto que usa `ppi-motor` | Mantener íntegro como evidencia experimental; no reescribirlo retrospectivamente. |
-| `artifacts/preliminar/manifest-if-recalibrado.json` (Sensor1) | Detector `if_recalibrado_2026_09` y modelo desplegable | Es el manifiesto que usan el motor y el panel | Fuente operativa; su publicación queda pendiente como evidencia (ver abajo). |
+| `artifacts/preliminar/manifest-if-recalibrado.json` (Sensor1) | Detector `if_recalibrado_2026_09` y modelo desplegable | Es el manifiesto que usan el motor y el panel | Fuente operativa; **publicado** como evidencia (SHA-256 `564b3a08…`, [nota Q](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/2255f7fa631561991b28919a888aba0925dc0832/04-evidencias/cyberflow/Q-promocion-reproducible-sensor1-2026-10-10/manifest-if-recalibrado.json)). No trae `evaluation` para este detector: el panel debe recibir `--detector-name` y leer el umbral de `detectors.<nombre>.calibration`. |
 | [`docs/dataset/MODEL_CARD_OCSVM.md`](dataset/MODEL_CARD_OCSVM.md) | OCSVM del laboratorio v2, FPR 4,71 %, 88,3 % | Histórico; no describe Sensor1 | Conservada como card histórica (el generador la rotula así). Card operativa: [`MODEL_CARD_IF_RECALIBRADO.md`](dataset/MODEL_CARD_IF_RECALIBRADO.md). |
 | [`scripts/engine/dashboard.py`](../scripts/engine/dashboard.py) | Tarjeta «Detector» fija en «OCSVM» y paso del recorrido «One-Class SVM» | Referencias falsas en el panel aunque el motor corra IF | Corregido: la tarjeta usa el `detector_name` real de `/api/status`. |
 
@@ -57,6 +57,17 @@ manifiesto: `564b3a080e22f20731d3a9ec8bde251cc166ce37be8e78e5247e4e3ed1e8fb5e`. 
 completa:
 [nota P](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/2e4f9accdf0b3b3352baf59b89fbc5934be8b66e/04-evidencias/cyberflow/P-equivalencia-umbral-sensor1-2026-10-10.md).
 El joblib no se publica; queda su hash.
+
+## Promoción reproducible y panel (2026-10-10)
+
+- `scripts/modeling/promover_preliminar.py`, aplicado al paquete original del modelo vivo,
+  produce un `Pipeline` que puntúa igual que el desplegado (diferencia 0,0 en 5000 filas);
+  no es el mismo fichero byte a byte. Informe de calibración y manifiesto operativo
+  publicados en la
+  [nota Q](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/2255f7fa631561991b28919a888aba0925dc0832/04-evidencias/cyberflow/Q-promocion-reproducible-sensor1-2026-10-10/README.md).
+- **Panel:** la unidad `ppi-dashboard` de Sensor1 no pasa `--detector-name`, de modo que
+  el panel usa `ocsvm_scaled` y muestra cifras del OCSVM. Corregido en el generador y en el
+  panel; falta regenerar la unidad en Sensor1 (sudo).
 
 ## Decisión pendiente
 
