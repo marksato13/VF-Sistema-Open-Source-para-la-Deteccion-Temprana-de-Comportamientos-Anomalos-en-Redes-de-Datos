@@ -151,21 +151,21 @@ configuración por despliegue (mejora abierta).
   datos de ejemplo.
 - **Solo lectura para todo rol:** no hay endpoints de escritura [C]. El rol `lector`
   recibe **403** en los endpoints de desarrollador.
-- Versión desplegada en Sensor1 (2026-10-10, 04:29 UTC) [S]: `dashboard.py` del commit
-  `4be3b76` de la rama `as-deployed-sensor-20261006`, **byte a byte** (SHA-256
-  `ef56b24f8050fbc4abd8478866357361b1e6c20cf8a08132e9bbd7e891162864`): incluye la lectura
-  del umbral desde `detectors.<nombre>.calibration` y «—» para métricas ausentes. Servicio
-  `active` y respondiendo por HTTPS desde el bastión (401 sin login). Respaldo de la
-  versión anterior: `dashboard.py.bak-20261010-042924`. **[V]** QA autenticada por rol con
+- Versión desplegada en Sensor1 (2026-10-10, 04:48 UTC) [S]: `dashboard.py` del commit
+  `1fc8772` de la rama `as-deployed-sensor-20261006`, **byte a byte** (SHA-256
+  `03e3ef481ee73b87e6b4767aa6c8d3fe62c3e2e3b1ded65c219a7d13f43ca688`). Servicio `active` y
+  respondiendo por HTTPS desde el bastión (401 sin login). Respaldo de la versión
+  anterior: `dashboard.py.bak-20261010-044838`. **[V]** QA autenticada por rol con
   capturas fechadas.
-- ⚠️ **Detector que muestra el panel [S, 2026-10-10].** La unidad `ppi-dashboard` de
-  Sensor1 **no pasa `--detector-name`**, así que el panel usa el valor por omisión
-  `ocsvm_scaled`: su sección Modelo muestra umbral, FPR y detección **del OCSVM** y cuenta
-  los ALERT del modelo con ese nombre, aunque el motor ejecute el IF recalibrado. Está
-  corregido en el código (el generador pasa el mismo detector al motor y al panel; el
-  panel lee el umbral de donde lo lee el motor), pero **en Sensor1 falta regenerar la
-  unidad** (`cyberflow_config.py --escribir`, requiere sudo con contraseña). Mientras
-  tanto, las cifras de esa sección del panel vivo no son las del modelo desplegado.
+- **Detector que muestra el panel [S, 2026-10-10].** Hasta las 04:48 UTC la unidad
+  `ppi-dashboard` de Sensor1, que no pasa `--detector-name`, dejaba el panel en
+  `ocsvm_scaled` y su sección Modelo mostraba cifras **del OCSVM**. Resuelto sin tocar la
+  unidad: sin ese argumento, el panel toma el detector de la misma configuración que el
+  motor. Journal: `panel: detector if_recalibrado_2026_09 (fuente:
+  configs/cyberflow.local.toml [motor] detector)`. El umbral mostrado es el del motor
+  (−0,568892); FPR y detección aparecen como «—» porque el manifiesto operativo no las
+  trae para este detector. El generador ya escribe `--detector-name` en la unidad del panel
+  para futuras instalaciones.
 
 ## 9. Servicios y versión de heurísticos
 
@@ -176,9 +176,12 @@ configuración por despliegue (mejora abierta).
   `port_scan` y ratios de unicidad 0,45 por el espejo). Desde esta versión del
   repositorio, el publicador **etiqueta el feed con la versión del código**
   (`heuristicos.VERSION_UMBRALES`) y avisa si se le pasa otra por argumento, para que la
-  traza no pueda divergir. **[V]** En Sensor1 la unidad del publicador aún pasa
-  `--umbrales 2026-10-06.1`: la etiqueta de esos feeds es incorrecta aunque las reglas
-  aplicadas sean las de `.2`; se corrige editando la unidad.
+  traza no pueda divergir. **[S] Desde el 2026-10-10 04:50 UTC** el publicador de Sensor1
+  es esta versión (SHA-256 `9cd4cd1d…`; respaldo `publicar_feed.py.bak-20261010-044944`):
+  el feed sale etiquetado `2026-10-06.2`, el journal registra el aviso por el
+  `--umbrales 2026-10-06.1` que todavía pasa la unidad, y el agente del host DMZ verifica la
+  firma y aplica cada ciclo sin errores. Quitar ese argumento de la unidad es solo
+  limpieza.
 
 ## 10. Resultados — siempre con modelo, dataset, denominador y escenario
 
