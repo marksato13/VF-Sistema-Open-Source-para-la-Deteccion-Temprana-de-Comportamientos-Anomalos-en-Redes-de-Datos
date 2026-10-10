@@ -105,7 +105,10 @@ def promover(paquete_path: Path, detector: str, salida_modelo: Path, salida_mani
     offset = float(modelo.offset_)
     umbral_df = float(paquete["umbral"])
     umbral_ss = umbral_df + offset          # decision_function = score_samples - offset_
-    pipeline = Pipeline([("escalador", escalador), ("modelo", modelo)])
+    # Nombres de paso iguales a los del artefacto desplegado el 30-sep (runbook de
+    # congelado): así, con los mismos objetos y el mismo entorno, el resultado es el
+    # mismo fichero byte a byte y la promoción se puede auditar por hash.
+    pipeline = Pipeline([("scaler", escalador), ("model", modelo)])
 
     # Comprobación con filas en la escala cruda que recibe el motor.
     rng = np.random.default_rng(semilla)
