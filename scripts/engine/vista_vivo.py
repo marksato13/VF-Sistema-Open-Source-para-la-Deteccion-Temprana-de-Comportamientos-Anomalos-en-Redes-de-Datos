@@ -124,11 +124,12 @@ def matriz_trazabilidad() -> list[dict]:
         info = INFO.get(nombre) or CONTEOS[nombre]
         fuente = info["source"]
         if fuente == "eve":
-            parser = "v2.load_app_observations"
+            parser = "load_app_observations"
         elif info["layer"] == "L2":
-            parser = "v3.parse_ethernet_l2 / l2_en_alcance"
+            parser = "l2_en_alcance"
         else:
-            parser = "v2.parse_ethernet_ipv4 + attribute_packets (tras deduplicar el espejo)"
+            # Tras quitar plano de control y copias del espejo (deduplicar_espejo).
+            parser = "parse_con_contexto → attribute_packets"
         if nombre in EN_MODELO:
             uso = "modelo"
         elif nombre in CONTEOS:
