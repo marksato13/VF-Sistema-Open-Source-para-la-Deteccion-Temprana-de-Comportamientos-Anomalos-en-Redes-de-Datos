@@ -67,9 +67,13 @@ fecha y función de score, y nunca se intercambian:**
 `offset_ = −0,5`; por eso −0,068892 − 0,5 = −0,568892. La comprobación sobre el
 artefacto real se hace con
 [`scripts/modeling/verificar_equivalencia_umbral.py`](../scripts/modeling/verificar_equivalencia_umbral.py),
-que carga el `Pipeline`, lee `offset_`, contrasta ambas funciones sobre filas reales y
-compara con el umbral del manifiesto. **[V]** su salida en Sensor1 se publica como
-evidencia en orquestación.
+que carga el `Pipeline`, lee `offset_`, contrasta ambas funciones y compara el umbral
+que lee el motor (`detectors.<nombre>.calibration.threshold`) con el del informe de
+calibración. **[S] Ejecutado sobre el artefacto vivo el 2026-10-10: `EQUIVALENTE`**
+(`offset_ = −0,5`, desvío 0,0 en la relación entre funciones; el umbral del manifiesto
+difiere del calibrado en 2,1·10⁻⁷ porque está redondeado a seis decimales). Evidencia:
+[nota P](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/2e4f9accdf0b3b3352baf59b89fbc5934be8b66e/04-evidencias/cyberflow/P-equivalencia-umbral-sensor1-2026-10-10.md);
+SHA-256 del manifiesto `564b3a080e22f20731d3a9ec8bde251cc166ce37be8e78e5247e4e3ed1e8fb5e`.
 
 ## 3. Contrato de variables [C]
 
@@ -135,10 +139,12 @@ configuración por despliegue (mejora abierta).
   datos de ejemplo.
 - **Solo lectura para todo rol:** no hay endpoints de escritura [C]. El rol `lector`
   recibe **403** en los endpoints de desarrollador.
-- Versión desplegada en Sensor1 (2026-10-09): `dashboard.py` con el contenido del commit
-  `8d696e5d61d3f90b4c3c2106ea503db83ca26950` de la rama `as-deployed-sensor-20261006`
-  (SHA-256 del fichero con finales LF: `5149d044a7c11de10075093dd2db7591132e4c8d0d4193d68fa0f20607285151`).
-  **[V]** QA autenticada por rol con capturas fechadas.
+- Versión desplegada en Sensor1 (2026-10-10) [S]: `dashboard.py` del commit
+  `3ce0f01` de la rama `as-deployed-sensor-20261006`, **byte a byte** (SHA-256
+  `d4a7358b01657c4d1020b3b4af71375abd77d48b79ff2190873ab40652b93582`); servicio `active` y
+  respondiendo por HTTPS desde el bastión (401 sin login). Respaldo de la versión
+  anterior: `dashboard.py.bak-20261010-002127`. **[V]** QA autenticada por rol con
+  capturas fechadas.
 
 ## 9. Servicios y versión de heurísticos
 
