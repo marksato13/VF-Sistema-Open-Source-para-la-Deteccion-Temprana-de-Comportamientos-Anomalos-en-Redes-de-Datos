@@ -7,6 +7,25 @@ Cada entrada dice qué cambió y **con qué se midió**, no solo qué se tocó.
 
 ### Corregido
 
+- **La guía de recalibración no producía un artefacto que el motor pudiera cargar.**
+  Entrenaba con `multilayer-v3.json` (31 variables) cuando el motor exige el contrato v2
+  (28, comprobado contra su extractor), y lo que guarda `entrenar_preliminar.py` es un
+  paquete (modelo, escalador y umbral en `decision_function`), no el objeto con
+  `score_samples` que carga el motor. Nuevo `scripts/modeling/promover_preliminar.py`
+  que construye el `Pipeline` y su manifiesto verificando en una pasada el orden de
+  variables (paquete = contrato = extractor del motor), los hashes, la conversión del
+  umbral sin redondeo y la equivalencia. README e INSTALACIÓN §8 describen ahora la
+  cadena completa, hasta el despliegue y el rollback. 10 pruebas en
+  `tests/test_promover_preliminar.py` ejecutan la cadena real y la comprueban con
+  `motor_decision.load_threshold` y con el panel.
+
+- **El panel podía mostrar las métricas de otro detector.** El generador de unidades
+  pasaba `--detector-name` al motor pero no al panel, que caía a `ocsvm_scaled`: con el
+  motor ejecutando el IF recalibrado, el panel mostraba umbral, FPR y detección del OCSVM
+  y contaba los ALERT con el nombre equivocado (comprobado en Sensor1 el 2026-10-10). La
+  unidad del panel recibe ahora el mismo detector que el motor, el panel lee el umbral de
+  donde lo lee el motor y una métrica ausente se muestra como «—», no como 0 %.
+
 - **La documentación pública describía el modelo y la respuesta de la versión
   anterior.** README, system card, configuración, instalación, guía, `CITATION.cff`
   y `.zenodo.json` presentaban como vigentes el OCSVM (`1,8126`), el bloqueo binario

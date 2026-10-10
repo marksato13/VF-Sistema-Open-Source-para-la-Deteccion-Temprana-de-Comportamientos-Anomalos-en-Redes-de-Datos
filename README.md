@@ -162,7 +162,13 @@ guía larga está en [`docs/INSTALACION.md`](docs/INSTALACION.md).
 
 Instalar no basta: el modelo publicado aprendió qué era «normal» en **otra** red.
 Para que detecte bien en la tuya hay que **recalibrarlo con tu propio tráfico** —
-ese es el paso que hace el sistema *replicable*, no solo reproducible. Pipeline v3:
+ese es el paso que hace el sistema *replicable*, no solo reproducible.
+
+> **El motor solo acepta el contrato v2 (28 variables).** La línea base se acumula con
+> el extractor v3 (31 columnas: las 28 de v2 más 3 de capa 2), pero el modelo se
+> **entrena con `multilayer-v2.json`**: el motor aborta si el esquema no coincide con
+> su extractor. Y lo que guarda el entrenamiento es un **paquete** (modelo, escalador
+> y umbral por separado), que el motor no puede cargar: hay que **promocionarlo**.
 
 1. Deja el motor **capturando línea base** unas horas con tráfico real (no una red vacía).
 2. **Particiona** por bloques con banda de guarda (sin fuga temporal):
@@ -172,27 +178,50 @@ ese es el paso que hace el sistema *replicable*, no solo reproducible. Pipeline 
      --salida  artifacts/linea-base/particionado.csv \
      --informe artifacts/linea-base/particion.json
    ```
-3. **Entrena y congela el umbral** desde validación (nunca desde prueba):
+3. **Entrena con el contrato del motor y congela el umbral** desde validación (nunca
+   desde prueba):
    ```bash
    python3 scripts/modeling/entrenar_preliminar.py \
      --entrada artifacts/linea-base/particionado.csv \
-     --schema  configs/features/multilayer-v3.json \
-     --salida  artifacts/preliminar/modelo.joblib \
-     --informe artifacts/preliminar/informe.json
+     --schema  configs/features/multilayer-v2.json \
+     --salida  artifacts/preliminar/if-AAAA-MM.joblib \
+     --informe artifacts/preliminar/if-AAAA-MM.json
    ```
-4. Comprueba en el informe que el **FPR sobre `test`** ronda `alpha` (0,05). Si cuadra,
-   promociona el modelo y su umbral a producción y arranca el panel con
-   `--calibrado-en-esta-red`. Hasta entonces el panel **avisa en ámbar** de que las
-   alertas son ruido.
-5. **Comprueba la escala del umbral al promocionar.** El informe da el umbral en
-   `decision_function`; el motor puntúa con `score_samples` (difieren en el `offset_`
-   del Isolation Forest, −0,5). Antes de dar el modelo por bueno:
+   Comprueba en el informe que el **FPR sobre `test`** ronda `alpha` (0,05).
+4. **Promociona el paquete a artefacto desplegable** —`Pipeline(escalador, Isolation
+   Forest)` con `score_samples` sobre datos crudos, más su manifiesto—:
+   ```bash
+   python3 scripts/modeling/promover_preliminar.py \
+     --paquete  artifacts/preliminar/if-AAAA-MM.joblib \
+     --informe  artifacts/preliminar/if-AAAA-MM.json \
+     --detector if_recalibrado_AAAA_MM \
+     --salida-modelo     artifacts/preliminar/if_recalibrado_AAAA_MM_desplegable.joblib \
+     --salida-manifiesto artifacts/preliminar/manifest-if-recalibrado-AAAA-MM.json
+   ```
+   Verifica en una sola pasada que el orden de variables del paquete coincide con el
+   contrato y con el extractor del motor; convierte el umbral a `score_samples` (sin
+   redondear) y comprueba que ninguna decisión cambia; registra los hashes del paquete,
+   del informe y del artefacto; y termina con la verificación de equivalencia. Escribe en
+   rutas nuevas y se niega a sobrescribir. (Opcional: `--deteccion-global`,
+   `--deteccion-kali` y `--deteccion-fuente` para que el panel muestre la detección.)
+5. **Verificación independiente** del par escrito (debe responder `EQUIVALENTE`):
    ```bash
    python3 scripts/modeling/verificar_equivalencia_umbral.py \
-     --modelo <joblib promocionado> --manifiesto <su manifiesto> \
-     --detector <nombre> --umbral-decision <umbral del informe>
+     --modelo artifacts/preliminar/if_recalibrado_AAAA_MM_desplegable.joblib \
+     --manifiesto artifacts/preliminar/manifest-if-recalibrado-AAAA-MM.json \
+     --detector if_recalibrado_AAAA_MM --umbral-decision <umbral_decision_function del informe>
    ```
-   Debe responder `EQUIVALENTE`.
+6. **Despliega** apuntando la configuración local al artefacto nuevo —en
+   `configs/cyberflow.local.toml`: `[rutas] modelo` y `manifiesto`, `[motor] detector`
+   con el mismo nombre y `calibrado_en_esta_red = true`— y regenera las unidades, que
+   pasan **el mismo detector al motor y al panel**:
+   ```bash
+   python3 scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml --mostrar  # revisar
+   sudo .venv/bin/python scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml --escribir
+   sudo systemctl daemon-reload && sudo systemctl restart ppi-motor ppi-dashboard
+   ```
+   Guarda antes una copia del `.toml` local: el rollback es restaurarla y repetir este
+   paso. Hasta desplegar, el panel **avisa en ámbar** de que las alertas son ruido.
 
 Detalle y advertencias en [`docs/INSTALACION.md`](docs/INSTALACION.md) §8.
 

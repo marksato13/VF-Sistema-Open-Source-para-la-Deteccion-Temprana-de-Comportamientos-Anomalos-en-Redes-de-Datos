@@ -367,9 +367,19 @@ Las entidades señaladas eran las interfaces del propio cortafuegos emitiendo
 sus anuncios CARP. **El 92,4 % eran falsos positivos.**
 
 No es un defecto del motor: es lo que pasa cuando se aplica un umbral calibrado
-en otro sitio. Recalibre con tráfico normal **de su red**. Pipeline v3, tres pasos
-sobre la línea base que el acumulador va escribiendo en
-`artifacts/linea-base/multilayer-v3.csv`:
+en otro sitio (y, en ese caso, también sin excluir todavía el plano de control del
+cortafuegos). Recalibre con tráfico normal **de su red**, sobre la línea base que el
+acumulador va escribiendo en `artifacts/linea-base/multilayer-v3.csv`.
+
+**Dos condiciones que impone el motor**, y que la secuencia de abajo cumple:
+
+- **Contrato v2 (28 variables).** La línea base tiene 31 columnas (v3 = v2 + 3 de
+  capa 2), pero el motor compara el esquema con su extractor v2 y aborta si no
+  coinciden: se entrena con `configs/features/multilayer-v2.json`.
+- **Un objeto con `score_samples` sobre datos crudos y el umbral en esa escala.**
+  `entrenar_preliminar.py` guarda un *paquete* (modelo, escalador y umbral en
+  `decision_function` por separado); `promover_preliminar.py` lo convierte en el
+  `Pipeline` y el manifiesto que el motor carga.
 
 ```bash
 # 1) Particionar por bloques temporales con banda de guarda (sin fuga entre
@@ -379,20 +389,47 @@ python3 scripts/dataset/particionar_linea_base.py \
   --salida  artifacts/linea-base/particionado.csv \
   --informe artifacts/linea-base/particion.json
 
-# 2) Entrenar sobre `train` y CONGELAR el umbral en el percentil alpha de
-#    `validation` -nunca de `test`-. El informe trae el umbral y el FPR de prueba.
+# 2) Entrenar sobre `train` con el CONTRATO DEL MOTOR (v2) y CONGELAR el umbral en
+#    el percentil alpha de `validation` -nunca de `test`-.
 python3 scripts/modeling/entrenar_preliminar.py \
   --entrada artifacts/linea-base/particionado.csv \
-  --schema  configs/features/multilayer-v3.json \
-  --salida  artifacts/preliminar/modelo.joblib \
-  --informe artifacts/preliminar/informe.json
+  --schema  configs/features/multilayer-v2.json \
+  --salida  artifacts/preliminar/if-AAAA-MM.joblib \
+  --informe artifacts/preliminar/if-AAAA-MM.json
+
+# 3) Promocionar: Pipeline + manifiesto, verificando orden de variables (paquete =
+#    contrato = extractor del motor), hashes, conversión del umbral sin redondeo y
+#    equivalencia. Escribe en rutas nuevas y no sobrescribe.
+python3 scripts/modeling/promover_preliminar.py \
+  --paquete  artifacts/preliminar/if-AAAA-MM.joblib \
+  --informe  artifacts/preliminar/if-AAAA-MM.json \
+  --detector if_recalibrado_AAAA_MM \
+  --salida-modelo     artifacts/preliminar/if_recalibrado_AAAA_MM_desplegable.joblib \
+  --salida-manifiesto artifacts/preliminar/manifest-if-recalibrado-AAAA-MM.json
+
+# 4) Verificación independiente del par escrito: debe responder EQUIVALENTE.
+python3 scripts/modeling/verificar_equivalencia_umbral.py \
+  --modelo artifacts/preliminar/if_recalibrado_AAAA_MM_desplegable.joblib \
+  --manifiesto artifacts/preliminar/manifest-if-recalibrado-AAAA-MM.json \
+  --detector if_recalibrado_AAAA_MM --umbral-decision <umbral_decision_function del informe>
 ```
 
-**3) Promocione con criterio.** Abra `artifacts/preliminar/informe.json` y confirme
-que el **FPR sobre `test`** ronda `alpha` (0,05): esa es la señal de que el umbral
-generaliza. Solo entonces reemplace el modelo y el umbral de producción por los
-nuevos y arranque el panel con `--calibrado-en-esta-red`. Hasta que lo haga, el
-panel avisa en ámbar de que las alertas no son fiables — que es lo correcto.
+**5) Promocione con criterio y despliegue.** Confirme en el informe que el **FPR sobre
+`test`** ronda `alpha` (0,05): esa es la señal de que el umbral generaliza. Solo
+entonces apunte `configs/cyberflow.local.toml` al artefacto nuevo —`[rutas] modelo` y
+`manifiesto`, `[motor] detector` con el mismo nombre y `calibrado_en_esta_red = true`—
+y regenere las unidades, que pasan el **mismo detector al motor y al panel**:
+
+```bash
+cp configs/cyberflow.local.toml configs/cyberflow.local.toml.bak-$(date +%Y%m%d)
+python3 scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml --mostrar
+sudo .venv/bin/python scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml --escribir
+sudo systemctl daemon-reload && sudo systemctl restart ppi-motor ppi-dashboard
+```
+
+El rollback es restaurar la copia del `.toml` y repetir esos tres últimos comandos.
+Hasta que despliegue, el panel avisa en ámbar de que las alertas no son fiables — que
+es lo correcto.
 
 > **Y antes de recalibrar, asegúrese de tener tráfico que merezca llamarse
 > línea base.** En una red sin usuarios, el 87 % de lo que ve el sensor es plano
