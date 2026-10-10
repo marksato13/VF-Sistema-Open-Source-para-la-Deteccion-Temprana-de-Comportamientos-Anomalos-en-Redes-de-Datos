@@ -17,11 +17,11 @@ clave ni token a la vista**; recortar a la parte útil; PNG, ancho 1200–1600 p
 | 4.2 | [`instalacion/04-02-tcpdump-vlan.png`](instalacion/04-02-tcpdump-vlan.png) | `docs/INSTALACION.md` | `sudo tcpdump -i ens37 -e -nn -c 20` | Mark (VM2) | pendiente |
 | 5.1 | [`instalacion/05-01-suricata-test.png`](instalacion/05-01-suricata-test.png) | `docs/INSTALACION.md` | `sudo suricata -T -c /etc/suricata/suricata.yaml -v` y `systemctl status suricata` | Mark (VM2) | pendiente |
 | 5.2 | [`instalacion/05-02-eve-crece.png`](instalacion/05-02-eve-crece.png) | `docs/INSTALACION.md` | Las dos lecturas de `wc -l` separadas por 60 s | Mark (VM2) | pendiente |
-| 6.1 | [`instalacion/06-01-asistente.png`](instalacion/06-01-asistente.png) | `docs/INSTALACION.md` | `bash scripts/setup/configurar.sh` completo, con lo que propone y lo que se acepta | Mark (VM2) | pendiente |
+| 6.1 | [`instalacion/06-01-asistente.png`](instalacion/06-01-asistente.png) | `docs/INSTALACION.md` | `bash scripts/setup/configurar.sh` completo, con lo que propone y lo que se acepta | Mark (VM2) | hecha |
 | 6.2 | [`instalacion/06-02-instalar-comprobar.png`](instalacion/06-02-instalar-comprobar.png) | `docs/INSTALACION.md` | `sudo bash scripts/setup/instalar.sh --comprobar` | Mark (VM2) | pendiente |
 | 6.3 | [`instalacion/06-03-instalar.png`](instalacion/06-03-instalar.png) | `docs/INSTALACION.md` | `sudo bash scripts/setup/instalar.sh` (puede ir en dos capturas) | Mark (VM2) | pendiente |
 | 6.4 | [`instalacion/06-04-instalado.png`](instalacion/06-04-instalado.png) | `docs/INSTALACION.md` | Últimas líneas de `instalar.sh` | Mark (VM2) | pendiente |
-| 6.5 | [`instalacion/06-05-sha256.png`](instalacion/06-05-sha256.png) | `docs/INSTALACION.md` | `sha256sum -c docs/dataset/SHA256SUMS` | Mark (VM2) | pendiente |
+| 6.5 | [`instalacion/06-05-sha256.png`](instalacion/06-05-sha256.png) | `docs/INSTALACION.md` | `sha256sum -c docs/dataset/SHA256SUMS` | Mark (VM2) | hecha |
 | 6.6 | [`instalacion/06-06-config-mostrar.png`](instalacion/06-06-config-mostrar.png) | `docs/INSTALACION.md` | `cyberflow_config.py --comprobar` y `--mostrar` | Mark (VM2) | pendiente |
 | 6.7 | [`instalacion/06-07-cuentas-panel.png`](instalacion/06-07-cuentas-panel.png) | `docs/INSTALACION.md` | Los cuatro comandos de `cyberflow_usuarios.py` (la contraseña NO debe verse) | Mark (VM2) | pendiente |
 | 7.1 | [`instalacion/07-01-doctor.png`](instalacion/07-01-doctor.png) | `docs/INSTALACION.md` | `bash scripts/setup/doctor.sh` completo | Claude/Mark (VM2) | pendiente |
