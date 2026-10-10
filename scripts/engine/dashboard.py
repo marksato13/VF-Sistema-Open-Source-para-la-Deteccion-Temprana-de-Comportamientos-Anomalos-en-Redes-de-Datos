@@ -94,6 +94,9 @@ HTML = """<!doctype html>
     border-left: 2px solid transparent;
   }
   .side nav a svg { flex: none; }
+  /* display:flex pisa al atributo hidden: sin esto, en modo operativo los
+     enlaces de desarrollo seguian en el menu apuntando a secciones ocultas. */
+  .side nav a[hidden] { display: none; }
   .side nav a:hover { background: var(--surface-2); color: var(--text); }
   .side nav a.active { background: var(--surface-2); color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
   .side nav a .pill {
@@ -505,6 +508,23 @@ HTML = """<!doctype html>
     box-shadow: inset 0 -1px 0 var(--border); }
   .score-cell { display: inline-flex; align-items: center; gap: 0.5rem; }
   .score-cell .mini { flex: none; }
+
+  /* Datos en vivo: cada registro con las variables a las que aporta. */
+  .vivo-bar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-bottom: 0.5rem; }
+  .vivo-chk { font-size: 0.8rem; color: var(--text-dim); display: inline-flex; gap: 0.3rem; align-items: center; }
+  .vivo-tabla { max-height: 560px; }
+  .vivo-tabla td { vertical-align: top; }
+  .vivo-tabla td.m { font-family: var(--mono); font-size: 0.76rem; white-space: nowrap; }
+  .vivo-tabla .sub { color: var(--text-dim); font-size: 0.72rem; }
+  .vf { display: inline-block; margin: 0 0.25rem 0.25rem 0; padding: 0.1rem 0.4rem; border-radius: 6px;
+    background: var(--surface-2); border: 1px solid var(--border); font-family: var(--mono); font-size: 0.72rem; white-space: nowrap; }
+  .vf b { color: var(--accent); font-weight: 600; }
+  .vf .ap { color: var(--text-dim); }
+  .vf.l2 { border-style: dashed; }
+  .vf.l2 b { color: var(--capa-c); }
+  .vf.cnt b { color: var(--amber); }
+  .vf .par { color: var(--amber); }
+  .vivo-tabla .heur { color: var(--amber); font-family: var(--mono); font-size: 0.74rem; }
 </style>
 
 <div class="shell">
@@ -516,6 +536,7 @@ HTML = """<!doctype html>
     <!--ADMIN-->
     <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Topología</a>
     <a href="#s-variables" data-sec="s-variables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg>Variables</a>
+    <a href="#s-vivo" data-sec="s-vivo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 2-6 2 3h6"/></svg>Datos en vivo</a>
     <a href="#s-modelo" data-sec="s-modelo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>Modelo</a>
     <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
     <a href="#s-simulacion" data-sec="s-simulacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg>Simulación</a>
@@ -551,14 +572,14 @@ HTML = """<!doctype html>
   <!--ADMIN-->
   <section id="s-topologia">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg><h2>Topología y flujo</h2></div>
-    <p class="lede-small">Tres vistas del sistema. <strong>Operacional</strong>: cómo funciona en vivo (el camino del paquete). <strong>Metodológica</strong>: cómo se construyó (las fases del método). <strong>Entrenamiento</strong>: el ciclo de datos → comparación de modelos → entrenar → reentrenar. Pulsa cualquier componente para ver su detalle y su flujo interno.</p>
+    <p class="lede-small">Tres vistas del sistema. <strong>Operacional</strong>: cómo funciona en vivo; del espejo salen dos fuentes (PCAP crudo y eve.json de Suricata), cada una con su parser, que juntas arman las variables por IP y ventana. <strong>Construcción y entrenamiento</strong>: de los datos al modelo congelado y su ciclo de vida (partición, candidatos, métricas, selección, congelación, despliegue, reentrenamiento y comparación antes/después). <strong>Fases del método</strong>: las siete fases de la tesis. Pulsa cualquier componente para ver su detalle; desde las fuentes se abre «Datos en vivo».</p>
     <div class="topo-wrap" id="topoWrap">
       <div class="topo-canvas" id="topoCanvas">
         <div class="topo-bar">
           <div class="range-toggle" id="topoVista">
             <button data-vista="completa" class="active">Operacional</button>
-            <button data-vista="metodologica">Metodológica</button>
-            <button data-vista="entrenamiento">Entrenamiento</button>
+            <button data-vista="construccion">Construcción y entrenamiento</button>
+            <button data-vista="metodologica">Fases del método</button>
           </div>
           <div class="topo-zoom">
             <button id="topoMenos" title="Reducir" aria-label="Reducir">&minus;</button>
@@ -594,6 +615,24 @@ HTML = """<!doctype html>
     <div class="var-capas" id="varCapas"></div>
     <div class="var-tabla" id="varTabla"></div>
     <p class="toolbar-hint" id="varPie"></p>
+  </section>
+
+  <section id="s-vivo">
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 2-6 2 3h6"/></svg><h2>Datos en vivo: del registro a la variable</h2></div>
+    <p class="lede-small">Las dos fuentes salen del mismo puerto espejo (SPAN): el <strong>PCAP</strong> es la captura cruda de tcpdump y <strong>eve.json</strong> los eventos que Suricata escribe tras procesar esas mismas tramas. Aquí se ve un tramo reciente de cada una pasado por <em>la misma cadena del motor</em> (parser, atribución a la entidad que inicia el flujo, ventanas de 10/30/60 s), y solo se listan los registros que <strong>aportan a alguna variable</strong>: cuál actualizan, con qué aporte y cuánto vale la variable en la ventana que los incorpora.</p>
+    <div class="vivo-bar">
+      <div class="range-toggle" id="vivoTabs">
+        <button data-vtab="eve" class="active">Eventos eve.json</button>
+        <button data-vtab="pcap">Tramas PCAP</button>
+        <button data-vtab="matriz">Matriz de trazabilidad</button>
+      </div>
+      <input type="text" id="vivoFiltro" class="ip-filter" placeholder="Filtrar por IP o variable...">
+      <label class="vivo-chk" id="vivoTodosLbl"><input type="checkbox" id="vivoTodos"> todas las tramas</label>
+      <button id="vivoPausa" class="export-btn" type="button">Pausar</button>
+    </div>
+    <p class="toolbar-hint" id="vivoResumen">Cargando&hellip;</p>
+    <div class="tbl-wrap tbl-scroll vivo-tabla" id="vivoTabla"></div>
+    <p class="toolbar-hint" id="vivoPie"></p>
   </section>
 
   <section id="s-modelo">
@@ -1006,7 +1045,7 @@ function on(id, evento, fn) {
 const TOUR_PASOS = [
   { sel: '#kpis', t: 'Las cifras clave', d: 'Cuatro números de un vistazo: entidades vigiladas, ventanas analizadas por hora, cuántos scores rozan el umbral y las alertas reales de la última hora.' },
   { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo y heurísticos → decisión → respuesta en el host. Pulsa cualquier componente para ver qué hace.' },
-  { sel: '#topoVista', t: 'Tres vistas del sistema', d: 'Operacional: cómo funciona en vivo. Metodológica: cómo se construyó por fases. Entrenamiento: datos, partición, comparación y reentrenamiento.' },
+  { sel: '#topoVista', t: 'Tres vistas del sistema', d: 'Operacional: dos fuentes y dos parsers hasta la decisión. Construcción y entrenamiento: de los datos al modelo congelado y su reentrenamiento. Fases del método: las siete fases de la tesis.' },
   { sel: '#topoArchivosBtn', t: 'Código auditable', d: 'En modo desarrollador, pulsa Ver archivos, elige un componente y un archivo; en su ficha pulsa ◎ Ver contenido. El visor es de solo lectura y solo muestra rutas permitidas.' },
   { sel: '#s-modelo', t: 'El detector activo y su umbral', d: 'El detector desplegado aprende la normalidad de esta red; el umbral se fijó con validación. Aquí ves el modelo activo y sus métricas, no una etiqueta fija de OCSVM.' },
   { sel: '#pruebasPrevias', t: 'Pruebas previas', d: 'Siete modelos se compararon en el estudio; la ablación sobre nueve episodios separa modelo solo (6), heurísticos solos (7) y ambos combinados (9). No confundas el 9/9 del sistema con el modelo solo.' },
@@ -1311,7 +1350,7 @@ const TOPO_VISTAS = {
     // Flujo HORIZONTAL de izquierda a derecha: cada fase es una columna
     // (Hosts | Adquisicion | Analisis | Decision | Observabilidad) y el paquete
     // avanza de izquierda a derecha. Un punto lo recorre en vivo.
-    packet: 'M374,70 L374,275 L540,139 L628,215 L894,139 L894,279 L1148,187 L1424,187 L1680,183',
+    packet: 'M374,70 L374,275 L540,139 L628,215 L894,139 L894,249 L1148,187 L1424,187 L1680,183',
     grupos: [
       { x: 12,   y: 32, w: 200, h: 456, txt: 'Hosts · VLAN 20/30' },
       { x: 272,  y: 32, w: 460, h: 456, txt: 'Adquisición',          n: 1 },
@@ -1331,13 +1370,14 @@ const TOPO_VISTAS = {
       { id: 'pcap',      x: 540, y: 192, w: 176, h: 46, icono: 'fichero', titulo: 'anillo live-*.pcap', tag: 'ARTEFACTO', clase: 'artefacto' },
       { id: 'suricata',  x: 540, y: 274, w: 176, h: 58, icono: 'lupa',   titulo: 'Suricata',           tag: 'SERVICIO' },
       { id: 'eve',       x: 540, y: 356, w: 176, h: 46, icono: 'fichero', titulo: 'eve.json',          tag: 'ARTEFACTO', clase: 'artefacto' },
-      { id: 'motor',     x: 806, y: 110, w: 176, h: 58, icono: 'cpu',    titulo: 'Atribución de flujo', tag: 'SERVICIO' },
-      { id: 'variables', x: 806, y: 250, w: 176, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s',   tag: 'L2·L3·L4·L7' },
-      { id: 'descartes', x: 806, y: 388, w: 176, h: 48, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO', clase: 'sumidero' },
+      { id: 'motor',     x: 806, y: 110, w: 176, h: 58, icono: 'cpu',    titulo: 'Parser de paquetes', tag: 'TRAMA → FLUJO · L2·L3·L4' },
+      { id: 'variables', x: 806, y: 220, w: 176, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s',   tag: 'POR IP Y VENTANA' },
+      { id: 'parser_eve', x: 806, y: 330, w: 176, h: 58, icono: 'reglas', titulo: 'Parser de eventos', tag: 'JSON → L7 · HTTP·DNS·TLS' },
+      { id: 'descartes', x: 806, y: 420, w: 176, h: 48, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO', clase: 'sumidero' },
       { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Reentrenamiento', tag: 'POLÍTICA PROPUESTA' },
       { id: 'modelo',    x: 1060, y: 158, w: 176, h: 58, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
       { id: 'heuristicos', x: 1060, y: 276, w: 176, h: 58, icono: 'reglas', titulo: 'Heurísticos',     tag: 'DETERMINISTAS' },
-      { id: 'control',   x: 1336, y: 158, w: 176, h: 58, icono: 'decision', titulo: 'Decisión',        tag: 'PERMIT / LIMIT / BLOCK' },
+      { id: 'control',   x: 1336, y: 158, w: 176, h: 58, icono: 'decision', titulo: 'Decisión',        tag: 'PERMIT · ALERT → LIMIT/BLOCK' },
       { id: 'feed',      x: 1336, y: 256, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',     tag: 'ed25519' },
       { id: 'agente',    x: 1336, y: 354, w: 176, h: 58, icono: 'escudo', titulo: 'Agente en host',   tag: 'nftables LIMIT/BLOCK' },
       { id: 'registro',  x: 1592, y: 160, w: 176, h: 46, icono: 'fichero', titulo: 'motor_decision.log', tag: 'ARTEFACTO', clase: 'artefacto' },
@@ -1355,12 +1395,13 @@ const TOPO_VISTAS = {
       { d: 'M462,275 C500,282 516,300 540,303',     desde: 'nic',      hasta: 'suricata', etiqueta: 'paquetes', ex: 500, ey: 322 },
       { d: 'M628,168 L628,192',                     desde: 'captura',  hasta: 'pcap' },
       { d: 'M628,332 L628,356',                     desde: 'suricata', hasta: 'eve' },
-      { d: 'M716,215 C760,208 772,146 806,139',     desde: 'pcap',     hasta: 'motor', etiqueta: 'L3·L4', ex: 762, ey: 165 },
-      { d: 'M716,379 C762,360 774,150 806,145',     desde: 'eve',      hasta: 'motor', etiqueta: 'HTTP·DNS·TLS', ex: 764, ey: 300 },
-      { d: 'M894,168 L894,250',                     desde: 'motor',    hasta: 'variables', etiqueta: 'atribuye por IP', ex: 952, ey: 210 },
-      { d: 'M820,168 C760,280 760,360 850,388',     desde: 'motor',    hasta: 'descartes', tipo: 'descarte', etiqueta: 'descarta', ex: 744, ey: 300 },
-      { d: 'M982,279 C1020,272 1036,193 1060,187',  desde: 'variables', hasta: 'modelo', etiqueta: '31 variables', ex: 1022, ey: 256 },
-      { d: 'M982,279 C1020,286 1036,302 1060,305',  desde: 'variables', hasta: 'heuristicos', etiqueta: 'mismas variables', ex: 1024, ey: 324 },
+      { d: 'M716,215 C760,208 772,146 806,139',     desde: 'pcap',     hasta: 'motor', etiqueta: 'tramas', ex: 762, ey: 165 },
+      { d: 'M716,379 C760,376 776,362 806,359',     desde: 'eve',      hasta: 'parser_eve', etiqueta: 'eventos', ex: 760, ey: 394 },
+      { d: 'M894,168 L894,220',                     desde: 'motor',    hasta: 'variables', etiqueta: 'L2·L3·L4 por IP', ex: 950, ey: 198 },
+      { d: 'M894,330 L894,278',                     desde: 'parser_eve', hasta: 'variables', etiqueta: 'L7 por IP', ex: 936, ey: 308 },
+      { d: 'M806,150 C752,240 752,420 806,446',     desde: 'motor',    hasta: 'descartes', tipo: 'descarte', etiqueta: 'descarta', ex: 768, ey: 290 },
+      { d: 'M982,249 C1020,242 1036,193 1060,187',  desde: 'variables', hasta: 'modelo', etiqueta: '28 al modelo', ex: 1020, ey: 232 },
+      { d: 'M982,249 C1020,256 1036,300 1060,305',  desde: 'variables', hasta: 'heuristicos', etiqueta: 'variables + conteos', ex: 1022, ey: 300 },
       { d: 'M1148,128 L1148,158',                   desde: 'reentrenamiento', hasta: 'modelo', etiqueta: 'entrena y congela', ex: 1200, ey: 143 },
       { d: 'M1236,187 L1336,187',                   desde: 'modelo',   hasta: 'control', etiqueta: 'score &lt; umbral', ex: 1286, ey: 178 },
       { d: 'M1236,305 C1290,300 1302,196 1336,192', desde: 'heuristicos', hasta: 'control', etiqueta: 'confirmado', ex: 1290, ey: 250 },
@@ -1402,28 +1443,43 @@ const TOPO_VISTAS = {
       { d: 'M1378,149 L1412,149', desde: 'm_desp',   hasta: 'm_valid' },
     ],
   },
-  // --- Vista ENTRENAMIENTO: el CICLO (datos -> comparar -> entrenar -> reentrenar)
-  entrenamiento: {
-    w: 1632, h: 340,
-    packet: 'M32,149 L1608,149',
-    grupos: [],
+  // --- Vista CONSTRUCCION Y ENTRENAMIENTO: de los datos al modelo congelado
+  // (fila 1, una vez y en seco) y su ciclo de vida (fila 2, de derecha a
+  // izquierda). Responde: donde se entrena, como se partio, que se comparo, con
+  // que metricas, por que gano, que cambia al reentrenar y cada cuanto.
+  construccion: {
+    w: 1560, h: 400,
+    packet: 'M140,104 L1420,104 L1420,284 L396,284',
+    grupos: [
+      { x: 20, y: 36,  w: 1520, h: 130, txt: 'Construcción: una vez, en seco, con datos de esta red', n: 1 },
+      { x: 20, y: 216, w: 1520, h: 130, txt: 'Operación y ciclo de vida', n: 2 },
+    ],
     nodos: [
-      { id: 'e_datos', x: 32,   y: 118, w: 196, h: 62, icono: 'disco',    titulo: 'Datos acumulados',    tag: 'multilayer-v3.csv' },
-      { id: 'e_part',  x: 262,  y: 118, w: 196, h: 62, icono: 'tabla',    titulo: 'Partición 60/20/20',  tag: 'sin fuga temporal' },
-      { id: 'e_comp',  x: 492,  y: 118, w: 196, h: 62, icono: 'modelo',   titulo: 'Comparar candidatos', tag: 'validación, criterio fijo' },
-      { id: 'e_train', x: 722,  y: 118, w: 196, h: 62, icono: 'cpu',      titulo: 'Entrenar + congelar', tag: 'umbral α=0,05' },
-      { id: 'e_eval',  x: 952,  y: 118, w: 196, h: 62, icono: 'lupa',     titulo: 'Evaluar una vez',     tag: 'test reservado + Kali' },
-      { id: 'e_antes', x: 1182, y: 118, w: 196, h: 62, icono: 'ciclo',    titulo: 'Antes vs después',    tag: 'mismos datos y métricas' },
-      { id: 'e_dec',   x: 1412, y: 118, w: 196, h: 62, icono: 'decision', titulo: 'Decidir despliegue', tag: 'cobertura ≥, FPR ≤' },
+      { id: 'c_datos',   x: 40,   y: 72,  w: 200, h: 64, icono: 'disco',    titulo: 'Datos de la red',      tag: 'SPAN → PCAP + eve.json', val: '335 202 ventanas normales' },
+      { id: 'c_limpia',  x: 296,  y: 72,  w: 200, h: 64, icono: 'tijera',   titulo: 'Limpieza y alcance',   tag: 'espejo · control · excluidas', val: 'sin imputación' },
+      { id: 'c_part',    x: 552,  y: 72,  w: 200, h: 64, icono: 'tabla',    titulo: 'Partición',            tag: 'train / validación / test', val: '204 148 / 65 633 / 65 421' },
+      { id: 'c_cand',    x: 808,  y: 72,  w: 200, h: 64, icono: 'modelo',   titulo: 'Candidatos',           tag: 'IF · LOF · OCSVM · EE', val: '7 (laboratorio) · IF aquí' },
+      { id: 'c_metr',    x: 1064, y: 72,  w: 200, h: 64, icono: 'lupa',     titulo: 'Comparar métricas',    tag: 'FPR · recall · F1 · AUC', val: 'criterio fijado antes' },
+      { id: 'c_sel',     x: 1320, y: 72,  w: 200, h: 64, icono: 'decision', titulo: 'Selección',            tag: 'transfiere a esta red', val: 'IF recalibrado' },
+      { id: 'c_cong',    x: 1320, y: 252, w: 200, h: 64, icono: 'cpu',      titulo: 'Congelar modelo+umbral', tag: 'α=0,05 · −0,568892', val: 'sha256 d27f6871…' },
+      { id: 'c_desp',    x: 1064, y: 252, w: 200, h: 64, icono: 'nic',      titulo: 'Despliegue',           tag: 'promover + verificar', val: 'manifiesto + hash' },
+      { id: 'c_acum',    x: 808,  y: 252, w: 200, h: 64, icono: 'fichero',  titulo: 'Acumulación',          tag: 'temporizador · v3', val: 'automática' },
+      { id: 'c_reent',   x: 552,  y: 252, w: 200, h: 64, icono: 'ciclo',    titulo: 'Reentrenar / recalibrar', tag: 'POLÍTICA PROPUESTA', val: 'mensual o por deriva' },
+      { id: 'c_antes',   x: 296,  y: 252, w: 200, h: 64, icono: 'tabla',    titulo: 'Antes vs después',     tag: 'mismos datos y métricas', val: 'FPR 92,4 % → 4,45 %' },
     ],
     aristas: [
-      { d: 'M228,149 L262,149',   desde: 'e_datos', hasta: 'e_part' },
-      { d: 'M458,149 L492,149',   desde: 'e_part',  hasta: 'e_comp' },
-      { d: 'M688,149 L722,149',   desde: 'e_comp',  hasta: 'e_train' },
-      { d: 'M918,149 L952,149',   desde: 'e_train', hasta: 'e_eval' },
-      { d: 'M1148,149 L1182,149', desde: 'e_eval',  hasta: 'e_antes' },
-      { d: 'M1378,149 L1412,149', desde: 'e_antes', hasta: 'e_dec' },
-      { d: 'M1510,180 C1510,300 130,300 130,180', desde: 'e_dec', hasta: 'e_datos', tipo: 'descarte', etiqueta: 'reentrenar: mensual o por deriva (política propuesta, manual)', ex: 815, ey: 296 },
+      { d: 'M240,104 L296,104',   desde: 'c_datos',  hasta: 'c_limpia' },
+      { d: 'M496,104 L552,104',   desde: 'c_limpia', hasta: 'c_part' },
+      { d: 'M752,104 L808,104',   desde: 'c_part',   hasta: 'c_cand' },
+      { d: 'M1008,104 L1064,104', desde: 'c_cand',   hasta: 'c_metr' },
+      { d: 'M1264,104 L1320,104', desde: 'c_metr',   hasta: 'c_sel' },
+      { d: 'M1420,136 L1420,252', desde: 'c_sel',    hasta: 'c_cong', etiqueta: 'umbral desde validación', ex: 1476, ey: 198 },
+      { d: 'M1320,284 L1264,284', desde: 'c_cong',   hasta: 'c_desp' },
+      { d: 'M1064,284 L1008,284', desde: 'c_desp',   hasta: 'c_acum' },
+      { d: 'M808,284 L752,284',   desde: 'c_acum',   hasta: 'c_reent' },
+      { d: 'M552,284 L496,284',   desde: 'c_reent',  hasta: 'c_antes' },
+      { d: 'M652,252 L652,136',   desde: 'c_reent',  hasta: 'c_part', tipo: 'descarte', etiqueta: 'repite 3→6 con datos nuevos', ex: 760, ey: 198 },
+      { d: 'M396,316 C396,384 1420,384 1420,316', desde: 'c_antes', hasta: 'c_cong', tipo: 'descarte', etiqueta: 'si mejora o iguala (FPR ≤, detección ≥) se congela el nuevo; si no, se queda el vigente', ex: 908, ey: 376 },
     ],
   },
 };
@@ -1487,15 +1543,28 @@ const TOPO_TEXTO = {
     nota: 'Los descartes del núcleo miden si la captura llega completa. Con descartes, las ventanas afectadas están incompletas y el modelo las puntúa igual.',
   },
   motor: {
-    que: 'El corazón del sistema. Convierte paquetes crudos en una decisión por entidad: atribuye el flujo, acota el alcance, arma las variables por ventana y puntúa.',
+    que: 'Parser de la fuente cruda. Lee los PCAP cerrados del anillo, decodifica Ethernet/802.1Q/IPv4/TCP/UDP/ICMP, quita lo que no se puntúa y atribuye cada paquete a la IP que INICIÓ su flujo. Lo ejecuta el servicio ppi-motor cada 10 s.',
     flujoTit: 'Procesamiento interno',
     flujo: [
-      {paso: 'Atribución por flujo', fichero: 'extract_multilayer_v2.py', garantia: 'cada paquete a la IP que INICIÓ el flujo, no al destino'},
-      {paso: 'Filtrado de alcance', fichero: 'extract_multilayer_v2.py', garantia: 'descarta plano de control y las copias que el espejo duplica'},
-      {paso: 'Ventaneo + variables', fichero: 'extract_multilayer_v2.py', garantia: 'ventanas fijas; una fila de variables por entidad y ventana'},
-      {paso: 'Puntuación', fichero: 'motor_decision.py', garantia: 'score del modelo + reglas heurísticas → decisión por ventana'},
+      {paso: 'Decodificar trama', fichero: 'extract_multilayer_v3.py', garantia: 'parse_con_contexto: VLAN, IP, puertos, flags, TTL, id IP'},
+      {paso: 'Filtrado de alcance', fichero: 'motor_decision.py', garantia: 'quita plano de control (CARP 112, pfsync 240) y copias del espejo'},
+      {paso: 'Atribución por flujo', fichero: 'extract_multilayer_v2.py', garantia: 'attribute_packets: el SYN-ACK y el eco ICMP se apuntan a quien preguntó'},
+      {paso: 'Ventaneo + variables', fichero: 'extract_multilayer_v2.py', garantia: 'build_rows: una fila por IP y ventana (10/30/60 s), junto con lo del parser de eventos'},
     ],
-    nota: 'El filtrado es ALCANCE, no fórmula: el extractor está congelado (sus fórmulas no se tocan); los filtros actúan sobre su ENTRADA. Así se descartan el plano de control y las tramas que el espejo enseña dos veces antes de puntuar.',
+    nota: 'El filtrado es ALCANCE, no fórmula: el extractor está congelado (sus fórmulas no se tocan); los filtros actúan sobre su ENTRADA. En «Datos en vivo → Tramas PCAP» se ve cada trama con la variable que actualiza.',
+    enlace: { href: '#s-vivo', vtab: 'pcap', txt: 'Ver tramas parseadas en vivo' },
+  },
+  parser_eve: {
+    que: 'Parser de la fuente estructurada. Lee las líneas JSON que Suricata escribe en eve.json y solo se queda con tres tipos: http (método y estado), dns (consulta y respuesta NXDOMAIN) y tls (sesión y versión). flow, ssh, stats y el resto no entran al cálculo.',
+    flujoTit: 'Del evento a la observación',
+    flujo: [
+      {paso: 'Recortar el tramo', fichero: 'motor_decision.py', garantia: 'solo las líneas de la historia que se puntúa (60 s)'},
+      {paso: 'Filtrar tipos', fichero: 'extract_multilayer_v2.py', garantia: 'load_app_observations: http · dns · tls'},
+      {paso: 'Atribuir', fichero: 'extract_multilayer_v2.py', garantia: 'a src_ip (en tls, dest_ip si src está fuera de la red); NXDOMAIN a quien preguntó'},
+      {paso: 'Ventanas de 60 s', fichero: 'extract_multilayer_v2.py', garantia: 'las 11 variables L7 de la misma fila que las de red'},
+    ],
+    nota: 'Suricata NO decide aquí: sus alertas por firma no se usan como etiqueta ni como variable. Solo se aprovecha su parseo de protocolos.',
+    enlace: { href: '#s-vivo', vtab: 'eve', txt: 'Ver eventos parseados en vivo' },
   },
   modelo: {
     que: 'El modelo one-class RECALIBRADO en esta red (IsolationForest). Aprende la normalidad propia; el umbral se congela desde validación (score_samples < -0,568892).',
@@ -1513,7 +1582,7 @@ const TOPO_TEXTO = {
     ],
   },
   control: {
-    que: 'Fusiona las dos señales en UNA acción por entidad: PERMIT (dejar pasar), LIMIT (degradar la tasa) o BLOCK (cortar). El modelo aporta LIMIT (anomalía); un heurístico confirmado aporta BLOCK.',
+    que: 'Fusiona las dos señales en UNA decisión por entidad y ventana. El motor registra PERMIT o ALERT (score bajo el umbral, o heurístico); la ALERT se traduce en acción: LIMIT (degradar la tasa) para la anomalía del modelo y para abuso HTTP o DNS, BLOCK (cortar) para fuerza bruta o escaneo confirmados.',
     flujoTit: 'Cómo se decide la acción',
     flujo: [
       {paso: 'Dos entradas', fichero: 'motor_decision.py', garantia: 'score del modelo (anomalía→LIMIT) + heurístico (confirmado→BLOCK)'},
@@ -1549,10 +1618,12 @@ const TOPO_TEXTO = {
   pcap: {
     que: 'Ficheros PCAP rotados cada 15 s. Es toda la historia de capa 3 y 4 de la que dispone el motor.',
     nota: 'Un temporizador poda los más viejos: sin él el anillo crece sin fin, porque el nombre lleva fecha y tcpdump nunca reutiliza un fichero. Medido antes de podarlo: 403 MB en un día.',
+    enlace: { href: '#s-vivo', vtab: 'pcap', txt: 'Ver las tramas en vivo y a qué variable aporta cada una' },
   },
   eve: {
     que: 'El registro de eventos de Suricata, una línea JSON por evento. De aquí salen HTTP, DNS y TLS.',
-    nota: 'Va por delante del anillo de PCAP: Suricata emite el evento antes de que tcpdump vuelque los paquetes a disco. Por eso hay ventanas con eventos de aplicación y cero paquetes.',
+    nota: 'Va por delante del anillo de PCAP: Suricata emite el evento antes de que tcpdump vuelque los paquetes a disco. Por eso hay ventanas con eventos de aplicación y cero paquetes. No es «eve.json por la NIC»: es una segunda fuente, derivada de las mismas tramas por Suricata.',
+    enlace: { href: '#s-vivo', vtab: 'eve', txt: 'Ver los eventos en vivo y a qué variable aporta cada uno' },
   },
   descartes: {
     que: 'Lo que se captura pero NO se puntúa: plano de control, copias del espejo y entidades declaradas fuera de alcance.',
@@ -1604,56 +1675,108 @@ const TOPO_TEXTO = {
     que: 'F7 (aporte). Validación interna (demo técnica en vivo) + externa (TAM + juicio de expertos, Cronbach/Aiken).',
     nota: 'Se demuestra y se acredita; no son solo palabras.',
   },
-  // ---- Vista ENTRENAMIENTO (el ciclo) ----
-  e_datos: {
-    que: 'El punto de partida: la línea base que el temporizador va acumulando con tráfico limpio verificado. El modelo envejece, por eso se reentrena con datos nuevos.',
-    nota: 'Solo tráfico benigno verificado entra al entrenamiento del detector de una sola clase.',
+  // ---- Vista CONSTRUCCION Y ENTRENAMIENTO ----
+  // Cifras del informe de calibracion (ensayo-if-v2.json, sha ec3ed063...) y de
+  // la comparacion historica de laboratorio (07-metricas-...-7-modelos.md).
+  c_datos: {
+    que: 'Dónde empieza: la línea base de ESTA red, capturada por el espejo SPAN del troncal. Dos fuentes de la misma copia: PCAP crudo (tcpdump) y eve.json (Suricata). El acumulador las pasa por el mismo extractor que el motor y escribe una fila por IP y ventana.',
+    flujoTit: 'Qué entra',
+    flujo: [
+      {paso: 'Captura', fichero: 'ppi-motor-capture + suricata', garantia: 'misma interfaz ens37, sin IP'},
+      {paso: 'Acumulación', fichero: 'acumular_v3.py', garantia: 'filas multilayer-v3 (28 del modelo + 3 de capa 2)'},
+      {paso: 'Solo normal', fichero: 'Kali apagada', garantia: 'un detector de una clase aprende lo normal; un ataque en la base lo volvería normal'},
+    ],
+    nota: 'Total usado para el IF vigente: 335 202 ventanas normales (204 148 + 65 633 + 65 421). Sin ataques: los de la Kali se reservaron para medir detección después.',
   },
-  e_part: {
-    que: 'Se divide en entrenamiento/validación/prueba (~60/20/20). Tres grupos porque, además de entrenar, hay que calibrar el umbral: la validación lo fija y la prueba queda ciega.',
+  c_limpia: {
+    que: 'Limpieza = acotar la ENTRADA, no tocar fórmulas. Se quitan el plano de control del cortafuegos (CARP 112, pfsync 240), la segunda copia de cada trama que el espejo enseña dos veces y las entidades declaradas fuera de alcance.',
+    flujoTit: 'Qué se quita y dónde',
+    flujo: [
+      {paso: 'Plano de control', fichero: 'motor_decision.py', garantia: '--excluir-protocolos 112,240'},
+      {paso: 'Copias del espejo', fichero: 'extract_multilayer_v3.py', garantia: 'deduplicar_espejo: TTL −1 entre VLAN, idénticas en difusión'},
+      {paso: 'Entidades fuera', fichero: 'cyberflow.local.toml', garantia: '[red] excluir: sensor y bastión'},
+    ],
+    nota: 'Sin imputación: una ausencia es un cero estructural (no hubo DNS en esa ventana), no un dato perdido. Las filas no elegibles (sin historia suficiente) no entran.',
+  },
+  c_part: {
+    que: 'Cómo se partió: 204 148 ventanas para entrenar, 65 633 para validar y 65 421 para probar (≈ 61/20/20). Tres grupos porque, además de entrenar, hay que fijar el umbral: la validación lo fija y la prueba queda ciega.',
     flujoTit: 'Partición sin fuga temporal',
     flujo: [
-      {paso: 'Bloques horarios', fichero: 'particionar_linea_base.py', garantia: 'reparto cíclico que cubre el ciclo diario'},
+      {paso: 'Bloques horarios', fichero: 'particionar_linea_base.py', garantia: 'reparto cíclico que cubre todo el ciclo diario'},
       {paso: 'Banda de guarda 60 s', fichero: 'particionar_linea_base.py', garantia: 'ninguna ventana comparte paquetes entre grupos'},
     ],
-    nota: 'No se usa 80/20 porque el umbral se calibra en validación; elegirlo sobre el test inflaría los resultados.',
+    nota: 'No se baraja al azar: ventanas vecinas comparten tráfico (las de 60 s se solapan) y una partición aleatoria filtraría la prueba en el entrenamiento.',
   },
-  e_comp: {
-    que: 'Los candidatos se comparan en VALIDACIÓN con un criterio fijado antes de mirar el test; el test queda reservado para una sola evaluación final.',
-    flujoTit: 'Comparación y selección',
+  c_cand: {
+    que: 'Qué modelos se compararon. En el laboratorio, 7 detectores de una clase con las mismas 28 variables y la misma partición: cuatro variantes de Isolation Forest, LOF, One-Class SVM y Elliptic Envelope. En esta red se reentrenó un solo candidato, el Isolation Forest (500 árboles).',
+    flujoTit: 'Los siete del laboratorio (F1 · FPR de prueba)',
     flujo: [
-      {paso: '7 candidatos', fichero: 'compare_frozen_models_metrics.py', garantia: 'mismas features, misma partición'},
-      {paso: 'Ablación', fichero: '31-ABLACION-RESULTADO.md', garantia: 'modelo 6/9 · heurísticos 7/9 · combinado 9/9'},
-      {paso: 'Significancia', fichero: 'significancia_modelos.py', garantia: 'McNemar + corrección de Holm'},
+      {paso: 'ocsvm_scaled', fichero: 'One-Class SVM RBF', garantia: 'F1 0,903 · recall 88,3 % · FPR 4,71 %'},
+      {paso: 'if_uniform / if_exact_collapsed', fichero: 'Isolation Forest', garantia: 'F1 0,696 · recall 57,5 % · FPR 5,07 %'},
+      {paso: 'if_primary / if_scaled_weighted', fichero: 'Isolation Forest', garantia: 'F1 0,674 · recall 54,2 % · FPR 4,35 %'},
+      {paso: 'lof_scaled', fichero: 'Local Outlier Factor', garantia: 'F1 0,579 · recall 43,0 % · FPR 3,62 %'},
+      {paso: 'elliptic_envelope_scaled', fichero: 'Elliptic Envelope', garantia: 'F1 0,405 · recall 27,4 % · FPR 5,07 %'},
     ],
-    nota: 'Histórico: la comparación de 7 candidatos del laboratorio promovió el OCSVM DESPUÉS de ver el test (sesgo declarado). El Isolation Forest actual no ganó esa comparación: se recalibró porque el OCSVM no transfirió a esta red. El 9/9 es del stack (modelo + heurísticos), no del modelo solo.',
+    nota: 'Por qué el IF y no el ganador: el OCSVM ganó en el laboratorio, pero se eligió después de ver la prueba (sesgo declarado) y no transfirió a esta red. El IF se reentrenó porque es el que la configuración inicial designaba como principal, y se midió con un objetivo de FPR fijado de antemano.',
   },
-  e_train: {
-    que: 'Se entrena el Isolation Forest sobre el conjunto de train y se congela el umbral como el percentil α=0,05 de validación (score_samples −0,568892).',
-    flujoTit: 'Entrenar y congelar',
+  c_metr: {
+    que: 'Con qué métricas. Sobre tráfico normal: FPR en validación (para fijar el umbral) y en prueba (una sola vez). Sobre ataques: tasa de detección con la Kali. En el laboratorio, además: precisión, recall, F1, MCC, ROC-AUC y PR-AUC, con McNemar + Holm entre pares.',
+    flujoTit: 'Métricas del IF vigente',
     flujo: [
-      {paso: 'Entrenar IF', fichero: 'entrenar_preliminar.py', garantia: '500 árboles, solo tráfico normal'},
-      {paso: 'Congelar umbral', fichero: 'entrenar_preliminar.py', garantia: 'desde validación, antes de ver el test'},
-      {paso: 'Modelo + manifiesto', fichero: 'if_recalibrado_desplegable.joblib', garantia: 'hashes que fijan la reproducibilidad'},
+      {paso: 'FPR validación', fichero: 'ensayo-if-v2.json', garantia: '5,00 % (por construcción: α = 0,05)'},
+      {paso: 'FPR prueba', fichero: 'ensayo-if-v2.json', garantia: '4,45 % sobre 65 421 ventanas normales'},
+      {paso: 'Detección Kali', fichero: 'nota M', garantia: '54/78 = 69 % global; HTTP 27/27'},
     ],
-    nota: 'El umbral se congela ANTES de tocar el test: elegirlo después sería trampa.',
+    nota: 'El criterio se fija ANTES de mirar la prueba: umbral desde validación con objetivo de FPR 5 %. El 4,45 % es del modelo sobre tráfico normal, no del sistema completo con heurísticos.',
   },
-  e_eval: {
-    que: 'Se mide una sola vez el FPR sobre el test reservado (objetivo 5 %, medido 4,45 % sobre 65 421 ventanas normales) y la detección sobre ataques reales de la Kali (54/78 = 69 % global; HTTP 27/27).',
-    nota: 'El 4,45 % es del modelo sobre tráfico normal, no del sistema completo. El ~23–26 % en operación fue del OCSVM en F6, otro modelo y escenario: no se atribuye a este.',
+  c_sel: {
+    que: 'Por qué ganó: el OCSVM del laboratorio, llevado a esta red con su umbral, marcaba como anómalo el 92,4 % del tráfico normal. El IF recalibrado aquí cumple el objetivo (4,45 % de FPR en prueba) y detecta 54/78 ventanas de ataque. Se elige el que funciona en la red donde opera.',
+    nota: 'La detección no la hace el modelo solo: la ablación da modelo 6/9, heurísticos 7/9 y combinado 9/9. El modelo es una de dos señales.',
+    enlace: { href: '#s-modelo', txt: 'Ver «Pruebas previas» y la ablación' },
   },
-  e_antes: {
-    que: 'Lo que pide el profesor: comparar el modelo ANTES vs DESPUÉS del reentrenamiento. Muestra FPR, umbral, features y TPR con sus variaciones.',
+  c_cong: {
+    que: 'Congelar modelo y umbral: el escalador y el IF se empaquetan en un Pipeline y el umbral se fija como el percentil α = 0,05 de validación: score_samples < −0,568892 (decision_function < −0,068892). Desde aquí nada se reajusta: la prueba y la Kali se puntúan con este mismo modelo.',
+    flujoTit: 'Qué queda fijo',
+    flujo: [
+      {paso: 'Pipeline', fichero: 'if_recalibrado_desplegable.joblib', garantia: 'sha256 d27f6871…125a'},
+      {paso: 'Umbral + orden de variables', fichero: 'manifest-if-recalibrado.json', garantia: 'el motor rechaza un orden distinto al del extractor'},
+      {paso: 'Equivalencia', fichero: 'verificar_equivalencia_umbral.py', garantia: '0 decisiones distintas sobre filas reales'},
+    ],
+    nota: 'La promoción es reproducible: promover_preliminar.py regenera el modelo desde su paquete con scores idénticos (no byte a byte).',
+  },
+  c_desp: {
+    que: 'Despliegue: el motor carga el Pipeline y el umbral del manifiesto, comprueba hash y orden de variables, y puntúa cada IP cada 10 s. El generador de configuración escribe las unidades systemd desde cyberflow.local.toml.',
+    flujoTit: 'Cadena de promoción',
+    flujo: [
+      {paso: 'Promover', fichero: 'promover_preliminar.py', garantia: 'paquete → Pipeline + manifiesto, se niega a sobrescribir'},
+      {paso: 'Verificar', fichero: 'verificar_equivalencia_umbral.py', garantia: 'hash + orden + umbral equivalente'},
+      {paso: 'Configurar', fichero: 'cyberflow_config.py', garantia: 'motor y panel con el mismo detector'},
+    ],
+    nota: 'Rollback: apuntar [motor] modelo, manifiesto y detector al artefacto anterior, regenerar la configuración y reiniciar ppi-motor. Nada se sobrescribe: promover se niega a pisar un artefacto existente.',
+  },
+  c_acum: {
+    que: 'Acumulación: mientras el motor opera, un temporizador sigue escribiendo filas de línea base (v3) con la misma cadena. Es lo único automático del ciclo de vida.',
+    nota: 'Las filas acumuladas solo sirven para reentrenar si se verifica que son tráfico normal: una campaña de ataque en ese tramo hay que retirarla antes.',
+  },
+  c_reent: {
+    que: 'Reentrenar o recalibrar: repetir los pasos 3 a 6 (partición, candidatos, métricas, selección) sobre los datos acumulados, en seco, sin tocar el modelo en producción. Recalibrar es solo mover el umbral con validación nueva; reentrenar es rehacer el modelo.',
+    flujoTit: 'Cada cuánto (política propuesta)',
+    flujo: [
+      {paso: 'Suelo', fichero: 'mensual', garantia: 'aunque nada cambie'},
+      {paso: 'Por deriva', fichero: 'FPR operativo', garantia: 'si sube claramente sobre el 5 % de diseño'},
+      {paso: 'Obligatorio', fichero: 'cambio de red', garantia: 'nueva VLAN, Wazuh, AAA, servicios nuevos'},
+    ],
+    nota: 'Política PROPUESTA, no automatizada. Hoy el entrenamiento y la promoción se hacen a mano y con la misma verificación, nunca a ciegas.',
+  },
+  c_antes: {
+    que: 'Antes vs después: el modelo nuevo se compara con el vigente sobre los MISMOS datos reservados y con las mismas métricas (FPR en normal, detección en ataques no vistos). La referencia publicada es el cambio de modelo en esta red: OCSVM con umbral de otra red, 92,4 % de FPR → IF recalibrado, 4,45 %.',
     flujoTit: 'Comparación antes / después',
     flujo: [
       {paso: 'Tabla de cambios', fichero: 'comparar_reentrenamiento.py', garantia: 'métricas previas vs posteriores + Δ'},
-      {paso: 'Evidencia', fichero: 'comparacion-reentrenamiento.md', garantia: 'queda en negro sobre blanco'},
+      {paso: 'Evidencia', fichero: 'comparacion-reentrenamiento.md', garantia: 'queda escrita antes de decidir'},
+      {paso: 'Decisión', fichero: 'regla fija', garantia: 'se promueve solo si FPR ≤ y detección ≥; si no, se queda el vigente'},
     ],
-    nota: 'Sin esta comparación, el reentrenamiento sería una caja negra: hay que VER qué cambió.',
-  },
-  e_dec: {
-    que: 'Se despliega el modelo reentrenado SOLO si mejora o iguala la cobertura y no empeora el FPR; si no, se conserva el actual. Siempre con rollback.',
-    nota: 'Cadencia propuesta, no automatizada: mensual como suelo o por deriva del FPR, y obligatoria al cambiar de red. Hoy solo se automatiza la acumulación de la línea base; el ciclo se ejecuta a mano y en seco. Ver RUNBOOK-REENTRENAMIENTO-DEMO.md y PLAN-REENTRENAMIENTO.md.',
+    nota: 'El 92,4 → 4,45 no es un reentrenamiento del mismo modelo sino un cambio de modelo y de umbral. La comparación de un reentrenamiento con datos nuevos reservados está pendiente (bloque B3).',
   },
 };
 
@@ -1824,7 +1947,11 @@ function renderTopologia(status) {
   const v = TOPO_VISTAS[topoVista];
   const svg = document.getElementById('topo');
   const est = {};
-  for (const n of v.nodos) est[n.id] = topoEstado(n.id, status);
+  for (const n of v.nodos) {
+    est[n.id] = topoEstado(n.id, status);
+    // Nodos de las vistas de construccion: sin estado vivo, llevan su cifra fija.
+    if (est[n.id].valor === '—' && n.val) est[n.id] = Object.assign({}, est[n.id], { valor: n.val });
+  }
 
   const grupos = v.grupos.map(g => {
     const badge = g.n
@@ -2046,7 +2173,8 @@ function renderTopoDetalle() {
   if (!topoUltimo) return;
   const lista = TOPO_VISTAS[topoVista].nodos;
   const n = lista.find(x => x.id === topoSel) || lista[0];
-  const e = topoEstado(n.id, topoUltimo);
+  let e = topoEstado(n.id, topoUltimo);
+  if (e.valor === '—' && n.val) e = Object.assign({}, e, { valor: n.val });
   const t = TOPO_TEXTO[n.id] || {};
   const filas = Object.entries(e.datos || {})
     .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
@@ -2060,7 +2188,7 @@ function renderTopoDetalle() {
     (t.flujo ? flujoHTML(t.flujo, t.flujoTit) : '') +
     filesHTML(n.id) +
     (t.nota ? `<p class="dim">${t.nota}</p>` : '') +
-    (t.enlace ? `<p><a href="${t.enlace.href}">${t.enlace.txt} &rarr;</a></p>` : '');
+    (t.enlace ? `<p><a href="${t.enlace.href}"${t.enlace.vtab ? ` data-vtab="${t.enlace.vtab}"` : ''}>${t.enlace.txt} &rarr;</a></p>` : '');
 }
 
 // La regla de decision del modelo, hecha visible en el nodo "Modelo": una recta
@@ -2476,13 +2604,157 @@ if (document.getElementById('varTabla')) {
 // Escenarios: catalogo estatico, se pide una vez (solo el admin tiene la seccion).
 if (document.getElementById('simGrid')) cargarEscenarios();
 
+// ---- Datos en vivo -------------------------------------------------------
+// Tres pestañas sobre /api/vivo y /api/trazabilidad (solo admin). Se refresca
+// cada 10 s mientras la seccion esta visible y no esta en pausa; la matriz se
+// pide una vez porque sale del esquema y del codigo, no del trafico.
+let vivoTab = 'eve', vivoDatos = null, vivoMatriz = null, vivoPausa = false;
+
+function vfChip(f) {
+  const cls = f.uso === 'modelo' ? '' : (f.uso === 'conteo' ? ' cnt' : ' l2');
+  const val = f.valor === null ? '—' : String(f.valor);
+  const tip = f.feature + ' · ventana ' + f.ventana_s + ' s · uso: ' + f.uso +
+    (f.parcial ? ' · valor PARCIAL: la ventana empieza antes del tramo leído' : '');
+  return '<span class="vf' + cls + '" title="' + varEsc(tip) + '"><b>' + varEsc(f.feature) +
+    '</b> <span class="ap">' + varEsc(f.aporte) + '</span> → ' + varEsc(val) +
+    (f.parcial ? '<span class="par">*</span>' : '') + '</span>';
+}
+
+function vivoPasa(r, q) {
+  if (!q) return true;
+  const txt = [r.entidad, r.ip_src, r.ip_dst, r.origen, r.destino, r.evento]
+    .concat((r.features || []).map(f => f.feature)).join(' ').toLowerCase();
+  return txt.includes(q);
+}
+
+function renderVivo() {
+  const caja = document.getElementById('vivoTabla');
+  const res = document.getElementById('vivoResumen');
+  const pie = document.getElementById('vivoPie');
+  if (!caja) return;
+  document.getElementById('vivoTodosLbl').style.display = vivoTab === 'pcap' ? '' : 'none';
+  const q = (document.getElementById('vivoFiltro').value || '').trim().toLowerCase();
+  const hora = (s) => s ? s.slice(11, 19) : '—';
+
+  if (vivoTab === 'matriz') {
+    if (!vivoMatriz) { caja.innerHTML = '<p class="var-vacio">Cargando matriz…</p>'; return; }
+    const filas = vivoMatriz.filter(m => !q || (m.feature + ' ' + m.registro + ' ' + m.fuente).toLowerCase().includes(q));
+    res.textContent = 'Fuente → registro → parser → variable → ventana → uso. Construida del esquema ' +
+      '(multilayer-v2/v3), de build_rows y del código de heuristicos.py: si cambia el código, cambia la matriz.';
+    caja.innerHTML = '<table><thead><tr><th>Fuente</th><th>Registro que la alimenta</th><th>Parser</th>' +
+      '<th>Variable</th><th>Capa</th><th>Ventana</th><th>Uso</th><th>Heurísticos</th></tr></thead><tbody>' +
+      filas.map(m => '<tr><td>' + varEsc(m.fuente) + '</td><td>' + varEsc(m.registro) + '</td><td class="m">' +
+        varEsc(m.parser) + '</td><td class="m"><b>' + varEsc(m.feature) + '</b></td><td>' + varEsc(m.capa) +
+        '</td><td>' + m.ventana_s + ' s</td><td>' + varEsc(m.uso) + '</td><td class="heur">' +
+        varEsc((m.heuristicos || []).join(', ') || '—') + '</td></tr>').join('') + '</tbody></table>';
+    pie.textContent = filas.length + ' columnas: 28 entran al modelo (v2), 3 de capa 2 se acumulan sin puntuarse (v3) ' +
+      'y 3 son conteos que solo leen los heurísticos.';
+    return;
+  }
+
+  if (!vivoDatos) { caja.innerHTML = '<p class="var-vacio">Cargando…</p>'; return; }
+  if (vivoDatos.error) {
+    caja.innerHTML = '<p class="var-vacio">' + varEsc(vivoDatos.error) + '</p>';
+    res.textContent = ''; pie.textContent = ''; return;
+  }
+  const d = vivoDatos;
+  const cfg = 'Red ' + d.config.red_entidades + ' · excluidas ' + (d.config.excluir.join(', ') || 'ninguna') +
+    ' · protocolos fuera ' + (d.config.excluir_protocolos.join(', ') || 'ninguno') + ' (de ' + d.config.fuente + ')';
+
+  if (vivoTab === 'eve') {
+    const e = d.eve;
+    const ign = Object.entries(e.ignorados || {}).map(([k, v]) => k + ' ' + v).join(', ');
+    res.textContent = 'Tramo ' + (e.tramo ? hora(e.tramo.desde) + '–' + hora(e.tramo.hasta) + ' UTC' : 'vacío') +
+      ' · ' + e.eventos + ' eventos leídos, ' + e.aportan + ' aportan a variables · ignorados: ' + (ign || 'ninguno') +
+      '. El motor solo usa http, dns (consulta y NXDOMAIN) y tls.';
+    const filas = d.eventos.filter(r => vivoPasa(r, q));
+    caja.innerHTML = '<table><thead><tr><th>Hora UTC</th><th>Entidad</th><th>Evento</th><th>Origen → destino</th>' +
+      '<th>Variable · aporte → valor en la ventana</th><th>Ventana</th><th>Fuente</th></tr></thead><tbody>' +
+      filas.map(r => '<tr><td class="m">' + varEsc(r.hora) + '</td><td class="m">' + varEsc(r.entidad) +
+        '</td><td>' + varEsc(r.evento) + '<div class="sub">' + varEsc(r.tipo) + (r.vlan ? ' · VLAN ' + r.vlan : '') +
+        '</div></td><td class="m">' + varEsc(r.origen) + '<div class="sub">→ ' + varEsc(r.destino) + '</div></td><td>' +
+        r.features.map(vfChip).join('') + '</td><td class="m">hasta ' + hora(r.ventana_fin) + '</td><td class="m">' +
+        varEsc(r.fuente.fichero) + '<div class="sub">byte ' + r.fuente.byte + '</div></td></tr>').join('') +
+      '</tbody></table>';
+    pie.textContent = cfg + ' · * valor parcial (la ventana de 60 s empieza antes del tramo leído).';
+  } else {
+    const p = d.pcap;
+    res.textContent = 'Tramo ' + (p.tramo ? hora(p.tramo.desde) + '–' + hora(p.tramo.hasta) + ' UTC' : 'vacío') +
+      ' · ' + p.ficheros.length + ' ficheros cerrados del anillo, ' + p.tramas + ' tramas: ' + p.no_ipv4 +
+      ' sin IPv4, ' + p.plano_control + ' de plano de control, ' + p.duplicados_espejo + ' copias del espejo, ' +
+      p.fuera_de_alcance + ' de entidades fuera de la red, ' + p.atribuidas + ' atribuidas (' + p.entidad_excluida +
+      ' de entidades excluidas). Mostrando: ' + p.filtro + '.' +
+      (p.ilegibles.length ? ' No legibles: ' + p.ilegibles.map(x => x.fichero).join(', ') + '.' : '');
+    const filas = d.tramas.filter(r => vivoPasa(r, q));
+    caja.innerHTML = '<table><thead><tr><th>Hora UTC</th><th>VLAN</th><th>MAC origen → destino</th>' +
+      '<th>IP origen → destino</th><th>Proto · flags</th><th>Long.</th><th>Variable · aporte → valor en la ventana</th>' +
+      '<th>Ventana</th><th>Fichero</th></tr></thead><tbody>' +
+      filas.map(r => '<tr><td class="m">' + varEsc(r.hora) + '</td><td class="m">' + (r.vlan || '—') +
+        '</td><td class="m">' + varEsc(r.mac_src || '') + '<div class="sub">→ ' + varEsc(r.mac_dst || '') +
+        '</div></td><td class="m">' + varEsc(r.ip_src) + (r.puerto_src ? ':' + r.puerto_src : '') +
+        '<div class="sub">→ ' + varEsc(r.ip_dst) + (r.puerto_dst ? ':' + r.puerto_dst : '') +
+        ' · entidad ' + varEsc(r.entidad) + ' (' + r.sentido + ')</div></td><td>' + varEsc(r.proto) +
+        '<div class="sub">' + varEsc(r.evento) + '</div></td><td class="m">' + (r.longitud === null ? '—' : r.longitud + ' B') +
+        '</td><td>' + r.features.map(vfChip).join('') + '</td><td class="m">hasta ' + hora(r.ventana_fin) +
+        '</td><td class="m">' + varEsc(r.fuente.fichero || '') + '<div class="sub">trama ' + r.fuente.trama +
+        '</div></td></tr>').join('') + '</tbody></table>';
+    pie.textContent = cfg + ' · * valor parcial · borde discontinuo: capa 2, se acumula pero no se puntúa · ' +
+      'ámbar: conteo que solo leen los heurísticos.';
+  }
+  if (!caja.querySelector('tbody tr')) caja.innerHTML = '<p class="var-vacio">Sin registros que aporten en este tramo' +
+    (q ? ' con ese filtro' : '') + '.</p>';
+}
+
+async function cargarVivo(forzar) {
+  const sec = document.getElementById('s-vivo');
+  if (!sec || (!forzar && (vivoPausa || sec.hidden))) return;
+  try {
+    if (vivoTab === 'matriz') {
+      if (!vivoMatriz) vivoMatriz = (await (await fetch('/api/trazabilidad')).json()).filas || [];
+    } else {
+      const todos = document.getElementById('vivoTodos').checked ? '1' : '0';
+      vivoDatos = await (await fetch('/api/vivo?todos=' + todos)).json();
+    }
+  } catch (e) {
+    vivoDatos = {error: 'No se pudo leer /api/vivo: ' + e};
+  }
+  renderVivo();
+}
+
+if (document.getElementById('vivoTabla')) {
+  on('vivoTabs', 'click', (ev) => {
+    const b = ev.target.closest('button[data-vtab]');
+    if (!b) return;
+    vivoTab = b.dataset.vtab;
+    document.querySelectorAll('#vivoTabs button').forEach(x => x.classList.toggle('active', x === b));
+    renderVivo();
+    cargarVivo(true);
+  });
+  on('vivoFiltro', 'input', renderVivo);
+  on('vivoTodos', 'change', () => cargarVivo(true));
+  on('vivoPausa', 'click', () => {
+    vivoPausa = !vivoPausa;
+    document.getElementById('vivoPausa').textContent = vivoPausa ? 'Reanudar' : 'Pausar';
+    if (!vivoPausa) cargarVivo(true);
+  });
+  // Enlaces "Ver en vivo" del diagrama: abren la pestaña de su fuente.
+  document.addEventListener('click', (ev) => {
+    const a = ev.target.closest('a[data-vtab]');
+    if (!a) return;
+    const b = document.querySelector('#vivoTabs button[data-vtab="' + a.dataset.vtab + '"]');
+    if (b) b.click();
+  });
+  cargarVivo(true);
+  setInterval(() => cargarVivo(false), 10000);
+}
+
 // ---- Sesion: quien eres y en que modo miras ------------------------------
 // El modo es del ADMIN y solo del admin: alterna entre la vista operativa y la
 // de desarrollo. No es un permiso -esta autorizado a las dos- sino una forma de
 // quitarse de encima lo que no necesita mientras opera. Por eso vive en
 // localStorage y no en la sesion: es preferencia, no autorizacion.
 const SESION = JSON.parse(document.getElementById('datosSesion').textContent);
-const DEV_SECS = ['s-topologia', 's-variables', 's-modelo', 's-alcance', 's-simulacion'];
+const DEV_SECS = ['s-topologia', 's-variables', 's-vivo', 's-modelo', 's-alcance', 's-simulacion'];
 
 function aplicarModo(modo) {
   const dev = modo === 'desarrollo';
@@ -2842,7 +3114,8 @@ ROLES = ("admin", "lector")
 # Rutas que solo sirve el administrador. La lista es explicita y una prueba
 # recorre las que el servidor despacha de verdad: si se anade un endpoint y
 # nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
-RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios", "/api/archivo"})
+RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios", "/api/archivo",
+                         "/api/vivo", "/api/trazabilidad"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -3310,7 +3583,37 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
                       "atribuye, extrae y puntua cada ventana"),
                   rel("scripts/features/extract_multilayer_v2.py", "py",
                       "extractor congelado de las 28 variables"),
+                  rel("scripts/features/extract_multilayer_v3.py", "py",
+                      "trama con contexto (VLAN, MAC) y deduplicacion del espejo"),
                    _stat_fichero(config_usada, "toml", "configuracion de este despliegue")],
+        "parser_eve": [_stat_fichero(eve_path, "json", "fuente: eventos de Suricata"),
+                       rel("scripts/features/extract_multilayer_v2.py", "py",
+                           "load_app_observations: http, dns y tls")],
+        "pcap": [anillo, rel("scripts/engine/vista_vivo.py", "py",
+                             "«Datos en vivo»: la misma cadena del motor sobre el tramo reciente")],
+        "eve": [_stat_fichero(eve_path, "json", "una linea JSON por evento"),
+                rel("scripts/engine/vista_vivo.py", "py",
+                    "«Datos en vivo»: la misma cadena del motor sobre el tramo reciente")],
+        "c_part": [rel("scripts/dataset/particionar_linea_base.py", "py",
+                       "bloques horarios y banda de guarda")],
+        "c_cand": [rel("scripts/analysis/compare_frozen_models_metrics.py", "py",
+                       "comparacion historica de 7 candidatos"),
+                   rel("scripts/modeling/experiments/significancia_modelos.py", "py",
+                       "McNemar + Holm entre pares")],
+        "c_metr": [rel("scripts/modeling/entrenar_preliminar.py", "py",
+                       "FPR de validacion y prueba con el umbral congelado")],
+        "c_cong": [rel("scripts/modeling/entrenar_preliminar.py", "py",
+                       "entrena y fija el umbral desde validacion"),
+                   _stat_fichero(manifest_path, "json", "umbral, orden y hash")],
+        "c_desp": [rel("scripts/modeling/promover_preliminar.py", "py",
+                       "paquete -> Pipeline + manifiesto"),
+                   rel("scripts/modeling/verificar_equivalencia_umbral.py", "py",
+                       "hash, orden y umbral equivalente"),
+                   rel("scripts/setup/cyberflow_config.py", "py", "unidades systemd")],
+        "c_acum": [rel("scripts/features/acumular_v3.py", "py",
+                       "acumula filas del anillo al dataset")],
+        "c_antes": [rel("scripts/modeling/comparar_reentrenamiento.py", "py",
+                        "metricas previas vs posteriores")],
         "variables": [_stat_fichero(schema_extra, "json", "contrato de las 31 variables")
                       if schema_extra else rel("configs/features/multilayer-v3.json",
                                                "json", "contrato de las 31 variables"),
@@ -3327,6 +3630,8 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
                                 "parte sin fuga temporal"),
                             rel("scripts/modeling/entrenar_preliminar.py", "py",
                                 "entrena y congela el umbral")],
+        "heuristicos": [rel("scripts/engine/heuristicos.py", "py",
+                            "las cuatro reglas y sus umbrales")],
         "control": [rel("scripts/engine/responder_iptables.py", "py",
                         "bloqueo con interlock de calibracion")],
         "registro": [_stat_fichero(log_path, "log", "una linea JSON por decision")],
@@ -3472,6 +3777,16 @@ def parse_args() -> argparse.Namespace:
         help="arranca sin login, como antes. Solo para desarrollo local: "
              "el panel queda accesible a cualquiera que alcance el puerto",
     )
+    # «Datos en vivo»: por omisión, los mismos valores que el generador pasa al
+    # motor, leídos de configs/cyberflow.local.toml (o cyberflow.toml).
+    parser.add_argument("--capture-dir", default=None,
+                        help="anillo PCAP del motor; por omisión [captura] directorio")
+    parser.add_argument("--capture-glob", default=None)
+    parser.add_argument("--entity-network", default=None,
+                        help="red de entidades; por omisión [red] red_entidades")
+    parser.add_argument("--excluir", default=None,
+                        help="redes excluidas separadas por comas; por omisión [red] excluir")
+    parser.add_argument("--excluir-protocolos", default=None)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8788)
     parser.add_argument(
@@ -3708,6 +4023,40 @@ def main() -> int:
                 return
             if path == "/api/escenarios":
                 self._send_json(cargar_escenarios(args.escenarios))
+                return
+            if path in ("/api/vivo", "/api/trazabilidad"):
+                # Se importa aquí: el panel arranca igual aunque falte el
+                # extractor, y solo esta sección lo necesita.
+                try:
+                    if str(Path(__file__).resolve().parent) not in sys.path:
+                        sys.path.insert(0, str(Path(__file__).resolve().parent))
+                    import vista_vivo
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"error": "vista_vivo no disponible: %s" % exc})
+                    return
+                if path == "/api/trazabilidad":
+                    self._send_json({"filas": vista_vivo.matriz_trazabilidad()})
+                    return
+                params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+                if args.demo:
+                    self._send_json({"error": "en modo demostración no hay captura en vivo"})
+                    return
+                cfg = vista_vivo.config(
+                    red_entidades=args.entity_network, directorio=args.capture_dir,
+                    anillo_glob=args.capture_glob,
+                    excluir=None if args.excluir is None else
+                    [t.strip() for t in args.excluir.split(",") if t.strip()],
+                    excluir_protocolos=None if args.excluir_protocolos is None else
+                    [int(t) for t in args.excluir_protocolos.split(",") if t.strip()])
+                if not cfg.get("red_entidades"):
+                    self._send_json({"error": "falta la red de entidades (--entity-network "
+                                              "o [red] red_entidades)"})
+                    return
+                try:
+                    self._send_json(vista_vivo.calcular_con_cache(
+                        args.eve_path, cfg, todos=params.get("todos") == "1"))
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"error": "%s: %s" % (type(exc).__name__, exc)})
                 return
             if path == "/api/decisions":
                 params = dict(pair.split("=") for pair in query.split("&") if "=" in pair)
