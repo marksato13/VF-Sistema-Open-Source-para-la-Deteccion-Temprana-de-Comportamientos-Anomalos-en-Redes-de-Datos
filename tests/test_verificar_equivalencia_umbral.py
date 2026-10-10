@@ -49,6 +49,26 @@ class Equivalencia(unittest.TestCase):
         self.assertEqual(r["veredicto"], "EQUIVALENTE")
         self.assertAlmostEqual(r["umbral_decision_function_implicito"], self.u_df)
 
+    def test_lee_el_umbral_donde_lo_lee_el_motor(self):
+        # Estructura del manifiesto operativo de Sensor1: el detector recalibrado
+        # solo aparece en detectors.<nombre>.calibration, que es lo que lee
+        # motor_decision.load_threshold. Debe preferirse a evaluation.
+        man = Path(self.tmp.name) / "manifest-operativo.json"
+        man.write_text(json.dumps({
+            "detectors": {"if_x": {"calibration": {"threshold": self.u_ss,
+                                                   "comparison": "score < threshold"}}},
+            "evaluation": {"otro": {"threshold_used": 9.9}}}), encoding="utf-8")
+        r = veq.verificar(self.modelo, man, "if_x", self.u_df)
+        self.assertEqual(r["veredicto"], "EQUIVALENTE")
+        self.assertEqual(r["fuente_umbral"], "detectors.if_x.calibration.threshold")
+
+    def test_regla_de_comparacion_distinta_se_rechaza(self):
+        man = Path(self.tmp.name) / "manifest-regla.json"
+        man.write_text(json.dumps({"detectors": {"if_x": {"calibration": {
+            "threshold": self.u_ss, "comparison": "score > threshold"}}}}), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            veq.verificar(self.modelo, man, "if_x", self.u_df)
+
     def test_umbral_sin_traducir_se_detecta(self):
         # El error que este guion existe para atrapar: usar el umbral de
         # decision_function tal cual en la escala de score_samples.

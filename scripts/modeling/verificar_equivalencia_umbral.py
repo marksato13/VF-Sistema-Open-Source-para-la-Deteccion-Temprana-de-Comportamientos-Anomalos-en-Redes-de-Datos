@@ -76,15 +76,30 @@ def filas(modelo, csv_path: Path | None, columnas: list[str] | None, n: int, sem
     return np.random.default_rng(semilla).normal(size=(n, int(d))), "sinteticas"
 
 
-def umbral_del_manifiesto(manifiesto: dict, detector: str | None) -> float:
+def umbral_del_manifiesto(manifiesto: dict, detector: str | None) -> tuple[float, str]:
+    """Umbral (escala score_samples) y de dónde se leyó.
+
+    Primero, la MISMA lectura que hace el motor (`motor_decision.load_threshold`):
+    `detectors.<nombre>.calibration.threshold` con la regla `score < threshold`. Así
+    se verifica el número que de verdad decide, no otro. Solo si no está ahí se
+    recurre a `evaluation.<nombre>.threshold_used` (manifiestos de laboratorio).
+    """
+    det = (manifiesto.get("detectors") or {}).get(detector) if detector else None
+    cal = det.get("calibration") if isinstance(det, dict) else None
+    if isinstance(cal, dict) and "threshold" in cal:
+        regla = cal.get("comparison", "score < threshold")
+        if regla != "score < threshold":
+            raise ValueError("regla de comparacion inesperada en el manifiesto: %r" % regla)
+        return float(cal["threshold"]), "detectors.%s.calibration.threshold" % detector
     ev = manifiesto.get("evaluation", {})
     if detector and detector in ev:
-        return float(ev[detector]["threshold_used"])
+        return float(ev[detector]["threshold_used"]), "evaluation.%s.threshold_used" % detector
     for clave in ("threshold_used", "umbral", "threshold"):
         if clave in manifiesto:
-            return float(manifiesto[clave])
+            return float(manifiesto[clave]), clave
     if len(ev) == 1:
-        return float(next(iter(ev.values()))["threshold_used"])
+        nombre, datos = next(iter(ev.items()))
+        return float(datos["threshold_used"]), "evaluation.%s.threshold_used" % nombre
     raise ValueError("no encuentro el umbral del detector %r en el manifiesto" % detector)
 
 
@@ -118,9 +133,10 @@ def verificar(modelo_path: Path, manifiesto_path: Path | None = None, detector: 
 
     if manifiesto_path:
         man = json.loads(Path(manifiesto_path).read_text(encoding="utf-8"))
-        u_ss = umbral_del_manifiesto(man, detector)
+        u_ss, fuente = umbral_del_manifiesto(man, detector)
         r.update({"manifiesto": str(manifiesto_path), "sha256_manifiesto": sha256(manifiesto_path),
                   "detector": detector, "umbral_score_samples_manifiesto": u_ss,
+                  "fuente_umbral": fuente,
                   "umbral_decision_function_implicito": u_ss - offset})
         if umbral_decision is not None:
             dif = abs(u_ss - (float(umbral_decision) + offset))
