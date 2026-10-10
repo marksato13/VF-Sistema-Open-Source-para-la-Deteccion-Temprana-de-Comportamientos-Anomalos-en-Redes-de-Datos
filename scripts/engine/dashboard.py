@@ -26,10 +26,14 @@ import json
 import secrets
 import ssl
 import subprocess
+import sys
 import time
+import tomllib
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+RAIZ_REPO = Path(__file__).resolve().parents[2]
 
 HTML = """<!doctype html>
 <meta charset="utf-8">
@@ -3344,6 +3348,28 @@ def cargar_escenarios(ruta: Path) -> dict:
     return {"normal": datos.get("normal", []), "anomalo": datos.get("anomalo", [])}
 
 
+def resolver_detector(explicito: str | None, raiz: Path = RAIZ_REPO) -> tuple[str, str]:
+    """Detector cuyas métricas muestra el panel, y de dónde se tomó.
+
+    Tiene que ser el MISMO que ejecuta el motor. La unidad lo pasa con --detector-name
+    (el generador lo escribe desde la configuración). Si una unidad no lo pasa, se lee
+    de la misma configuración de la que lo toma el generador —el perfil local y, si no,
+    el genérico— en lugar de caer a un nombre fijo: con un nombre fijo, Sensor1 mostraba
+    las cifras del OCSVM mientras el motor ejecutaba el Isolation Forest recalibrado.
+    """
+    if explicito:
+        return explicito, "--detector-name"
+    for nombre in ("cyberflow.local.toml", "cyberflow.toml"):
+        try:
+            datos = tomllib.loads((raiz / "configs" / nombre).read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            continue
+        detector = (datos.get("motor") or {}).get("detector")
+        if detector:
+            return str(detector), f"configs/{nombre} [motor] detector"
+    return "ocsvm_scaled", "valor por omisión (ninguna configuración declara detector)"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -3356,7 +3382,11 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("/home/useransible/ppi-motor-model/manifest.json"),
     )
-    parser.add_argument("--detector-name", default="ocsvm_scaled")
+    parser.add_argument(
+        "--detector-name", default=None,
+        help="detector del motor cuyas métricas se muestran; si se omite, se lee de "
+             "configs/cyberflow.local.toml (o cyberflow.toml), [motor] detector",
+    )
     parser.add_argument("--enforce-command", default="/usr/local/sbin/ppi-enforce")
     parser.add_argument(
         "--eve-path",
@@ -3456,6 +3486,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    args.detector_name, fuente_detector = resolver_detector(args.detector_name)
+    print(f"panel: detector {args.detector_name} (fuente: {fuente_detector})",
+          file=sys.stderr, flush=True)
     service_names = [name.strip() for name in args.services.split(",") if name.strip()]
     model_summary = load_model_summary(args.manifest_path, args.detector_name)
 
