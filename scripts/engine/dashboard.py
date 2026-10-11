@@ -1853,12 +1853,12 @@ const TOPO_TEXTO = {
     flujo: [
       {paso: 'FPR validación', fichero: 'ensayo-if-v2.json', garantia: '5,00 % (por construcción: α = 0,05)'},
       {paso: 'FPR prueba', fichero: 'ensayo-if-v2.json', garantia: '4,45 % sobre 65 421 ventanas normales'},
-      {paso: 'Detección Kali', fichero: 'nota M', garantia: '54/78 = 69 % global; HTTP 27/27'},
+      {paso: 'Detección Kali', fichero: 'nota M', garantia: '54/84 = 64,3 % global; HTTP 35/43'},
     ],
     nota: 'El criterio se fija ANTES de mirar la prueba: umbral desde validación con objetivo de FPR 5 %. El 4,45 % es del modelo sobre tráfico normal, no del sistema completo con heurísticos.',
   },
   c_sel: {
-    que: 'Por qué ganó: el OCSVM del laboratorio, llevado a esta red con su umbral, marcaba como anómalo el 92,4 % del tráfico normal. El IF recalibrado aquí cumple el objetivo (4,45 % de FPR en prueba) y detecta 54/78 ventanas de ataque. Se elige el que funciona en la red donde opera.',
+    que: 'Por qué ganó: el OCSVM del laboratorio, llevado a esta red con su umbral, marcaba como anómalo el 92,4 % del tráfico normal. El IF recalibrado aquí cumple el objetivo (4,45 % de FPR en prueba) y detecta 54/84 ventanas de ataque (64,3 %). Se elige el que funciona en la red donde opera.',
     nota: 'La detección no la hace el modelo solo: la ablación da modelo 6/9, heurísticos 7/9 y combinado 9/9. El modelo es una de dos señales.',
     enlace: { href: '#s-modelo', txt: 'Ver «Pruebas previas» y la ablación' },
   },

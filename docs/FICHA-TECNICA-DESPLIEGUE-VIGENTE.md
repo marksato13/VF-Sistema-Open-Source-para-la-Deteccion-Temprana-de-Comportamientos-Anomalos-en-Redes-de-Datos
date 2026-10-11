@@ -193,7 +193,7 @@ configuración por despliegue (mejora abierta).
   el espejo; el 4,45 % es otro modelo, sobre otros datos (~70 h de línea base) y con ese
   filtrado aplicado. Para atribuir la mejora a la recalibración habría que puntuar ambos
   modelos sobre el mismo conjunto retenido.
-- **Detección del IF:** 54/78 ventanas Kali (69 %); HTTP 27/27; escaneo 27/43; DNS 0/8
+- **Detección del IF:** 54/84 ventanas Kali (64,3 %); HTTP 35/43; escaneo 19/33; DNS 0/8 (recuento de la nota S)
   (el ensayo apuntó a un host que no era el resolver: limitación del ensayo).
 - **Stack híbrido por episodio** (3 familias × 3): modelo solo 6/9, heurísticos solos
   7/9, combinado 9/9. El 9/9 no es del modelo solo.

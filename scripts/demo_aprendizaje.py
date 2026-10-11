@@ -111,9 +111,9 @@ def main() -> int:
         "veredicto": "PROMOVIBLE",
         "razon": "FPR <= vigente y deteccion >= vigente sobre los mismos conjuntos",
         "resultados": {
-            "vigente": {"detector": cfg["detector"], "fpr_oro": 0.0445, "deteccion": 0.6923},
+            "vigente": {"detector": cfg["detector"], "fpr_oro": 0.0445, "deteccion": 0.6429},
             "candidato": {"detector": "if_aprendizaje_" + ident.replace("-", "_"),
-                          "fpr_oro": 0.0412, "deteccion": 0.7051}},
+                          "fpr_oro": 0.0412, "deteccion": 0.6667}},
         "filas": {"base": 269781, "nuevas": 115620, "fraccion_nueva": 0.3,
                   "particion": {"train": 231000, "validation": 77000, "test": 77000}},
         "influencia": {"tope_por_ip": 14900, "ips_recortadas": {"10.10.20.21": 3810},

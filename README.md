@@ -177,8 +177,8 @@ Limitaciones **medidas**, con su contexto (no intercambiar entre versiones):
   Isolation Forest recalibrado sobre **test normal retenido**; el histórico F6 dio
   **22,97–25,81 %** bajo otro modelo/escenario. El FPR del **sistema completo** (con
   heurísticos y enforcement) se mide aparte. Sobre tráfico pesado, recalibre antes.
-- **Detección por escenario, no global:** 69 % global (54/78 ventanas Kali), HTTP
-  27/27, escaneo 27/43, DNS 0/8 (el piloto apuntó a un host que no era el resolver:
+- **Detección por escenario, no global:** 64,3 % global (54/84 ventanas Kali), HTTP
+  35/43, escaneo 19/33, DNS 0/8 (el piloto apuntó a un host que no era el resolver:
   limitación del ensayo). La cobertura 9/9 es del **stack híbrido** (modelo +
   heurísticos), no del modelo solo (6/9).
 - **El motor usa un buffer incremental** (no reparsea todo el anillo de PCAP). Los
