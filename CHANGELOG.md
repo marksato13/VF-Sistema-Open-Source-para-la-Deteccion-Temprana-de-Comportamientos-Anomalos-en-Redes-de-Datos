@@ -5,6 +5,33 @@ Cada entrada dice qué cambió y **con qué se midió**, no solo qué se tocó.
 
 ## Sin publicar
 
+### Añadido
+
+- **Reentrenamiento supervisado con cuatro defensas contra el envenenamiento de
+  datos** (`scripts/modeling/cyberflow_aprendizaje.py`, [docs/APRENDIZAJE.md](docs/APRENDIZAJE.md)):
+  - **Saneamiento** de cada lote diario: fuera las IP marcadas a ±5 min y las filas
+    atípicas frente al oro; el lote entero se rechaza si su PSI > 0,5.
+  - **Linaje**: registro con sha256 encadenado.
+  - **Límite de influencia**: lo nuevo ≤ 30 % del entrenamiento, ninguna IP > 10 %.
+  - **Deriva** contra un conjunto de oro fijo.
+
+  El temporizador nocturno `cyberflow-aprendizaje` prepara y evalúa candidatos, y
+  **nunca cambia el modelo en uso**: eso es `promover`, que lanza una persona, deja copia
+  y se deshace con `revertir`. La política vive en `[reentrenamiento]` del `.toml`
+  (`modo` solo admite `supervisado`).
+
+  Se ve en una sección «Aprendizaje» del panel, solo para el admin, en modo desarrollador
+  y con datos de ejemplo en `demo.sh`, y en el bloque 9 de `doctor.sh`.
+
+  Medido con 16 pruebas en `tests/test_aprendizaje.py`, que recorren el ciclo completo
+  con datos sintéticos:
+  - quitar lo marcado y lo atípico;
+  - rechazar un lote desplazado;
+  - detectar un lote retocado o una línea borrada del registro;
+  - aplicar los topes;
+  - promover y revertir dejando el `.toml` byte a byte como estaba;
+  - impedir que el lector reciba la sección.
+
 ### Corregido
 
 - **La guía de recalibración no producía un artefacto que el motor pudiera cargar.**

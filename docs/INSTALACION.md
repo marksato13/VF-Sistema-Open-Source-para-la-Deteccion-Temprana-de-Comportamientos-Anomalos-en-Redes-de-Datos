@@ -406,9 +406,9 @@ sudo python3 scripts/setup/cyberflow_usuarios.py --crear lector --rol lector
 bash scripts/setup/doctor.sh                # todo de una vez; solo lee
 ```
 
-![Figura 7.1. doctor.sh: los ocho bloques y el resumen](img/instalacion/07-01-doctor.png)
+![Figura 7.1. doctor.sh: los bloques de salud y el resumen](img/instalacion/07-01-doctor.png)
 
-*Figura 7.1. `doctor.sh`: los ocho bloques y el resumen*
+*Figura 7.1. `doctor.sh`: los bloques de salud y el resumen*
 
 O pieza a pieza:
 
@@ -538,6 +538,25 @@ es lo correcto.
 ![Figura 8.1. Resultado de la recalibración: FPR en validación y prueba, umbral congelado](img/instalacion/08-01-recalibracion.png)
 
 *Figura 8.1. Resultado de la recalibración: FPR en validación y prueba, umbral congelado*
+
+### Después de la primera calibración: reentrenamiento supervisado
+
+La red cambia y el modelo envejece. Una vez calibrado, active el reentrenamiento
+supervisado: cada noche sanea un lote, mide la deriva y, cuando toca, prepara un
+candidato. **Nunca cambia el modelo en uso**: eso lo hace usted con `promover`. La
+partición de esta calibración da el conjunto de oro y la base:
+
+```bash
+.venv/bin/python scripts/modeling/cyberflow_aprendizaje.py \
+  --config configs/cyberflow.local.toml oro --desde artifacts/linea-base/particionado.csv
+# en configs/cyberflow.local.toml, sección [reentrenamiento]:
+#   activo = true
+#   base   = "artifacts/linea-base/particionado.csv"
+sudo .venv/bin/python scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml --escribir
+sudo systemctl daemon-reload && sudo systemctl enable --now cyberflow-aprendizaje.timer
+```
+
+Las cuatro defensas, la política y cómo promover o revertir: [APRENDIZAJE.md](APRENDIZAJE.md).
 
 ---
 

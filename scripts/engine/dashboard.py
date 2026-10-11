@@ -419,6 +419,22 @@ HTML = """<!doctype html>
     font-family: inherit; }
   .var-ej td { padding: 0.2rem 0.5rem 0.2rem 0; color: var(--text); }
   .var-vacio { padding: 0.9rem 0.8rem; color: var(--text-dim); font-size: 0.82rem; }
+  /* Aprendizaje supervisado: una tarjeta por defensa, y debajo sus tablas. */
+  .apr-def { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.7rem; margin: 0.6rem 0 1rem; }
+  .apr-def .card .value { font-size: 1.05rem; }
+  .apr-def .sub { font-size: 0.76rem; color: var(--text-dim); margin-top: 0.3rem; line-height: 1.4; }
+  .apr-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+  .apr-h { font-size: 0.86rem; margin: 1rem 0 0.45rem; color: var(--text); font-weight: 600; }
+  .apr-h .th-sub { color: var(--text-dim); font-weight: 400; font-size: 0.76rem; margin-left: 0.4rem; }
+  .apr-cand { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; position: relative; }
+  .apr-cand table { font-size: 0.8rem; margin: 0.5rem 0; }
+  .apr-cand td, .apr-cand th { padding: 0.3rem 0.5rem; }
+  .apr-cand td.num { overflow-wrap: anywhere; }
+  .apr-cols > div { min-width: 0; }
+  .apr-cand .topo-cmd { padding-right: 4.2rem; }
+  .badge.v-ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.v-no { background: var(--danger-soft); color: var(--danger); }
+  .badge.v-inc { background: var(--amber-soft); color: var(--amber); }
   .card {
     background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border);
     border-radius: 10px; padding: 0.8rem 1rem;
@@ -519,6 +535,7 @@ HTML = """<!doctype html>
     <a href="#s-modelo" data-sec="s-modelo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>Modelo</a>
     <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
     <a href="#s-simulacion" data-sec="s-simulacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg>Simulación</a>
+    <a href="#s-aprendizaje" data-sec="s-aprendizaje"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><polyline points="20,4 20,9 15,9"/></svg>Aprendizaje</a>
     <!--/ADMIN-->
     <a href="#s-scores" data-sec="s-scores"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg>Scores</a>
     <a href="#s-actividad" data-sec="s-actividad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg>Actividad<span class="pill" id="navAlertPill" hidden></span></a>
@@ -616,6 +633,21 @@ HTML = """<!doctype html>
       <button data-sim="anomalo">Tráfico anómalo</button>
     </div>
     <div class="sim-grid" id="simGrid"></div>
+  </section>
+
+  <section id="s-aprendizaje">
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><polyline points="20,4 20,9 15,9"/></svg><h2>Aprendizaje supervisado</h2></div>
+    <p class="lede-small">Cada noche el sistema sanea un lote del día, mide la deriva y, cuando toca, entrena y evalúa un modelo candidato. <strong>El modelo en uso solo cambia cuando una persona lo promueve</strong>. Aquí se ve cada defensa con su cifra. La política se cambia en el .toml (sección [reentrenamiento]), no desde aquí.</p>
+    <div class="apr-def" id="aprDefensas"></div>
+    <div class="apr-cols">
+      <div><h3 class="apr-h">Último candidato</h3><div id="aprCandidato"></div></div>
+      <div><h3 class="apr-h">Política vigente</h3><div class="tbl-wrap" id="aprPolitica"></div></div>
+    </div>
+    <h3 class="apr-h">Lotes diarios <span class="th-sub">saneamiento y linaje</span></h3>
+    <div class="tbl-wrap" id="aprLotes"></div>
+    <h3 class="apr-h">Deriva <span class="th-sub">modelo vigente frente al conjunto de oro</span></h3>
+    <div class="tbl-wrap" id="aprDeriva"></div>
+    <p class="toolbar-hint" id="aprPie"></p>
   </section>
   <!--/ADMIN-->
 
@@ -1370,16 +1402,16 @@ const TOPO_TEXTO = {
     nota: 'En el ARP spoofing su IP pasó a verse con dos MAC: esa es la anomalía de capa 2 que dispara unique_src_mac_30s.',
   },
   reentrenamiento: {
-    que: 'El modelo envejece: la normalidad cambia con el tiempo. Se reentrena con datos verificados limpios, congelando el umbral en validación antes de evaluar.',
-    flujoTit: 'Flujo de reentrenamiento',
+    que: 'El modelo envejece: la normalidad cambia con el tiempo. Cada noche el sistema sanea un lote, mide la deriva y, cuando toca, entrena y evalúa un candidato. Desplegarlo lo decide una persona: un modelo que se cambia solo podría aprender un ataque lento como normal.',
+    flujoTit: 'Reentrenamiento supervisado (cyberflow_aprendizaje.py)',
     flujo: [
-      {paso: 'Dataset limpio', fichero: 'multilayer-v3.csv', garantia: 'solo tráfico benigno verificado'},
-      {paso: 'Particionar', fichero: 'particionar_linea_base.py', garantia: 'bandas de guarda: sin fuga temporal'},
-      {paso: 'Entrenar', fichero: 'entrenar_preliminar.py', garantia: 'umbral congelado en validación, antes de evaluar'},
-      {paso: 'Modelo + manifiesto', fichero: 'if_recalibrado_desplegable.joblib', garantia: 'hashes que fijan la reproducibilidad'},
-      {paso: 'Promoción', fichero: 'misma verificación', garantia: 'FPR y partición revisados; nunca a ciegas'},
+      {paso: '1 · Saneamiento', fichero: 'lotes/lote-AAAAMMDD.csv', garantia: 'fuera las IPs marcadas y lo atípico; lote rechazado si su PSI se dispara'},
+      {paso: '2 · Linaje', fichero: 'registro.jsonl', garantia: 'sha256 de cada lote en una cadena: retocar uno la rompe'},
+      {paso: '3 · Límite de influencia', fichero: 'candidatos/<id>/', garantia: 'lo nuevo ≤ 30 % del entrenamiento; ninguna IP > 10 %'},
+      {paso: '4 · Deriva', fichero: 'deriva.jsonl', garantia: 'medida contra el conjunto de oro, que nunca entra a entrenar'},
+      {paso: 'Promoción', fichero: 'promover / revertir', garantia: 'solo si FPR ≤ y detección ≥ el vigente; a mano y con copia'},
     ],
-    nota: 'Cadencia: mensual como suelo, pero el disparador real es la deriva del FPR, y es OBLIGATORIO al cambiar la red (nueva VLAN, Wazuh, AAA). La automatización prepara el candidato; promocionarlo pasa por la misma verificación, nunca a ciegas.',
+    nota: 'Se entrena cada 30 días o antes si la deriva se sostiene 3 días, y es OBLIGATORIO al cambiar la red (nueva VLAN, Wazuh, AAA). La política vive en la sección [reentrenamiento] del .toml; el estado, en la sección Aprendizaje.',
   },
   nic: {
     que: 'La interfaz que recibe el espejo, sin dirección IP y en modo promiscuo.',
@@ -2267,13 +2299,142 @@ if (document.getElementById('varTabla')) {
 // Escenarios: catalogo estatico, se pide una vez (solo el admin tiene la seccion).
 if (document.getElementById('simGrid')) cargarEscenarios();
 
+// ---- Aprendizaje supervisado --------------------------------------------
+// Solo lee /api/aprendizaje (el estado que escribe cyberflow_aprendizaje.py).
+// Ensena las cuatro defensas con su cifra; promover es un comando para copiar,
+// nunca un boton: el panel no cambia el modelo.
+const aprPct = (v) => (v === null || v === undefined) ? '—' : (v * 100).toFixed(2) + ' %';
+const aprNum = (v, d) => (v === null || v === undefined) ? '—' : Number(v).toFixed(d === undefined ? 3 : d);
+const APR_VEREDICTO = {PROMOVIBLE: 'v-ok', NO_PROMOVER: 'v-no', EVALUACION_INCOMPLETA: 'v-inc'};
+const APR_LOTE = {aceptado: 'v-ok', aceptado_a_mano: 'v-inc', rechazado: 'v-no', insuficiente: 'v-inc'};
+
+function aprTarjeta(titulo, valor, cls, sub) {
+  return '<div class="card ' + (cls || '') + '"><div class="label">' + titulo + '</div>' +
+    '<div class="value">' + valor + '</div><div class="sub">' + sub + '</div></div>';
+}
+
+function renderAprendizaje(e) {
+  const pie = document.getElementById('aprPie');
+  if (!e.disponible) {
+    document.getElementById('aprDefensas').innerHTML =
+      '<p class="var-vacio">' + varEsc(e.motivo || 'sin datos') + '</p>';
+    for (const id of ['aprCandidato', 'aprPolitica', 'aprLotes', 'aprDeriva']) document.getElementById(id).innerHTML = '';
+    pie.textContent = '';
+    return;
+  }
+  const p = e.politica, lotes = e.lotes || [], der = e.deriva || [];
+  const ul = lotes.length ? lotes[lotes.length - 1] : null;
+  const ud = der.length ? der[der.length - 1] : null;
+  const uc = e.candidatos.length ? e.candidatos[e.candidatos.length - 1] : null;
+  const f = ul ? ul.filas : null;
+
+  document.getElementById('aprDefensas').innerHTML =
+    aprTarjeta('1 · Saneamiento', ul ? ul.estado : 'sin lotes',
+      ul ? (ul.estado === 'aceptado' ? 'ok' : (ul.estado === 'rechazado' ? 'bad' : 'amber')) : '',
+      ul ? ('lote ' + ul.dia + ': ' + f.entrada + ' → ' + f.salida + ' filas · ' + f.contaminadas +
+            ' de IPs marcadas · ' + f.atipicas + ' atípicas · PSI máx ' + aprNum(ul.psi_max, 2))
+         : 'el primer lote se cierra a las 00:30 UTC') +
+    aprTarjeta('2 · Linaje', e.registro_integro ? 'íntegro' : 'ROTO', e.registro_integro ? 'ok' : 'bad',
+      lotes.length + ' lotes registrados con sha256 encadenado · ' + e.lotes_disponibles + ' aún sin usar') +
+    aprTarjeta('3 · Límite de influencia', Math.round(p.max_fraccion_nueva * 100) + ' % / ' +
+      Math.round(p.max_fraccion_ip * 100) + ' %', 'accent',
+      'datos nuevos como máximo del entrenamiento / de lo nuevo por IP' +
+      (uc && uc.filas ? ' · último candidato: ' + aprPct(uc.filas.fraccion_nueva) + ' nuevo' : '')) +
+    aprTarjeta('4 · Deriva', ud && ud.fpr_oro !== undefined ? (e.deriva_sostenida ? 'sostenida' : (ud.senal ? 'señal' : 'estable')) : 'sin medir',
+      ud && ud.fpr_oro !== undefined ? (e.deriva_sostenida ? 'bad' : (ud.senal ? 'amber' : 'ok')) : '',
+      ud && ud.fpr_oro !== undefined ? ('FPR en oro ' + aprPct(ud.fpr_oro) + ' · PSI de scores ' +
+        aprNum(ud.psi_puntuaciones, 2) + ' · anómalo en el lote ' + aprPct(ud.tasa_anomala_lote))
+        : (e.oro ? 'se mide cada noche' : 'falta el conjunto de oro'));
+
+  let c = '<p class="var-vacio">Aún no hay candidatos. ' + varEsc(e.proximo ? 'Toca: ' + e.proximo : 'Se entrena por cadencia (' + p.cadencia_dias + ' días) o por deriva sostenida.') + '</p>';
+  if (uc) {
+    const r = uc.resultados || {}, va = r.vigente || {}, ca = r.candidato || {};
+    const cmd = '.venv/bin/python scripts/modeling/cyberflow_aprendizaje.py --config configs/' +
+      (e.toml || 'cyberflow.local.toml') + ' promover ' + uc.id;
+    c = '<div class="apr-cand"><div><b class="num">' + varEsc(uc.id) + '</b> ' +
+      '<span class="badge ' + (APR_VEREDICTO[uc.veredicto] || '') + '">' + varEsc(uc.veredicto) + '</span></div>' +
+      '<div class="sub" style="color:var(--text-dim);font-size:0.78rem;margin-top:0.3rem">' + varEsc(uc.motivo || '') + ' · ' + varEsc(uc.razon || '') + '</div>' +
+      '<table><tr><th></th><th>Vigente</th><th>Candidato</th></tr>' +
+      '<tr><td>FPR en oro</td><td class="num">' + aprPct(va.fpr_oro) + '</td><td class="num">' + aprPct(ca.fpr_oro) + '</td></tr>' +
+      '<tr><td>Detección</td><td class="num">' + aprPct(va.deteccion) + '</td><td class="num">' + aprPct(ca.deteccion) + '</td></tr>' +
+      '<tr><td>Detector</td><td class="num">' + varEsc(va.detector || '—') + '</td><td class="num">' + varEsc(ca.detector || '—') + '</td></tr></table>' +
+      (uc.veredicto === 'PROMOVIBLE'
+        ? '<div style="position:relative"><pre class="topo-cmd">' + varEsc(cmd) + '</pre>' +
+          '<button class="sim-copiar apr-copiar" data-cmd="' + varEsc(cmd) + '">copiar</button></div>' +
+          '<div class="sub" style="color:var(--text-dim);font-size:0.76rem">Deja copia del .toml; se deshace con «revertir». Después, los dos comandos con sudo que imprime.</div>'
+        : '') + '</div>';
+  }
+  document.getElementById('aprCandidato').innerHTML = c;
+
+  const filasPol = [
+    ['activo', p.activo ? 'sí' : 'no'], ['modo', p.modo],
+    ['cadencia', p.cadencia_dias + ' días · mínimo ' + p.dias_minimos + ' lotes'],
+    ['deriva', 'PSI > ' + p.psi_alerta + ' o anómalo > ' + aprPct(p.tasa_anomala_max) + ' durante ' + p.dias_deriva + ' días'],
+    ['saneamiento', '±' + p.margen_contaminacion_s + ' s de IPs marcadas · atípica en ≥ ' + p.max_variables_atipicas + ' variables · lote fuera si PSI > ' + p.psi_rechazo_lote],
+    ['promoción', 'FPR ≤ vigente + ' + aprPct(p.tolerancia_fpr) + ' y detección ≥ vigente'],
+    ['restauración', 'se conservan ' + p.conservar_modelos + ' modelos'],
+    ['conjunto de oro', e.oro ? (e.oro.filas + ' filas · ' + varEsc(e.oro.sha256.slice(0, 12)) + '…') : 'no creado'],
+  ];
+  document.getElementById('aprPolitica').innerHTML = '<table>' +
+    filasPol.map(x => '<tr><td>' + x[0] + '</td><td class="num">' + x[1] + '</td></tr>').join('') + '</table>';
+
+  document.getElementById('aprLotes').innerHTML = '<table><tr><th>Día</th><th>Estado</th><th>Entrada → salida</th>' +
+    '<th>Marcadas</th><th>Atípicas</th><th>PSI máx</th><th>sha256</th></tr>' +
+    (lotes.length ? lotes.slice(-10).reverse().map(l => '<tr><td class="num">' + l.dia + '</td>' +
+      '<td><span class="badge ' + (APR_LOTE[l.estado] || '') + '">' + l.estado + '</span></td>' +
+      '<td class="num">' + l.filas.entrada + ' → ' + l.filas.salida + '</td>' +
+      '<td class="num">' + l.filas.contaminadas + '</td><td class="num">' + l.filas.atipicas + '</td>' +
+      '<td class="num">' + aprNum(l.psi_max, 2) + '</td><td class="num">' + l.sha256.slice(0, 10) + '…</td></tr>').join('')
+      : '<tr class="empty-row"><td colspan="7">Sin lotes todavía</td></tr>') + '</table>';
+
+  const medidas = der.filter(d => d.fpr_oro !== undefined);
+  document.getElementById('aprDeriva').innerHTML = '<table><tr><th>Día</th><th>FPR en oro</th>' +
+    '<th>PSI de scores</th><th>Anómalo en el lote</th><th>ALERT del motor</th><th>Señal</th></tr>' +
+    (medidas.length ? medidas.slice(-10).reverse().map(d => '<tr><td class="num">' + d.dia + '</td>' +
+      '<td class="num">' + aprPct(d.fpr_oro) + '</td><td class="num">' + aprNum(d.psi_puntuaciones, 2) + '</td>' +
+      '<td class="num">' + aprPct(d.tasa_anomala_lote) + '</td><td class="num">' + aprPct(d.tasa_alert_motor) + '</td>' +
+      '<td>' + (d.senal ? '<span class="badge v-inc">sí</span>' : '<span class="badge v-ok">no</span>') + '</td></tr>').join('')
+      : '<tr class="empty-row"><td colspan="6">Sin mediciones todavía</td></tr>') + '</table>';
+
+  const h = e.historial || [];
+  pie.textContent = (e.demo ? 'DATOS DE EJEMPLO (modo demo): no son mediciones. ' : '') +
+    'Detector vigente: ' + e.detector_vigente +
+    (h.length ? ' · última acción: ' + h[h.length - 1].accion + ' ' + h[h.length - 1].candidato + ' (' + h[h.length - 1].fecha + ')' : ' · sin promociones todavía');
+}
+
+async function cargarAprendizaje() {
+  try {
+    renderAprendizaje(await (await fetch('/api/aprendizaje')).json());
+  } catch (err) {
+    renderAprendizaje({disponible: false, motivo: 'No se pudo leer el estado: ' + err});
+  }
+}
+
+on('aprCandidato', 'click', async (ev) => {
+  const b = ev.target.closest('.apr-copiar');
+  if (!b) return;
+  try {
+    await navigator.clipboard.writeText(b.dataset.cmd);
+    b.textContent = 'copiado ✓';
+    setTimeout(() => { b.textContent = 'copiar'; }, 1500);
+  } catch (err) {
+    b.textContent = 'copia manual';
+  }
+});
+
+if (document.getElementById('aprDefensas')) {
+  cargarAprendizaje();
+  // Cambia una vez al dia: cada cinco minutos sobra.
+  setInterval(cargarAprendizaje, 300000);
+}
+
 // ---- Sesion: quien eres y en que modo miras ------------------------------
 // El modo es del ADMIN y solo del admin: alterna entre la vista operativa y la
 // de desarrollo. No es un permiso -esta autorizado a las dos- sino una forma de
 // quitarse de encima lo que no necesita mientras opera. Por eso vive en
 // localStorage y no en la sesion: es preferencia, no autorizacion.
 const SESION = JSON.parse(document.getElementById('datosSesion').textContent);
-const DEV_SECS = ['s-topologia', 's-variables', 's-modelo', 's-alcance', 's-simulacion'];
+const DEV_SECS = ['s-topologia', 's-variables', 's-modelo', 's-alcance', 's-simulacion', 's-aprendizaje'];
 
 function aplicarModo(modo) {
   const dev = modo === 'desarrollo';
@@ -2614,6 +2775,29 @@ def load_model_summary(manifest_path: Path, detector_name: str) -> dict:
     }
 
 
+def estado_aprendizaje(config_toml: Path | None, demo: bool = False) -> dict:
+    """Estado del reentrenamiento supervisado, para la seccion del admin.
+
+    Solo lee ficheros (registro, lotes, deriva, candidatos); no carga modelos.
+    """
+    if config_toml is None:
+        return {"disponible": False,
+                "motivo": "El panel no recibio --config-toml: regenere las unidades "
+                          "con cyberflow_config.py para ver el aprendizaje."}
+    try:
+        modulo = Path(__file__).resolve().parents[1] / "modeling"
+        if str(modulo) not in sys.path:
+            sys.path.insert(0, str(modulo))
+        import cyberflow_aprendizaje as ap
+        e = ap.estado(ap.cargar_config(config_toml))
+    except (OSError, ValueError, KeyError, SystemExit) as err:
+        return {"disponible": False, "motivo": "No se pudo leer el aprendizaje: %s" % err}
+    e["disponible"] = True
+    e["demo"] = demo
+    e["toml"] = Path(config_toml).name
+    return e
+
+
 # --------------------------------------------------------------- autenticacion
 #
 # Dos cuentas y nada mas: "admin" ve todo, "lector" solo la vista operativa. El
@@ -2633,7 +2817,8 @@ ROLES = ("admin", "lector")
 # Rutas que solo sirve el administrador. La lista es explicita y una prueba
 # recorre las que el servidor despacha de verdad: si se anade un endpoint y
 # nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
-RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios"})
+RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios",
+                         "/api/aprendizaje"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -3213,6 +3398,13 @@ def parse_args() -> argparse.Namespace:
         help="catalogo de escenarios (normal/anomalo) para el panel guiado",
     )
     parser.add_argument(
+        "--config-toml",
+        type=Path,
+        default=None,
+        help="el .toml del despliegue: de el sale la politica de reentrenamiento "
+             "y donde estan sus lotes, su deriva y sus candidatos",
+    )
+    parser.add_argument(
         "--usuarios",
         type=Path,
         default=None,
@@ -3482,6 +3674,9 @@ def main() -> int:
                 return
             if path == "/api/escenarios":
                 self._send_json(cargar_escenarios(args.escenarios))
+                return
+            if path == "/api/aprendizaje":
+                self._send_json(estado_aprendizaje(args.config_toml, args.demo))
                 return
             if path == "/api/decisions":
                 params = dict(pair.split("=") for pair in query.split("&") if "=" in pair)

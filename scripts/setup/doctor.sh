@@ -132,6 +132,37 @@ if [[ "$(leer_toml panel activo)" == "true" ]]; then
     if ss -ltn 2>/dev/null | grep -q ":$PPORT"; then ok "escuchando en el puerto $PPORT"; else mal "no escucha en $PPORT -- journalctl -u ppi-dashboard"; fi
 fi
 
+# --- Aprendizaje -----------------------------------------------------
+tit "9. Reentrenamiento supervisado"
+if [[ "$(leer_toml reentrenamiento activo)" == "true" ]]; then
+    est=$(systemctl is-active cyberflow-aprendizaje.timer 2>/dev/null)
+    [[ "$est" == "active" ]] && ok "cyberflow-aprendizaje.timer" || aviso "cyberflow-aprendizaje.timer ($est)"
+    # Solo lee ficheros: el registro encadenado, los lotes y la deriva.
+    resumen=$(python3 "$RAIZ/scripts/modeling/cyberflow_aprendizaje.py" --config "$CONFIG" estado 2>/dev/null | python3 -c '
+import json, sys
+e = json.load(sys.stdin)
+print("integro" if e["registro_integro"] else "ROTO")
+print("si" if e["oro"] else "no")
+print(e["lotes_disponibles"])
+print("si" if e["deriva_sostenida"] else "no")
+c = e["candidatos"][-1] if e["candidatos"] else None
+print("%s (%s)" % (c["id"], c["veredicto"]) if c else "ninguno")' 2>/dev/null)
+    if [[ -z "$resumen" ]]; then
+        aviso "no se pudo leer el estado del aprendizaje"
+    else
+        mapfile -t r <<< "$resumen"
+        [[ "${r[0]}" == "integro" ]] && ok "registro de lotes integro (cadena de hashes)" \
+            || mal "registro de lotes ROTO: alguien edito o borro un lote (cyberflow_aprendizaje.py verificar)"
+        [[ "${r[1]}" == "si" ]] && ok "conjunto de oro presente" \
+            || aviso "sin conjunto de oro: cyberflow_aprendizaje.py oro --desde <particionado> (docs/APRENDIZAJE.md)"
+        ok "lotes aceptados aun sin usar: ${r[2]}"
+        [[ "${r[3]}" == "no" ]] && ok "sin deriva sostenida" || aviso "deriva sostenida: toca reentrenar"
+        ok "ultimo candidato: ${r[4]}"
+    fi
+else
+    ok "desactivado (reentrenamiento.activo = false)"
+fi
+
 # --- Resumen ---------------------------------------------------------
 tit "Resumen"
 if (( FALLOS == 0 && AVISOS == 0 )); then echo "  Todo sano."

@@ -19,6 +19,8 @@ LOG="$RUN/motor_decision.log"
 
 echo "==> Generando decisiones de ejemplo (relativas a ahora)..."
 "$PY" scripts/demo_datos.py --salida "$LOG"
+echo "==> Estado de ejemplo del reentrenamiento supervisado..."
+APRENDIZAJE_TOML="$("$PY" scripts/demo_aprendizaje.py --raiz "$RUN/aprendizaje")"
 
 PUERTO="${PUERTO:-8788}"
 echo "==> Panel demo en http://127.0.0.1:$PUERTO   (Ctrl+C para salir)"
@@ -31,4 +33,5 @@ exec "$PY" scripts/engine/dashboard.py \
   --descripciones configs/features/descripciones.json \
   --dataset artifacts/dataset/multilayer-v2-normal.csv \
   --escenarios configs/escenarios.json \
+  --config-toml "$APRENDIZAJE_TOML" \
   --host 127.0.0.1 --port "$PUERTO"
