@@ -378,9 +378,11 @@ def marcadas_por_motor(registro: Path, ini: float, fin: float) -> dict[str, list
 
 def marcadas_por_suricata(eve: Path, ini: float, fin: float) -> dict[str, list[float]]:
     marcas = defaultdict(list)
-    if not eve.exists():
+    try:
+        f = _abrir(eve)
+    except OSError:              # no existe o sin permiso: queda el filtro del motor
         return marcas
-    with _abrir(eve) as f:
+    with f:
         for linea in f:
             if '"event_type":"alert"' not in linea.replace(" ", ""):
                 continue

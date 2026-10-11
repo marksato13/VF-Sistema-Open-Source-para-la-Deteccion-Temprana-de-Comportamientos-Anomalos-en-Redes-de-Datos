@@ -1480,7 +1480,7 @@ const TOPO_VISTAS = {
       { id: 'variables', x: 806, y: 220, w: 176, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s',   tag: 'POR IP Y VENTANA' },
       { id: 'parser_eve', x: 806, y: 330, w: 176, h: 58, icono: 'reglas', titulo: 'Parser de eventos', tag: 'JSON → L7 · HTTP·DNS·TLS', val: 'http · dns · tls' },
       { id: 'descartes', x: 806, y: 420, w: 176, h: 48, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO', clase: 'sumidero' },
-      { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Reentrenamiento', tag: 'POLÍTICA PROPUESTA' },
+      { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Aprendizaje', tag: 'SUPERVISADO · CADA NOCHE' },
       { id: 'modelo',    x: 1060, y: 158, w: 176, h: 58, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
       { id: 'heuristicos', x: 1060, y: 276, w: 176, h: 58, icono: 'reglas', titulo: 'Heurísticos',     tag: 'DETERMINISTAS' },
       { id: 'control',   x: 1336, y: 158, w: 176, h: 58, icono: 'decision', titulo: 'Decisión',        tag: 'PERMIT · ALERT → LIMIT/BLOCK' },
@@ -1508,7 +1508,7 @@ const TOPO_VISTAS = {
       { d: 'M806,150 C752,240 752,420 806,446',     desde: 'motor',    hasta: 'descartes', tipo: 'descarte', etiqueta: 'descarta', ex: 768, ey: 290 },
       { d: 'M982,249 C1020,242 1036,193 1060,187',  desde: 'variables', hasta: 'modelo', etiqueta: '28 al modelo', ex: 1020, ey: 232 },
       { d: 'M982,249 C1020,256 1036,300 1060,305',  desde: 'variables', hasta: 'heuristicos', etiqueta: '+ conteos', ex: 1012, ey: 318 },
-      { d: 'M1148,128 L1148,158',                   desde: 'reentrenamiento', hasta: 'modelo', etiqueta: 'entrena y congela', ex: 1200, ey: 143 },
+      { d: 'M1148,128 L1148,158',                   desde: 'reentrenamiento', hasta: 'modelo', etiqueta: 'promover', ex: 1186, ey: 143 },
       { d: 'M1236,187 L1336,187',                   desde: 'modelo',   hasta: 'control', etiqueta: 'score &lt; umbral', ex: 1286, ey: 178 },
       { d: 'M1236,305 C1290,300 1302,196 1336,192', desde: 'heuristicos', hasta: 'control', etiqueta: 'confirmado', ex: 1290, ey: 250 },
       { d: 'M1424,216 L1424,256',                   desde: 'control',  hasta: 'feed', etiqueta: 'veredicto firmado', ex: 1424, ey: 243 },
@@ -1553,12 +1553,16 @@ const TOPO_VISTAS = {
   // (fila 1, una vez y en seco) y su ciclo de vida (fila 2, de derecha a
   // izquierda). Responde: donde se entrena, como se partio, que se comparo, con
   // que metricas, por que gano, que cambia al reentrenar y cada cuanto.
+  // Fila 3: el aprendizaje supervisado de cyberflow_aprendizaje.py, de
+  // izquierda a derecha, con sus cuatro defensas y la aprobacion humana que
+  // devuelve el modelo nuevo a "Congelar".
   construccion: {
-    w: 1560, h: 400,
-    packet: 'M140,104 L1420,104 L1420,284 L396,284',
+    w: 1560, h: 600,
+    packet: 'M140,104 L1420,104 L1420,284 L908,284 L908,316 L344,432 L344,464 L1420,464 L1420,316',
     grupos: [
       { x: 20, y: 36,  w: 1520, h: 130, txt: 'Construcción: una vez, en seco, con datos de esta red', n: 1 },
-      { x: 20, y: 216, w: 1520, h: 130, txt: 'Operación y ciclo de vida', n: 2 },
+      { x: 20, y: 216, w: 1520, h: 130, txt: 'Operación', n: 2 },
+      { x: 20, y: 396, w: 1520, h: 150, txt: 'Aprendizaje supervisado: cada noche, lo promueve una persona', n: 3 },
     ],
     nodos: [
       { id: 'c_datos',   x: 40,   y: 72,  w: 200, h: 64, icono: 'disco',    titulo: 'Datos de la red',      tag: 'SPAN → PCAP + eve.json', val: '335 202 ventanas' },
@@ -1569,9 +1573,15 @@ const TOPO_VISTAS = {
       { id: 'c_sel',     x: 1320, y: 72,  w: 200, h: 64, icono: 'decision', titulo: 'Selección',            tag: 'transfiere a esta red', val: 'IF recalibrado' },
       { id: 'c_cong',    x: 1320, y: 252, w: 200, h: 64, icono: 'cpu',      titulo: 'Congelar modelo', tag: 'α=0,05 · −0,568892', val: 'sha256 d27f6871…' },
       { id: 'c_desp',    x: 1064, y: 252, w: 200, h: 64, icono: 'nic',      titulo: 'Despliegue',           tag: 'promover + verificar', val: 'manifiesto + hash' },
-      { id: 'c_acum',    x: 808,  y: 252, w: 200, h: 64, icono: 'fichero',  titulo: 'Acumulación',          tag: 'temporizador · v3', val: 'automática' },
-      { id: 'c_reent',   x: 552,  y: 252, w: 200, h: 64, icono: 'ciclo',    titulo: 'Reentrenar / recalibrar', tag: 'POLÍTICA PROPUESTA', val: 'mensual o por deriva' },
-      { id: 'c_antes',   x: 296,  y: 252, w: 200, h: 64, icono: 'tabla',    titulo: 'Antes vs después',     tag: 'mismos datos y métricas', val: 'FPR 92,4 % → 4,45 %' },
+      { id: 'c_acum',    x: 808,  y: 252, w: 200, h: 64, icono: 'fichero',  titulo: 'Acumulación',          tag: 'temporizador · v3', val: 'cada 10 min' },
+      { id: 'c_vivo',    x: 552,  y: 252, w: 200, h: 64, icono: 'escudo',   titulo: 'Motor en vivo',        tag: 'PERMIT · ALERT · BLOCK', val: 'marca IPs sospechosas' },
+      { id: 'a_oro',     x: 40,   y: 432, w: 176, h: 64, icono: 'disco',    titulo: 'Conjunto de oro',      tag: 'FIJO · NUNCA ENTRENA', val: 'test de la nota L', clase: 'artefacto' },
+      { id: 'a_san',     x: 256,  y: 432, w: 176, h: 64, icono: 'tijera',   titulo: '① Saneamiento',        tag: 'LOTE DEL DÍA', val: 'fuera lo marcado y atípico' },
+      { id: 'a_lin',     x: 472,  y: 432, w: 176, h: 64, icono: 'fichero',  titulo: '② Linaje',             tag: 'SHA256 ENCADENADO', val: 'registro.jsonl', clase: 'artefacto' },
+      { id: 'a_der',     x: 688,  y: 432, w: 176, h: 64, icono: 'lupa',     titulo: '④ Deriva',             tag: 'CONTRA EL ORO', val: 'PSI · % anómalo' },
+      { id: 'a_inf',     x: 904,  y: 432, w: 176, h: 64, icono: 'modelo',   titulo: '③ Candidato',          tag: 'LÍMITE DE INFLUENCIA', val: 'nuevo ≤ 30 % · IP ≤ 10 %' },
+      { id: 'a_ver',     x: 1120, y: 432, w: 176, h: 64, icono: 'decision', titulo: 'Veredicto',            tag: 'MISMOS CONJUNTOS', val: 'FPR ≤ · detección ≥' },
+      { id: 'a_hum',     x: 1332, y: 432, w: 176, h: 64, icono: 'ojo',      titulo: 'Aprobación humana',    tag: 'PROMOVER · REVERTIR', val: 'con copia del .toml' },
     ],
     aristas: [
       { d: 'M240,104 L296,104',   desde: 'c_datos',  hasta: 'c_limpia' },
@@ -1582,15 +1592,27 @@ const TOPO_VISTAS = {
       { d: 'M1420,136 L1420,252', desde: 'c_sel',    hasta: 'c_cong', etiqueta: 'umbral desde validación', ex: 1476, ey: 198 },
       { d: 'M1320,284 L1264,284', desde: 'c_cong',   hasta: 'c_desp' },
       { d: 'M1064,284 L1008,284', desde: 'c_desp',   hasta: 'c_acum' },
-      { d: 'M808,284 L752,284',   desde: 'c_acum',   hasta: 'c_reent' },
-      { d: 'M552,284 L496,284',   desde: 'c_reent',  hasta: 'c_antes' },
-      { d: 'M652,252 L652,136',   desde: 'c_reent',  hasta: 'c_part', tipo: 'descarte', etiqueta: 'repite 3→6 con datos nuevos', ex: 760, ey: 198 },
-      { d: 'M396,316 C396,384 1420,384 1420,316', desde: 'c_antes', hasta: 'c_cong', tipo: 'descarte', etiqueta: 'si mejora o iguala (FPR ≤, detección ≥) se congela el nuevo; si no, se queda el vigente', ex: 908, ey: 376 },
+      { d: 'M1064,270 C960,226 760,226 700,252', desde: 'c_desp', hasta: 'c_vivo', etiqueta: 'puntúa cada 10 s', ex: 880, ey: 228 },
+      { d: 'M552,120 C380,150 128,300 128,432', desde: 'c_part', hasta: 'a_oro', tipo: 'descarte', etiqueta: 'su test se congela como oro', ex: 250, ey: 300 },
+      { d: 'M908,316 C908,384 380,372 360,432', desde: 'c_acum', hasta: 'a_san', etiqueta: 'lote del día', ex: 640, ey: 372 },
+      { d: 'M652,316 C652,372 330,380 320,432', desde: 'c_vivo', hasta: 'a_san', tipo: 'descarte', etiqueta: 'IPs marcadas', ex: 560, ey: 350 },
+      { d: 'M216,464 L256,464',   desde: 'a_oro',    hasta: 'a_san', tipo: 'descarte' },
+      { d: 'M432,464 L472,464',   desde: 'a_san',    hasta: 'a_lin' },
+      { d: 'M648,464 L688,464',   desde: 'a_lin',    hasta: 'a_der' },
+      { d: 'M864,464 L904,464',   desde: 'a_der',    hasta: 'a_inf' },
+      { d: 'M1080,464 L1120,464', desde: 'a_inf',    hasta: 'a_ver' },
+      { d: 'M1296,464 L1332,464', desde: 'a_ver',    hasta: 'a_hum' },
+      { d: 'M128,496 C128,580 1208,580 1208,496', desde: 'a_oro', hasta: 'a_ver', tipo: 'descarte', etiqueta: 'evalúa vigente y candidato en el oro', ex: 668, ey: 572 },
+      { d: 'M1420,432 L1420,316', desde: 'a_hum',    hasta: 'c_cong', etiqueta: 'promover: modelo nuevo', ex: 1476, ey: 374 },
     ],
   },
 };
 
 let topoVista = 'completa';
+// Ultimo estado de /api/aprendizaje (lo llena cargarAprendizaje). Los nodos del
+// aprendizaje en la topologia lo leen; con var y aqui arriba para que exista
+// desde el primer pintado, aunque llegue despues.
+var aprEstado = null;
 // Mapa de artefactos: los ficheros de cada componente. Se pide solo cuando se
 // activa "Ver archivos" -es de admin- y se guarda; los chips abiertos se
 // recuerdan entre repintados.
@@ -1861,28 +1883,64 @@ const TOPO_TEXTO = {
     nota: 'Rollback: apuntar [motor] modelo, manifiesto y detector al artefacto anterior, regenerar la configuración y reiniciar ppi-motor. Nada se sobrescribe: promover se niega a pisar un artefacto existente.',
   },
   c_acum: {
-    que: 'Acumulación: mientras el motor opera, un temporizador sigue escribiendo filas de línea base (v3) con la misma cadena. Es lo único automático del ciclo de vida.',
-    nota: 'Las filas acumuladas solo sirven para reentrenar si se verifica que son tráfico normal: una campaña de ataque en ese tramo hay que retirarla antes.',
+    que: 'Acumulación: mientras el motor opera, un temporizador escribe cada 10 min filas de línea base (v3) con la misma cadena del motor. Es la materia prima del aprendizaje.',
+    nota: 'Las filas acumuladas no entran tal cual a entrenar: cada noche pasan por el saneamiento (fila 3), que retira lo marcado y lo atípico.',
   },
-  c_reent: {
-    que: 'Reentrenar o recalibrar: repetir los pasos 3 a 6 (partición, candidatos, métricas, selección) sobre los datos acumulados, en seco, sin tocar el modelo en producción. Recalibrar es solo mover el umbral con validación nueva; reentrenar es rehacer el modelo.',
-    flujoTit: 'Cada cuánto (política propuesta)',
-    flujo: [
-      {paso: 'Suelo', fichero: 'mensual', garantia: 'aunque nada cambie'},
-      {paso: 'Por deriva', fichero: 'FPR operativo', garantia: 'si sube claramente sobre el 5 % de diseño'},
-      {paso: 'Obligatorio', fichero: 'cambio de red', garantia: 'nueva VLAN, Wazuh, AAA, servicios nuevos'},
-    ],
-    nota: 'Política PROPUESTA, no automatizada. Hoy el entrenamiento y la promoción se hacen a mano y con la misma verificación, nunca a ciegas.',
+  c_vivo: {
+    que: 'Motor en vivo: puntúa cada IP cada 10 s y decide PERMIT o ALERT (LIMIT/BLOCK). Para el aprendizaje, cada IP que marca queda señalada: sus ventanas de ese momento no entrarán al entrenamiento.',
+    nota: 'Es la primera defensa contra el envenenamiento: lo que el sistema ya consideró sospechoso nunca se aprende como normal.',
   },
-  c_antes: {
-    que: 'Antes vs después: el modelo nuevo se compara con el vigente sobre los MISMOS datos reservados y con las mismas métricas (FPR en normal, detección en ataques no vistos). La referencia publicada es el cambio de modelo en esta red: OCSVM con umbral de otra red, 92,4 % de FPR → IF recalibrado, 4,45 %.',
-    flujoTit: 'Comparación antes / después',
+  a_oro: {
+    que: 'Conjunto de ORO: las ventanas normales de la partición de prueba de la calibración (nota L), congeladas en solo lectura con su sha256. Nunca entran a entrenar: son la referencia fija contra la que se mide la deriva y se comparan vigente y candidato.',
+    flujoTit: 'De dónde sale',
     flujo: [
-      {paso: 'Tabla de cambios', fichero: 'comparar_reentrenamiento.py', garantia: 'métricas previas vs posteriores + Δ'},
-      {paso: 'Evidencia', fichero: 'comparacion-reentrenamiento.md', garantia: 'queda escrita antes de decidir'},
-      {paso: 'Decisión', fichero: 'regla fija', garantia: 'se promueve solo si FPR ≤ y detección ≥; si no, se queda el vigente'},
+      {paso: 'Partición de la nota L', fichero: 'particionado-nota-L.csv', garantia: 'reconstruida y verificada: mismo sha256 que el del modelo desplegado'},
+      {paso: 'Solo el test', fichero: 'oro/oro.csv', garantia: '65 421 ventanas · modo 0444'},
+      {paso: 'Huella', fichero: 'oro/oro.json', garantia: 'si el oro cambia, el aprendizaje se detiene'},
     ],
-    nota: 'El 92,4 → 4,45 no es un reentrenamiento del mismo modelo sino un cambio de modelo y de umbral. La comparación de un reentrenamiento con datos nuevos reservados está pendiente (bloque B3).',
+    nota: 'Si la red cambia de verdad (nueva VLAN, Wazuh, AAA) el oro deja de representarla: entonces se recalibra entera y se crea un oro nuevo.',
+  },
+  a_san: {
+    que: '① Saneamiento: cada noche se cierra el lote del día anterior y se filtra antes de que pueda entrenar.',
+    flujoTit: 'Tres filtros',
+    flujo: [
+      {paso: 'Contaminación', fichero: 'motor_decision.log + eve.json', garantia: 'fuera las ventanas de IPs marcadas a ±5 min'},
+      {paso: 'Atípicas', fichero: 'límites del oro', garantia: 'fuera la fila que se sale en 3 o más variables'},
+      {paso: 'Lote anómalo', fichero: 'PSI frente al oro', garantia: 'PSI > 0,5: lote rechazado, lo revisa una persona'},
+    ],
+    nota: 'Un lote rechazado puede ser un cambio de red legítimo; se acepta a mano con «lote --dia … --aceptar» tras revisarlo.',
+  },
+  a_lin: {
+    que: '② Linaje: cada lote queda registrado con su sha256, su origen y lo que se filtró, en un registro encadenado (cada línea lleva el hash de la anterior).',
+    nota: 'Borrar o retocar un lote rompe la cadena: «verificar» lo detecta, doctor.sh lo marca en rojo y el candidato se niega a entrenar.',
+  },
+  a_der: {
+    que: '④ Deriva: cada noche el modelo vigente se mide contra el oro (FPR) y contra el lote del día (PSI de sus puntuaciones y % que marcaría anómalo).',
+    nota: 'Si la señal se sostiene 3 días, toca reentrenar antes de la cadencia de 30 días.',
+  },
+  a_inf: {
+    que: '③ Candidato con límite de influencia: se suman los lotes aceptados a la base de la calibración, con topes, y se repite la misma cadena (partición sin fuga → entrenar → umbral en validación → Pipeline + manifiesto).',
+    flujoTit: 'Topes',
+    flujo: [
+      {paso: 'Fracción nueva', fichero: 'max_fraccion_nueva', garantia: 'lo nuevo ≤ 30 % del entrenamiento'},
+      {paso: 'Por IP', fichero: 'max_fraccion_ip', garantia: 'ninguna IP > 10 % de lo nuevo'},
+      {paso: 'Nunca el oro', fichero: 'claves (IP, ventana)', garantia: 'sus filas se excluyen del entrenamiento'},
+    ],
+    nota: 'Un equipo que inunda la red no puede mover el modelo. El candidato se escribe en candidatos/<id>/ y no toca el modelo en uso.',
+  },
+  a_ver: {
+    que: 'Veredicto: vigente y candidato se puntúan sobre los MISMOS conjuntos (oro para el FPR, ataques etiquetados para la detección).',
+    flujoTit: 'Tres resultados',
+    flujo: [
+      {paso: 'PROMOVIBLE', fichero: 'candidato.json', garantia: 'FPR ≤ vigente y detección ≥ vigente'},
+      {paso: 'NO_PROMOVER', fichero: 'candidato.json', garantia: 'empeora una de las dos: se queda el vigente'},
+      {paso: 'EVALUACION_INCOMPLETA', fichero: 'candidato.json', garantia: 'sin ataques etiquetados no se sabe si detecta igual'},
+    ],
+  },
+  a_hum: {
+    que: 'Aprobación humana: el modelo en uso solo cambia con «promover», que lanza una persona. Deja copia del .toml y apunta motor y panel al candidato; «revertir» lo deshace. Se conservan 3 modelos de respaldo.',
+    nota: 'Por qué no es automático: un modelo que se despliega solo puede aprender un ataque lento como normal. Todo lo automático ocurre fuera del modelo en uso.',
+    enlace: { href: '#s-aprendizaje', txt: 'Ver el estado en «Aprendizaje»' },
   },
 };
 
@@ -2037,10 +2095,42 @@ function topoEstado(id, s) {
     case 'panel':
       return { estado: 'ok', valor: 'solo lectura', datos: { 'Refresco': '5 s' } };
     case 'reentrenamiento':
-      return { estado: '', valor: 'política propuesta', datos: {
-        'Cadencia propuesta': 'mensual o por deriva del FPR',
-        'Obligatorio': 'al cambiar la red',
-        'Automatizado': 'solo la acumulación de la línea base' } };
+    case 'a_oro': case 'a_san': case 'a_lin': case 'a_der': case 'a_inf': case 'a_ver': case 'a_hum': {
+      const e = aprEstado;
+      if (!e || !e.disponible) return { estado: '', valor: 'sin estado', datos: { 'Estado': 'abre «Aprendizaje» o revisa --config-toml' } };
+      const p = e.politica, lotes = e.lotes || [], der = (e.deriva || []).filter(d => d.fpr_oro !== undefined);
+      const ul = lotes.length ? lotes[lotes.length - 1] : null, ud = der.length ? der[der.length - 1] : null;
+      const uc = e.candidatos.length ? e.candidatos[e.candidatos.length - 1] : null;
+      const act = p.activo ? 'activo' : 'desactivado';
+      const pct = (v) => (v === null || v === undefined) ? '—' : (v * 100).toFixed(2) + ' %';
+      if (id === 'reentrenamiento') return { estado: p.activo ? 'ok' : 'warn', valor: act, datos: {
+        'Modo': p.modo, 'Cadencia': p.cadencia_dias + ' días o deriva ' + p.dias_deriva + ' días',
+        'Lotes sin usar': String(e.lotes_disponibles), 'Último candidato': uc ? uc.id + ' · ' + uc.veredicto : 'ninguno' } };
+      if (id === 'a_oro') return e.oro
+        ? { estado: 'ok', valor: e.oro.filas + ' ventanas', datos: { 'sha256': e.oro.sha256.slice(0, 16) + '…', 'Creado': String(e.oro.generado).slice(0, 10) } }
+        : { estado: 'warn', valor: 'no creado', datos: { 'Crear': 'cyberflow_aprendizaje.py oro --desde <particionado>' } };
+      if (id === 'a_san') return ul
+        ? { estado: ul.estado === 'aceptado' ? 'ok' : (ul.estado === 'rechazado' ? 'bad' : 'warn'), valor: ul.estado, datos: {
+            'Lote': ul.dia, 'Filas': ul.filas.entrada + ' → ' + ul.filas.salida,
+            'De IPs marcadas': String(ul.filas.contaminadas), 'Atípicas': String(ul.filas.atipicas), 'PSI máx': ul.psi_max === null ? '—' : String(ul.psi_max) } }
+        : { estado: p.activo ? '' : 'warn', valor: p.activo ? 'primer lote a las 00:30 UTC' : act, datos: {} };
+      if (id === 'a_lin') return { estado: e.registro_integro ? 'ok' : 'bad', valor: e.registro_integro ? 'íntegro' : 'ROTO', datos: {
+        'Lotes registrados': String(lotes.length), 'Sin usar': String(e.lotes_disponibles) } };
+      if (id === 'a_der') return ud
+        ? { estado: e.deriva_sostenida ? 'bad' : (ud.senal ? 'warn' : 'ok'), valor: e.deriva_sostenida ? 'sostenida' : (ud.senal ? 'señal' : 'estable'), datos: {
+            'Día': ud.dia, 'FPR en oro': pct(ud.fpr_oro), 'Anómalo en el lote': pct(ud.tasa_anomala_lote) } }
+        : { estado: '', valor: 'sin medir', datos: {} };
+      if (id === 'a_inf') return { estado: '', valor: Math.round(p.max_fraccion_nueva * 100) + ' % / ' + Math.round(p.max_fraccion_ip * 100) + ' %', datos: {
+        'Último': uc && uc.filas ? pct(uc.filas.fraccion_nueva) + ' de filas nuevas' : 'sin candidatos', 'Próximo': e.proximo || 'por cadencia o deriva' } };
+      if (id === 'a_ver') return uc
+        ? { estado: uc.veredicto === 'PROMOVIBLE' ? 'ok' : (uc.veredicto === 'NO_PROMOVER' ? 'bad' : 'warn'), valor: uc.veredicto, datos: {
+            'FPR oro (vigente → candidato)': pct((uc.resultados.vigente || {}).fpr_oro) + ' → ' + pct((uc.resultados.candidato || {}).fpr_oro),
+            'Detección': pct((uc.resultados.vigente || {}).deteccion) + ' → ' + pct((uc.resultados.candidato || {}).deteccion) } }
+        : { estado: '', valor: 'sin candidatos', datos: {} };
+      const h = e.historial || [];
+      return { estado: '', valor: h.length ? h[h.length - 1].accion + ' ' + h[h.length - 1].candidato : 'sin promociones', datos: {
+        'Detector vigente': e.detector_vigente } };
+    }
     case 'heuristicos':
       return { estado: '', valor: '4 reglas deterministas', datos: {
         'Cubren': 'brute-force · port-scan · http-abuse · dns-entropy',
@@ -3151,6 +3241,7 @@ function aprTarjeta(titulo, valor, cls, sub) {
 }
 
 function renderAprendizaje(e) {
+  aprEstado = e;                     // lo leen tambien los nodos de la topologia
   const pie = document.getElementById('aprPie');
   if (!e.disponible) {
     document.getElementById('aprDefensas').innerHTML =
@@ -4082,6 +4173,54 @@ def _stat_fichero(ruta: Path, tipo: str, que: str) -> dict:
     return info
 
 
+def artefactos_aprendizaje(r: Path, config_usada: Path, log_path: Path,
+                           eve_path: Path) -> dict:
+    """Ficheros de cada paso del aprendizaje supervisado (fila 3 de la vista)."""
+    apr = r / "artifacts" / "aprendizaje"
+    base = ""
+    try:
+        with config_usada.open("rb") as fh:
+            base = tomllib.load(fh).get("reentrenamiento", {}).get("base", "")
+    except (OSError, ValueError):
+        pass
+
+    def ultimo(patron: str, tipo: str, que: str) -> dict:
+        hallados = sorted(apr.glob(patron))
+        if hallados:
+            return _stat_fichero(hallados[-1], tipo, que)
+        return {"ruta": str(apr / patron), "tipo": tipo, "que": que, "existe": False}
+
+    script = _stat_fichero(r / "scripts/modeling/cyberflow_aprendizaje.py", "py",
+                           "cyberflow_aprendizaje.py")
+    return {
+        "c_vivo": [_stat_fichero(log_path, "log", "decisiones: de aqui salen las IPs marcadas"),
+                   _stat_fichero(r / "scripts/engine/motor_decision.py", "py", "el motor")],
+        "a_oro": [_stat_fichero(apr / "oro/oro.csv", "csv", "conjunto de oro, solo lectura"),
+                  _stat_fichero(apr / "oro/oro.json", "json", "su sha256 y su origen")]
+                 + ([_stat_fichero(r / base, "csv", "base: particion de la calibracion")]
+                    if base else []),
+        "a_san": [dict(script, que="orden «lote»: los tres filtros"),
+                  ultimo("lotes/lote-*.csv", "csv", "ultimo lote saneado"),
+                  _stat_fichero(eve_path, "json", "alertas de Suricata (contaminacion)")],
+        "a_lin": [_stat_fichero(apr / "registro.jsonl", "jsonl",
+                                "registro encadenado: sha256 de cada lote"),
+                  dict(script, que="orden «verificar»: comprueba la cadena")],
+        "a_der": [_stat_fichero(apr / "deriva.jsonl", "jsonl", "una medicion por noche"),
+                  dict(script, que="orden «deriva»")],
+        "a_inf": [ultimo("candidatos/*/modelo.joblib", "joblib", "ultimo candidato"),
+                  _stat_fichero(r / "scripts/modeling/promover_preliminar.py", "py",
+                                "paquete -> Pipeline + manifiesto"),
+                  _stat_fichero(r / "scripts/dataset/particionar_linea_base.py", "py",
+                                "particion sin fuga")],
+        "a_ver": [ultimo("candidatos/*/candidato.json", "json",
+                         "veredicto, resultados y linaje del candidato")],
+        "a_hum": [_stat_fichero(apr / "modelos.jsonl", "jsonl", "historial promover/revertir"),
+                  _stat_fichero(config_usada, "toml", "lo que cambia «promover» (con copia)"),
+                  _stat_fichero(Path("/etc/systemd/system/cyberflow-aprendizaje.timer"),
+                                "timer", "temporizador nocturno (00:30 UTC)")],
+    }
+
+
 def ruta_modelo_activo(manifest_path: Path, detector_name: str, raiz: Path) -> Path:
     """Ubica el artefacto declarado para el detector activo sin cargar el joblib."""
     try:
@@ -4180,10 +4319,12 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
         "modelo": [_stat_fichero(modelo_activo, "joblib",
                                   "artefacto del detector activo; umbral en el manifiesto"),
                    _stat_fichero(manifest_path, "json", "hashes y evaluacion")],
-        "reentrenamiento": [rel("scripts/dataset/particionar_linea_base.py", "py",
-                                "parte sin fuga temporal"),
-                            rel("scripts/modeling/entrenar_preliminar.py", "py",
-                                "entrena y congela el umbral")],
+        "reentrenamiento": [rel("scripts/modeling/cyberflow_aprendizaje.py", "py",
+                                "reentrenamiento supervisado: lote, deriva, candidato"),
+                            rel("artifacts/aprendizaje/registro.jsonl", "jsonl",
+                                "linaje: un registro encadenado por lote"),
+                            _stat_fichero(config_usada, "toml", "politica: seccion [reentrenamiento]")],
+        **artefactos_aprendizaje(r, config_usada, log_path, eve_path),
         "heuristicos": [rel("scripts/engine/heuristicos.py", "py",
                             "las cuatro reglas y sus umbrales")],
         "control": [rel("scripts/engine/responder_iptables.py", "py",
