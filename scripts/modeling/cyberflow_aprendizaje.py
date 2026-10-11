@@ -94,6 +94,10 @@ POLITICA = {
     "tolerancia_deteccion": 0.0,
     "conservar_modelos": 3,
     "semilla": 20260813,
+    # Tramos que se sabe que NO son normales (una rafaga de ataque que se colo en
+    # la linea base, una prueba): "IP@ini/fin" en ISO, o "*@ini/fin" para todas.
+    # Nunca entran a entrenar, ni desde la base ni desde los lotes.
+    "excluir_ventanas": [],
 }
 
 ESTADOS_LOTE_UTILES = ("aceptado", "aceptado_a_mano")
@@ -255,11 +259,37 @@ def comprobar_politica(politica: dict) -> list[str]:
               "filas_minimas_lote", "max_variables_atipicas"):
         if int(p[k]) < 1:
             fallos.append("reentrenamiento.%s debe ser >= 1 (es %r)" % (k, p[k]))
+    try:
+        tramos_excluidos(p["excluir_ventanas"])
+    except (ValueError, TypeError) as e:
+        fallos.append("reentrenamiento.excluir_ventanas: %s" % e)
     if float(p["psi_alerta"]) >= float(p["psi_rechazo_lote"]):
         fallos.append("reentrenamiento.psi_alerta (%s) debe ser menor que psi_rechazo_lote "
                       "(%s): la deriva avisa antes de rechazar" % (p["psi_alerta"],
                                                                  p["psi_rechazo_lote"]))
     return fallos
+
+
+def tramos_excluidos(lista) -> list[tuple[str, float, float]]:
+    """["IP@ini/fin", ...] -> [(ip, t_ini, t_fin)]. "*" vale para cualquier IP."""
+    tramos = []
+    for t in lista or []:
+        ip, _, rango = str(t).partition("@")
+        ini, _, fin = rango.partition("/")
+        if not (ip and ini and fin):
+            raise ValueError("%r no tiene la forma IP@ini/fin" % t)
+        a, b = marca(ini), marca(fin)
+        if b <= a:
+            raise ValueError("%r: el fin no es posterior al inicio" % t)
+        tramos.append((ip, a, b))
+    return tramos
+
+
+def excluida(fila: dict, tramos) -> bool:
+    if not tramos:
+        return False
+    t = marca(fila["window_end_utc"])
+    return any((ip == "*" or ip == fila["entity_ip"]) and a <= t <= b for ip, a, b in tramos)
 
 
 # ------------------------------------------------------- registro encadenado
@@ -673,14 +703,23 @@ def generar_candidato(cfg: dict, hoy: date, forzar: bool = False) -> dict:
                 "necesarios": int(p["dias_minimos"])}
 
     claves_oro = {clave(f) for f in oro}
+    tramos = tramos_excluidos(p["excluir_ventanas"])
     columnas, base = leer_csv(base_ruta)
     columnas = [c for c in columnas if c != "particion"]
     base = [r for r in base if r.get("particion") in ("train", "validation")
             and elegible(r) and clave(r) not in claves_oro]
+    antes_base = len(base)
+    base = [r for r in base if not excluida(r, tramos)]
+    excluidas = {"base": antes_base - len(base), "lotes": 0}
     nuevas = []
     for e in lotes:
-        nuevas += [r for r in leer_csv(cfg["dir"] / "lotes" / e["fichero"])[1]
-                   if clave(r) not in claves_oro]
+        for r in leer_csv(cfg["dir"] / "lotes" / e["fichero"])[1]:
+            if clave(r) in claves_oro:
+                continue
+            if excluida(r, tramos):
+                excluidas["lotes"] += 1
+                continue
+            nuevas.append(r)
     nuevas, influencia = limitar_influencia(
         nuevas, len(base), float(p["max_fraccion_nueva"]), float(p["max_fraccion_ip"]))
 
@@ -730,6 +769,7 @@ def generar_candidato(cfg: dict, hoy: date, forzar: bool = False) -> dict:
                   "fraccion_nueva": round(len(nuevas) / max(1, len(base) + len(nuevas)), 4),
                   "particion": particion.get("reparto")},
         "influencia": influencia,
+        "excluidas_por_politica": dict(excluidas, tramos=list(p["excluir_ventanas"])),
         "linaje": {
             "lotes": [{"fichero": e["fichero"], "sha256": e["sha256"]} for e in lotes],
             "base": {"ruta": str(base_ruta), "sha256": sha256(base_ruta)},
