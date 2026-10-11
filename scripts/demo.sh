@@ -6,6 +6,9 @@
 #   bash scripts/demo.sh
 #   # luego abre http://127.0.0.1:8788
 #
+# En un sensor ya instalado el 8788 lo ocupa el panel real; use otro puerto:
+#   PUERTO=8790 bash scripts/demo.sh
+#
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
@@ -17,7 +20,8 @@ LOG="$RUN/motor_decision.log"
 echo "==> Generando decisiones de ejemplo (relativas a ahora)..."
 "$PY" scripts/demo_datos.py --salida "$LOG"
 
-echo "==> Panel demo en http://127.0.0.1:8788   (Ctrl+C para salir)"
+PUERTO="${PUERTO:-8788}"
+echo "==> Panel demo en http://127.0.0.1:$PUERTO   (Ctrl+C para salir)"
 exec "$PY" scripts/engine/dashboard.py \
   --demo \
   --log-path "$LOG" \
@@ -27,4 +31,4 @@ exec "$PY" scripts/engine/dashboard.py \
   --descripciones configs/features/descripciones.json \
   --dataset artifacts/dataset/multilayer-v2-normal.csv \
   --escenarios configs/escenarios.json \
-  --host 127.0.0.1 --port 8788
+  --host 127.0.0.1 --port "$PUERTO"

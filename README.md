@@ -77,6 +77,7 @@ Desde un clon recién hecho, **sin red ni sensor**:
 
 ```bash
 bash scripts/demo.sh          # abre http://127.0.0.1:8788
+PUERTO=8790 bash scripts/demo.sh   # en un sensor ya instalado, donde el 8788 es del panel real
 ```
 
 ![Figura R.1. Modo demo: el panel con decisiones de ejemplo, sin red ni sensor](docs/img/readme/R-01-demo.png)
