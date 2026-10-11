@@ -139,6 +139,9 @@ base = ""
 # Ventanas de ataque etiquetadas (p. ej. las de la Kali, nota M) para medir la
 # deteccion. Vacio = el veredicto queda en EVALUACION_INCOMPLETA.
 ataques = ""
+# Tramos que se sabe que no son normales y nunca deben entrenar, ni desde la
+# base ni desde los lotes: "IP@ini/fin" (ISO, UTC) o "*@ini/fin" para todas.
+excluir_ventanas = []
 
 # Cuando se entrena: cada cadencia_dias, o antes si la deriva se sostiene
 # dias_deriva dias seguidos. Nunca con menos de dias_minimos lotes aceptados.

@@ -144,6 +144,18 @@ class Politica(unittest.TestCase):
         self.assertTrue(ap.comprobar_politica({"max_fraccion_nueva": 1.5}))
         self.assertEqual(ap.comprobar_politica({}), [])
 
+    def test_excluir_ventanas_valida_el_formato(self):
+        self.assertTrue(ap.comprobar_politica({"excluir_ventanas": ["10.0.0.1"]}))
+        self.assertTrue(ap.comprobar_politica(
+            {"excluir_ventanas": ["10.0.0.1@2026-09-27T22:00:00+00:00/2026-09-27T21:00:00+00:00"]}))
+        self.assertEqual(ap.comprobar_politica(
+            {"excluir_ventanas": ["*@2026-09-27T21:35:00+00:00/2026-09-27T22:05:00+00:00"]}), [])
+        tramos = ap.tramos_excluidos(["10.10.20.30@2026-09-27T21:35:00+00:00/2026-09-27T22:05:00+00:00"])
+        dentro = {"entity_ip": "10.10.20.30", "window_end_utc": "2026-09-27T21:45:00+00:00"}
+        self.assertTrue(ap.excluida(dentro, tramos))
+        self.assertFalse(ap.excluida(dict(dentro, entity_ip="10.10.20.21"), tramos))
+        self.assertFalse(ap.excluida(dict(dentro, window_end_utc="2026-09-27T22:10:00+00:00"), tramos))
+
     def test_la_deriva_avisa_antes_de_rechazar(self):
         self.assertTrue(ap.comprobar_politica({"psi_alerta": 0.6, "psi_rechazo_lote": 0.5}))
 
@@ -256,7 +268,13 @@ class CicloCompleto(unittest.TestCase):
             e.dia(d)
             self.assertEqual(ap.cerrar_lote(e.cfg, d)["estado"], "aceptado")
 
+        # Una IP declarada fuera durante toda la base: no debe entrar ni una fila suya.
+        e.cfg["politica"]["excluir_ventanas"] = [
+            "%s@2026-09-01T00:00:00+00:00/2026-09-01T12:00:00+00:00" % IPS[1]]
         ficha = ap.generar_candidato(e.cfg, date(2026, 10, 5), forzar=True)
+        e.cfg["politica"]["excluir_ventanas"] = []
+        self.assertGreater(ficha["excluidas_por_politica"]["base"], 0)
+        self.assertEqual(ficha["excluidas_por_politica"]["lotes"], 0)
         self.assertEqual(ficha["veredicto"], "PROMOVIBLE", ficha.get("razon"))
         self.assertEqual(len(ficha["linaje"]["lotes"]), 3)   # el rechazado no entra
         self.assertLessEqual(ficha["filas"]["fraccion_nueva"], 0.30 + 1e-6)
