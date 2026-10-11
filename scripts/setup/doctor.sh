@@ -62,7 +62,12 @@ fi
 tit "3. Suricata (eve.json)"
 if [[ -r "$EVE" ]]; then
     a=$(stat -c %s "$EVE"); sleep 4; b=$(stat -c %s "$EVE")
-    (( b > a )) && ok "eve.json crece (+$((b - a)) bytes en 4 s)" || aviso "eve.json no crecio en 4 s (poco trafico L7?)"
+    # Con poco trafico L7 pueden pasar 4 s sin una linea; Suricata escribe al
+    # menos su evento stats cada pocos segundos, asi que la antiguedad decide.
+    edad=$(( $(date +%s) - $(stat -c %Y "$EVE") ))
+    if (( b > a )); then ok "eve.json crece (+$((b - a)) bytes en 4 s)"
+    elif (( edad <= 60 )); then ok "eve.json escrito hace ${edad} s (poco trafico L7 ahora)"
+    else aviso "eve.json sin escribir desde hace ${edad} s: revisa suricata"; fi
 else
     aviso "no se puede leer $EVE (permisos) -- comprueba con sudo"
 fi
