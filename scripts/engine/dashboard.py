@@ -2333,7 +2333,7 @@ function renderAprendizaje(e) {
       ul ? (ul.estado === 'aceptado' ? 'ok' : (ul.estado === 'rechazado' ? 'bad' : 'amber')) : '',
       ul ? ('lote ' + ul.dia + ': ' + f.entrada + ' → ' + f.salida + ' filas · ' + f.contaminadas +
             ' de IPs marcadas · ' + f.atipicas + ' atípicas · PSI máx ' + aprNum(ul.psi_max, 2))
-         : 'el primer lote se cierra a las 00:30 UTC') +
+         : (p.activo ? 'el primer lote se cierra a las 00:30 UTC' : 'desactivado: no se cierran lotes')) +
     aprTarjeta('2 · Linaje', e.registro_integro ? 'íntegro' : 'ROTO', e.registro_integro ? 'ok' : 'bad',
       lotes.length + ' lotes registrados con sha256 encadenado · ' + e.lotes_disponibles + ' aún sin usar') +
     aprTarjeta('3 · Límite de influencia', Math.round(p.max_fraccion_nueva * 100) + ' % / ' +
@@ -2347,6 +2347,11 @@ function renderAprendizaje(e) {
         : (e.oro ? 'se mide cada noche' : 'falta el conjunto de oro'));
 
   let c = '<p class="var-vacio">Aún no hay candidatos. ' + varEsc(e.proximo ? 'Toca: ' + e.proximo : 'Se entrena por cadencia (' + p.cadencia_dias + ' días) o por deriva sostenida.') + '</p>';
+  if (!p.activo) {
+    c = '<div class="note"><span><strong>Desactivado</strong> (reentrenamiento.activo = false). El modelo en uso no cambia y no se cierran lotes. ' +
+      'Para activarlo: crear el conjunto de oro con <code>cyberflow_aprendizaje.py oro --desde &lt;particionado&gt;</code>, poner ' +
+      '<code>activo = true</code> y <code>base</code> en [reentrenamiento] y regenerar las unidades (docs/APRENDIZAJE.md).</span></div>';
+  }
   if (uc) {
     const r = uc.resultados || {}, va = r.vigente || {}, ca = r.candidato || {};
     const cmd = '.venv/bin/python scripts/modeling/cyberflow_aprendizaje.py --config configs/' +
