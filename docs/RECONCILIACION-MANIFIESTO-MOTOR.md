@@ -27,7 +27,7 @@ ataques, y se recalibró un Isolation Forest con normalidad de esa red; su FPR s
 **test normal retenido** fue **4,45 %**. **Esa diferencia no aísla el efecto de
 recalibrar**: entre ambas mediciones cambiaron el modelo, los datos y el alcance (se
 excluyó el plano de control y se deduplicó el espejo). El 4,45 % tampoco borra el FPR
-histórico **22,97–25,81 %** de F6 (otra configuración). La detección **69 %** son 54/78
+histórico **22,97–25,81 %** de F6 (otra configuración). La detección **64,3 %** son 54/84
 ventanas de Kali de septiembre; el 9/9 de la batería posterior es del **stack híbrido
 por episodio**, no del modelo solo.
 

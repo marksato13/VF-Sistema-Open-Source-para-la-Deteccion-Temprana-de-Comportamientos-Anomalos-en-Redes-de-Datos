@@ -17,8 +17,9 @@ laboratorio**. Esta card se mantiene a mano: **no** se genera con `generar_cards
 
 **Mediciones del modelo, no del stack completo.** Línea base normal elegible 337 980
 filas (train 204 148, validation 65 633, test 65 421); **FPR sobre test normal 4,45 %**
-(nota L). Sobre 78 ventanas activas de ataques Kali en la misma red, 54 detectadas =
-**69 %**; HTTP 27/27, escaneo 27/43 y DNS 0/8 (nota M). Cambiar el denominador o el
+(nota L). Sobre 84 ventanas activas de ataques Kali en la misma red, 54 detectadas =
+**64,3 %**; por familia HTTP 35/43, escaneo 19/33 y DNS 0/8 (nota M, recontada en la
+nota S: el primer recuento daba 54/78 = 69 %). Cambiar el denominador o el
 escenario cambia la estimación. No extrapolar a otras redes ni a un «zero-day»
 universal.
 
@@ -31,7 +32,11 @@ modelos sobre el mismo conjunto retenido.
 da modelo solo 6/9, heurísticos solos 7/9, combinado 9/9. No atribuir 9/9 al Isolation
 Forest. La fuerza bruta confirmada en vivo la detectó el heurístico.
 
-**Limitaciones.** El 4,45 % se midió en test normal retenido tras la recalibración; no
+**Limitaciones.** La línea base de entrenamiento contiene una ráfaga de la Kali
+(27-sep, 21:40–21:59 UTC; 51 ventanas en train, nota S): el modelo no se entrenó con
+tráfico 100 % limpio. El conjunto de prueba no tiene ataques, así que el 4,45 % se
+sostiene, y los candidatos futuros excluyen esa ráfaga (`excluir_ventanas`).
+El 4,45 % se midió en test normal retenido tras la recalibración; no
 es garantía de FPR continuo ni el FPR del sistema completo. F6 dio 22,97–25,81 % con
 otro modelo y escenario. El modelo solo no detectó DNS en el piloto de septiembre (ensayo
 contra un host que no era el resolver). La comparación de siete candidatos del dataset

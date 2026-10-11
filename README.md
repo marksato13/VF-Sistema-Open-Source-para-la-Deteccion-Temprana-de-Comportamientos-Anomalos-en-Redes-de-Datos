@@ -340,8 +340,8 @@ Limitaciones **medidas**, cada una con su modelo y su escenario (no intercambiar
 > El umbral publicado está calibrado para un laboratorio concreto. **En otra red hay que
 > recalibrar antes de creerse una sola alerta.**
 
-**La detección es por escenario, no global.** IF recalibrado sobre la Kali: 54/78
-ventanas (69 %); HTTP 27/27, escaneo 27/43, DNS 0/8 (el ensayo apuntó a un host que no
+**La detección es por escenario, no global.** IF recalibrado sobre la Kali: 54/84
+ventanas (64,3 %); HTTP 35/43, escaneo 19/33, DNS 0/8 (el ensayo apuntó a un host que no
 era el resolver). La cobertura 9/9 por episodio es del **stack** (modelo + heurísticos);
 el modelo solo, 6/9.
 

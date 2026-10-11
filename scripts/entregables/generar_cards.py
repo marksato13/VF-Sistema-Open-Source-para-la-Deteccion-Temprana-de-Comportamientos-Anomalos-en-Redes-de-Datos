@@ -438,8 +438,8 @@ def system_card(limpio: list[dict], pase1: list[dict]) -> str:
     a("`calibrado_en_esta_red = true`. El detector es un Isolation Forest recalibrado con "
       "tráfico normal de esta red; su umbral se fijó con `alpha = 0,05` **sobre "
       "validación** y se evaluó una sola vez sobre **test normal retenido**: FPR **4,45 %** "
-      "(65 421 ventanas). Sobre ataques reales de la Kali detectó **54/78 ventanas** "
-      "(HTTP 27/27, escaneo 27/43, DNS 0/8). Detalle en "
+      "(65 421 ventanas). Sobre ataques reales de la Kali detectó **54/84 ventanas (64,3 %)** "
+      "(HTTP 35/43, escaneo 19/33, DNS 0/8). Detalle en "
       "[`MODEL_CARD_IF_RECALIBRADO.md`](MODEL_CARD_IF_RECALIBRADO.md).\n\n")
     a("> **La caída 92,4 % → 4,45 % no aísla el efecto de recalibrar.** El 92,4 % se midió "
       "con el OCSVM en los primeros minutos sobre la red real (92 decisiones en 7 "
