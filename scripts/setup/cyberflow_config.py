@@ -582,6 +582,9 @@ def main() -> int:
             shutil.copy2(ruta, copia)
         ruta.write_text(texto, encoding="utf-8")
         print("escrito %s" % ruta)
+    if not sys.stdout.isatty():
+        # instalar.sh lo llama por tuberia y arranca las unidades el mismo.
+        return 0
     print("\nAhora:  sudo systemctl daemon-reload")
     servicios = [n for n in unidades if n.endswith(".service")]
     print("        sudo systemctl enable --now %s" % " ".join(servicios))

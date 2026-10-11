@@ -70,7 +70,7 @@ fi
 # --- Motor -----------------------------------------------------------
 tit "4. Motor de decision"
 if [[ -r "$REGISTRO" ]]; then
-    n=$(grep -c '"event": "decision"' "$REGISTRO" 2>/dev/null || echo 0)
+    n=$(grep -c '"event": "decision"' "$REGISTRO" 2>/dev/null) || n=${n:-0}
     (( n > 0 )) && ok "decidiendo: $n decisiones registradas" || aviso "aun sin decisiones (el motor llena su historia ~230 s primero)"
     if (( n > 0 )); then
         # Python solo EXTRAE los dos numeros de la ultima decision; el veredicto

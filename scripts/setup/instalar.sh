@@ -428,8 +428,10 @@ for u in $UNIDADES; do
 done
 REGISTRO="$RAIZ/$(leer_toml rutas registro)"
 sleep 15
-if [[ -s "$REGISTRO" ]]; then
-    ok "el motor esta decidiendo: $(grep -c '"event": "decision"' "$REGISTRO" 2>/dev/null || echo 0) decisiones"
+n=0
+[[ -s "$REGISTRO" ]] && n=$(grep -c '"event": "decision"' "$REGISTRO" 2>/dev/null) || true
+if (( ${n:-0} > 0 )); then
+    ok "el motor esta decidiendo: $n decisiones"
 else
     aviso "aun no hay decisiones. El motor necesita llenar su historia primero."
 fi
