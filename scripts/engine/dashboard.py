@@ -2775,11 +2775,19 @@ def load_model_summary(manifest_path: Path, detector_name: str) -> dict:
     }
 
 
-def estado_aprendizaje(config_toml: Path | None, demo: bool = False) -> dict:
+TOML_LOCAL = Path(__file__).resolve().parents[2] / "configs" / "cyberflow.local.toml"
+
+
+def estado_aprendizaje(config_toml: Path | None, demo: bool = False,
+                       respaldo: Path | None = TOML_LOCAL) -> dict:
     """Estado del reentrenamiento supervisado, para la seccion del admin.
 
     Solo lee ficheros (registro, lotes, deriva, candidatos); no carga modelos.
+    Sin --config-toml -unidades generadas antes de existir esta seccion- se usa
+    el .local.toml de la propia raiz, que es el que leen el motor y el timer.
     """
+    if config_toml is None and respaldo is not None and Path(respaldo).is_file():
+        config_toml = respaldo
     if config_toml is None:
         return {"disponible": False,
                 "motivo": "El panel no recibio --config-toml: regenere las unidades "

@@ -316,7 +316,9 @@ class CicloCompleto(unittest.TestCase):
     def test_8_el_panel_lo_lee(self):
         sys.path.insert(0, str(REPO / "scripts" / "engine"))
         import dashboard
-        self.assertFalse(dashboard.estado_aprendizaje(None)["disponible"])
+        self.assertFalse(dashboard.estado_aprendizaje(None, respaldo=None)["disponible"])
+        # Sin --config-toml se usa el .local.toml de la raiz, si existe.
+        self.assertTrue(dashboard.estado_aprendizaje(None, respaldo=self.e.toml)["disponible"])
         e = dashboard.estado_aprendizaje(self.e.toml)
         self.assertTrue(e["disponible"], e.get("motivo"))
         self.assertEqual(e["toml"], "cyberflow.local.toml")
