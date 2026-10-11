@@ -108,6 +108,59 @@ dataset = "artifacts/linea-base/multilayer-v3.csv"
 # de separarlas despues.
 campana = "piloto-con-dns"
 
+[reentrenamiento]
+# Reentrenamiento SUPERVISADO (scripts/modeling/cyberflow_aprendizaje.py): cada
+# noche se cierra y sanea un lote, se mide la deriva y, si toca, se entrena y
+# evalua un CANDIDATO. El modelo en uso solo cambia con
+#   cyberflow_aprendizaje.py --config ... promover <id>
+# que lanza una persona y deja copia para "revertir". Ver docs/APRENDIZAJE.md.
+#
+# false hasta la primera calibracion en esta red (INSTALACION 8): el conjunto de
+# oro sale de su particion de prueba, y sin oro no hay contra que medir.
+activo = false
+modo = "supervisado"                 # unico valor admitido, a proposito
+
+# Conjunto de ORO: ventanas normales verificadas, FIJAS. Nunca entran a
+# entrenar; todo candidato y la deriva se miden contra ellas.
+oro = "artifacts/aprendizaje/oro/oro.csv"
+# Particionado con el que se entreno el modelo vigente (salida de
+# particionar_linea_base.py): sus filas train+validation son la base a la que
+# se suman los lotes nuevos.
+base = ""
+# Ventanas de ataque etiquetadas (p. ej. las de la Kali, nota M) para medir la
+# deteccion. Vacio = el veredicto queda en EVALUACION_INCOMPLETA.
+ataques = ""
+
+# Cuando se entrena: cada cadencia_dias, o antes si la deriva se sostiene
+# dias_deriva dias seguidos. Nunca con menos de dias_minimos lotes aceptados.
+cadencia_dias = 30
+dias_minimos = 7
+dias_deriva = 3
+
+# 1) Saneamiento del lote diario.
+filas_minimas_lote = 500
+margen_contaminacion_s = 300         # fuera ventanas de IPs marcadas +-5 min
+usar_alertas_suricata = true
+cuantil_referencia = 0.999           # limites por variable, sacados del oro
+tolerancia_atipica = 0.5             # cuanto se permite salir de ese rango
+max_variables_atipicas = 3           # fuera la fila si sale en tantas variables
+psi_rechazo_lote = 0.5               # lote entero rechazado: lo revisa una persona
+
+# 3) Limite de influencia.
+max_fraccion_nueva = 0.30            # lo nuevo, como mucho el 30 % del entrenamiento
+max_fraccion_ip = 0.10               # ninguna IP mas del 10 % de lo nuevo
+
+# 4) Deriva (contra el oro y sobre el lote del dia).
+psi_alerta = 0.25
+tasa_anomala_max = 0.15
+
+# Criterio de promocion: FPR en oro <= vigente + tolerancia_fpr y deteccion >=
+# vigente - tolerancia_deteccion. Si no, NO_PROMOVER.
+alpha = 0.05
+tolerancia_fpr = 0.005
+tolerancia_deteccion = 0.0
+conservar_modelos = 3                # puntos de restauracion
+
 [panel]
 # Expuesto en la VLAN de gestion y de solo lectura. Desde el bastion se abre
 # directo; desde fuera, con un tunel que SALGA del bastion, porque es el unico

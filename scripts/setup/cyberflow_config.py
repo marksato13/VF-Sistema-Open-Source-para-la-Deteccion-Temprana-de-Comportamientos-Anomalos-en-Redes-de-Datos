@@ -29,6 +29,8 @@ from pathlib import Path
 
 RAIZ_REPO = Path(__file__).resolve().parents[2]
 CONFIG_POR_OMISION = RAIZ_REPO / "configs" / "cyberflow.toml"
+sys.path.insert(0, str(RAIZ_REPO / "scripts" / "modeling"))
+from cyberflow_aprendizaje import comprobar_politica  # noqa: E402  (solo stdlib)
 DESTINO_SYSTEMD = Path("/etc/systemd/system")
 
 CABECERA = """# Generado por scripts/setup/cyberflow_config.py desde {origen}
@@ -167,6 +169,7 @@ ExecStart={python} {raiz}/scripts/engine/dashboard.py \\
     --descripciones {raiz}/{descripciones} \\
     --dataset {raiz}/{dataset} \\
     --escenarios {raiz}/{escenarios} \\
+    --config-toml {raiz}/configs/{fichero} \\
     --services ppi-motor.service,ppi-motor-capture.service,suricata.service \\{calibrado}{acceso_args}
     --host {direccion} --port {puerto}
 Restart=always
@@ -294,6 +297,42 @@ Persistent=true
 WantedBy=timers.target
 """
 
+APRENDIZAJE = """{cabecera}
+[Unit]
+Description=CyberFlow - reentrenamiento supervisado (lote, deriva y candidato)
+After=cyberflow-acumular.service
+
+[Service]
+Type=oneshot
+User={usuario}
+Group={usuario}
+WorkingDirectory={raiz}
+# Prepara y evalua; NUNCA cambia el modelo en uso. Eso es "promover", a mano.
+# Entrenar un Isolation Forest sobre la linea base ocupa CPU un rato: al fondo
+# de la cola para no quitarsela al motor ni a la captura.
+ExecStart={python} {raiz}/scripts/modeling/cyberflow_aprendizaje.py \\
+    --config {raiz}/configs/{fichero} diario
+StandardOutput=append:{raiz}/logs/aprendizaje.log
+StandardError=journal
+Nice=19
+IOSchedulingClass=idle
+NoNewPrivileges=true
+"""
+
+APRENDIZAJE_TIMER = """{cabecera}
+[Unit]
+Description=CyberFlow - reentrenamiento supervisado, cada noche
+
+[Timer]
+# 00:30 UTC: el lote es el dia anterior entero, y la ultima pasada del
+# acumulador (cada 10 min) ya lo ha cerrado.
+OnCalendar=*-*-* 00:30:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+"""
+
 ROTACION = """# Generado por scripts/setup/cyberflow_config.py. NO editar a mano.
 # El motor escribe una linea JSON por decision y puede producir cientos por
 # minuto. Sin tope, este fichero llena la raiz, y un / lleno tumba la maquina
@@ -325,7 +364,10 @@ def panel_expuesto(panel: dict) -> bool:
 
 def cargar(ruta: Path) -> dict:
     with ruta.open("rb") as fh:
-        return tomllib.load(fh)
+        cfg = tomllib.load(fh)
+    # Las unidades necesitan saber que .toml leer (la del aprendizaje lo pasa).
+    cfg["_fichero"] = Path(ruta).name
+    return cfg
 
 
 def comprobar(cfg: dict) -> list[str]:
@@ -391,6 +433,8 @@ def comprobar(cfg: dict) -> list[str]:
                     continue
                 if n.prefixlen == 0:
                     fallos.append("panel.permitir contiene %s: equivale a no filtrar nada" % r)
+
+    fallos += comprobar_politica(cfg.get("reentrenamiento", {}))
 
     raiz = Path(rut["raiz"])
     for clave in ("modelo", "manifiesto", "esquema"):
@@ -465,6 +509,10 @@ def render(cfg: dict) -> dict[str, str]:
         "cyberflow-acumular.timer": ACUMULAR_TIMER.format(
             cabecera=cabecera, retener="%d min" % cap["retener_minutos"]),
     }
+    if cfg.get("reentrenamiento", {}).get("activo"):
+        unidades["cyberflow-aprendizaje.service"] = APRENDIZAJE.format(
+            fichero=cfg.get("_fichero", "cyberflow.local.toml"), **comun)
+        unidades["cyberflow-aprendizaje.timer"] = APRENDIZAJE_TIMER.format(cabecera=cabecera)
     if panel.get("activo"):
         acceso = ""
         if panel_expuesto(panel):
@@ -524,6 +572,7 @@ def render(cfg: dict) -> dict[str, str]:
             descripciones=rut.get("descripciones", "configs/features/descripciones.json"),
             dataset=rut.get("dataset", "artifacts/linea-base/multilayer-v3.csv"),
             escenarios=rut.get("escenarios", "configs/escenarios.json"),
+            fichero=cfg.get("_fichero", "cyberflow.local.toml"),
             **comun)
     return unidades
 
