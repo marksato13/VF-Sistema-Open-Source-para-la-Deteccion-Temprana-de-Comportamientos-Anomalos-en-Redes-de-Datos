@@ -1,0 +1,47 @@
+{
+  "_nota": "Inventario declarado de dónde está instalado cada componente. El panel corre en el sensor y no tiene credenciales de los demás hosts, así que muestra esto como el despliegue declarado; la vivacidad del sensor sale de los servicios reales. Verificado el 12-oct-2026.",
+  "cadena": [
+    {
+      "rol": "sensor",
+      "titulo": "Sensor (decide y publica)",
+      "host": "cyberflow-sensor",
+      "ip": "10.10.60.11",
+      "vlan": "60 · gestión",
+      "donde": "VM sobre ESXi 172.17.25.2",
+      "componentes": [
+        {"nombre": "Motor de decisión", "unidad": "ppi-motor.service", "servicio": "ppi-motor.service"},
+        {"nombre": "Captura", "unidad": "ppi-motor-capture.service", "servicio": "ppi-motor-capture.service"},
+        {"nombre": "Suricata", "unidad": "suricata.service", "servicio": "suricata.service"},
+        {"nombre": "Publicador del feed", "unidad": "ppi-publicar-feed.timer", "cadencia": "cada 60 s"},
+        {"nombre": "Este panel", "unidad": "ppi-dashboard.service"}
+      ],
+      "nota": "La clave privada de firma (ed25519) vive solo aquí."
+    },
+    {
+      "rol": "relay",
+      "titulo": "Relay del feed (bastión)",
+      "host": "VM-GESTION",
+      "ip": "10.10.10.30",
+      "vlan": "10 · gestión",
+      "donde": "Bastión; sin credenciales de firma",
+      "componentes": [
+        {"nombre": "Relay del feed firmado", "unidad": "ppi-relay-feed.timer", "cadencia": "cada 60 s", "fichero": "/home/gadmin/relay-feed.sh"}
+      ],
+      "nota": "Relay tonto: copia el feed firmado del sensor a los hosts; no puede forjarlo."
+    },
+    {
+      "rol": "agente",
+      "titulo": "Agente en host protegido",
+      "host": "srv-dmz",
+      "ip": "10.10.30.10",
+      "vlan": "30 · DMZ",
+      "donde": "Host objetivo HTTP/HTTPS",
+      "componentes": [
+        {"nombre": "Agente de enforcement", "unidad": "ppi-enforce-agent.timer", "cadencia": "cada 60 s", "fichero": "/home/adminsrvdmz/enforce/agente_enforce.py"},
+        {"nombre": "Cortafuegos", "unidad": "nftables", "detalle": "LIMIT = tasa · BLOCK = drop, con caducidad"}
+      ],
+      "nota": "Verifica la firma antes de aplicar; si no cuadra, no toca nada. Eleva solo 'nft' con sudo -n."
+    }
+  ],
+  "para_anadir_un_host": "Instalar agente_enforce.py + la unidad ppi-enforce-agent en el host nuevo, con la clave pública del sensor. No hace falta reentrenar: el mismo feed sirve a todos los agentes (modelo un-feed / N-agentes)."
+}
