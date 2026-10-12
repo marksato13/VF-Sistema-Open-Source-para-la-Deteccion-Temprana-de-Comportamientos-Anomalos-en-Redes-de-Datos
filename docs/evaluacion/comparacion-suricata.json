@@ -1,0 +1,34 @@
+{
+  "fuente": "Batería N=3 (nota 26, 5-oct), ablación (nota 31, 6-oct) y episodio Nikto (nota 28, 6-oct) del repositorio de orquestación, comparacion-cyberflow-suricata/",
+  "protocolo": {
+    "entrada": "Mismo PCAP de cada episodio reproducido a Suricata y a CyberFlow, con el reloj del paquete (sensor) y la configuración congelada",
+    "referencia": "Inicio y fin de cada episodio según el orquestador de ataques (lanzamiento en la Kali); no según las alertas ni las decisiones",
+    "unidad": "episodio",
+    "suricata": {"ruleset": "ET Open por defecto (53 013 reglas)", "modo": "IDS sobre el PCAP deduplicado; en SPAN no bloquea"},
+    "cyberflow": {"consume": "eventos EVE (http, dns, tls) y tramas del PCAP; no alertas de Suricata", "umbrales_heuristicos": "2026-10-06.1 en la batería"}
+  },
+  "episodios": [
+    {"id": "E3-dns-1", "familia": "dns", "con_firma": false, "detecciones": {"suricata": null, "modelo": null, "heuristicos": 13, "combinado": 13}},
+    {"id": "E3-dns-2", "familia": "dns", "con_firma": false, "detecciones": {"suricata": null, "modelo": null, "heuristicos": 9, "combinado": 9}},
+    {"id": "E3-dns-3", "familia": "dns", "con_firma": false, "detecciones": {"suricata": null, "modelo": null, "heuristicos": 14, "combinado": 14}},
+    {"id": "E4-flood-1", "familia": "flood", "con_firma": false, "detecciones": {"suricata": null, "modelo": 10, "heuristicos": 10, "combinado": 10}},
+    {"id": "E4-flood-2", "familia": "flood", "con_firma": false, "detecciones": {"suricata": null, "modelo": 4, "heuristicos": 14, "combinado": 4}},
+    {"id": "E4-flood-3", "familia": "flood", "con_firma": false, "detecciones": {"suricata": null, "modelo": 9, "heuristicos": 19, "combinado": 9}},
+    {"id": "E1-scan-1", "familia": "escaneo", "con_firma": false, "detecciones": {"suricata": null, "modelo": 23, "heuristicos": null, "combinado": 23}},
+    {"id": "E1-scan-2", "familia": "escaneo", "con_firma": false, "detecciones": {"suricata": null, "modelo": 21, "heuristicos": 21, "combinado": 21}},
+    {"id": "E1-scan-3", "familia": "escaneo", "con_firma": false, "detecciones": {"suricata": null, "modelo": 23, "heuristicos": null, "combinado": 23}},
+    {"id": "E5-nikto-1", "familia": "nikto", "con_firma": true, "detecciones": {"suricata": 3.4, "modelo": 12.0, "heuristicos": "no medido", "combinado": 12.0}}
+  ],
+  "benigno": {
+    "ventanas": 527,
+    "horas": null,
+    "falsos": {"suricata": "no medido", "modelo": 0, "heuristicos": 0, "combinado": 0}
+  },
+  "notas": [
+    "N = 3 por familia sin firma y N = 1 con firma: es un piloto ampliado, no una campaña.",
+    "Escaneo en heurísticos: 1/3 con los umbrales 2026-10-06.1; tras añadir la rama de ráfaga (2026-10-06.2) la confirmación dio 3/3 (N = 3), sin cambiar el FPR.",
+    "Nikto: solo se midió el modelo; el heurístico http_abuse no se midió, así que la latencia del combinado es como máximo 12,0 s.",
+    "Suricata en SPAN funciona como IDS: se compara detección, no bloqueo. El bloqueo es una capacidad adicional de CyberFlow.",
+    "Falsos positivos de Suricata sobre la línea base: no medidos todavía; van en la campaña C3."
+  ]
+}

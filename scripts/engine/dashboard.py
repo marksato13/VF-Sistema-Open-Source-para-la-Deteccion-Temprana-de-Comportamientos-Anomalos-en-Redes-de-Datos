@@ -94,6 +94,9 @@ HTML = """<!doctype html>
     border-left: 2px solid transparent;
   }
   .side nav a svg { flex: none; }
+  /* display:flex pisa al atributo hidden: sin esto, en modo operativo los
+     enlaces de desarrollo seguian en el menu apuntando a secciones ocultas. */
+  .side nav a[hidden] { display: none; }
   .side nav a:hover { background: var(--surface-2); color: var(--text); }
   .side nav a.active { background: var(--surface-2); color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
   .side nav a .pill {
@@ -146,15 +149,19 @@ HTML = """<!doctype html>
   .topo-zoom #topoNivel { min-width: 38px; text-align: center; }
   .topo-scroll { overflow: auto; flex: 1; min-height: 0; max-height: 82vh; }
   .topo-scroll svg { display: block; }
-  /* Zoom por seccion: un boton por fase que encuadra ese grupo. */
-  .topo-fases { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }
-  .topo-fases .lbl { font: 0.72rem var(--mono); color: var(--text-dim); margin-right: 0.15rem; }
-  .topo-fases button {
-    font: 600 0.76rem var(--sans); line-height: 1; min-width: 22px;
-    background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border);
-    border-radius: 6px; padding: 0.25rem 0.5rem; cursor: pointer;
-  }
-  .topo-fases button:hover { border-color: var(--accent); color: var(--accent); }
+  /* Vista "Validacion": una tabla, no un diagrama. */
+  .topo-tabla { display: none; padding: 0.4rem 0.2rem 0.8rem; }
+  .topo-tabla table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .topo-tabla th { text-align: left; font: 600 0.72rem var(--mono); letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-dim); padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--border); }
+  .topo-tabla td { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .topo-tabla td:first-child { font-weight: 700; color: var(--text); }
+  .topo-tabla .falta { display: block; color: var(--text-dim); font-size: 0.78rem; }
+  .val-est { display: inline-block; font: 700 0.74rem var(--mono); padding: 0.16rem 0.55rem;
+    border-radius: 999px; border: 1px solid var(--border); }
+  .val-est.c { color: var(--ok); border-color: var(--ok); }
+  .val-est.p { color: var(--amber); border-color: var(--amber); }
+  .val-est.n { color: var(--text-dim); }
 
   /* Pantalla completa: el diagrama manda y el detalle se queda al lado. */
   .topo-wrap:fullscreen { background: var(--bg); padding: 1rem; gap: 1rem; height: 100%; grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
@@ -189,6 +196,17 @@ HTML = """<!doctype html>
   .topo-edge.live { stroke: var(--accent); stroke-dasharray: 5 6; animation: flow 1.1s linear infinite; }
   .topo-edge.dim { stroke: color-mix(in srgb, var(--text-dim) 45%, var(--border)); stroke-dasharray: 3 5; }
   .topo-edge.descarte { stroke: var(--danger); opacity: 0.55; stroke-dasharray: 2 4; animation: none; }
+  /* Conectores por naturaleza, para las vistas que no dependen del estado vivo. */
+  .topo-edge.fijo { stroke: var(--accent); }
+  .topo-edge.copia { stroke: var(--amber); stroke-dasharray: 6 4; }
+  .topo-edge.previsto { stroke: var(--text-dim); stroke-dasharray: 3 5; opacity: 0.75; }
+  .topo-edge.retorno { stroke: var(--text-dim); stroke-dasharray: 5 4; }
+  .topo-edge.persona { stroke: var(--ok); }
+  .topo-edge.enlace { stroke: color-mix(in srgb, var(--text-dim) 60%, var(--border)); }
+  .topo-node.acc-limit .box { stroke: var(--amber); }
+  .topo-node.acc-block .box { stroke: var(--danger); }
+  .topo-node.acc-limit .ico { color: var(--amber); }
+  .topo-node.acc-block .ico { color: var(--danger); }
   @keyframes flow { to { stroke-dashoffset: -22; } }
   @media (prefers-reduced-motion: reduce) { .topo-edge.live { animation: none; } }
   .topo-edge-label { fill: var(--text); font: 600 10px var(--mono); }
@@ -514,6 +532,48 @@ HTML = """<!doctype html>
   .badge.acc-block { background: var(--danger-soft); color: var(--danger); }
   .why { color: var(--text-dim); font-size: 0.82rem; }
 
+  /* Filas por accion: el analista ve primero lo que se corto o se degrado. */
+  tr.row-block td:first-child { box-shadow: inset 4px 0 0 var(--danger); }
+  tr.row-limit td:first-child { box-shadow: inset 4px 0 0 var(--amber); }
+  tr.row-nueva td { animation: fila-nueva 6s ease-out; }
+  @keyframes fila-nueva { from { background: rgba(94,234,212,0.16); } to { background: transparent; } }
+  .badge.acc-block, .badge.acc-limit { font-size: 0.8rem; padding: 0.22rem 0.65rem; letter-spacing: 0.03em; }
+  .hace { display: block; font-size: 0.72rem; color: var(--text-dim); }
+  .modelo-celda { display: inline-flex; align-items: center; gap: 0.45rem; font-family: var(--mono); font-size: 0.78rem; }
+  .modelo-celda .m-alert { color: var(--danger); font-weight: 600; }
+  .modelo-celda .m-permit { color: var(--text-dim); }
+
+  /* Acciones vigentes: cuenta atras visible y barra de lo que queda. */
+  .vig-barra { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: 0.3rem; min-width: 90px; }
+  .vig-barra i { display: block; height: 100%; }
+  .vig-fuente { font-size: 0.7rem; color: var(--text-dim); font-family: var(--mono); }
+  .sec-sub { color: var(--text-dim); font-size: 0.82rem; margin: -0.3rem 0 0.7rem; }
+  .cmp-fig { background: #0f1722; border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; margin-bottom: 0.9rem; }
+  .cmp-fig svg { width: 100%; height: auto; display: block; }
+  .cmp-notas { margin: 0.5rem 0 0; padding-left: 1.1rem; color: var(--text-dim); font-size: 0.8rem; line-height: 1.5; }
+  td.cmp-bien { color: var(--ok); } td.cmp-mal { color: var(--danger); } td.cmp-nm { color: var(--text-dim); font-style: italic; }
+  tr.cmp-total td { font-weight: 600; border-top: 2px solid var(--border); }
+
+  /* Actividad: cifras por accion y las IPs que mas actuaron. */
+  .act-cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1rem; margin-top: 0.9rem; }
+  @media (max-width: 900px) { .act-cols { grid-template-columns: 1fr; } }
+  .act-h { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin: 0 0 0.45rem; font-weight: 600; }
+
+  /* Alertas flotantes: una por IP y accion, apiladas arriba a la derecha. */
+  .toasts { position: fixed; top: 16px; right: 16px; z-index: 400; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+  .toast { pointer-events: auto; background: var(--surface-2); border: 1px solid var(--border); border-left: 5px solid var(--amber);
+    border-radius: 10px; padding: 0.75rem 0.9rem 0.7rem; box-shadow: 0 10px 30px rgba(0,0,0,0.45); cursor: pointer;
+    animation: toast-in .25s ease-out; }
+  .toast.block { border-left-color: var(--danger); }
+  .toast .t-cab { display: flex; align-items: center; gap: 0.5rem; }
+  .toast .t-ip { font-family: var(--mono); font-weight: 700; color: var(--text); font-size: 0.95rem; }
+  .toast .t-x { margin-left: auto; background: none; border: none; color: var(--text-dim); font-size: 1.1rem; cursor: pointer; line-height: 1; }
+  .toast .t-mot { margin-top: 0.35rem; font-size: 0.84rem; color: var(--text); line-height: 1.35; }
+  .toast .t-meta { margin-top: 0.3rem; font-size: 0.72rem; color: var(--text-dim); font-family: var(--mono); }
+  @keyframes toast-in { from { transform: translateX(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .btn-avisos { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); border-radius: 7px; padding: 0.3rem 0.6rem; font: 0.78rem var(--sans); cursor: pointer; }
+  .btn-avisos[data-on="1"] { color: var(--accent); border-color: var(--accent); }
+
   /* Tabla de decisiones: cabecera fija al desplazar la lista larga, y la celda
      de score lleva una mini-barra que situa el valor respecto al umbral. */
   .tbl-scroll { max-height: 420px; overflow-y: auto; }
@@ -521,6 +581,88 @@ HTML = """<!doctype html>
     box-shadow: inset 0 -1px 0 var(--border); }
   .score-cell { display: inline-flex; align-items: center; gap: 0.5rem; }
   .score-cell .mini { flex: none; }
+
+  /* Datos en vivo: cada registro con las variables a las que aporta. */
+  .vivo-bar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-bottom: 0.5rem; }
+  .vivo-chk { font-size: 0.8rem; color: var(--text-dim); display: inline-flex; gap: 0.3rem; align-items: center; }
+  .vivo-tabla { max-height: 560px; }
+  .vivo-tabla td { vertical-align: top; }
+  .vivo-tabla td.m { font-family: var(--mono); font-size: 0.76rem; white-space: nowrap; }
+  .vivo-tabla .sub { color: var(--text-dim); font-size: 0.72rem; }
+  .vf { display: inline-block; margin: 0 0.25rem 0.25rem 0; padding: 0.1rem 0.4rem; border-radius: 6px;
+    background: var(--surface-2); border: 1px solid var(--border); font-family: var(--mono); font-size: 0.72rem; white-space: nowrap; }
+  .vf b { color: var(--accent); font-weight: 600; }
+  .vf .ap { color: var(--text-dim); }
+  .vf.l2 { border-style: dashed; }
+  .vf.l2 b { color: var(--capa-c); }
+  .vf.cnt b { color: var(--amber); }
+  .vf .par { color: var(--amber); }
+  .vivo-tabla .matriz td:nth-child(2) { min-width: 14rem; }
+  .vivo-tabla .matriz td.m { white-space: normal; }
+  .vivo-tabla .heur { color: var(--amber); font-family: var(--mono); font-size: 0.74rem; }
+
+  /* Captura en vivo: medidor de ingesta y lista tipo Wireshark. */
+  .vivo-medidor { display: grid; grid-template-columns: minmax(12rem, 1.2fr) repeat(3, minmax(10rem, 1fr));
+    gap: 0.6rem; margin: 0.4rem 0 0.8rem; }
+  @media (max-width: 900px) { .vivo-medidor { grid-template-columns: 1fr 1fr; } }
+  .vivo-medidor > div { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.55rem 0.7rem; min-width: 0; }
+  .vm-estado { display: flex; flex-direction: column; justify-content: center; gap: 0.15rem; }
+  .vm-estado b { font-size: 0.95rem; }
+  .vm-estado span:last-child { color: var(--text-dim); font-size: 0.74rem; }
+  .vm-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-dim); display: inline-block; }
+  .vm-dot.ok { background: var(--ok); box-shadow: 0 0 0 0 var(--ok); animation: vmPulso 1.4s infinite; }
+  .vm-dot.lento { background: var(--amber); }
+  .vm-dot.parado { background: var(--danger); }
+  @keyframes vmPulso { 0% { box-shadow: 0 0 0 0 rgba(74,222,128,.6); } 100% { box-shadow: 0 0 0 9px rgba(74,222,128,0); } }
+  .vm-cab { color: var(--text-dim); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; }
+  .vm-num { font-family: var(--mono); font-size: 0.8rem; color: var(--text-dim); }
+  .vm-num b { font-size: 1.25rem; color: var(--text); }
+  .vm-spark { width: 100%; height: 28px; display: block; }
+  .vm-spark polyline { fill: none; stroke: var(--accent); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+  .vm-spark polygon { fill: rgba(94,234,212,.12); stroke: none; }
+  .vm-pie { font-family: var(--mono); font-size: 0.7rem; color: var(--text-dim); overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .vm-pie .crece { color: var(--ok); }
+  .vivo-tabla.ws { max-height: 460px; }
+  .vivo-tabla.ws table { font-size: 0.72rem; }
+  .vivo-tabla.ws .fl { max-width: 12.5rem; overflow: hidden; text-overflow: ellipsis; }
+  .vivo-tabla.ws td { padding: 0.2rem 0.45rem; font-family: var(--mono); white-space: nowrap; }
+  .vivo-tabla.ws th { padding-left: 0.45rem; padding-right: 0.45rem; }
+  .vivo-tabla.ws td.txt { font-family: var(--sans); white-space: normal; }
+  .vivo-tabla.ws tbody tr { cursor: pointer; border-left: 3px solid transparent; }
+  .vivo-tabla.ws tbody tr.sel { outline: 1px solid var(--accent); outline-offset: -1px; }
+  .vivo-tabla.ws .fl { display: block; line-height: 1.35; }
+  .vivo-tabla.ws .fl b { color: var(--accent); font-weight: 600; }
+  .vivo-tabla.ws .fl.l2 b { color: var(--capa-c); }
+  .vivo-tabla.ws .fl.cnt b { color: var(--amber); }
+  .vivo-tabla.ws td.txt { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vivo-tabla.ws .mas { margin-left: 0.35rem; padding: 0 0.3rem; border-radius: 5px; background: var(--surface-2);
+    border: 1px solid var(--border); color: var(--text-dim); font-size: 0.68rem; }
+  .vivo-tabla.ws .pend { color: var(--text-dim); }
+  .vivo-tabla.ws .conf { color: var(--ok); }
+  .vivo-tabla.ws .prov { color: var(--text-dim); font-style: italic; }
+  /* Reglas de color al estilo de Wireshark, en tinte para el tema oscuro. */
+  tr.c-tcp  { background: rgba(141,129,255,.10); border-left-color: rgba(141,129,255,.7) !important; }
+  tr.c-syn  { background: rgba(160,160,160,.16); border-left-color: #a0a0a0 !important; }
+  tr.c-rst  { background: rgba(248,113,113,.18); border-left-color: var(--danger) !important; }
+  tr.c-udp  { background: rgba(96,165,250,.10); border-left-color: rgba(96,165,250,.7) !important; }
+  tr.c-icmp { background: rgba(244,114,182,.13); border-left-color: var(--capa-d) !important; }
+  tr.c-arp  { background: rgba(240,180,41,.12); border-left-color: var(--amber) !important; }
+  tr.c-http { background: rgba(74,222,128,.12); border-left-color: var(--ok) !important; }
+  tr.c-dns  { background: rgba(96,165,250,.13); border-left-color: var(--capa-b) !important; }
+  tr.c-tls  { background: rgba(192,132,252,.12); border-left-color: var(--capa-c) !important; }
+  tr.c-alert { background: rgba(248,113,113,.22); border-left-color: var(--danger) !important; }
+  tr.c-fuera td { opacity: .55; }
+  tr.nueva { animation: wsNueva 1.2s ease-out; }
+  @keyframes wsNueva { from { box-shadow: inset 0 0 0 999px rgba(94,234,212,.28); } to { box-shadow: inset 0 0 0 999px rgba(94,234,212,0); } }
+  .ws-detalle { margin-top: 0.5rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.6rem 0.8rem; font-family: var(--mono); font-size: 0.76rem; max-height: 340px; overflow: auto; }
+  .ws-detalle details { margin: 0.1rem 0; }
+  .ws-detalle summary { cursor: pointer; color: var(--text); }
+  .ws-detalle .kv { padding-left: 1.2rem; color: var(--text-dim); white-space: pre-wrap; word-break: break-all; }
+  .ws-detalle .kv b { color: var(--text); font-weight: 500; }
+  .ws-detalle pre { margin: 0.3rem 0 0 1.2rem; white-space: pre-wrap; word-break: break-all; color: var(--text-dim); }
 </style>
 
 <div class="shell">
@@ -530,9 +672,11 @@ HTML = """<!doctype html>
   <nav id="nav">
     <a href="#s-salud" data-sec="s-salud"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>Salud</a>
     <!--ADMIN-->
-    <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Topología</a>
+    <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Mapa</a>
     <a href="#s-variables" data-sec="s-variables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg>Variables</a>
+    <a href="#s-vivo" data-sec="s-vivo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 2-6 2 3h6"/></svg>Datos en vivo</a>
     <a href="#s-modelo" data-sec="s-modelo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>Modelo</a>
+    <a href="#s-comparacion" data-sec="s-comparacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg>Suricata</a>
     <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
     <a href="#s-simulacion" data-sec="s-simulacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg>Simulación</a>
     <a href="#s-aprendizaje" data-sec="s-aprendizaje"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><polyline points="20,4 20,9 15,9"/></svg>Aprendizaje</a>
@@ -552,11 +696,14 @@ HTML = """<!doctype html>
     <div class="sesion">
       <!--ADMIN--><button id="modoBtn" class="btn-modo" type="button"
         title="Cambia entre la vista operativa y la de desarrollo. Las dos son de solo lectura."></button><!--/ADMIN-->
+      <button id="avisosBtn" class="btn-avisos" type="button" data-on="1"
+        title="Alertas flotantes cuando una IP recibe LIMIT o BLOCK">Avisos: sí</button>
       <span class="quien" id="quien"></span>
       <form method="post" action="/logout"><button class="btn-salir" type="submit">Salir</button></form>
     </div>
   </header>
 
+  <div class="toasts" id="toasts" aria-live="polite"></div>
   <div class="kpi-row" id="kpis"></div>
   <div class="healthbar" id="healthbar"></div>
 
@@ -567,14 +714,19 @@ HTML = """<!doctype html>
 
   <!--ADMIN-->
   <section id="s-topologia">
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg><h2>Topología y flujo</h2></div>
-    <p class="lede-small">El camino que recorre un paquete desde el troncal hasta la decisión. Pulsa un componente para ver qué hace, qué mide y de dónde sale ese número.</p>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg><h2>Mapa del sistema</h2></div>
+    <p class="lede-small">Pulsa un componente para ver su detalle.</p>
     <div class="topo-wrap" id="topoWrap">
       <div class="topo-canvas" id="topoCanvas">
         <div class="topo-bar">
           <div class="range-toggle" id="topoVista">
-            <button data-vista="esencial" class="active">Esencial</button>
-            <button data-vista="completa">Completa</button>
+            <button data-vista="red">Red y captura</button>
+            <button data-vista="completa" class="active">Operacional</button>
+            <button data-vista="decision">Decisión</button>
+            <button data-vista="respuesta">Respuesta</button>
+            <button data-vista="construccion">Construcción y entrenamiento</button>
+            <button data-vista="metodologica">Fases del método</button>
+            <button data-vista="validacion">Validación</button>
           </div>
           <div class="topo-zoom">
             <button id="topoMenos" title="Reducir" aria-label="Reducir">&minus;</button>
@@ -582,7 +734,6 @@ HTML = """<!doctype html>
             <button id="topoMas" title="Ampliar" aria-label="Ampliar">+</button>
             <button id="topoReset" title="Ver todo el diagrama" aria-label="Ver todo el diagrama">Ajustar</button>
           </div>
-          <div class="topo-fases" id="topoFases"></div>
           <button id="topoArchivosBtn" class="export-btn" title="Muestra los ficheros que usa cada componente" aria-pressed="false">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6l2 3h8v13H4Z"/></svg>
             <span>Ver archivos</span>
@@ -597,7 +748,8 @@ HTML = """<!doctype html>
           </button>
         </div>
         <div class="topo-scroll" id="topoScroll">
-          <svg id="topo" role="img" aria-label="Diagrama de arquitectura y flujo de CyberFlow"></svg>
+          <svg id="topo" role="img" aria-label="Mapa del sistema CyberFlow"></svg>
+          <div class="topo-tabla" id="topoTabla"></div>
         </div>
       </div>
       <div class="topo-detail" id="topoDetail"></div>
@@ -612,10 +764,86 @@ HTML = """<!doctype html>
     <p class="toolbar-hint" id="varPie"></p>
   </section>
 
+  <section id="s-vivo">
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 2-6 2 3h6"/></svg><h2>Datos en vivo: del registro a la variable</h2></div>
+    <p class="lede-small">Las dos fuentes del puerto espejo, en vivo: <strong>tramas PCAP</strong> (tcpdump) y <strong>eventos eve.json</strong> (Suricata). Cada fila aparece al capturarse, <em>provisional</em>, y queda <strong>confirmada</strong> cuando el motor la procesa y calcula el valor real de la variable.</p>
+    <div class="vivo-medidor" id="vivoMedidor">
+      <div class="vm-estado"><span class="vm-dot" id="vmDot"></span><b id="vmTitulo">Conectando&hellip;</b><span id="vmSub"></span></div>
+      <div class="vm-fuente"><div class="vm-cab">PCAP &middot; tcpdump</div><div class="vm-num"><b id="vmPcapTasa">—</b> tramas/s</div><svg id="vmPcapSpark" class="vm-spark" viewBox="0 0 120 28" preserveAspectRatio="none"></svg><div class="vm-pie" id="vmPcapPie">—</div></div>
+      <div class="vm-fuente"><div class="vm-cab">eve.json &middot; Suricata</div><div class="vm-num"><b id="vmEveTasa">—</b> eventos/s</div><svg id="vmEveSpark" class="vm-spark" viewBox="0 0 120 28" preserveAspectRatio="none"></svg><div class="vm-pie" id="vmEvePie">—</div></div>
+      <div class="vm-fuente"><div class="vm-cab">Desde que abriste la vista</div><div class="vm-num"><b id="vmTotal">0</b></div><div class="vm-pie" id="vmTotalPie">—</div></div>
+    </div>
+    <div class="vivo-bar">
+      <div class="range-toggle" id="vivoTabs">
+        <button data-vtab="eve" class="active">Eventos eve.json</button>
+        <button data-vtab="pcap">Tramas PCAP</button>
+        <button data-vtab="matriz">Matriz de trazabilidad</button>
+      </div>
+      <input type="text" id="vivoFiltro" class="ip-filter" placeholder="Filtrar: IP, protocolo, variable...">
+      <label class="vivo-chk" id="vivoTodosLbl" title="Por omisión solo se listan los registros que aportan a alguna variable"><input type="checkbox" id="vivoTodos"> ver todo</label>
+      <label class="vivo-chk" title="Bajar solo con cada registro nuevo, como Wireshark"><input type="checkbox" id="vivoSeguir" checked> seguir</label>
+      <button id="vivoPausa" class="export-btn" type="button">Pausar</button>
+      <button id="vivoLimpiar" class="export-btn" type="button">Limpiar</button>
+    </div>
+    <p class="toolbar-hint" id="vivoResumen">Cargando&hellip;</p>
+    <div class="tbl-wrap tbl-scroll vivo-tabla ws" id="vivoTabla"></div>
+    <div class="ws-detalle" id="vivoDetalle" hidden></div>
+    <p class="toolbar-hint" id="vivoPie"></p>
+  </section>
+
   <section id="s-modelo">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg><h2>Modelo congelado</h2></div>
     <div class="grid" id="model"></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="16.5" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Punto débil conocido:</strong> este modelo detecta peor la fuerza bruta de contraseñas (50&ndash;55%) que el resto de familias de ataque (&gt;80%). Una decisión PERMIT en ese escenario es menos confiable que en otros.</span></div>
+
+    <p class="lede-small" id="pruebasPrevias" style="margin-top:1.4rem"><strong style="color:var(--text)">Pruebas previas &mdash; comparación exploratoria de modelos.</strong> Se compararon <strong>7 candidatos</strong> con las mismas variables y la misma partición (<code>compare_frozen_models_metrics.py</code>, auditable desde <em>Mapa &rarr; Ver archivos</em>). El conjunto positivo son 179 ventanas de anomalía; el negativo, 276 ventanas normales de prueba. Se reportan F1, MCC, ROC&#8209;AUC y precisión media, sin reentrenar y verificando cada modelo contra el manifiesto. La selección posterior a ver resultados de prueba limita la estimación de generalización.</p>
+    <p class="lede-small">Y la detección no la hace el modelo solo. La <strong>ablación por componentes</strong> mide qué aporta cada pieza sobre 9 episodios (3 familias con 3 repeticiones):</p>
+    <div class="grid">
+      <div class="card"><div class="label">Modelo solo</div><div class="value">6 / 9</div></div>
+      <div class="card"><div class="label">Heurísticos solos</div><div class="value">7 / 9</div></div>
+      <div class="card accent"><div class="label">Modelo + heurísticos</div><div class="value">9 / 9</div></div>
+    </div>
+    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span>La <strong>complementariedad es el resultado medido</strong>: el modelo detectó flood HTTP y escaneo en esta batería, pero <strong>0/3 DNS</strong>; el heurístico DNS cubrió ese hueco. La fuerza bruta en vivo la confirma el heurístico <code>brute_force</code>. La combinación cubrió 9/9 episodios de las tres primeras familias; no significa que el modelo solo los cubra. La comparación con Suricata y sus límites están en la nota 32 del repositorio de orquestación.</span></div>
+  </section>
+
+  <section id="s-comparacion">
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg><h2>Comparación con Suricata</h2></div>
+    <p class="lede-small">Mismo PCAP para todos; qué es un ataque lo dice la referencia, no las alertas. Se cuenta por episodio.</p>
+    <div class="cmp-fig">
+      <svg viewBox="0 0 900 250" role="img" aria-label="Protocolo: entrada común y referencia independiente, cuatro condiciones, evaluación por episodio">
+        <defs><marker id="cmpFl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8aa0b4"/></marker></defs>
+        <g font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="13" fill="#dce8f5">
+          <rect x="10" y="30" width="190" height="72" rx="10" fill="#15202c" stroke="#3a5169"/>
+          <text x="105" y="60" text-anchor="middle" font-weight="600">Entrada común</text>
+          <text x="105" y="80" text-anchor="middle" fill="#9fb2c4" font-size="12">ataques · Nikto · tramo normal</text>
+          <rect x="10" y="150" width="190" height="72" rx="10" fill="#2a1d12" stroke="#b5741b"/>
+          <text x="105" y="180" text-anchor="middle" font-weight="600">Referencia</text>
+          <text x="105" y="200" text-anchor="middle" fill="#e8c9a4" font-size="12">guion y orquestador</text>
+          <rect x="290" y="10" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
+          <text x="415" y="37" text-anchor="middle">Suricata · firmas</text>
+          <rect x="290" y="66" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
+          <text x="415" y="93" text-anchor="middle">Solo modelo · score</text>
+          <rect x="290" y="122" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
+          <text x="415" y="149" text-anchor="middle">Solo heurísticos · eventos EVE</text>
+          <rect x="290" y="178" width="250" height="44" rx="9" fill="#0e3b3a" stroke="#5eead4"/>
+          <text x="415" y="205" text-anchor="middle" font-weight="600">CyberFlow · combinado</text>
+          <rect x="640" y="60" width="250" height="130" rx="10" fill="#15202c" stroke="#3a5169"/>
+          <text x="765" y="92" text-anchor="middle" font-weight="600">Evaluación por episodio</text>
+          <text x="765" y="116" text-anchor="middle" fill="#9fb2c4" font-size="12">detección por familia</text>
+          <text x="765" y="136" text-anchor="middle" fill="#9fb2c4" font-size="12">latencia desde el inicio</text>
+          <text x="765" y="156" text-anchor="middle" fill="#9fb2c4" font-size="12">falsos positivos aparte</text>
+        </g>
+        <g stroke="#8aa0b4" stroke-width="1.6" fill="none" marker-end="url(#cmpFl)">
+          <path d="M200,66 L288,32"/><path d="M200,66 L288,88"/><path d="M200,66 L288,144"/><path d="M200,66 L288,200"/>
+          <path d="M540,32 L638,110"/><path d="M540,88 L638,118"/><path d="M540,144 L638,128"/><path d="M540,200 L638,136"/>
+        </g>
+        <path d="M105,222 L105,242 L765,242 L765,194" stroke="#b5741b" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#cmpFl)"/>
+      </svg>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr><th>Familia</th><th>Suricata</th><th>Solo modelo</th><th>Solo heurísticos</th><th>CyberFlow</th></tr></thead><tbody id="cmpTabla"></tbody></table></div>
+    <p class="toolbar-hint">Celda: episodios detectados / medidos · latencia mediana [mín–máx]. CyberFlow lee eventos de EVE, no alertas de Suricata. En SPAN, Suricata es IDS: se compara detección, no bloqueo.</p>
+    <p class="toolbar-hint"><span class="badge heur">ejecutada</span> Batería N=3 por familia, con el mismo PCAP y la configuración fija. <span class="badge">propuesta</span> Campaña C3: N=5 por familia, fuerza bruta, tráfico legítimo intenso y 2 h de tráfico normal con los falsos positivos de Suricata medidos.</p>
+    <ul class="cmp-notas" id="cmpNotas"></ul>
   </section>
 
   <section id="s-alcance">
@@ -669,22 +897,34 @@ HTML = """<!doctype html>
       </div>
     </div>
     <div class="grid" id="counters"></div>
-    <div class="spark-wrap">
-      <svg id="spark" width="100%" height="46" viewBox="0 0 610 46" preserveAspectRatio="none"></svg>
-      <div class="chart-tip" id="sparkTip"></div>
-      <div class="spark-legend">
-        <span><i class="swatch" style="background:var(--danger)"></i>intervalo con ALERT</span>
-        <span><i class="swatch" style="background:var(--accent)"></i>solo PERMIT</span>
-        <span><i class="swatch" style="background:var(--border)"></i>sin tráfico</span>
-        <span id="sparkRangeLabel">&larr; hace 60 min&nbsp;&nbsp;&nbsp;ahora &rarr;</span>
+    <div class="act-cols">
+      <div>
+        <p class="act-h">Ventanas por minuto</p>
+        <div class="spark-wrap">
+          <svg id="spark" width="100%" height="46" viewBox="0 0 610 46" preserveAspectRatio="none"></svg>
+          <div class="chart-tip" id="sparkTip"></div>
+          <div class="spark-legend">
+            <span><i class="swatch" style="background:var(--danger)"></i>con alerta</span>
+            <span><i class="swatch" style="background:var(--accent)"></i>normal</span>
+            <span><i class="swatch" style="background:var(--border)"></i>sin tráfico</span>
+            <span id="sparkRangeLabel">&larr; hace 60 min&nbsp;&nbsp;&nbsp;ahora &rarr;</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="act-h">IPs con más acciones</p>
+        <div class="tbl-wrap">
+          <table><thead><tr><th>IP</th><th>Acciones</th><th>Última</th></tr></thead><tbody id="topIps"></tbody></table>
+        </div>
       </div>
     </div>
   </section>
 
   <section id="s-bloqueos">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><h2>IPs bloqueadas ahora</h2></div>
+    <p class="sec-sub" id="vigentesSub">LIMIT y BLOCK en vigor, con su caducidad. Los aplica el agente en el host protegido.</p>
     <div class="tbl-wrap">
-      <table><thead><tr><th>IP</th><th>Expira en</th></tr></thead><tbody id="blocked"></tbody></table>
+      <table><thead><tr><th>IP</th><th>Acción</th><th>Motivo</th><th>Desde</th><th>Expira en</th><th>Reincidencia</th></tr></thead><tbody id="blocked"></tbody></table>
     </div>
   </section>
 
@@ -692,6 +932,10 @@ HTML = """<!doctype html>
     <div class="sec-head-row">
       <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg><h2>Decisiones recientes</h2></div>
       <div class="toolbar">
+        <div class="range-toggle" id="decVista">
+          <button data-dv="accion" class="active">Con acción</button>
+          <button data-dv="todas">Todas</button>
+        </div>
         <input type="text" id="ipFilter" placeholder="Filtrar por IP..." class="ip-filter">
         <button id="exportCsv" class="export-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7,10 12,15 17,10"/><path d="M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
@@ -702,13 +946,32 @@ HTML = """<!doctype html>
     <p class="toolbar-hint" id="filterHint"></p>
     <div class="tbl-wrap tbl-scroll">
       <table>
-        <thead><tr><th>Hora</th><th>IP</th><th>Decisión</th><th>Acción</th><th>Motivo</th><th>Score <span class="th-sub">(← umbral)</span></th><th>Paquetes</th></tr></thead>
+        <thead><tr><th>Hora</th><th>IP</th><th>Acción</th><th>Motivo</th><th>Modelo <span class="th-sub">score frente al umbral</span></th><th>Paquetes</th></tr></thead>
         <tbody id="decisions"></tbody>
       </table>
     </div>
   </section>
 </div>
 
+<style>
+.ver-codigo{margin-top:6px;background:#15202c;border:1px solid #2b3a4a;color:#9fd0ff;border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer}
+.ver-codigo:hover{background:#1b2a39;border-color:#3a5169}
+.code-modal{position:fixed;inset:0;background:rgba(2,6,12,.72);z-index:300;display:flex;align-items:center;justify-content:center;padding:26px}
+.code-modal[hidden]{display:none}
+.code-box{background:#0f1720;border:1px solid #27333f;border-radius:12px;width:min(1000px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.code-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid #27333f;font-weight:600;color:#e6eef7}
+.code-head button{background:none;border:none;color:#8aa0b2;font-size:24px;line-height:1;cursor:pointer}
+.code-head button:hover{color:#fff}
+.code-sub{padding:7px 16px;font:11px ui-monospace,SFMono-Regular,Menlo,monospace;color:#7d93a6;border-bottom:1px solid #1b2530}
+.code-pre{margin:0;padding:14px 16px;overflow:auto;white-space:pre;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#d6e2ee;background:#0a1118;border-radius:0 0 12px 12px}
+</style>
+<div class="code-modal" id="codeModal" hidden>
+  <div class="code-box">
+    <div class="code-head"><span id="codeTitle"></span><button id="codeClose" type="button" aria-label="Cerrar">&times;</button></div>
+    <div class="code-sub" id="codeSub"></div>
+    <pre class="code-pre"><code id="codeBody"></code></pre>
+  </div>
+</div>
 <button class="tour-fab" id="tourBtn" title="Recorrido guiado">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.2a2.6 2.6 0 1 1 3.7 2.4c-.8.4-1.1 1-1.1 1.8"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
   Guía
@@ -735,6 +998,7 @@ const DETECTOR_LABEL = {
   no_live_packets_heuristic: 'sin paquetes aún (heurístico)',
   ocsvm_scaled: 'modelo (OCSVM)',
   if_recalibrado_2026_09: 'modelo recalibrado (IsolationForest)',
+  if_recalibrado: 'modelo recalibrado (IsolationForest)',
   auth_failure_heuristic: 'fuerza bruta (heurístico)',
   brute_force: 'fuerza bruta (heurístico)',
   port_scan: 'escaneo de puertos (heurístico)',
@@ -757,15 +1021,24 @@ const seenDecisionKeys = new Set();
 let unseenAlertCount = 0;
 let sessionStart = true; // evita contar todo el historial como "nuevo" en la primera carga
 
+// Decisiones que llegaron en este refresco (para resaltar su fila).
+let nuevasClaves = new Set();
+
 function markSeenAndCountNewAlerts(decisions) {
   let newAlerts = 0;
+  const nuevas = [];
+  nuevasClaves = new Set();
   for (const d of decisions) {
     const key = d.entity_ip + '|' + d.window_end_utc;
     if (seenDecisionKeys.has(key)) continue;
     seenDecisionKeys.add(key);
-    if (!sessionStart && d.decision === 'ALERT') newAlerts++;
+    if (sessionStart) continue;
+    nuevasClaves.add(key);
+    // Se avisa por ACCION: un heuristico puede pedir BLOCK con el modelo en PERMIT.
+    if (accionDeDecision(d) !== 'PERMIT') { newAlerts++; nuevas.push(d); }
   }
   sessionStart = false;
+  if (nuevas.length) avisar(nuevas);
   if (seenDecisionKeys.size > 5000) {
     // evita crecimiento sin limite en una sesion de navegador larga
     const it = seenDecisionKeys.values();
@@ -776,6 +1049,84 @@ function markSeenAndCountNewAlerts(decisions) {
     document.title = `(${unseenAlertCount}) ` + BASE_TITLE;
     document.getElementById('favicon').href = ALERT_FAVICON;
   }
+}
+
+// ---- Alertas flotantes ---------------------------------------------------
+// Una tarjeta por IP y accion, con el motivo. BLOCK se queda hasta cerrarla (o
+// 45 s); LIMIT se va sola a los 15 s. Pulsarla filtra Decisiones por esa IP.
+// Se pueden silenciar con el boton «Avisos» (se recuerda en este navegador).
+let avisosOn = true;
+try { avisosOn = localStorage.getItem('cf_avisos') !== '0'; } catch (e) { /* por omision, si */ }
+
+function pintarBotonAvisos() {
+  const b = document.getElementById('avisosBtn');
+  if (!b) return;
+  b.dataset.on = avisosOn ? '1' : '0';
+  b.textContent = avisosOn ? 'Avisos: sí' : 'Avisos: no';
+}
+pintarBotonAvisos();
+on('avisosBtn', 'click', () => {
+  avisosOn = !avisosOn;
+  try { localStorage.setItem('cf_avisos', avisosOn ? '1' : '0'); } catch (e) { /* sin persistir */ }
+  pintarBotonAvisos();
+});
+
+const REGLA_LEGACY = { auth_failure_heuristic: 'fallos de autenticación repetidos' };
+
+function motivoDeDecision(d) {
+  if (d.heuristico && d.heuristico.heuristico) {
+    return { regla: d.heuristico.heuristico, texto: d.heuristico.motivo || '' };
+  }
+  if (d.decision === 'ALERT' && String(d.detector_name || '').endsWith('_heuristic')) {
+    return { regla: d.detector_name, texto: REGLA_LEGACY[d.detector_name] || 'regla determinista' };
+  }
+  if (d.decision === 'ALERT') {
+    const s = d.score != null ? 'score ' + d.score.toFixed(3) : '';
+    const u = d.threshold != null ? ' bajo el umbral ' + Number(d.threshold).toFixed(3) : '';
+    return { regla: 'modelo', texto: 'anomalía: ' + s + u };
+  }
+  return { regla: '', texto: '' };
+}
+
+function avisar(nuevas) {
+  if (!avisosOn) return;
+  const cont = document.getElementById('toasts');
+  if (!cont) return;
+  const grupos = new Map();
+  for (const d of nuevas) {
+    const acc = accionDeDecision(d);
+    const k = d.entity_ip + '|' + acc;
+    const g = grupos.get(k) || { ip: d.entity_ip, acc: acc, n: 0, d: d };
+    g.n += 1;
+    if ((d.logged_at || 0) > (g.d.logged_at || 0)) g.d = d;
+    grupos.set(k, g);
+  }
+  for (const g of grupos.values()) {
+    const id = 'toast-' + g.ip.split('.').join('-') + '-' + g.acc;
+    const viejo = document.getElementById(id);
+    if (viejo) viejo.remove();
+    const m = motivoDeDecision(g.d);
+    const el = document.createElement('div');
+    el.className = 'toast ' + (g.acc === 'BLOCK' ? 'block' : 'limit');
+    el.id = id;
+    el.innerHTML = '<div class="t-cab"><span class="badge acc-' + g.acc.toLowerCase() + '">' + g.acc + '</span>'
+      + '<span class="t-ip">' + varEsc(g.ip) + '</span>'
+      + '<button class="t-x" title="Cerrar" aria-label="Cerrar">×</button></div>'
+      + '<div class="t-mot">' + varEsc(m.texto || 'acción del sistema') + '</div>'
+      + '<div class="t-meta">' + varEsc(m.regla) + ' · ' + fmtTime(g.d.logged_at)
+      + (g.n > 1 ? ' · ' + g.n + ' ventanas' : '') + (g.d.simulado ? ' · simulado' : '') + '</div>';
+    el.addEventListener('click', (ev) => {
+      if (ev.target.closest('.t-x')) { el.remove(); return; }
+      const f = document.getElementById('ipFilter');
+      if (f) { f.value = g.ip; decVista = 'todas'; pintarDecVista(); renderDecisionsTable(); }
+      const s = document.getElementById('s-decisiones');
+      if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.remove();
+    });
+    cont.prepend(el);
+    setTimeout(() => el.remove(), g.acc === 'BLOCK' ? 45000 : 15000);
+  }
+  while (cont.children.length > 4) cont.lastElementChild.remove();
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -790,7 +1141,7 @@ function card(label, value, cls) {
   return `<div class="card ${cls||''}"><div class="label">${label}</div><div class="value">${value}</div></div>`;
 }
 function fmtTime(t) {
-  return new Date(t * 1000).toLocaleTimeString();
+  return new Date(t * 1000).toLocaleTimeString('es-PE', { hour12: false });
 }
 
 // Fila de KPIs: las cuatro cifras que un operador mira primero. Todo sale de
@@ -1007,8 +1358,11 @@ function on(id, evento, fn) {
 // pasos cuyo elemento no existe -por rol o vista- se saltan solos.
 const TOUR_PASOS = [
   { sel: '#kpis', t: 'Las cifras clave', d: 'Cuatro números de un vistazo: entidades vigiladas, ventanas analizadas por hora, cuántos scores rozan el umbral y las alertas reales de la última hora.' },
-  { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo → decisión → bloqueo. Pulsa cualquier componente para ver qué hace y qué mide.' },
-  { sel: '#s-modelo', t: 'El modelo y su umbral', d: 'El detector desplegado (su nombre real aparece en la tarjeta Detector) aprende solo con tráfico normal; su umbral, fijado en validación, separa lo normal de lo anómalo. Aquí ves sus métricas.' },
+  { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo y heurísticos → decisión → respuesta en el host. Pulsa cualquier componente para ver qué hace.' },
+  { sel: '#topoVista', t: 'Siete vistas', d: 'De la red a la validación: cada botón es un diagrama del mismo sistema.' },
+  { sel: '#topoArchivosBtn', t: 'Código auditable', d: 'En modo desarrollador, pulsa Ver archivos, elige un componente y un archivo; en su ficha pulsa ◎ Ver contenido. El visor es de solo lectura y solo muestra rutas permitidas.' },
+  { sel: '#s-modelo', t: 'El detector activo y su umbral', d: 'El detector desplegado aprende la normalidad de esta red; el umbral se fijó con validación. Aquí ves el modelo activo y sus métricas, no una etiqueta fija de OCSVM.' },
+  { sel: '#pruebasPrevias', t: 'Pruebas previas', d: 'Siete modelos se compararon en el estudio; la ablación sobre nueve episodios separa modelo solo (6), heurísticos solos (7) y ambos combinados (9). No confundas el 9/9 del sistema con el modelo solo.' },
   { sel: '#s-scores', t: 'Distribución de scores', d: 'No solo si alertó o no, sino cuánto margen hubo respecto al umbral. Rojo = ALERT, verde = PERMIT.' },
   { sel: '#s-decisiones', t: 'Las decisiones', d: 'Cada ventana con su decisión, su score frente al umbral (la mini-barra) y el motivo. Filtrable por IP y exportable.' },
   { sel: '#s-simulacion', t: 'Escenarios guiados', d: 'Comandos listos para provocar tráfico normal o un ataque y ver cómo responde el modelo. El panel no ejecuta: copias el comando y observas.' },
@@ -1119,7 +1473,7 @@ async function refresh() {
       // no un 0 % que parecería una medición.
       const pct = (v, d) => (v == null ? '—' : (v * 100).toFixed(d) + '%');
       modelEl.innerHTML = [
-        card('Detector', DETECTOR_LABEL[m.detector_name] || m.detector_name),
+        card('Detector', escSimple(DETECTOR_LABEL[m.detector_name] || m.detector_name || 'no disponible')),
         card('Umbral', m.threshold.toFixed(4), 'accent'),
         card('FPR benigno', pct(m.test_fpr, 2)),
         card('Detección global', pct(m.detection_rate, 1), 'accent'),
@@ -1127,17 +1481,15 @@ async function refresh() {
       ].join('');
     }
 
-    blocked.innerHTML = status.blocked.length
-      ? status.blocked.map(b => `<tr><td class="ip">${b.ip}</td><td class="num">${b.expires_seconds != null ? b.expires_seconds + 's' : '?'}</td></tr>`).join('')
-      : '<tr class="empty-row"><td colspan="2">Ninguna IP bloqueada ahora mismo.</td></tr>';
+    renderVigentes(status.vigentes || [], status.blocked || []);
 
     const c = status.counters;
     counters.innerHTML = [
-      card('Total', c.total),
-      card('ALERT (modelo)', c.alert_model, c.alert_model > 0 ? 'bad' : ''),
-      card('ALERT (fuerza bruta)', c.alert_auth_heuristic, c.alert_auth_heuristic > 0 ? 'bad' : ''),
-      card('PERMIT (modelo)', c.permit_model, 'ok'),
-      card('PERMIT (sin tráfico)', c.permit_heuristic),
+      card('Ventanas analizadas', (c.total || 0).toLocaleString('es')),
+      card('BLOCK', c.block || 0, c.block > 0 ? 'bad' : ''),
+      card('LIMIT', c.limit || 0, c.limit > 0 ? 'amber' : ''),
+      card('IPs con acción', c.ips_con_accion || 0, c.ips_con_accion > 0 ? 'amber' : ''),
+      card('Anomalías del modelo', c.alert_model || 0, c.alert_model > 0 ? 'bad' : ''),
     ].join('');
 
     const alcanceEl = document.getElementById('alcance');
@@ -1157,9 +1509,10 @@ async function refresh() {
     if (currentRange === '1h') renderSparkline(status.activity);
     else loadActivity(currentRange);
 
-    lastDecisions = await (await fetch('/api/decisions?limit=100')).json();
+    lastDecisions = await (await fetch('/api/decisions?limit=600')).json();
     markSeenAndCountNewAlerts(lastDecisions);
     renderDecisionsTable();
+    renderTopIps();
   } catch (e) {
     stamp.textContent = 'Error al actualizar: ' + e;
   }
@@ -1194,42 +1547,145 @@ function miniBarraScore(score) {
 // anomalia del modelo (ALERT) degrada a LIMIT; lo demas, PERMIT. Si el motor
 // aun no emite el campo `heuristico` (no reiniciado), se cae a modelo/PERMIT.
 function accionDeDecision(d) {
-  if (d.heuristico && d.heuristico.accion) return d.heuristico.accion;
-  return d.decision === 'ALERT' ? 'LIMIT' : 'PERMIT';
+  const sev = { BLOCK: 2, LIMIT: 1, PERMIT: 0 };
+  let acc = 'PERMIT';
+  if (d.decision === 'ALERT') {
+    acc = String(d.detector_name || '').endsWith('_heuristic') ? 'BLOCK' : 'LIMIT';
+  }
+  if (d.heuristico && sev[d.heuristico.accion] > sev[acc]) acc = d.heuristico.accion;
+  return acc;
+}
+
+function haceTexto(t) {
+  const s = Math.max(0, Math.round(Date.now() / 1000 - t));
+  if (s < 60) return 'hace ' + s + ' s';
+  if (s < 3600) return 'hace ' + Math.floor(s / 60) + ' min';
+  return 'hace ' + Math.floor(s / 3600) + ' h';
+}
+
+function duracionTexto(s) {
+  if (s < 60) return s + ' s';
+  const m = Math.floor(s / 60), r = s % 60;
+  return m + ' min' + (r ? ' ' + r + ' s' : '');
+}
+
+// Acciones vigentes: del feed publicado (caducidad exacta) o reconstruidas del
+// registro con la misma escalera. Si el host tuviera nftables local, tambien.
+function renderVigentes(vigentes, locales) {
+  const filas = vigentes.map(v => {
+    const total = v.accion === 'BLOCK' ? ({ 1: 300, 2: 1800, 3: 3600 }[v.nivel] || 300) + 60 : 360;
+    const pct = Math.max(2, Math.min(100, Math.round(100 * v.expira_s / total)));
+    const color = v.accion === 'BLOCK' ? 'var(--danger)' : 'var(--amber)';
+    const reinc = v.accion === 'BLOCK'
+      ? 'nivel ' + (v.nivel || 1) + (v.revisar_humano ? ' · revisar' : '')
+      : '—';
+    return `<tr class="row-${v.accion.toLowerCase()}"><td class="ip">${varEsc(v.ip)}</td>`
+      + `<td><span class="badge acc-${v.accion.toLowerCase()}">${v.accion}</span></td>`
+      + `<td class="why">${varEsc(v.origen || '')}${v.motivo ? ' · ' + varEsc(v.motivo) : ''}</td>`
+      + `<td class="num">${v.desde ? fmtTime(v.desde) : '—'}${v.ofensas ? '<span class="hace">' + v.ofensas + ' ventanas</span>' : ''}</td>`
+      + `<td class="num">${duracionTexto(v.expira_s)}<div class="vig-barra"><i style="width:${pct}%;background:${color}"></i></div></td>`
+      + `<td>${reinc}<div class="vig-fuente">${v.fuente === 'feed' ? 'feed publicado' : 'según registro'}</div></td></tr>`;
+  });
+  for (const b of locales) {
+    filas.push(`<tr class="row-block"><td class="ip">${varEsc(b.ip)}</td><td><span class="badge acc-block">BLOCK</span></td>`
+      + `<td class="why">nftables local</td><td class="num">—</td>`
+      + `<td class="num">${b.expires_seconds != null ? duracionTexto(b.expires_seconds) : '?'}</td><td>—</td></tr>`);
+  }
+  document.getElementById('blocked').innerHTML = filas.length ? filas.join('')
+    : '<tr class="empty-row"><td colspan="6">Ninguna IP limitada ni bloqueada ahora mismo.</td></tr>';
+}
+
+function renderTopIps() {
+  const el = document.getElementById('topIps');
+  if (!el) return;
+  const hora = Date.now() / 1000 - 3600;
+  const por = new Map();
+  for (const d of lastDecisions) {
+    if ((d.logged_at || 0) < hora) continue;
+    const acc = accionDeDecision(d);
+    if (acc === 'PERMIT') continue;
+    const p = por.get(d.entity_ip) || { ip: d.entity_ip, n: 0, block: 0, ult: 0, acc: acc };
+    p.n += 1;
+    if (acc === 'BLOCK') p.block += 1;
+    if ((d.logged_at || 0) > p.ult) { p.ult = d.logged_at; p.acc = acc; }
+    por.set(d.entity_ip, p);
+  }
+  const lista = Array.from(por.values()).sort((a, b) => b.block - a.block || b.n - a.n).slice(0, 6);
+  el.innerHTML = lista.length ? lista.map(p =>
+    `<tr class="row-${p.acc.toLowerCase()}" data-ip="${varEsc(p.ip)}" style="cursor:pointer"><td class="ip">${varEsc(p.ip)}</td>`
+    + `<td class="num">${p.n}</td><td><span class="badge acc-${p.acc.toLowerCase()}">${p.acc}</span><span class="hace">${haceTexto(p.ult)}</span></td></tr>`).join('')
+    : '<tr class="empty-row"><td colspan="3">Ninguna IP con acciones en la última hora.</td></tr>';
+}
+
+on('topIps', 'click', (ev) => {
+  const tr = ev.target.closest('tr[data-ip]');
+  if (!tr) return;
+  document.getElementById('ipFilter').value = tr.dataset.ip;
+  decVista = 'todas'; pintarDecVista(); renderDecisionsTable();
+  document.getElementById('s-decisiones').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// Vista de la tabla: por omision solo lo que pidio una accion; «Todas» incluye
+// los PERMIT. Un analista empieza por lo que se corto o se degrado.
+let decVista = 'accion';
+function pintarDecVista() {
+  document.querySelectorAll('#decVista button').forEach(b => b.classList.toggle('active', b.dataset.dv === decVista));
+}
+on('decVista', 'click', (ev) => {
+  const b = ev.target.closest('button[data-dv]');
+  if (!b) return;
+  decVista = b.dataset.dv;
+  pintarDecVista();
+  renderDecisionsTable();
+});
+
+function filasFiltradas() {
+  const query = document.getElementById('ipFilter').value.trim();
+  let rows = lastDecisions;
+  if (decVista === 'accion') rows = rows.filter(d => accionDeDecision(d) !== 'PERMIT');
+  if (query) rows = rows.filter(d => d.entity_ip.includes(query));
+  return { rows, query };
 }
 
 function renderDecisionsTable() {
-  const query = document.getElementById('ipFilter').value.trim();
-  const rows = query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions;
-  document.getElementById('filterHint').textContent = query
-    ? `${rows.length} de ${lastDecisions.length} decisiones coinciden con "${query}"`
-    : '';
+  const { rows, query } = filasFiltradas();
+  const nAcc = lastDecisions.filter(d => accionDeDecision(d) !== 'PERMIT').length;
+  document.getElementById('filterHint').textContent =
+    (decVista === 'accion' ? nAcc + ' con acción de ' + lastDecisions.length + ' decisiones recientes' : lastDecisions.length + ' decisiones recientes')
+    + (query ? ' · ' + rows.length + ' coinciden con «' + query + '»' : '');
   document.getElementById('decisions').innerHTML = rows.length ? rows.map(d => {
-    const isAlert = d.decision === 'ALERT';
-    const badge = isAlert ? `<span class="badge alert">${ICON.bad} ALERT</span>` : `<span class="badge permit">${ICON.ok} PERMIT</span>`;
     const accion = accionDeDecision(d);
     const accBadge = `<span class="badge acc-${accion.toLowerCase()}">${accion}</span>`;
-    const scoreCell = d.score != null
-      ? `<span class="score-cell"><span>${d.score.toFixed(4)}</span>${miniBarraScore(d.score)}</span>`
-      : '&mdash;';
-    return `<tr class="${isAlert ? 'row-alert' : ''}"><td>${fmtTime(d.logged_at)}</td><td class="ip">${d.entity_ip}</td>` +
-      `<td>${badge}</td><td>${accBadge}</td><td class="why">${DETECTOR_LABEL[d.detector_name] || d.detector_name}</td>` +
-      `<td class="num">${scoreCell}</td><td class="num">${d.packet_count_10s}</td></tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="7">${query ? 'Ninguna decisión coincide con el filtro.' : 'Sin decisiones recientes.'}</td></tr>`;
+    const isAlert = d.decision === 'ALERT';
+    const modelo = d.score != null
+      ? `<span class="modelo-celda"><span class="${isAlert ? 'm-alert' : 'm-permit'}">${isAlert ? 'ALERT' : 'normal'}</span>`
+        + `<span>${d.score.toFixed(3)}</span>${miniBarraScore(d.score)}</span>`
+      : '<span class="modelo-celda"><span class="m-permit">sin puntuar</span></span>';
+    const m = motivoDeDecision(d);
+    const motivoTxt = m.regla && m.regla !== 'modelo'
+      ? `<span class="badge heur" title="regla determinista, sin firma">${varEsc(m.regla)}</span> ${varEsc(m.texto)}`
+      : (m.regla === 'modelo' ? varEsc(m.texto) : varEsc(DETECTOR_LABEL[d.detector_name] || d.detector_name || ''));
+    const key = d.entity_ip + '|' + d.window_end_utc;
+    const cls = (accion !== 'PERMIT' ? 'row-' + accion.toLowerCase() : '') + (nuevasClaves.has(key) ? ' row-nueva' : '');
+    return `<tr class="${cls}"><td class="num">${fmtTime(d.logged_at)}<span class="hace">${haceTexto(d.logged_at)}</span></td>`
+      + `<td class="ip">${varEsc(d.entity_ip)}</td><td>${accBadge}</td><td class="why">${motivoTxt}</td>`
+      + `<td>${modelo}</td><td class="num">${d.packet_count_10s ?? '—'}</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="6">${query ? 'Ninguna decisión coincide con el filtro.'
+      : (decVista === 'accion' ? 'Ninguna acción reciente: todo el tráfico se permitió.' : 'Sin decisiones recientes.')}</td></tr>`;
 }
 
 on('ipFilter', 'input', renderDecisionsTable);
 
 on('exportCsv', 'click', () => {
-  const query = document.getElementById('ipFilter').value.trim();
-  const rows = query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions;
+  const { rows } = filasFiltradas();
   const header = ['hora_utc', 'ip', 'decision', 'accion', 'motivo', 'score', 'paquetes_10s'];
   const csvRows = rows.map(d => [
     d.window_end_utc,
     d.entity_ip,
     d.decision,
     accionDeDecision(d),
-    DETECTOR_LABEL[d.detector_name] || d.detector_name,
+    (motivoDeDecision(d).regla ? motivoDeDecision(d).regla + ': ' + motivoDeDecision(d).texto
+      : (DETECTOR_LABEL[d.detector_name] || d.detector_name)),
     d.score != null ? d.score : '',
     d.packet_count_10s,
   ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
@@ -1305,7 +1761,7 @@ const TOPO_VISTAS = {
     // Flujo HORIZONTAL de izquierda a derecha: cada fase es una columna
     // (Hosts | Adquisicion | Analisis | Decision | Observabilidad) y el paquete
     // avanza de izquierda a derecha. Un punto lo recorre en vivo.
-    packet: 'M374,70 L374,275 L540,139 L628,215 L894,139 L894,279 L1148,187 L1424,187 L1680,183',
+    packet: 'M374,70 L374,275 L540,139 L628,215 L894,139 L894,249 L1148,187 L1424,187 L1680,183',
     grupos: [
       { x: 12,   y: 32, w: 200, h: 456, txt: 'Hosts · VLAN 20/30' },
       { x: 272,  y: 32, w: 460, h: 456, txt: 'Adquisición',          n: 1 },
@@ -1325,18 +1781,20 @@ const TOPO_VISTAS = {
       { id: 'pcap',      x: 540, y: 192, w: 176, h: 46, icono: 'fichero', titulo: 'anillo live-*.pcap', tag: 'ARTEFACTO', clase: 'artefacto' },
       { id: 'suricata',  x: 540, y: 274, w: 176, h: 58, icono: 'lupa',   titulo: 'Suricata',           tag: 'SERVICIO' },
       { id: 'eve',       x: 540, y: 356, w: 176, h: 46, icono: 'fichero', titulo: 'eve.json',          tag: 'ARTEFACTO', clase: 'artefacto' },
-      { id: 'motor',     x: 806, y: 110, w: 176, h: 58, icono: 'cpu',    titulo: 'Atribución de flujo', tag: 'SERVICIO' },
-      { id: 'variables', x: 806, y: 250, w: 176, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s',   tag: 'L2·L3·L4·L7' },
-      { id: 'descartes', x: 806, y: 388, w: 176, h: 48, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO', clase: 'sumidero' },
-      { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Reentrenamiento', tag: 'MENSUAL / POR DERIVA' },
+      { id: 'motor',     x: 806, y: 110, w: 176, h: 58, icono: 'cpu',    titulo: 'Parser de paquetes', tag: 'TRAMA → FLUJO · L2·L3·L4' },
+      { id: 'variables', x: 806, y: 220, w: 176, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s',   tag: 'POR IP Y VENTANA' },
+      { id: 'parser_eve', x: 806, y: 330, w: 176, h: 58, icono: 'reglas', titulo: 'Parser de eventos', tag: 'JSON → L7 · HTTP·DNS·TLS', val: 'http · dns · tls' },
+      { id: 'descartes', x: 806, y: 420, w: 176, h: 48, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO', clase: 'sumidero' },
+      { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Aprendizaje', tag: 'SUPERVISADO · CADA NOCHE' },
       { id: 'modelo',    x: 1060, y: 158, w: 176, h: 58, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
       { id: 'heuristicos', x: 1060, y: 276, w: 176, h: 58, icono: 'reglas', titulo: 'Heurísticos',     tag: 'DETERMINISTAS' },
-      { id: 'control',   x: 1336, y: 158, w: 176, h: 58, icono: 'decision', titulo: 'Decisión',        tag: 'PERMIT / LIMIT / BLOCK' },
-      { id: 'feed',      x: 1336, y: 256, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',     tag: 'ed25519' },
-      { id: 'agente',    x: 1336, y: 354, w: 176, h: 58, icono: 'escudo', titulo: 'Agente en host',   tag: 'nftables LIMIT/BLOCK' },
+      { id: 'control',   x: 1336, y: 158, w: 176, h: 58, icono: 'decision', titulo: 'Decisión',        tag: 'PERMIT · ALERT → LIMIT/BLOCK' },
+      { id: 'feed',      x: 1336, y: 246, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',     tag: 'ed25519 · CADA 60 s' },
+      { id: 'relay',     x: 1336, y: 334, w: 176, h: 52, icono: 'espejo', titulo: 'Relay (bastión)',   val: 'réplica · cada 60 s' },
+      { id: 'agente',    x: 1336, y: 416, w: 176, h: 58, icono: 'escudo', titulo: 'Agente en host',   tag: 'PULL 60 s · nftables' },
       { id: 'registro',  x: 1592, y: 160, w: 176, h: 46, icono: 'fichero', titulo: 'motor_decision.log', tag: 'ARTEFACTO', clase: 'artefacto' },
       { id: 'panel',     x: 1592, y: 256, w: 176, h: 52, icono: 'ojo',    titulo: 'Este panel',        tag: 'SOLO LECTURA' },
-      { id: 'wazuh',     x: 1592, y: 352, w: 176, h: 52, icono: 'ojo',    titulo: 'Wazuh (SIEM)',      tag: 'CONCENTRADOR' },
+      { id: 'wazuh',     x: 1592, y: 352, w: 176, h: 52, icono: 'ojo',    titulo: 'Wazuh (SIEM)',      tag: 'PREVISTO', clase: 'artefacto' },
     ],
     aristas: [
       { d: 'M200,94 L286,90',                       desde: 'atacante', hasta: 'red', etiqueta: 'ataca',    ex: 243, ey: 82 },
@@ -1349,25 +1807,277 @@ const TOPO_VISTAS = {
       { d: 'M462,275 C500,282 516,300 540,303',     desde: 'nic',      hasta: 'suricata', etiqueta: 'paquetes', ex: 500, ey: 322 },
       { d: 'M628,168 L628,192',                     desde: 'captura',  hasta: 'pcap' },
       { d: 'M628,332 L628,356',                     desde: 'suricata', hasta: 'eve' },
-      { d: 'M716,215 C760,208 772,146 806,139',     desde: 'pcap',     hasta: 'motor', etiqueta: 'L3·L4', ex: 762, ey: 165 },
-      { d: 'M716,379 C762,360 774,150 806,145',     desde: 'eve',      hasta: 'motor', etiqueta: 'HTTP·DNS·TLS', ex: 764, ey: 300 },
-      { d: 'M894,168 L894,250',                     desde: 'motor',    hasta: 'variables', etiqueta: 'atribuye por IP', ex: 952, ey: 210 },
-      { d: 'M820,168 C760,280 760,360 850,388',     desde: 'motor',    hasta: 'descartes', tipo: 'descarte', etiqueta: 'descarta', ex: 744, ey: 300 },
-      { d: 'M982,279 C1020,272 1036,193 1060,187',  desde: 'variables', hasta: 'modelo', etiqueta: '31 variables', ex: 1022, ey: 256 },
-      { d: 'M982,279 C1020,286 1036,302 1060,305',  desde: 'variables', hasta: 'heuristicos', etiqueta: 'mismas variables', ex: 1024, ey: 324 },
-      { d: 'M1148,128 L1148,158',                   desde: 'reentrenamiento', hasta: 'modelo', etiqueta: 'entrena y congela', ex: 1200, ey: 143 },
+      { d: 'M716,215 C760,208 772,146 806,139',     desde: 'pcap',     hasta: 'motor', etiqueta: 'tramas', ex: 762, ey: 165 },
+      { d: 'M716,379 C760,376 776,362 806,359',     desde: 'eve',      hasta: 'parser_eve', etiqueta: 'eventos', ex: 760, ey: 394 },
+      { d: 'M894,168 L894,220',                     desde: 'motor',    hasta: 'variables', etiqueta: 'L2·L3·L4 por IP', ex: 950, ey: 198 },
+      { d: 'M894,330 L894,278',                     desde: 'parser_eve', hasta: 'variables', etiqueta: 'L7 por IP', ex: 936, ey: 308 },
+      { d: 'M806,150 C752,240 752,420 806,446',     desde: 'motor',    hasta: 'descartes', tipo: 'descarte', etiqueta: 'descarta', ex: 768, ey: 290 },
+      { d: 'M982,249 C1020,242 1036,193 1060,187',  desde: 'variables', hasta: 'modelo', etiqueta: '28 al modelo', ex: 1020, ey: 232 },
+      { d: 'M982,249 C1020,256 1036,300 1060,305',  desde: 'variables', hasta: 'heuristicos', etiqueta: '+ conteos', ex: 1012, ey: 318 },
+      { d: 'M1148,128 L1148,158',                   desde: 'reentrenamiento', hasta: 'modelo', etiqueta: 'promover', ex: 1186, ey: 143 },
       { d: 'M1236,187 L1336,187',                   desde: 'modelo',   hasta: 'control', etiqueta: 'score &lt; umbral', ex: 1286, ey: 178 },
       { d: 'M1236,305 C1290,300 1302,196 1336,192', desde: 'heuristicos', hasta: 'control', etiqueta: 'confirmado', ex: 1290, ey: 250 },
-      { d: 'M1424,216 L1424,256',                   desde: 'control',  hasta: 'feed', etiqueta: 'veredicto firmado', ex: 1424, ey: 243 },
-      { d: 'M1424,314 L1424,354',                   desde: 'feed',     hasta: 'agente', etiqueta: 'pull + verifica', ex: 1424, ey: 337 },
+      { d: 'M1424,216 L1424,246',                   desde: 'control',  hasta: 'feed' },
+      { d: 'M1424,304 L1424,334',                   desde: 'feed',     hasta: 'relay' },
+      { d: 'M1424,386 L1424,416',                   desde: 'relay',    hasta: 'agente', tipo: 'fijo' },
       { d: 'M1512,187 C1550,185 1562,184 1592,183', desde: 'control',  hasta: 'registro', etiqueta: 'cada decisión', ex: 1552, ey: 175 },
       { d: 'M1680,206 L1680,256',                   desde: 'registro', hasta: 'panel', etiqueta: 'lee', ex: 1698, ey: 234 },
-      { d: 'M1660,206 C1585,270 1585,330 1660,352', desde: 'registro', hasta: 'wazuh', etiqueta: 'syslog', ex: 1642, ey: 336 },
+      { d: 'M1660,206 C1585,270 1585,330 1660,352', desde: 'registro', hasta: 'wazuh', tipo: 'previsto', etiqueta: 'syslog', ex: 1642, ey: 336 },
     ],
   },
+  // --- Vista METODOLOGICA: como se CONSTRUYO (las 7 fases del metodo) -------
+  metodologica: {
+    w: 1632, h: 330,
+    packet: 'M32,109 L1608,109',
+    grupos: [
+      { x: 20,   y: 20, w: 210, h: 150, txt: 'Datos y línea base',  n: 1 },
+      { x: 250,  y: 20, w: 210, h: 150, txt: 'Preproceso y features', n: 2 },
+      { x: 480,  y: 20, w: 210, h: 150, txt: 'Modelado híbrido',    n: 3 },
+      { x: 710,  y: 20, w: 210, h: 150, txt: 'Experimento y eval.', n: 4 },
+      { x: 940,  y: 20, w: 210, h: 150, txt: 'Respuesta',           n: 5 },
+      { x: 1170, y: 20, w: 210, h: 150, txt: 'Despliegue',          n: 6 },
+      { x: 1400, y: 20, w: 210, h: 150, txt: 'Validación',          n: 7 },
+    ],
+    // val = estado de la fase; las tres vueltas atras van anidadas por debajo
+    // (la mas corta arriba) para que no se crucen.
+    nodos: [
+      { id: 'm_datos',  x: 32,   y: 78, w: 196, h: 62, icono: 'disco',    titulo: 'Línea base real',       tag: 'SPAN · PCAP · eve', val: 'hecho' },
+      { id: 'm_feat',   x: 262,  y: 78, w: 196, h: 62, icono: 'tabla',    titulo: '28 variables L3/L4/L7', tag: 'extractor congelado', val: 'hecho' },
+      { id: 'm_modelo', x: 492,  y: 78, w: 196, h: 62, icono: 'modelo',   titulo: 'IF + heurísticos',      tag: 'θ = −0,568892', val: 'hecho' },
+      { id: 'm_eval',   x: 722,  y: 78, w: 196, h: 62, icono: 'lupa',     titulo: 'Replay vs Suricata',    tag: '9/9 vs 0/9 · N=3', val: 'parcial · falta C3' },
+      { id: 'm_resp',   x: 952,  y: 78, w: 196, h: 62, icono: 'escudo',   titulo: 'PERMIT/LIMIT/BLOCK',    tag: 'feed firmado', val: 'hecho' },
+      { id: 'm_desp',   x: 1182, y: 78, w: 196, h: 62, icono: 'nic',      titulo: 'Desplegado en sensor',  tag: 'systemd · replicable', val: 'hecho' },
+      { id: 'm_valid',  x: 1412, y: 78, w: 196, h: 62, icono: 'ojo',      titulo: 'Interna + externa',     tag: 'demo · TAM · expertos', val: 'en curso' },
+    ],
+    aristas: [
+      { d: 'M228,109 L262,109',   desde: 'm_datos',  hasta: 'm_feat',   tipo: 'fijo' },
+      { d: 'M458,109 L492,109',   desde: 'm_feat',   hasta: 'm_modelo', tipo: 'fijo' },
+      { d: 'M688,109 L722,109',   desde: 'm_modelo', hasta: 'm_eval',   tipo: 'fijo' },
+      { d: 'M918,109 L952,109',   desde: 'm_eval',   hasta: 'm_resp',   tipo: 'fijo' },
+      { d: 'M1148,109 L1182,109', desde: 'm_resp',   hasta: 'm_desp',   tipo: 'fijo' },
+      { d: 'M1378,109 L1412,109', desde: 'm_desp',   hasta: 'm_valid',  tipo: 'fijo' },
+      { d: 'M790,140 L790,196 L640,196 L640,140',     desde: 'm_eval',  hasta: 'm_modelo', tipo: 'retorno', etiqueta: 'recalibrar', ex: 715, ey: 190 },
+      { d: 'M1280,140 L1280,240 L560,240 L560,140',   desde: 'm_desp',  hasta: 'm_modelo', tipo: 'persona', etiqueta: 'reentrenar con aprobación humana', ex: 920, ey: 234 },
+      { d: 'M1510,140 L1510,286 L360,286 L360,140',   desde: 'm_valid', hasta: 'm_feat',   tipo: 'retorno', etiqueta: 'observaciones → mejoras', ex: 935, ey: 280 },
+    ],
+  },
+  // --- Vista CONSTRUCCION Y ENTRENAMIENTO: de los datos al modelo congelado
+  // (fila 1, una vez y en seco) y su ciclo de vida (fila 2, de derecha a
+  // izquierda). Responde: donde se entrena, como se partio, que se comparo, con
+  // que metricas, por que gano, que cambia al reentrenar y cada cuanto.
+  // Fila 3: el aprendizaje supervisado de cyberflow_aprendizaje.py, de
+  // izquierda a derecha, con sus cuatro defensas y la aprobacion humana que
+  // devuelve el modelo nuevo a "Congelar".
+  construccion: {
+    w: 1560, h: 600,
+    packet: 'M140,104 L1420,104 L1420,284 L908,284 L908,316 L344,432 L344,464 L1420,464 L1420,316',
+    grupos: [
+      { x: 20, y: 36,  w: 1520, h: 130, txt: 'Construcción: una vez, en seco, con datos de esta red', n: 1 },
+      { x: 20, y: 216, w: 1520, h: 130, txt: 'Operación', n: 2 },
+      { x: 20, y: 396, w: 1520, h: 150, txt: 'Aprendizaje supervisado: cada noche, lo promueve una persona', n: 3 },
+    ],
+    nodos: [
+      { id: 'c_datos',   x: 40,   y: 72,  w: 200, h: 64, icono: 'disco',    titulo: 'Datos de la red',      tag: 'SPAN → PCAP + eve.json', val: '335 202 ventanas' },
+      { id: 'c_limpia',  x: 296,  y: 72,  w: 200, h: 64, icono: 'tijera',   titulo: 'Limpieza y alcance',   tag: 'espejo · control · excluidas', val: 'sin imputación' },
+      { id: 'c_part',    x: 552,  y: 72,  w: 200, h: 64, icono: 'tabla',    titulo: 'Partición',            tag: 'train / validación / test', val: '204 148 / 65 633 / 65 421' },
+      { id: 'c_cand',    x: 808,  y: 72,  w: 200, h: 64, icono: 'modelo',   titulo: 'Candidatos',           tag: 'IF · LOF · OCSVM · EE', val: '7 (laboratorio) · IF aquí' },
+      { id: 'c_metr',    x: 1064, y: 72,  w: 200, h: 64, icono: 'lupa',     titulo: 'Comparar métricas',    tag: 'FPR · recall · F1 · AUC', val: 'criterio fijado antes' },
+      { id: 'c_sel',     x: 1320, y: 72,  w: 200, h: 64, icono: 'decision', titulo: 'Selección',            tag: 'transfiere a esta red', val: 'IF recalibrado' },
+      { id: 'c_cong',    x: 1320, y: 252, w: 200, h: 64, icono: 'cpu',      titulo: 'Congelar modelo', tag: 'α=0,05 · −0,568892', val: 'sha256 d27f6871…' },
+      { id: 'c_desp',    x: 1064, y: 252, w: 200, h: 64, icono: 'nic',      titulo: 'Despliegue',           tag: 'promover + verificar', val: 'manifiesto + hash' },
+      { id: 'c_acum',    x: 808,  y: 252, w: 200, h: 64, icono: 'fichero',  titulo: 'Acumulación',          tag: 'temporizador · v3', val: 'cada 10 min' },
+      { id: 'c_vivo',    x: 552,  y: 252, w: 200, h: 64, icono: 'escudo',   titulo: 'Motor en vivo',        tag: 'PERMIT · ALERT · BLOCK', val: 'marca IPs sospechosas' },
+      { id: 'a_oro',     x: 40,   y: 432, w: 176, h: 64, icono: 'disco',    titulo: 'Conjunto de oro',      tag: 'FIJO · NUNCA ENTRENA', val: 'test de la nota L', clase: 'artefacto' },
+      { id: 'a_san',     x: 256,  y: 432, w: 176, h: 64, icono: 'tijera',   titulo: '1 · Saneamiento',        tag: 'LOTE · EXCLUYE VENTANAS', val: 'fuera lo marcado y atípico' },
+      { id: 'a_lin',     x: 472,  y: 432, w: 176, h: 64, icono: 'fichero',  titulo: '2 · Linaje',             tag: 'SHA256 ENCADENADO', val: 'registro.jsonl', clase: 'artefacto' },
+      { id: 'a_der',     x: 688,  y: 432, w: 176, h: 64, icono: 'lupa',     titulo: '4 · Deriva',             tag: 'CONTRA EL ORO', val: 'PSI · % anómalo' },
+      { id: 'a_inf',     x: 904,  y: 432, w: 176, h: 64, icono: 'modelo',   titulo: '3 · Candidato',          tag: 'LÍMITE DE INFLUENCIA', val: 'nuevo ≤ 30 % · IP ≤ 10 %' },
+      { id: 'a_ver',     x: 1120, y: 432, w: 176, h: 64, icono: 'decision', titulo: 'Veredicto',            tag: 'MISMOS CONJUNTOS', val: 'FPR ≤ · detección ≥' },
+      { id: 'a_hum',     x: 1332, y: 432, w: 176, h: 64, icono: 'ojo',      titulo: 'Aprobación humana',    tag: 'PROMOVER · REVERTIR', val: 'con copia del .toml' },
+    ],
+    aristas: [
+      { d: 'M240,104 L296,104',   desde: 'c_datos',  hasta: 'c_limpia' },
+      { d: 'M496,104 L552,104',   desde: 'c_limpia', hasta: 'c_part' },
+      { d: 'M752,104 L808,104',   desde: 'c_part',   hasta: 'c_cand' },
+      { d: 'M1008,104 L1064,104', desde: 'c_cand',   hasta: 'c_metr' },
+      { d: 'M1264,104 L1320,104', desde: 'c_metr',   hasta: 'c_sel' },
+      { d: 'M1420,136 L1420,252', desde: 'c_sel',    hasta: 'c_cong', etiqueta: 'umbral desde validación', ex: 1476, ey: 198 },
+      { d: 'M1320,284 L1264,284', desde: 'c_cong',   hasta: 'c_desp' },
+      { d: 'M1064,284 L1008,284', desde: 'c_desp',   hasta: 'c_acum' },
+      { d: 'M1064,270 C960,226 760,226 700,252', desde: 'c_desp', hasta: 'c_vivo', etiqueta: 'puntúa cada 10 s', ex: 880, ey: 228 },
+      { d: 'M552,120 C380,150 128,300 128,432', desde: 'c_part', hasta: 'a_oro', tipo: 'descarte', etiqueta: 'su test se congela como oro', ex: 250, ey: 300 },
+      { d: 'M908,316 C908,384 380,372 360,432', desde: 'c_acum', hasta: 'a_san', etiqueta: 'lote del día', ex: 640, ey: 372 },
+      { d: 'M652,316 C652,372 330,380 320,432', desde: 'c_vivo', hasta: 'a_san', tipo: 'descarte', etiqueta: 'IPs marcadas', ex: 560, ey: 350 },
+      { d: 'M216,464 L256,464',   desde: 'a_oro',    hasta: 'a_san', tipo: 'descarte' },
+      { d: 'M432,464 L472,464',   desde: 'a_san',    hasta: 'a_lin' },
+      { d: 'M648,464 L688,464',   desde: 'a_lin',    hasta: 'a_der' },
+      { d: 'M864,464 L904,464',   desde: 'a_der',    hasta: 'a_inf' },
+      { d: 'M1080,464 L1120,464', desde: 'a_inf',    hasta: 'a_ver' },
+      { d: 'M1296,464 L1332,464', desde: 'a_ver',    hasta: 'a_hum' },
+      { d: 'M128,496 C128,580 1208,580 1208,496', desde: 'a_oro', hasta: 'a_ver', tipo: 'descarte', etiqueta: 'evalúa vigente y candidato en el oro', ex: 668, ey: 572 },
+      { d: 'M1420,432 L1420,316', desde: 'a_hum',    hasta: 'c_cong', etiqueta: 'promover: modelo nuevo', ex: 1476, ey: 374 },
+    ],
+  },
+  // --- Vista RED Y CAPTURA: por donde va el trafico de prueba y por donde
+  // llega su copia al sensor. Reusa los nodos vivos (span, nic, captura,
+  // suricata) para que el estado sea el real. El recorrido de prueba y la copia
+  // SPAN llevan estilos distintos: el sensor no esta en el recorrido.
+  red: {
+    w: 1480, h: 480,
+    packet: 'M200,84 L330,240 L400,216 L400,118 L456,118 L456,216 L330,250 L200,240',
+    grupos: [
+      { x: 12,  y: 32,  w: 200, h: 146, txt: 'VLAN 20 · usuarios' },
+      { x: 12,  y: 190, w: 200, h: 86,  txt: 'VLAN 30 · DMZ' },
+      { x: 12,  y: 288, w: 200, h: 146, txt: 'VLAN 10 · gestión' },
+      { x: 740, y: 32,  w: 720, h: 430, txt: 'Host ESXi · 172.17.25.2' },
+    ],
+    nodos: [
+      { id: 'atacante',  x: 24,  y: 60,  w: 176, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',  host: true, ip: '10.10.20.30',     desc: '' },
+      { id: 'clientes',  x: 24,  y: 118, w: 176, h: 48, icono: 'red',    titulo: 'Clientes',         host: true, ip: '10.10.20.21-.26', desc: '' },
+      { id: 'servidor',  x: 24,  y: 216, w: 176, h: 48, icono: 'disco',  titulo: 'srv-dmz · objetivo', host: true, ip: '10.10.30.10',   desc: '' },
+      { id: 'r_bastion', x: 24,  y: 316, w: 176, h: 48, icono: 'ojo',    titulo: 'VM-GESTION',       host: true, ip: '10.10.10.30',     desc: '' },
+      { id: 'r_dns',     x: 24,  y: 374, w: 176, h: 48, icono: 'red',    titulo: 'DNS / AD',         host: true, ip: '10.10.10.20',     desc: '' },
+      { id: 'gateway',   x: 330, y: 70,  w: 196, h: 48, icono: 'escudo', titulo: 'pfSense A/B',      host: true, ip: 'enruta entre VLAN', desc: '' },
+      { id: 'span',      x: 330, y: 216, w: 196, h: 58, icono: 'espejo', titulo: 'CORE-STACK',       tag: 'NO ENRUTA · ESPEJA' },
+      { id: 'r_pg',      x: 760, y: 70,  w: 240, h: 58, icono: 'nic',    titulo: 'PG-CYBERFLOW-SPAN', tag: 'GRUPO DE PUERTOS', val: 'modo promiscuo' },
+      { id: 'nic',       x: 760, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor1 · ens37',  tag: 'SIN IP · 10.10.60.11' },
+      { id: 'r_sensor2', x: 990, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor2 · ens37',  tag: 'RÉPLICA · 10.10.60.12', val: 'recibe la misma copia' },
+      { id: 'r_cmp',     x: 1220, y: 200, w: 216, h: 58, icono: 'lupa',  titulo: 'VM-SURICATA',      tag: 'COMPARADOR · 10.10.60.13', val: 'recepción por comprobar', clase: 'artefacto' },
+      { id: 'captura',   x: 760, y: 340, w: 176, h: 58, icono: 'captura', titulo: 'tcpdump',         tag: 'ANILLO PCAP' },
+      { id: 'suricata',  x: 970, y: 340, w: 176, h: 58, icono: 'lupa',   titulo: 'Suricata',         tag: 'eve.json' },
+    ],
+    aristas: [
+      { d: 'M200,84 C270,84 270,232 330,232',     desde: 'atacante', hasta: 'span',     tipo: 'fijo', etiqueta: '1 · generado', ex: 262, ey: 76 },
+      { d: 'M200,142 C262,142 268,240 330,240',   desde: 'clientes', hasta: 'span',     tipo: 'fijo' },
+      { d: 'M400,216 L400,118',                   desde: 'span',     hasta: 'gateway',  tipo: 'fijo' },
+      { d: 'M456,118 L456,216',                   desde: 'gateway',  hasta: 'span',     tipo: 'fijo', etiqueta: '2 · troncales Gi1/0/23 · Gi2/0/23', ex: 606, ey: 170 },
+      { d: 'M330,252 C280,252 260,240 200,240',   desde: 'span',     hasta: 'servidor', tipo: 'fijo', etiqueta: '3 · recibido', ex: 268, ey: 268 },
+      { d: 'M200,340 C290,340 340,320 380,274',   desde: 'r_bastion', hasta: 'span',    tipo: 'enlace' },
+      { d: 'M526,245 C650,245 640,99 760,99',     desde: 'span',     hasta: 'r_pg',     tipo: 'copia', etiqueta: 'copia SPAN · Gi2/0/19', ex: 640, ey: 150 },
+      { d: 'M858,128 L858,200',                   desde: 'r_pg',     hasta: 'nic',      tipo: 'copia' },
+      { d: 'M940,128 C940,170 1088,160 1088,200', desde: 'r_pg',     hasta: 'r_sensor2', tipo: 'copia' },
+      { d: 'M1000,99 C1328,99 1328,140 1328,200', desde: 'r_pg',     hasta: 'r_cmp',    tipo: 'previsto' },
+      { d: 'M848,258 L848,340',                   desde: 'nic',      hasta: 'captura',  etiqueta: '4 · observado', ex: 800, ey: 304 },
+      { d: 'M880,258 C880,300 1058,296 1058,340', desde: 'nic',      hasta: 'suricata' },
+    ],
+  },
+  // --- Vista DECISION: dos niveles. El motor decide cada ventana; el publicador
+  // combina por IP cada 60 s sobre los ultimos 120 s y fija la caducidad.
+  // Fuentes: motor_decision.py, heuristicos.py, publicar_feed.py, escalada.py.
+  decision: {
+    w: 1560, h: 520,
+    packet: 'M230,149 L330,99 L630,99 L1060,140 L1160,174 L140,330 L240,359 L820,359 L920,388 L1140,440',
+    grupos: [
+      { x: 12, y: 32,  w: 1536, h: 236, txt: 'Motor · decide cada ventana', n: 1 },
+      { x: 12, y: 296, w: 1536, h: 112, txt: 'Publicador · cada 60 s, últimos 120 s, por IP', n: 2 },
+    ],
+    nodos: [
+      { id: 'variables',   x: 40,   y: 120, w: 190, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s', tag: 'POR IP Y VENTANA' },
+      { id: 'descartes',   x: 40,   y: 204, w: 190, h: 48, icono: 'tijera', titulo: 'IP excluida',      tag: 'SE CUENTA · NO SE PUNTÚA', clase: 'sumidero' },
+      { id: 'modelo',      x: 330,  y: 70,  w: 200, h: 58, icono: 'modelo', titulo: 'Isolation Forest', tag: 'SOLO CON PAQUETES' },
+      { id: 'heuristicos', x: 330,  y: 170, w: 200, h: 58, icono: 'reglas', titulo: 'Heurísticos',      tag: 'TAMBIÉN SIN PAQUETES (L7)' },
+      { id: 'd_alert',     x: 630,  y: 70,  w: 200, h: 58, icono: 'decision', titulo: 'ALERT del modelo', tag: 's(x) < −0,568892', val: 'pasa a LIMIT' },
+      { id: 'd_reglas',    x: 630,  y: 170, w: 300, h: 58, icono: 'reglas', titulo: 'Regla disparada',  tag: 'ABUSO HTTP · DNS → LIMIT', val: 'fuerza bruta · escaneo → BLOCK' },
+      { id: 'registro',    x: 1060, y: 124, w: 200, h: 50, icono: 'fichero', titulo: 'motor_decision.log', tag: 'IP · VENTANA · SCORE · REGLA', clase: 'artefacto' },
+      { id: 'd_nunca',     x: 40,   y: 330, w: 200, h: 58, icono: 'tijera', titulo: 'Nunca bloquear',   tag: 'FILTRO', val: 'bastión · sensor · DNS' },
+      { id: 'd_severa',    x: 300,  y: 330, w: 200, h: 58, icono: 'decision', titulo: 'La más severa',  tag: 'POR IP', val: 'BLOCK > LIMIT' },
+      { id: 'd_escalera',  x: 560,  y: 330, w: 200, h: 58, icono: 'ciclo',  titulo: 'Escalera',         tag: 'REINCIDENCIA EN 24 h', val: '300 → 1800 → 3600 s' },
+      { id: 'feed',        x: 820,  y: 330, w: 200, h: 58, icono: 'fichero', titulo: 'Feed firmado',    tag: 'CON VERSIÓN DE UMBRALES' },
+      { id: 'd_permit',    x: 560,  y: 440, w: 200, h: 58, icono: 'ojo',    titulo: 'PERMIT',           val: 'sin entrada en el feed' },
+      { id: 'd_limit',     x: 820,  y: 440, w: 200, h: 58, icono: 'ciclo',  titulo: 'LIMIT',            val: 'tasa limitada · 300 s', clase: 'acc-limit' },
+      { id: 'd_block',     x: 1080, y: 440, w: 240, h: 58, icono: 'escudo', titulo: 'BLOCK',            tag: 'REVISIÓN HUMANA DESDE EL 3.º', val: '300 · 1800 · 3600 s', clase: 'acc-block' },
+    ],
+    aristas: [
+      { d: 'M135,178 L135,204',                      desde: 'variables',   hasta: 'descartes',  tipo: 'descarte' },
+      { d: 'M230,149 C280,149 280,99 330,99',        desde: 'variables',   hasta: 'modelo',     etiqueta: '28 variables', ex: 276, ey: 106 },
+      { d: 'M230,149 C280,149 280,199 330,199',      desde: 'variables',   hasta: 'heuristicos', etiqueta: '+ conteos', ex: 280, ey: 204 },
+      { d: 'M530,99 L630,99',                        desde: 'modelo',      hasta: 'd_alert',    etiqueta: 'score &lt; umbral', ex: 580, ey: 90 },
+      { d: 'M530,199 L630,199',                      desde: 'heuristicos', hasta: 'd_reglas',   tipo: 'fijo' },
+      { d: 'M830,99 C960,99 950,140 1060,140',       desde: 'd_alert',     hasta: 'registro',   tipo: 'fijo' },
+      { d: 'M930,199 C1000,199 990,158 1060,158',    desde: 'd_reglas',    hasta: 'registro',   tipo: 'fijo' },
+      { d: 'M1160,174 C1160,300 140,236 140,330',    desde: 'registro',    hasta: 'd_nunca',    tipo: 'fijo', etiqueta: 'decisiones por ventana', ex: 660, ey: 286 },
+      { d: 'M240,359 L300,359',                      desde: 'd_nunca',     hasta: 'd_severa',   tipo: 'fijo' },
+      { d: 'M500,359 L560,359',                      desde: 'd_severa',    hasta: 'd_escalera', tipo: 'fijo' },
+      { d: 'M760,359 L820,359',                      desde: 'd_escalera',  hasta: 'feed',       tipo: 'fijo' },
+      { d: 'M900,388 C900,416 660,412 660,440',      desde: 'feed',        hasta: 'd_permit',   tipo: 'previsto' },
+      { d: 'M920,388 L920,440',                      desde: 'feed',        hasta: 'd_limit',    tipo: 'fijo' },
+      { d: 'M940,388 C940,416 1200,412 1200,440',    desde: 'feed',        hasta: 'd_block',    tipo: 'fijo' },
+    ],
+  },
+  // --- Vista RESPUESTA: del veredicto a la regla en el host y a su retirada.
+  // Los tres tiempos se miden desde el inicio del ataque con el reloj del sensor
+  // (docs/evidencias/tiempos-2026-10-06.md).
+  respuesta: {
+    w: 1560, h: 350,
+    packet: 'M40,139 L1286,139 L1198,230',
+    grupos: [
+      { x: 12,   y: 32, w: 510, h: 290, txt: 'Sensor',         n: 1 },
+      { x: 560,  y: 32, w: 240, h: 290, txt: 'Bastión',        n: 2 },
+      { x: 830,  y: 32, w: 480, h: 290, txt: 'Host protegido', n: 3 },
+      { x: 1340, y: 32, w: 208, h: 290, txt: 'Persona',        n: 4 },
+    ],
+    nodos: [
+      { id: 'control',    x: 40,   y: 110, w: 176, h: 58, icono: 'decision', titulo: 'Decisión',     tag: 'DETECCIÓN ~2–40 s' },
+      { id: 'feed',       x: 320,  y: 110, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',  tag: 'DECISIÓN 17–18 s (N=2)' },
+      { id: 'relay',      x: 592,  y: 110, w: 176, h: 58, icono: 'espejo',  titulo: 'Relay',         tag: 'RÉPLICA', val: 'cada 60 s' },
+      { id: 'agente',     x: 860,  y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'Agente',        tag: 'VERIFICA LA FIRMA' },
+      { id: 'p_nft',      x: 1110, y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'nftables',      tag: 'RESPUESTA 51–141 s', val: 'LIMIT · BLOCK', clase: 'acc-block' },
+      { id: 'p_noaplica', x: 860,  y: 230, w: 176, h: 58, icono: 'tijera',  titulo: 'Firma inválida', tag: 'LO VIGENTE CADUCA', val: 'no aplica nada', clase: 'sumidero' },
+      { id: 'p_caduca',   x: 1110, y: 230, w: 176, h: 58, icono: 'ciclo',   titulo: 'Caduca sola',   tag: 'TIMEOUT DEL SET', val: '300 · 1800 · 3600 s' },
+      { id: 'p_manual',   x: 1356, y: 110, w: 176, h: 58, icono: 'ojo',     titulo: 'Retirada manual', tag: 'UNA PERSONA', val: 'nft delete element' },
+    ],
+    aristas: [
+      { d: 'M216,139 L320,139',   desde: 'control', hasta: 'feed',       etiqueta: 'cada 60 s', ex: 268, ey: 130 },
+      { d: 'M496,139 L592,139',   desde: 'feed',    hasta: 'relay',      tipo: 'fijo', etiqueta: 'cada 60 s', ex: 544, ey: 130 },
+      { d: 'M768,139 L860,139',   desde: 'relay',   hasta: 'agente',     tipo: 'fijo', etiqueta: 'pull · 60 s', ex: 814, ey: 130 },
+      { d: 'M1036,139 L1110,139', desde: 'agente',  hasta: 'p_nft',      tipo: 'fijo', etiqueta: 'válida', ex: 1073, ey: 130 },
+      { d: 'M948,168 L948,230',   desde: 'agente',  hasta: 'p_noaplica', tipo: 'descarte' },
+      { d: 'M1198,168 L1198,230', desde: 'p_nft',   hasta: 'p_caduca',   tipo: 'fijo' },
+      { d: 'M1356,139 L1286,139', desde: 'p_manual', hasta: 'p_nft',     tipo: 'persona', etiqueta: 'retira', ex: 1322, ey: 130 },
+    ],
+  },
+  // --- Vista VALIDACION: una tabla (requisito, prueba, evidencia, estado), no
+  // un diagrama. La pinta validacionHTML().
+  validacion: { w: 1200, h: 420, tabla: true, packet: '', grupos: [], nodos: [], aristas: [] },
 };
 
-let topoVista = 'esencial';
+// Matriz de validacion interna. Cada estado cita la nota que lo respalda; un
+// parcial dice que falta. Al cambiar un estado, cambiarlo aqui y en la figura
+// VI-7 (orquestacion: diagramas-vistas-gui/drawio/gen_vi7.py).
+const VALIDACION = [
+  ['Instalación offline', 'Desde cero en una VM limpia', 'doctor.sh OK a los 30 min · nota R', 'c', ''],
+  ['Captura y extracción', 'PCAP + EVE → 28 variables', 'Espejo sin descartes · notas B y D', 'c', ''],
+  ['Decisión híbrida', 'Score, regla y motivo por ventana', 'Registro de decisiones · nota 31', 'c', ''],
+  ['Respuesta distribuida', 'Feed firmado → nftables', 'Escaneo bloqueado · notas O y 26', 'p', 'falta fuerza bruta'],
+  ['Acceso por roles', 'admin y lector', '401 sin sesión, sin HTTP en claro · nota R', 'p', 'falta el ingreso por navegador'],
+  ['Reentrenamiento', 'Lote → candidato → evaluación', 'Oro, linaje y lote rechazado · nota S', 'p', 'sin candidato real'],
+  ['Reversión', 'Caducidad y retirada manual', 'Escalera en pruebas unitarias', 'p', 'falta registro en vivo'],
+  ['Comparación con Suricata', 'Mismo PCAP, cuatro condiciones', 'Batería N=3 · notas 26, 28 y 31', 'p', 'C3 propuesta · nota 33'],
+  ['Tres tiempos', 'Detección, decisión, respuesta', 'Mediciones del 06-oct (N=3 y N=2)', 'c', 'N pequeño'],
+];
+const VAL_NOMBRE = { c: 'Cumplido', p: 'Parcial', n: 'Pendiente' };
+
+function validacionHTML() {
+  const filas = VALIDACION.map(f =>
+    `<tr><td>${f[0]}</td><td>${f[1]}</td><td>${f[2]}</td>` +
+    `<td><span class="val-est ${f[3]}">${VAL_NOMBRE[f[3]]}</span>` +
+    (f[4] ? `<span class="falta">${f[4]}</span>` : '') + '</td></tr>').join('');
+  return '<table><thead><tr><th>Requisito</th><th>Prueba</th><th>Evidencia</th><th>Estado</th></tr></thead>'
+    + `<tbody>${filas}</tbody></table>`;
+}
+
+function validacionDetalleHTML() {
+  const n = k => VALIDACION.filter(f => f[3] === k).length;
+  return '<h3>Validación interna</h3>'
+    + `<dl><dt>Cumplidos</dt><dd>${n('c')}</dd><dt>Parciales</dt><dd>${n('p')}</dd><dt>Pendientes</dt><dd>${n('n')}</dd></dl>`
+    + '<p class="dim">Cada estado cita su evidencia. TAM y juicio de expertos van en la validación externa.</p>';
+}
+
+let topoVista = 'completa';
+// Ultimo estado de /api/aprendizaje (lo llena cargarAprendizaje). Los nodos del
+// aprendizaje en la topologia lo leen; con var y aqui arriba para que exista
+// desde el primer pintado, aunque llegue despues.
+var aprEstado = null;
 // Mapa de artefactos: los ficheros de cada componente. Se pide solo cuando se
 // activa "Ver archivos" -es de admin- y se guarda; los chips abiertos se
 // recuerdan entre repintados.
@@ -1383,7 +2093,7 @@ const TOPO_TEXTO = {
   span: {
     que: 'La sesión de espejo del conmutador copia el troncal del cortafuegos hacia el puerto del sensor.',
     nota: 'Desde el sensor no se puede leer el estado de la sesión: se infiere de que lleguen paquetes. Si deja de llegar tráfico, el problema puede estar aquí y el panel no lo distingue de una red en silencio.',
-    cmd: 'monitor session 1 source interface Gi1/0/20 , Gi2/0/20 both\\nmonitor session 1 destination interface Gi1/0/48 encapsulation replicate\\n! Gi1/0/20 y Gi2/0/20: troncales al hipervisor A (172.17.25.3)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
+    cmd: 'monitor session 1 source interface Gi1/0/23 , Gi2/0/23 both\\nmonitor session 1 destination interface Gi2/0/19 encapsulation replicate\\n! Gi1/0/23 y Gi2/0/23: troncales de pfSense A/B\\n! Gi2/0/19: hacia el hipervisor del sensor (172.17.25.2)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
   },
   atacante: {
     que: 'La VM Kali (10.10.20.30). Genera los ataques del ensayo: escaneo, nikto, flood HTTP y ARP spoofing.',
@@ -1426,15 +2136,28 @@ const TOPO_TEXTO = {
     nota: 'Los descartes del núcleo miden si la captura llega completa. Con descartes, las ventanas afectadas están incompletas y el modelo las puntúa igual.',
   },
   motor: {
-    que: 'El corazón del sistema. Convierte paquetes crudos en una decisión por entidad: atribuye el flujo, acota el alcance, arma las variables por ventana y puntúa.',
+    que: 'Parser de la fuente cruda. Lee los PCAP cerrados del anillo, decodifica Ethernet/802.1Q/IPv4/TCP/UDP/ICMP, quita lo que no se puntúa y atribuye cada paquete a la IP que INICIÓ su flujo. Lo ejecuta el servicio ppi-motor cada 10 s.',
     flujoTit: 'Procesamiento interno',
     flujo: [
-      {paso: 'Atribución por flujo', fichero: 'extract_multilayer_v2.py', garantia: 'cada paquete a la IP que INICIÓ el flujo, no al destino'},
-      {paso: 'Filtrado de alcance', fichero: 'extract_multilayer_v2.py', garantia: 'descarta plano de control y las copias que el espejo duplica'},
-      {paso: 'Ventaneo + variables', fichero: 'extract_multilayer_v2.py', garantia: 'ventanas fijas; una fila de variables por entidad y ventana'},
-      {paso: 'Puntuación', fichero: 'motor_decision.py', garantia: 'score del modelo + reglas heurísticas → decisión por ventana'},
+      {paso: 'Decodificar trama', fichero: 'extract_multilayer_v3.py', garantia: 'parse_con_contexto: VLAN, IP, puertos, flags, TTL, id IP'},
+      {paso: 'Filtrado de alcance', fichero: 'motor_decision.py', garantia: 'quita plano de control (CARP 112, pfsync 240) y copias del espejo'},
+      {paso: 'Atribución por flujo', fichero: 'extract_multilayer_v2.py', garantia: 'attribute_packets: el SYN-ACK y el eco ICMP se apuntan a quien preguntó'},
+      {paso: 'Ventaneo + variables', fichero: 'extract_multilayer_v2.py', garantia: 'build_rows: una fila por IP y ventana (10/30/60 s), junto con lo del parser de eventos'},
     ],
-    nota: 'El filtrado es ALCANCE, no fórmula: el extractor está congelado (sus fórmulas no se tocan); los filtros actúan sobre su ENTRADA. Así se descartan el plano de control y las tramas que el espejo enseña dos veces antes de puntuar.',
+    nota: 'El filtrado es ALCANCE, no fórmula: el extractor está congelado (sus fórmulas no se tocan); los filtros actúan sobre su ENTRADA. En «Datos en vivo → Tramas PCAP» se ve cada trama con la variable que actualiza.',
+    enlace: { href: '#s-vivo', vtab: 'pcap', txt: 'Ver tramas parseadas en vivo' },
+  },
+  parser_eve: {
+    que: 'Parser de la fuente estructurada. Lee las líneas JSON que Suricata escribe en eve.json y solo se queda con tres tipos: http (método y estado), dns (consulta y respuesta NXDOMAIN) y tls (sesión y versión). flow, ssh, stats y el resto no entran al cálculo.',
+    flujoTit: 'Del evento a la observación',
+    flujo: [
+      {paso: 'Recortar el tramo', fichero: 'motor_decision.py', garantia: 'solo las líneas de la historia que se puntúa (60 s)'},
+      {paso: 'Filtrar tipos', fichero: 'extract_multilayer_v2.py', garantia: 'load_app_observations: http · dns · tls'},
+      {paso: 'Atribuir', fichero: 'extract_multilayer_v2.py', garantia: 'a src_ip (en tls, dest_ip si src está fuera de la red); NXDOMAIN a quien preguntó'},
+      {paso: 'Ventanas de 60 s', fichero: 'extract_multilayer_v2.py', garantia: 'las 11 variables L7 de la misma fila que las de red'},
+    ],
+    nota: 'Suricata NO decide aquí: sus alertas por firma no se usan como etiqueta ni como variable. Solo se aprovecha su parseo de protocolos.',
+    enlace: { href: '#s-vivo', vtab: 'eve', txt: 'Ver eventos parseados en vivo' },
   },
   modelo: {
     que: 'El modelo one-class RECALIBRADO en esta red (IsolationForest). Aprende la normalidad propia; el umbral se congela desde validación (score_samples < -0,568892).',
@@ -1442,17 +2165,17 @@ const TOPO_TEXTO = {
   },
   heuristicos: {
     que: 'Reglas deterministas sobre las mismas variables de la ventana, complemento del modelo: fuerza bruta, escaneo de puertos, abuso HTTP y DNS de alta entropía.',
-    nota: 'Cubren huecos donde el modelo mide flojo (p.ej. DNS-entropy). Validado: disparan en 47/104 ventanas de ataque y solo 0,08 % en tráfico normal. Umbrales versionados, criterio razonado (NO calibrados como el modelo).',
-    flujoTit: 'Las cuatro reglas',
+    nota: 'Cubren huecos donde el modelo mide flojo (p.ej. DNS-entropy). El motor del sensor declara VERSION_UMBRALES 2026-10-06.2; la unidad del publicador todavía etiqueta el feed como 2026-10-06.1. La discrepancia de trazabilidad debe corregirse antes de atribuir una versión única al flujo. Los ratios de unicidad de 0,45 consideran copias del espejo SPAN; la rama de ráfaga de port_scan es posterior al piloto 1/3.',
+    flujoTit: 'Las cuatro reglas (umbrales; versión del motor 2026-10-06.2)',
     flujo: [
-      {paso: 'Fuerza bruta', fichero: 'heuristicos.py', garantia: '≥5 req/60s con ≥80% de fallo de auth → BLOCK'},
-      {paso: 'Escaneo de puertos', fichero: 'heuristicos.py', garantia: 'muchos puertos, pocas conexiones completadas → BLOCK'},
-      {paso: 'Abuso HTTP', fichero: 'heuristicos.py', garantia: 'volumen alto sin fallos de auth → LIMIT'},
-      {paso: 'DNS-entropy', fichero: 'heuristicos.py', garantia: 'muchas consultas, casi todas únicas/NXDOMAIN → LIMIT'},
+      {paso: 'Fuerza bruta', fichero: 'heuristicos.py', garantia: '≥5 req HTTP/60s y ≥80% de fallo de auth → BLOCK'},
+      {paso: 'Escaneo de puertos', fichero: 'heuristicos.py', garantia: '≥20 intentos/30s, unicidad ≥0,45 y ≤30% completadas; O ráfaga ≥200/30s y ≤10% completadas → BLOCK'},
+      {paso: 'Abuso HTTP', fichero: 'heuristicos.py', garantia: '≥100 req/60s con <80% de fallo de auth (no es fuerza bruta) → LIMIT'},
+      {paso: 'DNS-entropy', fichero: 'heuristicos.py', garantia: '≥20 consultas/60s con ≥45% de nombres únicos o ≥50% de NXDOMAIN → LIMIT'},
     ],
   },
   control: {
-    que: 'Fusiona las dos señales en UNA acción por entidad: PERMIT (dejar pasar), LIMIT (degradar la tasa) o BLOCK (cortar). El modelo aporta LIMIT (anomalía); un heurístico confirmado aporta BLOCK.',
+    que: 'Fusiona las dos señales en UNA decisión por entidad y ventana. El motor registra PERMIT o ALERT (score bajo el umbral, o heurístico); la ALERT se traduce en acción: LIMIT (degradar la tasa) para la anomalía del modelo y para abuso HTTP o DNS, BLOCK (cortar) para fuerza bruta o escaneo confirmados.',
     flujoTit: 'Cómo se decide la acción',
     flujo: [
       {paso: 'Dos entradas', fichero: 'motor_decision.py', garantia: 'score del modelo (anomalía→LIMIT) + heurístico (confirmado→BLOCK)'},
@@ -1488,10 +2211,12 @@ const TOPO_TEXTO = {
   pcap: {
     que: 'Ficheros PCAP rotados cada 15 s. Es toda la historia de capa 3 y 4 de la que dispone el motor.',
     nota: 'Un temporizador poda los más viejos: sin él el anillo crece sin fin, porque el nombre lleva fecha y tcpdump nunca reutiliza un fichero. Medido antes de podarlo: 403 MB en un día.',
+    enlace: { href: '#s-vivo', vtab: 'pcap', txt: 'Ver las tramas en vivo y a qué variable aporta cada una' },
   },
   eve: {
     que: 'El registro de eventos de Suricata, una línea JSON por evento. De aquí salen HTTP, DNS y TLS.',
-    nota: 'Va por delante del anillo de PCAP: Suricata emite el evento antes de que tcpdump vuelque los paquetes a disco. Por eso hay ventanas con eventos de aplicación y cero paquetes.',
+    nota: 'Va por delante del anillo de PCAP: Suricata emite el evento antes de que tcpdump vuelque los paquetes a disco. Por eso hay ventanas con eventos de aplicación y cero paquetes. No es «eve.json por la NIC»: es una segunda fuente, derivada de las mismas tramas por Suricata.',
+    enlace: { href: '#s-vivo', vtab: 'eve', txt: 'Ver los eventos en vivo y a qué variable aporta cada uno' },
   },
   descartes: {
     que: 'Lo que se captura pero NO se puntúa: plano de control, copias del espejo y entidades declaradas fuera de alcance.',
@@ -1514,6 +2239,246 @@ const TOPO_TEXTO = {
     que: 'Lee el registro del motor, el estado de los servicios y la tabla nftables. No ejecuta ninguna acción.',
     nota: 'Solo lectura a propósito. Un panel que pudiera desbloquear una IP sería otro camino hacia el cortafuegos, y con su propia superficie de ataque.',
   },
+  relay: {
+    que: 'El bastión copia el feed firmado del sensor a la red interna. Los hosts lo traen de aquí: nunca hablan con el sensor.',
+    nota: 'Es uno de los tres temporizadores de 60 s (publicador, relay, agente) que dominan el tiempo de respuesta.',
+  },
+  // ---- Vista RED Y CAPTURA ----
+  r_bastion: {
+    que: 'La máquina de gestión. Desde aquí se administra el sensor y aquí corre el relay del feed.',
+    nota: 'Está en la lista «nunca bloquear».',
+  },
+  r_dns: {
+    que: 'El DNS y directorio de la red. Las consultas DNS de las pruebas van contra esta máquina.',
+    nota: 'Está en la lista «nunca bloquear»: cortarlo dejaría sin resolver a toda la red.',
+  },
+  r_pg: {
+    que: 'El grupo de puertos del hipervisor que recibe la copia del puerto Gi2/0/19. En modo promiscuo la entrega a toda máquina virtual conectada.',
+    nota: 'Por eso un solo puerto destino del espejo alimenta a varios sensores.',
+  },
+  r_sensor2: {
+    que: 'El segundo sensor, instalado desde cero para probar que el sistema se replica. Cuelga del mismo grupo de puertos.',
+  },
+  r_cmp: {
+    que: 'La máquina reservada para comparar con Suricata. Está conectada al grupo de puertos, pero su interfaz de captura estaba apagada.',
+    nota: 'La comparación publicada se hizo reproduciendo el mismo PCAP, no con esta máquina en vivo.',
+  },
+  // ---- Vista DECISION ----
+  d_alert: {
+    que: 'Una ventana con paquetes cuyo score queda por debajo del umbral. El modelo no bloquea: su alerta se traduce en LIMIT.',
+    nota: 'Sin paquetes en la ventana el modelo no puntúa, para no alertar por silencio de red.',
+  },
+  d_reglas: {
+    que: 'Cuatro reglas versionadas. Fuerza bruta y escaneo de puertos piden BLOCK; abuso HTTP y DNS de alta entropía piden LIMIT.',
+    nota: 'Sus umbrales son criterio razonado, no calibración estadística como el umbral del modelo.',
+  },
+  d_nunca: {
+    que: 'Antes de combinar, el publicador descarta la infraestructura: bastión, sensor, gateways y DNS.',
+    nota: 'Pase lo que pase en el motor, esas direcciones no llegan al feed.',
+  },
+  d_severa: {
+    que: 'Por cada IP se queda con el veredicto más severo de los últimos 120 s: BLOCK gana a LIMIT.',
+  },
+  d_escalera: {
+    que: 'La caducidad crece con la reincidencia en 24 h: 300 s, luego 1800 s, luego 3600 s. LIMIT es siempre 300 s.',
+    nota: 'Desde el tercer BLOCK la entrada queda marcada para revisión humana. Nunca hay bloqueo automático indefinido.',
+  },
+  d_permit: {
+    que: 'Sin señal del modelo ni de las reglas, la IP no entra al feed y no se le aplica nada.',
+  },
+  d_limit: {
+    que: 'Limitación de tasa durante 300 s. Degrada sin cortar: es la respuesta cuando la señal es ambigua.',
+  },
+  d_block: {
+    que: 'Corte del tráfico de esa IP hacia el host, con caducidad de 300, 1800 o 3600 s según la reincidencia.',
+    nota: 'Desde el tercer bloqueo, revisión humana.',
+  },
+  // ---- Vista RESPUESTA ----
+  p_nft: {
+    que: 'La regla ya aplicada en el núcleo del host protegido. Es el final del tiempo de respuesta.',
+    nota: 'Medido desde el inicio del ataque: entre 51 y 141 s. Lo dominan los tres temporizadores de 60 s, no el cómputo.',
+  },
+  p_noaplica: {
+    que: 'Si la firma del feed no verifica, el agente no toca nada.',
+    nota: 'Lo que ya estaba aplicado no se borra: caduca a su hora.',
+  },
+  p_caduca: {
+    que: 'Cada entrada vive en un conjunto de nftables con caducidad propia. Al vencer, el núcleo la retira solo.',
+  },
+  p_manual: {
+    que: 'Una persona puede retirar una entrada antes de que caduque.',
+    cmd: 'nft delete element inet <tabla> <conjunto> { <ip> }',
+    nota: 'El panel no lo hace: es de solo lectura a propósito.',
+  },
+  // ---- Vista METODOLOGICA (como se construyo) ----
+  m_datos: {
+    que: 'F1. La línea base se genera y captura en la propia red por espejo SPAN: no es un dataset público. La recalibración sobre tráfico propio bajó el FPR del 92,4 % al 4,45 %.',
+    nota: 'Datos reales, no simulados: cierra el salto simulación→realidad que casi ningún trabajo del estado del arte aborda.',
+  },
+  m_feat: {
+    que: 'F2. El extractor congelado convierte los paquetes y las señales de Suricata en 28 variables multicapa (L3/L4/L7) por IP iniciadora, en ventanas de 10/30/60 s. Sin imputación: las ausencias son ceros estructurales.',
+    nota: 'Limpieza = deduplicación del espejo + validación fail-closed. 27 de 28 variables con variación observable.',
+  },
+  m_modelo: {
+    que: 'F3. Detector híbrido: Isolation Forest recalibrado (umbral −0,568892) + heurísticos deterministas. La ablación lo justifica: modelo solo 6/9, heurísticos 7/9, combinado 9/9.',
+    nota: 'El modelo se elige comparando 7 candidatos (no a ciegas); el umbral se calibra en validación y se congela antes del test.',
+  },
+  m_eval: {
+    que: 'F4. Evaluación justa por replay del MISMO PCAP a CyberFlow y a Suricata, anclando al reloj del paquete. Resultado sin firma: 9/9 vs 0/9.',
+    nota: 'Complementario a Suricata: él bloquea lo que tiene firma; CyberFlow detecta lo que no la tiene.',
+  },
+  m_resp: {
+    que: 'F5 (aporte). La decisión se convierte en acción: PERMIT/LIMIT/BLOCK con feed firmado (ed25519), caducidad escalada, aplicada por agentes en los hosts (nftables).',
+    nota: 'Actuar, no solo detectar: es lo que casi ningún artículo del estado del arte alcanza.',
+  },
+  m_desp: {
+    que: 'F6 (aporte). Desplegado sobre el sensor con systemd, instalación turnkey offline, verificado en un segundo sensor. 58 corridas sin caídas.',
+    nota: 'Nadie de los 15 artículos despliega su sistema en operación real.',
+  },
+  m_valid: {
+    que: 'F7 (aporte). Validación interna (demo técnica en vivo) + externa (TAM + juicio de expertos, Cronbach/Aiken).',
+    nota: 'Se demuestra y se acredita; no son solo palabras.',
+  },
+  // ---- Vista CONSTRUCCION Y ENTRENAMIENTO ----
+  // Cifras del informe de calibracion (ensayo-if-v2.json, sha ec3ed063...) y de
+  // la comparacion historica de laboratorio (07-metricas-...-7-modelos.md).
+  c_datos: {
+    que: 'Dónde empieza: la línea base de ESTA red, capturada por el espejo SPAN del troncal. Dos fuentes de la misma copia: PCAP crudo (tcpdump) y eve.json (Suricata). El acumulador las pasa por el mismo extractor que el motor y escribe una fila por IP y ventana.',
+    flujoTit: 'Qué entra',
+    flujo: [
+      {paso: 'Captura', fichero: 'ppi-motor-capture + suricata', garantia: 'misma interfaz ens37, sin IP'},
+      {paso: 'Acumulación', fichero: 'acumular_v3.py', garantia: 'filas multilayer-v3 (28 del modelo + 3 de capa 2)'},
+      {paso: 'Solo normal', fichero: 'Kali apagada', garantia: 'un detector de una clase aprende lo normal; un ataque en la base lo volvería normal'},
+    ],
+    nota: 'Total usado para el IF vigente: 335 202 ventanas normales (204 148 + 65 633 + 65 421). Sin ataques: los de la Kali se reservaron para medir detección después.',
+  },
+  c_limpia: {
+    que: 'Limpieza = acotar la ENTRADA, no tocar fórmulas. Se quitan el plano de control del cortafuegos (CARP 112, pfsync 240), la segunda copia de cada trama que el espejo enseña dos veces y las entidades declaradas fuera de alcance.',
+    flujoTit: 'Qué se quita y dónde',
+    flujo: [
+      {paso: 'Plano de control', fichero: 'motor_decision.py', garantia: '--excluir-protocolos 112,240'},
+      {paso: 'Copias del espejo', fichero: 'extract_multilayer_v3.py', garantia: 'deduplicar_espejo: TTL −1 entre VLAN, idénticas en difusión'},
+      {paso: 'Entidades fuera', fichero: 'cyberflow.local.toml', garantia: '[red] excluir: sensor y bastión'},
+    ],
+    nota: 'Sin imputación: una ausencia es un cero estructural (no hubo DNS en esa ventana), no un dato perdido. Las filas no elegibles (sin historia suficiente) no entran.',
+  },
+  c_part: {
+    que: 'Cómo se partió: 204 148 ventanas para entrenar, 65 633 para validar y 65 421 para probar (≈ 61/20/20). Tres grupos porque, además de entrenar, hay que fijar el umbral: la validación lo fija y la prueba queda ciega.',
+    flujoTit: 'Partición sin fuga temporal',
+    flujo: [
+      {paso: 'Bloques horarios', fichero: 'particionar_linea_base.py', garantia: 'reparto cíclico que cubre todo el ciclo diario'},
+      {paso: 'Banda de guarda 60 s', fichero: 'particionar_linea_base.py', garantia: 'ninguna ventana comparte paquetes entre grupos'},
+    ],
+    nota: 'No se baraja al azar: ventanas vecinas comparten tráfico (las de 60 s se solapan) y una partición aleatoria filtraría la prueba en el entrenamiento.',
+  },
+  c_cand: {
+    que: 'Qué modelos se compararon. En el laboratorio, 7 detectores de una clase con las mismas 28 variables y la misma partición: cuatro variantes de Isolation Forest, LOF, One-Class SVM y Elliptic Envelope. En esta red se reentrenó un solo candidato, el Isolation Forest (500 árboles).',
+    flujoTit: 'Los siete del laboratorio (F1 · FPR de prueba)',
+    flujo: [
+      {paso: 'ocsvm_scaled', fichero: 'One-Class SVM RBF', garantia: 'F1 0,903 · recall 88,3 % · FPR 4,71 %'},
+      {paso: 'if_uniform / if_exact_collapsed', fichero: 'Isolation Forest', garantia: 'F1 0,696 · recall 57,5 % · FPR 5,07 %'},
+      {paso: 'if_primary / if_scaled_weighted', fichero: 'Isolation Forest', garantia: 'F1 0,674 · recall 54,2 % · FPR 4,35 %'},
+      {paso: 'lof_scaled', fichero: 'Local Outlier Factor', garantia: 'F1 0,579 · recall 43,0 % · FPR 3,62 %'},
+      {paso: 'elliptic_envelope_scaled', fichero: 'Elliptic Envelope', garantia: 'F1 0,405 · recall 27,4 % · FPR 5,07 %'},
+    ],
+    nota: 'Por qué el IF y no el ganador: el OCSVM ganó en el laboratorio, pero se eligió después de ver la prueba (sesgo declarado) y no transfirió a esta red. El IF se reentrenó porque es el que la configuración inicial designaba como principal, y se midió con un objetivo de FPR fijado de antemano.',
+  },
+  c_metr: {
+    que: 'Con qué métricas. Sobre tráfico normal: FPR en validación (para fijar el umbral) y en prueba (una sola vez). Sobre ataques: tasa de detección con la Kali. En el laboratorio, además: precisión, recall, F1, MCC, ROC-AUC y PR-AUC, con McNemar + Holm entre pares.',
+    flujoTit: 'Métricas del IF vigente',
+    flujo: [
+      {paso: 'FPR validación', fichero: 'ensayo-if-v2.json', garantia: '5,00 % (por construcción: α = 0,05)'},
+      {paso: 'FPR prueba', fichero: 'ensayo-if-v2.json', garantia: '4,45 % sobre 65 421 ventanas normales'},
+      {paso: 'Detección Kali', fichero: 'nota M', garantia: '54/84 = 64,3 % global; HTTP 35/43'},
+    ],
+    nota: 'El criterio se fija ANTES de mirar la prueba: umbral desde validación con objetivo de FPR 5 %. El 4,45 % es del modelo sobre tráfico normal, no del sistema completo con heurísticos.',
+  },
+  c_sel: {
+    que: 'Por qué ganó: el OCSVM del laboratorio, llevado a esta red con su umbral, marcaba como anómalo el 92,4 % del tráfico normal. El IF recalibrado aquí cumple el objetivo (4,45 % de FPR en prueba) y detecta 54/84 ventanas de ataque (64,3 %). Se elige el que funciona en la red donde opera.',
+    nota: 'La detección no la hace el modelo solo: la ablación da modelo 6/9, heurísticos 7/9 y combinado 9/9. El modelo es una de dos señales.',
+    enlace: { href: '#s-modelo', txt: 'Ver «Pruebas previas» y la ablación' },
+  },
+  c_cong: {
+    que: 'Congelar modelo y umbral: el escalador y el IF se empaquetan en un Pipeline y el umbral se fija como el percentil α = 0,05 de validación: score_samples < −0,568892 (decision_function < −0,068892). Desde aquí nada se reajusta: la prueba y la Kali se puntúan con este mismo modelo.',
+    flujoTit: 'Qué queda fijo',
+    flujo: [
+      {paso: 'Pipeline', fichero: 'if_recalibrado_desplegable.joblib', garantia: 'sha256 d27f6871…125a'},
+      {paso: 'Umbral + orden de variables', fichero: 'manifest-if-recalibrado.json', garantia: 'el motor rechaza un orden distinto al del extractor'},
+      {paso: 'Equivalencia', fichero: 'verificar_equivalencia_umbral.py', garantia: '0 decisiones distintas sobre filas reales'},
+    ],
+    nota: 'La promoción es reproducible: promover_preliminar.py regenera el modelo desde su paquete con scores idénticos (no byte a byte).',
+  },
+  c_desp: {
+    que: 'Despliegue: el motor carga el Pipeline y el umbral del manifiesto, comprueba hash y orden de variables, y puntúa cada IP cada 10 s. El generador de configuración escribe las unidades systemd desde cyberflow.local.toml.',
+    flujoTit: 'Cadena de promoción',
+    flujo: [
+      {paso: 'Promover', fichero: 'promover_preliminar.py', garantia: 'paquete → Pipeline + manifiesto, se niega a sobrescribir'},
+      {paso: 'Verificar', fichero: 'verificar_equivalencia_umbral.py', garantia: 'hash + orden + umbral equivalente'},
+      {paso: 'Configurar', fichero: 'cyberflow_config.py', garantia: 'motor y panel con el mismo detector'},
+    ],
+    nota: 'Rollback: apuntar [motor] modelo, manifiesto y detector al artefacto anterior, regenerar la configuración y reiniciar ppi-motor. Nada se sobrescribe: promover se niega a pisar un artefacto existente.',
+  },
+  c_acum: {
+    que: 'Acumulación: mientras el motor opera, un temporizador escribe cada 10 min filas de línea base (v3) con la misma cadena del motor. Es la materia prima del aprendizaje.',
+    nota: 'Las filas acumuladas no entran tal cual a entrenar: cada noche pasan por el saneamiento (fila 3), que retira lo marcado y lo atípico.',
+  },
+  c_vivo: {
+    que: 'Motor en vivo: puntúa cada IP cada 10 s y decide PERMIT o ALERT (LIMIT/BLOCK). Para el aprendizaje, cada IP que marca queda señalada: sus ventanas de ese momento no entrarán al entrenamiento.',
+    nota: 'Es la primera defensa contra el envenenamiento: lo que el sistema ya consideró sospechoso nunca se aprende como normal.',
+  },
+  a_oro: {
+    que: 'Conjunto de ORO: las ventanas normales de la partición de prueba de la calibración (nota L), congeladas en solo lectura con su sha256. Nunca entran a entrenar: son la referencia fija contra la que se mide la deriva y se comparan vigente y candidato.',
+    flujoTit: 'De dónde sale',
+    flujo: [
+      {paso: 'Partición de la nota L', fichero: 'particionado-nota-L.csv', garantia: 'reconstruida y verificada: mismo sha256 que el del modelo desplegado'},
+      {paso: 'Solo el test', fichero: 'oro/oro.csv', garantia: '65 421 ventanas · modo 0444'},
+      {paso: 'Huella', fichero: 'oro/oro.json', garantia: 'si el oro cambia, el aprendizaje se detiene'},
+    ],
+    nota: 'Si la red cambia de verdad (nueva VLAN, Wazuh, AAA) el oro deja de representarla: entonces se recalibra entera y se crea un oro nuevo.',
+  },
+  a_san: {
+    que: '① Saneamiento: cada noche se cierra el lote del día anterior y se filtra antes de que pueda entrenar.',
+    flujoTit: 'Cuatro filtros',
+    flujo: [
+      {paso: 'Ventanas excluidas', fichero: 'excluir_ventanas', garantia: 'fuera los tramos declarados, como la ráfaga de la Kali del 27-sep'},
+      {paso: 'Contaminación', fichero: 'motor_decision.log + eve.json', garantia: 'fuera las ventanas de IPs marcadas a ±5 min'},
+      {paso: 'Atípicas', fichero: 'límites del oro', garantia: 'fuera la fila que se sale en 3 o más variables'},
+      {paso: 'Lote anómalo', fichero: 'PSI frente al oro', garantia: 'PSI > 0,5: lote rechazado, lo revisa una persona'},
+    ],
+    nota: 'Un lote rechazado puede ser un cambio de red legítimo; se acepta a mano con «lote --dia … --aceptar» tras revisarlo. Caso real: el lote del 10-oct se rechazó con PSI 2,41, porque la red no tenía tráfico de usuarios.',
+  },
+  a_lin: {
+    que: '② Linaje: cada lote queda registrado con su sha256, su origen y lo que se filtró, en un registro encadenado (cada línea lleva el hash de la anterior).',
+    nota: 'Borrar o retocar un lote rompe la cadena: «verificar» lo detecta, doctor.sh lo marca en rojo y el candidato se niega a entrenar.',
+  },
+  a_der: {
+    que: '④ Deriva: cada noche el modelo vigente se mide contra el oro (FPR) y contra el lote del día (PSI de sus puntuaciones y % que marcaría anómalo).',
+    nota: 'Si la señal se sostiene 3 días, toca reentrenar antes de la cadencia de 30 días. La deriva solo adelanta el reentrenamiento: nunca cambia el modelo por sí sola.',
+  },
+  a_inf: {
+    que: '③ Candidato con límite de influencia: se suman los lotes aceptados a la base de la calibración, con topes, y se repite la misma cadena (partición sin fuga → entrenar → umbral en validación → Pipeline + manifiesto).',
+    flujoTit: 'Topes',
+    flujo: [
+      {paso: 'Fracción nueva', fichero: 'max_fraccion_nueva', garantia: 'lo nuevo ≤ 30 % del entrenamiento'},
+      {paso: 'Por IP', fichero: 'max_fraccion_ip', garantia: 'ninguna IP > 10 % de lo nuevo'},
+      {paso: 'Nunca el oro', fichero: 'claves (IP, ventana)', garantia: 'sus filas se excluyen del entrenamiento'},
+    ],
+    nota: 'Un equipo que inunda la red no puede mover el modelo. El candidato se escribe en candidatos/<id>/ y no toca el modelo en uso.',
+  },
+  a_ver: {
+    que: 'Veredicto: vigente y candidato se puntúan sobre los MISMOS conjuntos (oro para el FPR, ataques etiquetados para la detección).',
+    flujoTit: 'Tres resultados',
+    flujo: [
+      {paso: 'PROMOVIBLE', fichero: 'candidato.json', garantia: 'FPR ≤ vigente y detección ≥ vigente'},
+      {paso: 'NO_PROMOVER', fichero: 'candidato.json', garantia: 'empeora una de las dos: se queda el vigente'},
+      {paso: 'EVALUACION_INCOMPLETA', fichero: 'candidato.json', garantia: 'sin ataques etiquetados no se sabe si detecta igual'},
+    ],
+  },
+  a_hum: {
+    que: 'Aprobación humana: el modelo en uso solo cambia con «promover», que lanza una persona. Deja copia del .toml y apunta motor y panel al candidato; «revertir» lo deshace. Se conservan 3 modelos de respaldo.',
+    nota: 'Por qué no es automático: un modelo que se despliega solo puede aprender un ataque lento como normal. Todo lo automático ocurre fuera del modelo en uso.',
+    enlace: { href: '#s-aprendizaje', txt: 'Ver el estado en «Aprendizaje»' },
+  },
 };
 
 let topoSel = 'motor';
@@ -1524,6 +2489,25 @@ let topoUltimo = null;
 // antes de su declaracion lanza ReferenceError -zona muerta temporal- y se
 // llevaba por delante el primer pintado entero del panel.
 let varDatos = null;
+
+// pcaps_ilegibles es un ACUMULADO desde que arranco el motor, no el estado de
+// ahora. El caso conocido -tcpdump -Z deja el primer fichero de cada arranque a
+// tcpdump:tcpdump y el motor no puede leerlo- da PermissionError una sola vez
+// y deja el contador en 1 hasta el siguiente reinicio del motor: es ambar, no
+// rojo. Cualquier otro motivo, o mas de uno, si es rojo.
+function ilegiblesEstado(al) {
+  const ile = al.pcaps_ilegibles;
+  if (ile == null) return { estado: '', valor: 'sin medir', datos: { 'Ficheros ilegibles': 'sin medir' } };
+  if (!ile) return { estado: 'ok', valor: 'anillo íntegro', datos: { 'Ficheros ilegibles': '0' } };
+  const motivos = al.pcaps_ilegibles_motivo || {};
+  const tipos = Object.keys(motivos);
+  const conocido = ile === 1 && tipos.length === 1 && tipos[0] === 'PermissionError';
+  const datos = { 'Ficheros ilegibles (acumulado desde que arrancó el motor)': String(ile) };
+  tipos.forEach(t => { datos['Motivo ' + t] = motivos[t]; });
+  if (conocido) datos['Lectura'] = 'primer fichero tras arrancar tcpdump (-Z lo deja a tcpdump:tcpdump); el resto del anillo se lee';
+  return { estado: conocido ? 'warn' : 'bad',
+           valor: conocido ? 'anillo legible · 1 histórico' : ile + ' ficheros ilegibles', datos: datos };
+}
 
 function topoEstado(id, s) {
   const sv = s.services || {};
@@ -1552,13 +2536,11 @@ function topoEstado(id, s) {
       };
     case 'captura': {
       const on = !!sv['ppi-motor-capture.service'];
-      const ile = al.pcaps_ilegibles;
-      const mal = on && ile != null && ile > 0;
+      const il = ilegiblesEstado(al);
       return {
-        estado: !on ? 'bad' : (mal ? 'bad' : 'ok'),
-        valor: !on ? 'inactivo' : (ile == null ? 'activo' : (mal ? num(ile) + ' ficheros ilegibles' : 'anillo íntegro')),
-        datos: { 'Servicio': on ? 'activo' : 'inactivo',
-                 'Ficheros ilegibles': ile == null ? 'sin medir' : num(ile) },
+        estado: !on ? 'bad' : il.estado,
+        valor: !on ? 'inactivo' : il.valor,
+        datos: Object.assign({ 'Servicio': on ? 'activo' : 'inactivo' }, il.datos),
       };
     }
     case 'suricata': {
@@ -1601,12 +2583,8 @@ function topoEstado(id, s) {
       };
     }
     case 'pcap': {
-      const ile = al.pcaps_ilegibles;
-      return {
-        estado: ile == null ? '' : (ile > 0 ? 'bad' : 'ok'),
-        valor: ile == null ? 'sin medir' : (ile > 0 ? num(ile) + ' ilegibles' : 'íntegro'),
-        datos: { 'Ficheros que el motor no pudo leer': ile == null ? 'sin medir' : num(ile) },
-      };
+      const il = ilegiblesEstado(al);
+      return { estado: il.estado, valor: il.valor, datos: il.datos };
     }
     case 'eve': {
       const drops = cm ? (cm.kernel_drops + cm.kernel_ifdrops) : null;
@@ -1654,10 +2632,42 @@ function topoEstado(id, s) {
     case 'panel':
       return { estado: 'ok', valor: 'solo lectura', datos: { 'Refresco': '5 s' } };
     case 'reentrenamiento':
-      return { estado: '', valor: 'periódico', datos: {
-        'Cadencia base': 'mensual',
-        'Disparador real': 'deriva del FPR',
-        'Obligatorio': 'al cambiar la red' } };
+    case 'a_oro': case 'a_san': case 'a_lin': case 'a_der': case 'a_inf': case 'a_ver': case 'a_hum': {
+      const e = aprEstado;
+      if (!e || !e.disponible) return { estado: '', valor: 'sin estado', datos: { 'Estado': 'abre «Aprendizaje» o revisa --config-toml' } };
+      const p = e.politica, lotes = e.lotes || [], der = (e.deriva || []).filter(d => d.fpr_oro !== undefined);
+      const ul = lotes.length ? lotes[lotes.length - 1] : null, ud = der.length ? der[der.length - 1] : null;
+      const uc = e.candidatos.length ? e.candidatos[e.candidatos.length - 1] : null;
+      const act = p.activo ? 'activo' : 'desactivado';
+      const pct = (v) => (v === null || v === undefined) ? '—' : (v * 100).toFixed(2) + ' %';
+      if (id === 'reentrenamiento') return { estado: p.activo ? 'ok' : 'warn', valor: act, datos: {
+        'Modo': p.modo, 'Cadencia': p.cadencia_dias + ' días o deriva ' + p.dias_deriva + ' días',
+        'Lotes sin usar': String(e.lotes_disponibles), 'Último candidato': uc ? uc.id + ' · ' + uc.veredicto : 'ninguno' } };
+      if (id === 'a_oro') return e.oro
+        ? { estado: 'ok', valor: e.oro.filas + ' ventanas', datos: { 'sha256': e.oro.sha256.slice(0, 16) + '…', 'Creado': String(e.oro.generado).slice(0, 10) } }
+        : { estado: 'warn', valor: 'no creado', datos: { 'Crear': 'cyberflow_aprendizaje.py oro --desde <particionado>' } };
+      if (id === 'a_san') return ul
+        ? { estado: ul.estado === 'aceptado' ? 'ok' : (ul.estado === 'rechazado' ? 'bad' : 'warn'), valor: ul.estado, datos: {
+            'Lote': ul.dia, 'Filas': ul.filas.entrada + ' → ' + ul.filas.salida,
+            'De IPs marcadas': String(ul.filas.contaminadas), 'Atípicas': String(ul.filas.atipicas), 'PSI máx': ul.psi_max === null ? '—' : String(ul.psi_max) } }
+        : { estado: p.activo ? '' : 'warn', valor: p.activo ? 'primer lote a las 00:30 UTC' : act, datos: {} };
+      if (id === 'a_lin') return { estado: e.registro_integro ? 'ok' : 'bad', valor: e.registro_integro ? 'íntegro' : 'ROTO', datos: {
+        'Lotes registrados': String(lotes.length), 'Sin usar': String(e.lotes_disponibles) } };
+      if (id === 'a_der') return ud
+        ? { estado: e.deriva_sostenida ? 'bad' : (ud.senal ? 'warn' : 'ok'), valor: e.deriva_sostenida ? 'sostenida' : (ud.senal ? 'señal' : 'estable'), datos: {
+            'Día': ud.dia, 'FPR en oro': pct(ud.fpr_oro), 'Anómalo en el lote': pct(ud.tasa_anomala_lote) } }
+        : { estado: '', valor: 'sin medir', datos: {} };
+      if (id === 'a_inf') return { estado: '', valor: Math.round(p.max_fraccion_nueva * 100) + ' % / ' + Math.round(p.max_fraccion_ip * 100) + ' %', datos: {
+        'Último': uc && uc.filas ? pct(uc.filas.fraccion_nueva) + ' de filas nuevas' : 'sin candidatos', 'Próximo': e.proximo || 'por cadencia o deriva' } };
+      if (id === 'a_ver') return uc
+        ? { estado: uc.veredicto === 'PROMOVIBLE' ? 'ok' : (uc.veredicto === 'NO_PROMOVER' ? 'bad' : 'warn'), valor: uc.veredicto, datos: {
+            'FPR oro (vigente → candidato)': pct((uc.resultados.vigente || {}).fpr_oro) + ' → ' + pct((uc.resultados.candidato || {}).fpr_oro),
+            'Detección': pct((uc.resultados.vigente || {}).deteccion) + ' → ' + pct((uc.resultados.candidato || {}).deteccion) } }
+        : { estado: '', valor: 'sin candidatos', datos: {} };
+      const h = e.historial || [];
+      return { estado: '', valor: h.length ? h[h.length - 1].accion + ' ' + h[h.length - 1].candidato : 'sin promociones', datos: {
+        'Detector vigente': e.detector_vigente } };
+    }
     case 'heuristicos':
       return { estado: '', valor: '4 reglas deterministas', datos: {
         'Cubren': 'brute-force · port-scan · http-abuse · dns-entropy',
@@ -1682,8 +2692,22 @@ function renderTopologia(status) {
   topoUltimo = status;
   const v = TOPO_VISTAS[topoVista];
   const svg = document.getElementById('topo');
+  const tabla = document.getElementById('topoTabla');
+  if (v.tabla) {
+    svg.style.display = 'none';
+    tabla.style.display = 'block';
+    tabla.innerHTML = validacionHTML();
+    document.getElementById('topoDetail').innerHTML = validacionDetalleHTML();
+    return;
+  }
+  svg.style.display = '';
+  tabla.style.display = 'none';
   const est = {};
-  for (const n of v.nodos) est[n.id] = topoEstado(n.id, status);
+  for (const n of v.nodos) {
+    est[n.id] = topoEstado(n.id, status);
+    // Nodos de las vistas de construccion: sin estado vivo, llevan su cifra fija.
+    if (est[n.id].valor === '—' && n.val) est[n.id] = Object.assign({}, est[n.id], { valor: n.val });
+  }
 
   const grupos = v.grupos.map(g => {
     const badge = g.n
@@ -1700,16 +2724,18 @@ function renderTopologia(status) {
   // Un aviso -por ejemplo, umbral sin calibrar- no interrumpe el flujo, asi
   // que no apaga la arista; solo un servicio caido lo hace. La rama de
   // descarte nunca se anima: no es el camino del dato, es donde se queda.
+  const PUNTA = ' marker-end="url(#topoPunta)"';
   const aristas = v.aristas.map(e => {
-    if (e.tipo === 'descarte') {
-      return `<path class="topo-edge descarte" d="${e.d}"/>` +
-             (e.etiqueta ? `<text class="topo-edge-label" x="${e.ex}" y="${e.ey}" text-anchor="middle">${e.etiqueta}</text>` : '');
+    const label = e.etiqueta
+      ? `<text class="topo-edge-label" x="${e.ex}" y="${e.ey}" text-anchor="middle">${e.etiqueta}</text>` : '';
+    // Con tipo, el conector dice su naturaleza (copia, previsto, persona...) y
+    // no depende del estado vivo. Un enlace fisico no lleva punta.
+    if (e.tipo) {
+      return `<path class="topo-edge ${e.tipo}" d="${e.d}"${e.tipo === 'enlace' ? '' : PUNTA}/>` + label;
     }
     const vivo = est[e.desde].estado !== 'bad' && est[e.hasta].estado !== 'bad'
                  && est[e.desde].estado !== '';
-    const label = e.etiqueta
-      ? `<text class="topo-edge-label" x="${e.ex}" y="${e.ey}" text-anchor="middle">${e.etiqueta}</text>` : '';
-    return `<path class="topo-edge ${vivo ? 'live' : 'dim'}" d="${e.d}"/>` + label;
+    return `<path class="topo-edge ${vivo ? 'live' : 'dim'}" d="${e.d}"${PUNTA}/>` + label;
   }).join('');
 
   // Un punto recorre la tuberia en bucle: hace visible que el dato fluye.
@@ -1752,8 +2778,9 @@ function renderTopologia(status) {
     </g>`;
   }).join('');
 
-  svg.innerHTML = grupos + aristas + packet + hosts + nodos;
-  if (topoFasesVista !== topoVista) { renderFases(); topoFasesVista = topoVista; }
+  // La punta de flecha toma el color de su conector (context-stroke).
+  const defs = '<defs><marker id="topoPunta" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse"><path d="M0,0.8 L9.5,5 L0,9.2 Z" fill="context-stroke" stroke="none"/></marker></defs>';
+  svg.innerHTML = defs + grupos + aristas + packet + hosts + nodos;
   aplicarZoom();
   renderTopoDetalle();
 }
@@ -1791,48 +2818,17 @@ function escalaActual() {
   return topoZoom != null ? topoZoom : escalaAjuste();
 }
 
-// Zoom por seccion: encuadra un grupo (fase) y lo centra en el lienzo.
-function zoomAGrupo(g) {
-  const caja = document.getElementById('topoScroll');
-  const m = 28;
-  const esc = Math.max(0.3, Math.min(3, Math.min(
-    (caja.clientWidth - m) / g.w, (caja.clientHeight - m) / g.h)));
-  topoZoom = esc;
-  aplicarZoom();
-  caja.scrollLeft = Math.max(0, (g.x + g.w / 2) * esc - caja.clientWidth / 2);
-  caja.scrollTop = Math.max(0, (g.y + g.h / 2) * esc - caja.clientHeight / 2);
-}
-
-// Un boton por fase (solo en vistas con grupos numerados) + "Todo".
-let topoFasesVista = null;
-function renderFases() {
-  const cont = document.getElementById('topoFases');
-  if (!cont) return;
-  const grupos = (TOPO_VISTAS[topoVista].grupos || []).filter(g => g.n);
-  if (!grupos.length) { cont.innerHTML = ''; cont.style.display = 'none'; return; }
-  cont.style.display = 'flex';
-  cont.innerHTML = '<span class="lbl">Fase</span>'
-    + grupos.map(g => `<button type="button" data-fase="${g.n}" title="Encuadrar: ${g.txt}">${g.n}</button>`).join('')
-    + '<button type="button" data-fase="all" title="Ver todo el diagrama">Todo</button>';
-}
-
-on('topoFases', 'click', (ev) => {
-  const b = ev.target.closest('button[data-fase]');
-  if (!b) return;
-  const caja = document.getElementById('topoScroll');
-  if (b.dataset.fase === 'all') { topoZoom = null; aplicarZoom(); caja.scrollTop = 0; caja.scrollLeft = 0; return; }
-  const g = (TOPO_VISTAS[topoVista].grupos || []).find(x => String(x.n) === b.dataset.fase);
-  if (g) zoomAGrupo(g);
-});
-
 on('topoVista', 'click', (ev) => {
   const b = ev.target.closest('button[data-vista]');
   if (!b) return;
   topoVista = b.dataset.vista;
   document.querySelectorAll('#topoVista button').forEach(x => x.classList.toggle('active', x === b));
   topoZoom = null;   // cada vista tiene otro tamano: se reajusta
-  // Si el nodo seleccionado no existe en la vista nueva, se cae al motor.
-  if (!TOPO_VISTAS[topoVista].nodos.some(n => n.id === topoSel)) topoSel = 'motor';
+  // Si el nodo seleccionado no existe en la vista nueva, se cae al primero.
+  if (!TOPO_VISTAS[topoVista].nodos.some(n => n.id === topoSel)) {
+    const prim = TOPO_VISTAS[topoVista].nodos.find(n => !n.host) || TOPO_VISTAS[topoVista].nodos[0];
+    topoSel = prim ? prim.id : null;
+  }
   if (topoUltimo) renderTopologia(topoUltimo);
 });
 
@@ -1902,7 +2898,8 @@ function renderTopoDetalle() {
   if (!topoUltimo) return;
   const lista = TOPO_VISTAS[topoVista].nodos;
   const n = lista.find(x => x.id === topoSel) || lista[0];
-  const e = topoEstado(n.id, topoUltimo);
+  let e = topoEstado(n.id, topoUltimo);
+  if (e.valor === '—' && n.val) e = Object.assign({}, e, { valor: n.val });
   const t = TOPO_TEXTO[n.id] || {};
   const filas = Object.entries(e.datos || {})
     .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
@@ -1916,7 +2913,7 @@ function renderTopoDetalle() {
     (t.flujo ? flujoHTML(t.flujo, t.flujoTit) : '') +
     filesHTML(n.id) +
     (t.nota ? `<p class="dim">${t.nota}</p>` : '') +
-    (t.enlace ? `<p><a href="${t.enlace.href}">${t.enlace.txt} &rarr;</a></p>` : '');
+    (t.enlace ? `<p><a href="${t.enlace.href}"${t.enlace.vtab ? ` data-vtab="${t.enlace.vtab}"` : ''}>${t.enlace.txt} &rarr;</a></p>` : '');
 }
 
 // La regla de decision del modelo, hecha visible en el nodo "Modelo": una recta
@@ -1979,7 +2976,7 @@ function fmtBytes(b) {
 }
 
 function nombreFichero(ruta) {
-  const p = ruta.split('/');
+  const p = String(ruta).split(/[\\\\/]/);
   return p[p.length - 1] || ruta;
 }
 
@@ -2002,8 +2999,11 @@ function filesHTML(nodeId) {
            f.mtime ? 'modif. ' + new Date(f.mtime * 1000).toLocaleString() : null]
             .filter(Boolean).join(' · ')
         : '<span class="aus">no existe todavía</span>';
+      const verbtn = f.existe
+        ? `<button class="ver-codigo" data-ruta="${String(f.ruta).replace(/"/g, '&quot;')}">◎ Ver contenido</button>`
+        : '';
       html += `<div class="topo-file-det"><div class="ruta">${f.ruta}</div>`
-        + `<div>${f.que}</div><div>${estado}</div></div>`;
+        + `<div>${f.que}</div><div>${estado}</div>${verbtn}</div>`;
     }
   }
   return html + '</div>';
@@ -2086,12 +3086,42 @@ on('topoArchivosBtn', 'click', async () => {
   if (topoUltimo) renderTopologia(topoUltimo);
 });
 
-on('topoDetail', 'click', (ev) => {
+on('topoDetail', 'click', async (ev) => {
+  const vc = ev.target.closest('.ver-codigo');
+  if (vc) { await verCodigo(vc.dataset.ruta); return; }
   const f = ev.target.closest('.topo-file');
   if (!f) return;
   const clave = f.dataset.file;
   if (filesAbiertos.has(clave)) filesAbiertos.delete(clave); else filesAbiertos.add(clave);
   renderTopoDetalle();
+});
+
+// Modo desarrollador: abre un modal con el CONTENIDO del script (solo lectura).
+async function verCodigo(ruta) {
+  const modal = document.getElementById('codeModal');
+  document.getElementById('codeTitle').textContent = nombreFichero(ruta);
+  document.getElementById('codeSub').textContent = ruta;
+  document.getElementById('codeBody').textContent = 'cargando…';
+  modal.hidden = false;
+  try {
+    const r = await fetch('/api/archivo?ruta=' + encodeURIComponent(ruta));
+    const d = await r.json();
+    if (!d || d.contenido == null) {
+      document.getElementById('codeBody').textContent = (d && d.nota) || 'no disponible';
+    } else {
+      document.getElementById('codeBody').textContent =
+        d.contenido + (d.truncado ? '\\n\\n…(archivo truncado: se muestran los primeros 512 KB)…' : '');
+      document.getElementById('codeSub').textContent =
+        ruta + '  ·  ' + (d.bytes || 0) + ' bytes';
+    }
+  } catch (e) {
+    document.getElementById('codeBody').textContent = 'error al cargar el archivo';
+  }
+}
+on('codeClose', 'click', () => { document.getElementById('codeModal').hidden = true; });
+on('codeModal', 'click', (ev) => { if (ev.target.id === 'codeModal') ev.currentTarget.hidden = true; });
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') { const m = document.getElementById('codeModal'); if (m) m.hidden = true; }
 });
 
 on('topo', 'click', (ev) => {
@@ -2299,6 +3329,455 @@ if (document.getElementById('varTabla')) {
 // Escenarios: catalogo estatico, se pide una vez (solo el admin tiene la seccion).
 if (document.getElementById('simGrid')) cargarEscenarios();
 
+// ---- Comparacion con Suricata: la tabla la calcula el evaluador del servidor
+// (scripts/evaluacion/comparacion.py) desde el fichero de episodios.
+function cmpCelda(c) {
+  if (!c || c.n === 0) return '<td class="cmp-nm">no medido</td>';
+  const coma = (v) => String(v).split('.').join(',');
+  let t = c.detectados + '/' + c.n;
+  if (c.detectados) {
+    t += c.latencia_min_s === c.latencia_max_s ? ' · ' + coma(c.latencia_mediana_s) + ' s'
+      : ' · ' + coma(c.latencia_mediana_s) + ' s [' + coma(c.latencia_min_s) + '–' + coma(c.latencia_max_s) + ']';
+  }
+  const cls = c.detectados === c.n ? 'cmp-bien' : (c.detectados === 0 ? 'cmp-mal' : '');
+  return '<td class="num ' + cls + '">' + t + '</td>';
+}
+
+async function cargarComparacion() {
+  const tb = document.getElementById('cmpTabla');
+  if (!tb) return;
+  try {
+    const r = await (await fetch('/api/comparacion')).json();
+    if (r.error) { tb.innerHTML = '<tr class="empty-row"><td colspan="5">' + varEsc(r.error) + '</td></tr>'; return; }
+    const conds = ['suricata', 'modelo', 'heuristicos', 'combinado'];
+    let html = r.por_familia.map(f => '<tr><td>' + varEsc(f.nombre) + (f.con_firma ? ' <span class="badge heur">con firma</span>' : '') + '</td>'
+      + conds.map(c => cmpCelda(f[c])).join('') + '</tr>').join('');
+    html += '<tr class="cmp-total"><td>Total sin firma</td>' + conds.map(c => cmpCelda(r.sin_firma[c])).join('') + '</tr>';
+    const fp = r.falsos_positivos;
+    const fpTxt = (x) => x.valor === 'no medido' ? '<td class="cmp-nm">no medido</td>'
+      : '<td class="num">' + x.valor + (x.de ? ' / ' + x.de : '') + '</td>';
+    html += '<tr><td>Falsos positivos <span class="hace">ventanas normales con acción</span></td>' + conds.map(c => fpTxt(fp[c])).join('') + '</tr>';
+    tb.innerHTML = html;
+    document.getElementById('cmpNotas').innerHTML = (r.notas || []).map(n => '<li>' + varEsc(n) + '</li>').join('');
+  } catch (e) {
+    tb.innerHTML = '<tr class="empty-row"><td colspan="5">No se pudo cargar la comparación.</td></tr>';
+  }
+}
+cargarComparacion();
+
+// ---- Datos en vivo -------------------------------------------------------
+// Captura en vivo al estilo de Wireshark. Tres llamadas, todas solo admin:
+//  - /api/vivo/flujo cada 1 s: SOLO lo escrito desde la llamada anterior en el
+//    anillo PCAP y en eve.json (el cursor lo guarda esta pagina). Las filas
+//    llegan con lo que se sabe de cada registro solo: son provisionales.
+//  - /api/vivo cada 10 s: la cadena del motor sobre el tramo reciente. Lo que
+//    devuelve se cruza por fichero#trama o por byte y la fila pasa a confirmada,
+//    con la entidad que atribuye el motor y el valor real de cada variable.
+//  - /api/trazabilidad una vez: la matriz sale del esquema y del codigo.
+// El medidor cuenta TODO lo que entra, aunque el filtro oculte filas: es la
+// prueba de que la ingesta no se detiene.
+const VIVO_MAX = 1500;
+const vivo = {
+  tab: 'eve', pausa: false, cursor: {}, matriz: null, error: null, enCurso: false,
+  filas: {eve: [], pcap: []}, porClave: {eve: new Map(), pcap: new Map()},
+  motor: {eve: new Map(), pcap: new Map()}, motorInfo: null,
+  num: {eve: 0, pcap: 0}, total: {eve: 0, pcap: 0, aportan: 0},
+  estados: {}, tipos: {}, hist: [], prev: null, visto: {eve: null, pcap: null},
+  sel: null, desde: null,
+};
+
+const vivoHora = (s) => s ? s.slice(11, 19) : '—';
+const vivoUso = (f) => f.uso === 'modelo' ? '' : (f.uso === 'conteo' ? ' cnt' : ' l2');
+function vivoNum(v) {
+  if (v === null || v === undefined) return '—';
+  const n = Number(v);
+  return Math.abs(n) >= 100 ? n.toFixed(0) : String(+n.toFixed(4));
+}
+function vivoMB(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : (b / 1024).toFixed(0) + ' KB'; }
+function vivoTasa(n) { return n >= 100 ? n.toFixed(0) : n.toFixed(1); }
+
+function vivoClase(r, fuente) {
+  let c = '';
+  if (fuente === 'eve') {
+    c = {http: 'c-http', dns: 'c-dns', tls: 'c-tls', alert: 'c-alert'}[r.tipo] || '';
+  } else if (r.proto === 'TCP') {
+    c = r.flags.includes('RST') ? 'c-rst' : (r.flags.includes('SYN') || r.flags.includes('FIN') ? 'c-syn' : 'c-tcp');
+  } else if (r.proto === 'UDP') {
+    c = (r.puerto_src === 53 || r.puerto_dst === 53) ? 'c-dns' : 'c-udp';
+  } else if (r.proto === 'ICMP') c = 'c-icmp';
+  else if (r.proto === 'ARP') c = 'c-arp';
+  return c + (r.estado === 'aporta' ? '' : ' c-fuera');
+}
+
+function vivoPasa(r, q) {
+  if (!q) return true;
+  const m = vivo.motor[vivo.tab].get(r.k);
+  const feats = (m ? m.features : r.aportes) || [];
+  const txt = [r.entidad, m && m.entidad, r.ip_src, r.ip_dst, r.origen, r.destino, r.evento, r.info,
+    r.proto, r.tipo, r.flags, r.mac_src, r.vlan, r.estado].concat(feats.map(f => f.feature)).join(' ').toLowerCase();
+  return txt.includes(q);
+}
+
+// Variable, ventana y valor: una linea por variable en tres columnas alineadas.
+// En la lista van las dos mas especificas; todas, en el detalle (clic en la fila).
+// Las genericas (toda trama suma a packet_rate y byte_rate) van al final.
+const VIVO_GENERICAS = ['packet_rate_10s', 'byte_rate_10s', 'large_ip_ratio_10s', 'flow_attempt_count_30s',
+  'http_request_count_60s', 'dns_query_count_60s', 'unique_dst_ip_ratio_30s', 'unique_dst_port_ratio_30s'];
+function vivoOrden(feats) {
+  const g = (f) => VIVO_GENERICAS.indexOf(f.feature);
+  return feats.slice().sort((a, b) => (g(a) >= 0) - (g(b) >= 0) || g(a) - g(b));
+}
+function vivoCeldasVar(r, fuente) {
+  const m = vivo.motor[fuente].get(r.k);
+  const todas = vivoOrden(m ? m.features : (r.aportes || []));
+  if (!todas.length) return '<td class="txt prov">' + varEsc(r.estado) + '</td><td></td><td></td>';
+  const feats = todas.slice(0, 2), resto = todas.length - feats.length;
+  const tip = (f) => varEsc(f.feature + ' · ventana ' + f.ventana_s + ' s · uso: ' + f.uso);
+  const mas = resto ? '<span class="mas" title="' + varEsc(todas.slice(2).map(f => f.feature).join(', ')) +
+    '">+' + resto + '</span>' : '';
+  return '<td>' + feats.map((f, i) => '<span class="fl' + vivoUso(f) + '" title="' + tip(f) + '"><b>' +
+      varEsc(f.feature) + '</b> ' + varEsc(f.aporte) + (i === 0 ? mas : '') + '</span>').join('') + '</td>' +
+    '<td>' + feats.map(f => '<span class="fl"' + (m ? ' title="ventana que termina ' + vivoHora(m.ventana_fin) +
+      ' UTC"' : '') + '>' + f.ventana_s + ' s</span>').join('') + '</td>' +
+    '<td>' + feats.map(f => m
+      ? '<span class="fl conf" title="Valor real de la variable en esa ventana (build_rows del motor)' +
+        (f.parcial ? ': PARCIAL, la ventana empieza antes del tramo leído' : '') + '">' +
+        vivoNum(f.valor) + (f.parcial ? '*' : '') + '</span>'
+      : '<span class="fl pend" title="Pendiente: el motor procesa la trama cuando su fichero se cierra (rota cada 15 s)">…</span>').join('') + '</td>';
+}
+
+function vivoFila(r, fuente, nueva) {
+  const m = vivo.motor[fuente].get(r.k);
+  const ent = m ? '<span class="conf" title="Atribuida por la cadena del motor">' + varEsc(m.entidad) + '</span>'
+    : (r.entidad ? '<span class="prov" title="Provisional: sin estado no se sabe quién inició el flujo">' + varEsc(r.entidad) + '</span>' : '—');
+  const cls = vivoClase(r, fuente) + (nueva ? ' nueva' : '') + (vivo.sel === r.k ? ' sel' : '');
+  const ini = '<tr data-k="' + varEsc(r.k) + '" data-c="' + (m ? 1 : 0) + '" class="' + cls + '"><td>' + r.no + '</td><td>' + varEsc(r.hora) + '</td>';
+  if (fuente === 'eve') {
+    return ini + '<td>' + ent + '</td><td class="txt" title="' + varEsc(r.info || '') + '">' +
+      varEsc(r.evento || r.tipo) + '</td><td>' + varEsc(r.origen) + '<div class="sub">→ ' + varEsc(r.destino) +
+      '</div></td>' + vivoCeldasVar(r, fuente) + '<td title="eve.json, byte ' + r.byte + '">@' + r.byte + '</td></tr>';
+  }
+  const ip = (a, p) => varEsc(a || '') + (p ? ':' + p : '');
+  // La entidad no es columna de esta vista: va en el titulo de la IP y en el detalle.
+  const entTxt = m ? m.entidad + ' (motor)' : (r.entidad ? r.entidad + ' (provisional)' : 'sin entidad');
+  return ini + '<td>' + (r.vlan || '—') + '</td><td>' + varEsc(r.mac_src) + '</td><td title="Entidad: ' +
+    varEsc(entTxt) + '">' + ip(r.ip_src, r.puerto_src) + '<div class="sub">→ ' + ip(r.ip_dst, r.puerto_dst) + '</div></td><td>' +
+    varEsc(r.proto || '') + '</td><td>' + varEsc(r.flags || '') + '</td><td>' +
+    (r.longitud === null ? r.capturada : r.longitud) + '</td>' + vivoCeldasVar(r, fuente) + '<td title="' +
+    varEsc(r.fichero) + ', trama ' + r.trama + '">…' + varEsc(r.fichero.replace(/[.]pcap$/, '').slice(-6)) +
+    ' #' + r.trama + '</td></tr>';
+}
+
+function vivoCabecera(fuente) {
+  const cols = fuente === 'eve'
+    ? ['No.', 'Hora UTC', 'Entidad', 'Evento', 'Origen → destino', 'Variable · aporte', 'Vent.', 'Valor', 'Fuente']
+    : ['No.', 'Hora UTC', 'VLAN', 'MAC origen', 'IP origen → destino', 'Proto', 'Flags', 'Long.',
+       'Variable · aporte', 'Vent.', 'Valor', 'Archivo'];
+  return '<table><thead><tr>' + cols.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody></tbody></table>';
+}
+
+function vivoAlFinal(caja) {
+  if (document.getElementById('vivoSeguir').checked) caja.scrollTop = caja.scrollHeight;
+}
+
+function renderVivo() {
+  const caja = document.getElementById('vivoTabla');
+  const res = document.getElementById('vivoResumen');
+  const pie = document.getElementById('vivoPie');
+  if (!caja) return;
+  const q = (document.getElementById('vivoFiltro').value || '').trim().toLowerCase();
+  const enMatriz = vivo.tab === 'matriz';
+  for (const id of ['vivoTodosLbl', 'vivoSeguir', 'vivoLimpiar']) {
+    const el = document.getElementById(id);
+    (el.closest('label') || el).style.display = enMatriz ? 'none' : '';
+  }
+  document.getElementById('vivoDetalle').hidden = enMatriz || !vivo.sel;
+
+  if (enMatriz) {
+    if (!vivo.matriz) { caja.innerHTML = '<p class="var-vacio">Cargando matriz…</p>'; return; }
+    const filas = vivo.matriz.filter(m => !q || (m.feature + ' ' + m.registro + ' ' + m.fuente).toLowerCase().includes(q));
+    res.textContent = 'Fuente → registro → parser → variable → ventana → uso. Construida del esquema ' +
+      '(multilayer-v2/v3), de build_rows y del código de heuristicos.py: si cambia el código, cambia la matriz. ' +
+      'Las variables de PCAP se calculan después de quitar el plano de control y las copias del espejo.';
+    caja.classList.remove('ws');
+    caja.innerHTML = '<table class="matriz"><thead><tr><th>Fuente</th><th>Registro que la alimenta</th><th>Parser</th>' +
+      '<th>Variable</th><th>Capa</th><th>Ventana</th><th>Uso</th><th>Heurísticos</th></tr></thead><tbody>' +
+      filas.map(m => '<tr><td>' + varEsc(m.fuente) + '</td><td>' + varEsc(m.registro) + '</td><td class="m">' +
+        varEsc(m.parser) + '</td><td class="m"><b>' + varEsc(m.feature) + '</b></td><td>' + varEsc(m.capa) +
+        '</td><td>' + m.ventana_s + ' s</td><td>' + varEsc(m.uso) + '</td><td class="heur">' +
+        varEsc((m.heuristicos || []).join(', ') || '—') + '</td></tr>').join('') + '</tbody></table>';
+    pie.textContent = filas.length + ' columnas: 28 entran al modelo (v2), 3 de capa 2 se acumulan sin puntuarse (v3) ' +
+      'y 3 son conteos que solo leen los heurísticos.';
+    return;
+  }
+  caja.classList.add('ws');
+  if (vivo.error) {
+    caja.innerHTML = '<p class="var-vacio">' + varEsc(vivo.error) + '</p>';
+    res.textContent = ''; pie.textContent = ''; return;
+  }
+  const fuente = vivo.tab;
+  caja.innerHTML = vivoCabecera(fuente);
+  const filas = vivo.filas[fuente].filter(r => vivoPasa(r, q));
+  caja.querySelector('tbody').innerHTML = filas.map(r => vivoFila(r, fuente, false)).join('');
+  if (!filas.length) caja.insertAdjacentHTML('beforeend', '<p class="var-vacio">Esperando registros' +
+    (q ? ' que pasen el filtro' : ' que aporten a alguna variable') + '…</p>');
+  vivoResumenTexto();
+  vivoAlFinal(caja);
+}
+
+function vivoResumenTexto() {
+  const res = document.getElementById('vivoResumen');
+  const pie = document.getElementById('vivoPie');
+  const todos = document.getElementById('vivoTodos').checked;
+  const cuenta = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => v + ' ' + k).join(' · ') || 'nada aún';
+  const mi = vivo.motorInfo;
+  if (vivo.tab === 'eve') {
+    res.textContent = 'Recibidos: ' + cuenta(vivo.tipos) + '. ' +
+      (todos ? 'Se listan todos.' : 'Se listan los que usa el motor (http, dns, tls).');
+    pie.textContent = 'Verde: confirmado por el motor' + (mi ? ' (' + vivoHora(mi.calculado) + ' UTC)' : '') +
+      ' · cursiva: provisional · *: ventana parcial.';
+  } else {
+    res.textContent = 'Recibidas: ' + cuenta(vivo.estados) + '. ' + (todos ? 'Se listan todas.'
+      : 'Se listan las de señal propia (SYN, SYN-ACK, RST, ICMP, fragmento, ARP).');
+    pie.textContent = '«…»: pendiente hasta que el fichero se cierre (cada 15 s)' +
+      (mi && mi.pcap.tramo ? ' · motor al día hasta ' + vivoHora(mi.pcap.tramo.hasta) + ' UTC' : '') +
+      ' · colores como en Wireshark.';
+  }
+}
+
+function vivoIngerir(d) {
+  const q = (document.getElementById('vivoFiltro').value || '').trim().toLowerCase();
+  const caja = document.getElementById('vivoTabla');
+  const tbody = caja ? caja.querySelector('tbody') : null;
+  for (const fuente of ['pcap', 'eve']) {
+    const f = d[fuente];
+    if (f.ultimo_ts) vivo.visto[fuente] = f.ultimo_ts;
+    vivo.total[fuente] += fuente === 'pcap' ? f.nuevas : f.nuevos;
+    vivo.total.aportan += f.aportan;
+    const acum = fuente === 'pcap' ? vivo.estados : vivo.tipos;
+    for (const [k, v] of Object.entries(fuente === 'pcap' ? f.estados : f.tipos)) acum[k] = (acum[k] || 0) + v;
+    const lista = vivo.filas[fuente], idx = vivo.porClave[fuente];
+    const nuevas = [];
+    for (const r of f.filas) {
+      if (idx.has(r.k)) continue;
+      r.no = ++vivo.num[fuente];
+      lista.push(r); idx.set(r.k, r); nuevas.push(r);
+    }
+    while (lista.length > VIVO_MAX) idx.delete(lista.shift().k);
+    if (fuente === vivo.tab && tbody && !vivo.error) {
+      const html = nuevas.filter(r => vivoPasa(r, q)).map(r => vivoFila(r, fuente, true)).join('');
+      if (html) {
+        const vacio = caja.querySelector('.var-vacio');
+        if (vacio) vacio.remove();
+        tbody.insertAdjacentHTML('beforeend', html);
+        while (tbody.rows.length > VIVO_MAX) tbody.deleteRow(0);
+        vivoAlFinal(caja);
+      }
+    }
+  }
+  vivoMedidor(d);
+  if (vivo.tab !== 'matriz') vivoResumenTexto();
+}
+
+function vivoSpark(id, serie) {
+  const svg = document.getElementById(id);
+  if (!svg) return;
+  const max = Math.max(1, ...serie);
+  const pts = serie.map((v, i) => (i * 120 / Math.max(1, serie.length - 1)).toFixed(1) + ',' + (27 - v / max * 25).toFixed(1));
+  svg.innerHTML = serie.length < 2 ? '' : '<polygon points="0,28 ' + pts.join(' ') + ' 120,28"/><polyline points="' + pts.join(' ') + '"/>';
+}
+
+function vivoMedidor(d) {
+  const ahora = d.servidor, prev = vivo.prev;
+  let tp = 0, te = 0, bp = 0, be = 0;
+  if (prev) {
+    const dt = Math.max(0.2, ahora - prev.servidor);
+    tp = d.pcap.nuevas / dt; te = d.eve.nuevos / dt;
+    bp = d.pcap.bytes / dt; be = d.eve.bytes / dt;
+    vivo.hist.push({p: tp, e: te});
+    if (vivo.hist.length > 120) vivo.hist.shift();
+  }
+  vivo.prev = d;
+  if (!vivo.desde) vivo.desde = ahora;
+  const txt = (id, s) => { const el = document.getElementById(id); if (el) el.innerHTML = s; };
+  txt('vmPcapTasa', prev ? vivoTasa(tp) : '…');
+  txt('vmEveTasa', prev ? vivoTasa(te) : '…');
+  vivoSpark('vmPcapSpark', vivo.hist.map(h => h.p));
+  vivoSpark('vmEveSpark', vivo.hist.map(h => h.e));
+  txt('vmPcapPie', d.pcap.activo ? varEsc(d.pcap.activo) + ' · ' + vivoMB(d.pcap.tam_activo) +
+    (bp > 0 ? ' <span class="crece">+' + vivoMB(bp) + '/s</span>' : '') : 'sin ficheros en el anillo');
+  txt('vmEvePie', d.eve.fichero ? 'eve.json · ' + vivoMB(d.eve.tam) +
+    (be > 0 ? ' <span class="crece">+' + vivoMB(be) + '/s</span>' : '') : 'sin eve.json');
+  const tot = vivo.total.pcap + vivo.total.eve;
+  txt('vmTotal', tot.toLocaleString('es'));
+  const min = Math.max(0, Math.round((ahora - vivo.desde) / 60));
+  txt('vmTotalPie', vivo.total.pcap.toLocaleString('es') + ' tramas · ' + vivo.total.eve.toLocaleString('es') +
+    ' eventos · ' + vivo.total.aportan.toLocaleString('es') + ' aportan · ' + min + ' min');
+  // Edad del ultimo registro de cada fuente, con el reloj del sensor.
+  const edad = (ts) => ts ? Math.max(0, ahora - ts) : Infinity;
+  const ep = edad(vivo.visto.pcap), ee = edad(vivo.visto.eve), peor = Math.max(ep, ee);
+  const fmt = (s) => s === Infinity ? 'nunca' : (s < 60 ? 'hace ' + s.toFixed(1) + ' s' : 'hace ' + Math.round(s / 60) + ' min');
+  const dot = document.getElementById('vmDot');
+  dot.className = 'vm-dot ' + (peor < 5 ? 'ok' : (peor < 30 ? 'lento' : 'parado'));
+  txt('vmTitulo', peor < 5 ? 'EN VIVO · entrando datos' : (peor < 30 ? 'Ingesta lenta' : 'Sin datos nuevos'));
+  txt('vmSub', 'última trama ' + fmt(ep) + ' · último evento ' + fmt(ee) +
+    (d.pcap.omitido_bytes || d.eve.omitido_bytes ? ' · se saltó retraso acumulado' : ''));
+}
+
+function vivoDetalle(r, fuente) {
+  const caja = document.getElementById('vivoDetalle');
+  if (!r) { caja.hidden = true; return; }
+  const m = vivo.motor[fuente].get(r.k);
+  const kv = (k, v) => '<div class="kv">' + k + ': <b>' + varEsc(String(v)) + '</b></div>';
+  const rama = (t, cuerpo, abierta) => '<details' + (abierta ? ' open' : '') + '><summary>' + t + '</summary>' + cuerpo + '</details>';
+  let h = '';
+  if (fuente === 'pcap') {
+    h += rama('Trama ' + r.trama + ' de ' + varEsc(r.fichero) + ': ' + r.capturada + ' bytes capturados',
+      kv('Hora (UTC)', r.hora) + kv('Clave', r.k), false);
+    h += rama('Ethernet II: ' + varEsc(r.mac_src) + ' → ' + varEsc(r.mac_dst),
+      kv('Origen', r.mac_src) + kv('Destino', r.mac_dst), false);
+    if (r.vlan) h += rama('802.1Q: VLAN ' + r.vlan, kv('VLAN', r.vlan), false);
+    if (r.proto === 'ARP') {
+      h += rama('ARP: ' + varEsc(r.info), kv('Emisor', r.ip_src) + kv('Objetivo', r.ip_dst), true);
+    } else if (r.longitud !== null) {
+      h += rama('IPv4: ' + varEsc(r.ip_src) + ' → ' + varEsc(r.ip_dst),
+        kv('Longitud total', r.longitud + ' B') + kv('TTL', r.ttl) + kv('Identificación', r.ip_id) +
+        kv('Fragmentada', r.fragmentada ? 'sí' : 'no'), true);
+      if (r.proto === 'TCP') h += rama('TCP: ' + r.puerto_src + ' → ' + r.puerto_dst + ' [' + varEsc(r.flags || '—') + ']',
+        kv('Flags', r.flags || '—') + kv('Secuencia', r.seq) + kv('Datos', r.datos + ' B'), true);
+      else if (r.proto === 'UDP') h += rama('UDP: ' + r.puerto_src + ' → ' + r.puerto_dst, '', false);
+      else h += rama(varEsc(r.proto) + ': ' + varEsc(r.info || ''), '', false);
+    } else {
+      h += rama(varEsc(r.proto || 'otro') + ' (sin IPv4)', '', false);
+    }
+  } else {
+    h += rama('Evento ' + varEsc(r.tipo) + ' en eve.json, byte ' + r.byte, kv('Hora (UTC)', r.hora) +
+      kv('Origen', r.origen) + kv('Destino', r.destino) + kv('Protocolo', r.proto) + kv('Resumen', r.info || '—'), true);
+    let crudo = r.crudo;
+    try { crudo = JSON.stringify(JSON.parse(r.crudo), null, 2); } catch (e) { /* recortado */ }
+    h += rama('Línea JSON tal como la escribió Suricata', '<pre>' + varEsc(crudo) + '</pre>', false);
+  }
+  const feats = m ? m.features : (r.aportes || []);
+  const cf = kv('Estado', r.estado) +
+    kv('Entidad', m ? m.entidad + ' (atribuida por el motor)' : (r.entidad ? r.entidad + ' (provisional)' : '—')) +
+    (m ? kv('Ventana', 'termina ' + vivoHora(m.ventana_fin) + ' UTC') : kv('Motor', 'pendiente: aún no procesado')) +
+    feats.map(f => kv(f.feature, f.aporte + ' · ventana ' + f.ventana_s + ' s · ' + f.uso +
+      (m ? ' · valor ' + vivoNum(f.valor) + (f.parcial ? ' (parcial)' : '') : ''))).join('');
+  h += rama('CyberFlow: ' + (feats.length ? feats.length + ' variable(s)' : 'no aporta') + (m ? ' · confirmada' : ' · provisional'), cf, true);
+  caja.innerHTML = h;
+  caja.hidden = false;
+}
+
+async function vivoPoll() {
+  const sec = document.getElementById('s-vivo');
+  if (!sec || sec.hidden || vivo.pausa || vivo.enCurso) return;
+  vivo.enCurso = true;
+  try {
+    const qs = new URLSearchParams({todos: document.getElementById('vivoTodos').checked ? '1' : '0'});
+    for (const k of ['pf', 'po', 'pn', 'eo']) if (vivo.cursor[k] !== undefined) qs.set(k, vivo.cursor[k]);
+    const d = await (await fetch('/api/vivo/flujo?' + qs.toString())).json();
+    if (d.error) {
+      if (vivo.error !== d.error) { vivo.error = d.error; renderVivo(); }
+      document.getElementById('vmTitulo').textContent = 'Sin captura';
+      document.getElementById('vmSub').textContent = d.error;
+      document.getElementById('vmDot').className = 'vm-dot parado';
+      return;
+    }
+    const habiaError = vivo.error;
+    vivo.error = null;
+    vivo.cursor = d.cursor;
+    if (habiaError) renderVivo();
+    vivoIngerir(d);
+  } catch (e) {
+    document.getElementById('vmTitulo').textContent = 'Sin conexión con el panel';
+    document.getElementById('vmDot').className = 'vm-dot parado';
+  } finally {
+    vivo.enCurso = false;
+  }
+}
+
+async function vivoMotor() {
+  const sec = document.getElementById('s-vivo');
+  if (!sec || sec.hidden || vivo.pausa || vivo.error) return;
+  try {
+    const d = await (await fetch('/api/vivo?todos=1&limite=3000')).json();
+    if (d.error) return;
+    vivo.motorInfo = d;
+    for (const r of d.tramas) vivo.motor.pcap.set(r.fuente.fichero + '#' + r.fuente.trama, r);
+    for (const r of d.eventos) vivo.motor.eve.set(String(r.fuente.byte), r);
+    for (const fuente of ['pcap', 'eve']) {
+      const mp = vivo.motor[fuente];
+      while (mp.size > 8000) mp.delete(mp.keys().next().value);
+    }
+  } catch (e) { return; }
+  // Las filas ya pintadas que ahora tienen confirmacion se repintan en su sitio.
+  const caja = document.getElementById('vivoTabla');
+  if (vivo.tab === 'matriz' || !caja) return;
+  for (const tr of Array.from(caja.querySelectorAll('tbody tr[data-c="0"]'))) {
+    if (!vivo.motor[vivo.tab].has(tr.dataset.k)) continue;
+    const r = vivo.porClave[vivo.tab].get(tr.dataset.k);
+    if (r) tr.outerHTML = vivoFila(r, vivo.tab, false);
+  }
+  if (vivo.sel && vivo.motor[vivo.tab].has(vivo.sel)) vivoDetalle(vivo.porClave[vivo.tab].get(vivo.sel), vivo.tab);
+  vivoResumenTexto();
+}
+
+async function vivoCargarMatriz() {
+  if (vivo.matriz) return;
+  try { vivo.matriz = (await (await fetch('/api/trazabilidad')).json()).filas || []; }
+  catch (e) { vivo.matriz = []; }
+  renderVivo();
+}
+
+if (document.getElementById('vivoTabla')) {
+  on('vivoTabs', 'click', (ev) => {
+    const b = ev.target.closest('button[data-vtab]');
+    if (!b) return;
+    vivo.tab = b.dataset.vtab;
+    vivo.sel = null;
+    document.querySelectorAll('#vivoTabs button').forEach(x => x.classList.toggle('active', x === b));
+    renderVivo();
+    if (vivo.tab === 'matriz') vivoCargarMatriz();
+  });
+  on('vivoFiltro', 'input', renderVivo);
+  on('vivoTodos', 'change', renderVivo);
+  on('vivoSeguir', 'change', () => vivoAlFinal(document.getElementById('vivoTabla')));
+  on('vivoPausa', 'click', () => {
+    vivo.pausa = !vivo.pausa;
+    document.getElementById('vivoPausa').textContent = vivo.pausa ? 'Reanudar' : 'Pausar';
+    if (vivo.pausa) {
+      document.getElementById('vmTitulo').textContent = 'En pausa';
+      document.getElementById('vmDot').className = 'vm-dot';
+    } else vivoPoll();
+  });
+  on('vivoLimpiar', 'click', () => {
+    vivo.filas = {eve: [], pcap: []};
+    vivo.porClave = {eve: new Map(), pcap: new Map()};
+    vivo.sel = null;
+    renderVivo();
+  });
+  on('vivoTabla', 'click', (ev) => {
+    const tr = ev.target.closest('tbody tr[data-k]');
+    if (!tr || vivo.tab === 'matriz') return;
+    vivo.sel = tr.dataset.k;
+    document.querySelectorAll('#vivoTabla tr.sel').forEach(x => x.classList.remove('sel'));
+    tr.classList.add('sel');
+    document.getElementById('vivoSeguir').checked = false;
+    vivoDetalle(vivo.porClave[vivo.tab].get(vivo.sel), vivo.tab);
+  });
+  // Enlaces "Ver en vivo" del diagrama: abren la pestaña de su fuente.
+  document.addEventListener('click', (ev) => {
+    const a = ev.target.closest('a[data-vtab]');
+    if (!a) return;
+    const b = document.querySelector('#vivoTabs button[data-vtab="' + a.dataset.vtab + '"]');
+    if (b) b.click();
+  });
+  renderVivo();
+  vivoPoll().then(vivoMotor);
+  setInterval(vivoPoll, 1000);
+  setInterval(vivoMotor, 10000);
+}
+
 // ---- Aprendizaje supervisado --------------------------------------------
 // Solo lee /api/aprendizaje (el estado que escribe cyberflow_aprendizaje.py).
 // Ensena las cuatro defensas con su cifra; promover es un comando para copiar,
@@ -2314,6 +3793,7 @@ function aprTarjeta(titulo, valor, cls, sub) {
 }
 
 function renderAprendizaje(e) {
+  aprEstado = e;                     // lo leen tambien los nodos de la topologia
   const pie = document.getElementById('aprPie');
   if (!e.disponible) {
     document.getElementById('aprDefensas').innerHTML =
@@ -2439,7 +3919,7 @@ if (document.getElementById('aprDefensas')) {
 // quitarse de encima lo que no necesita mientras opera. Por eso vive en
 // localStorage y no en la sesion: es preferencia, no autorizacion.
 const SESION = JSON.parse(document.getElementById('datosSesion').textContent);
-const DEV_SECS = ['s-topologia', 's-variables', 's-modelo', 's-alcance', 's-simulacion', 's-aprendizaje'];
+const DEV_SECS = ['s-topologia', 's-variables', 's-vivo', 's-modelo', 's-comparacion', 's-alcance', 's-simulacion', 's-aprendizaje'];
 
 function aplicarModo(modo) {
   const dev = modo === 'desarrollo';
@@ -2566,8 +4046,12 @@ def compute_counters(decisions: list[dict], window_seconds: int = 3600,
         1 for d in recent
         if d["decision"] == "PERMIT" and d.get("detector_name") == detector_modelo
     )
+    acciones = [accion_de(d) for d in recent]
     return {
         "total": len(recent),
+        "block": sum(1 for a in acciones if a and a[0] == "BLOCK"),
+        "limit": sum(1 for a in acciones if a and a[0] == "LIMIT"),
+        "ips_con_accion": len({d.get("entity_ip") for d, a in zip(recent, acciones) if a}),
         "alert_model": alert_ocsvm,
         "alert_auth_heuristic": alert_auth_heuristic,
         "permit_model": permit_model,
@@ -2666,6 +4150,131 @@ def enforcement_list(enforce_command: str) -> list[dict]:
         return json.loads(result.stdout)
     except json.JSONDecodeError:
         return []
+
+
+# --------------------------------------------------------------- acciones
+#
+# La ACCION que corresponde a cada decision, con la misma regla que
+# publicar_feed.py: un heuristico confirmado manda (BLOCK o LIMIT); un ALERT del
+# modelo degrada a LIMIT; un ALERT de heuristico «legacy» (*_heuristic) bloquea.
+# Ojo: en un ataque real el modelo puede decir PERMIT y el heuristico pedir BLOCK
+# (escaneo del 6-oct): por eso el panel avisa por ACCION, no por decision.
+
+SEVERIDAD_ACCION = {"BLOCK": 2, "LIMIT": 1}
+ESCALERA_BLOCK_S = {1: 300, 2: 1800, 3: 3600}     # = escalada.py
+TIMEOUT_LIMIT_S = 300
+CADENCIA_FEED_S = 60                              # el publicador corre cada minuto
+REGLA_LEGACY = {"auth_failure_heuristic": "fallos de autenticación repetidos"}
+NUNCA_BLOQUEAR = {"10.10.10.30", "10.10.60.11", "10.10.30.1", "10.10.40.1",
+                  "10.10.60.1", "10.10.20.1", "10.10.10.20"}   # = publicar_feed.py
+
+
+def accion_de(d: dict) -> tuple[str, str, str] | None:
+    """(accion, motivo, origen) de una decision, o None si no pide accion."""
+    candidatos = []
+    if d.get("decision") == "ALERT":
+        det = str(d.get("detector_name", ""))
+        if det.endswith("_heuristic"):
+            candidatos.append(("BLOCK", REGLA_LEGACY.get(det, "regla determinista"), det))
+        else:
+            candidatos.append(("LIMIT", "anomalía del modelo", "modelo"))
+    h = d.get("heuristico")
+    if isinstance(h, dict) and h.get("accion") in SEVERIDAD_ACCION:
+        candidatos.append((h["accion"], str(h.get("motivo", "")), str(h.get("heuristico", "regla"))))
+    if not candidatos:
+        return None
+    # A igual severidad gana la regla: su motivo dice mas que «anomalia del modelo».
+    return max(candidatos, key=lambda c: (SEVERIDAD_ACCION[c[0]], c[2] != "modelo"))
+
+
+def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | None = None,
+                      estado_path: Path | None = None, nunca: set[str] = NUNCA_BLOQUEAR) -> list[dict]:
+    """LIMIT/BLOCK en vigor ahora, por IP.
+
+    Dos fuentes. El feed publicado (feed.json) trae la caducidad exacta de lo
+    que se publico en el ultimo minuto. Lo anterior se reconstruye del registro
+    del motor con la misma escalera: ultima ofensa + 300 s (LIMIT) o 300/1800/
+    3600 s (BLOCK, nivel leido de estado.json) + la cadencia del feed. Lo que el
+    agente del host aplica es exactamente eso; el sensor no tiene otra forma de
+    saberlo, porque el bloqueo ocurre en el host.
+    """
+    vigentes: dict[str, dict] = {}
+    if feed_path is not None:
+        try:
+            feed = json.loads(Path(feed_path).read_text(encoding="utf-8"))
+            for e in feed.get("entradas", []):
+                if float(e.get("hasta", 0)) > ahora and e.get("ip"):
+                    vigentes[e["ip"]] = {
+                        "ip": e["ip"], "accion": e.get("accion"), "motivo": e.get("motivo", ""),
+                        "origen": e.get("detector", ""), "nivel": e.get("nivel"),
+                        "hasta": float(e["hasta"]), "revisar_humano": bool(e.get("revisar_humano")),
+                        "fuente": "feed"}
+        except (OSError, ValueError, TypeError):
+            pass
+    estado = {}
+    if estado_path is not None:
+        try:
+            estado = json.loads(Path(estado_path).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            estado = {}
+
+    ofensas: dict[str, list[tuple[float, str, str, str]]] = {}
+    for d in decisions:
+        a = accion_de(d)
+        ip = str(d.get("entity_ip", ""))
+        if a is None or not ip or ip in nunca:
+            continue
+        ofensas.setdefault(ip, []).append((float(d.get("logged_at", 0)), *a))
+    for ip, lista in ofensas.items():
+        lista.sort()
+        t_ultima = lista[-1][0]
+        # El episodio: ofensas encadenadas con huecos de menos de 5 min.
+        inicio = t_ultima
+        for t, *_ in reversed(lista):
+            if inicio - t > TIMEOUT_LIMIT_S:
+                break
+            inicio = t
+        episodio = [o for o in lista if o[0] >= inicio]
+        accion, motivo, origen = max(((o[1], o[2], o[3]) for o in episodio),
+                                     key=lambda o: SEVERIDAD_ACCION[o[0]])
+        if accion == "BLOCK":
+            nivel = max(1, min(3, int((estado.get(ip) or {}).get("bloqueos", 1) or 1)))
+            hasta = t_ultima + ESCALERA_BLOCK_S[nivel] + CADENCIA_FEED_S
+        else:
+            nivel = 0
+            hasta = t_ultima + TIMEOUT_LIMIT_S + CADENCIA_FEED_S
+        previo = vigentes.get(ip)
+        if previo is None:
+            if hasta > ahora:
+                vigentes[ip] = {"ip": ip, "accion": accion, "motivo": motivo, "origen": origen,
+                                "nivel": nivel, "hasta": hasta, "revisar_humano": nivel >= 3,
+                                "fuente": "registro"}
+            previo = vigentes.get(ip)
+        if previo is not None:
+            previo["desde"] = inicio
+            previo["ofensas"] = len(episodio)
+    salida = []
+    for v in vigentes.values():
+        v["expira_s"] = max(0, int(v["hasta"] - ahora))
+        salida.append(v)
+    salida.sort(key=lambda v: (-SEVERIDAD_ACCION.get(v["accion"], 0), -v["hasta"]))
+    return salida
+
+
+COMPARACION_POR_OMISION = Path(__file__).resolve().parents[2] / "docs" / "evaluacion" / "comparacion-suricata.json"
+
+
+def estado_comparacion(ruta: Path | None) -> dict:
+    """Tabla de la comparacion con Suricata, calculada por el evaluador."""
+    ruta = ruta or COMPARACION_POR_OMISION
+    try:
+        modulo = Path(__file__).resolve().parents[1] / "evaluacion"
+        if str(modulo) not in sys.path:
+            sys.path.insert(0, str(modulo))
+        import comparacion
+        return comparacion.evaluar(json.loads(Path(ruta).read_text(encoding="utf-8")))
+    except (OSError, ValueError, KeyError, ImportError) as err:
+        return {"error": "No se pudo leer la comparación (%s): %s" % (Path(ruta).name, err)}
 
 
 def suricata_stats_desde_eve(eve_path: Path) -> dict | None:
@@ -2830,8 +4439,9 @@ ROLES = ("admin", "lector")
 # Rutas que solo sirve el administrador. La lista es explicita y una prueba
 # recorre las que el servidor despacha de verdad: si se anade un endpoint y
 # nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
-RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios",
-                         "/api/aprendizaje"})
+RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios", "/api/archivo",
+                         "/api/vivo", "/api/vivo/flujo", "/api/trazabilidad",
+                         "/api/aprendizaje", "/api/comparacion"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -3244,10 +4854,73 @@ def _stat_fichero(ruta: Path, tipo: str, que: str) -> dict:
     return info
 
 
+def artefactos_aprendizaje(r: Path, config_usada: Path, log_path: Path,
+                           eve_path: Path) -> dict:
+    """Ficheros de cada paso del aprendizaje supervisado (fila 3 de la vista)."""
+    apr = r / "artifacts" / "aprendizaje"
+    base = ""
+    try:
+        with config_usada.open("rb") as fh:
+            base = tomllib.load(fh).get("reentrenamiento", {}).get("base", "")
+    except (OSError, ValueError):
+        pass
+
+    def ultimo(patron: str, tipo: str, que: str) -> dict:
+        hallados = sorted(apr.glob(patron))
+        if hallados:
+            return _stat_fichero(hallados[-1], tipo, que)
+        return {"ruta": str(apr / patron), "tipo": tipo, "que": que, "existe": False}
+
+    script = _stat_fichero(r / "scripts/modeling/cyberflow_aprendizaje.py", "py",
+                           "cyberflow_aprendizaje.py")
+    return {
+        "c_vivo": [_stat_fichero(log_path, "log", "decisiones: de aqui salen las IPs marcadas"),
+                   _stat_fichero(r / "scripts/engine/motor_decision.py", "py", "el motor")],
+        "a_oro": [_stat_fichero(apr / "oro/oro.csv", "csv", "conjunto de oro, solo lectura"),
+                  _stat_fichero(apr / "oro/oro.json", "json", "su sha256 y su origen")]
+                 + ([_stat_fichero(r / base, "csv", "base: particion de la calibracion")]
+                    if base else []),
+        "a_san": [dict(script, que="orden «lote»: los tres filtros"),
+                  ultimo("lotes/lote-*.csv", "csv", "ultimo lote saneado"),
+                  _stat_fichero(eve_path, "json", "alertas de Suricata (contaminacion)")],
+        "a_lin": [_stat_fichero(apr / "registro.jsonl", "jsonl",
+                                "registro encadenado: sha256 de cada lote"),
+                  dict(script, que="orden «verificar»: comprueba la cadena")],
+        "a_der": [_stat_fichero(apr / "deriva.jsonl", "jsonl", "una medicion por noche"),
+                  dict(script, que="orden «deriva»")],
+        "a_inf": [ultimo("candidatos/*/modelo.joblib", "joblib", "ultimo candidato"),
+                  _stat_fichero(r / "scripts/modeling/promover_preliminar.py", "py",
+                                "paquete -> Pipeline + manifiesto"),
+                  _stat_fichero(r / "scripts/dataset/particionar_linea_base.py", "py",
+                                "particion sin fuga")],
+        "a_ver": [ultimo("candidatos/*/candidato.json", "json",
+                         "veredicto, resultados y linaje del candidato")],
+        "a_hum": [_stat_fichero(apr / "modelos.jsonl", "jsonl", "historial promover/revertir"),
+                  _stat_fichero(config_usada, "toml", "lo que cambia «promover» (con copia)"),
+                  _stat_fichero(Path("/etc/systemd/system/cyberflow-aprendizaje.timer"),
+                                "timer", "temporizador nocturno (00:30 UTC)")],
+    }
+
+
+def ruta_modelo_activo(manifest_path: Path, detector_name: str, raiz: Path) -> Path:
+    """Ubica el artefacto declarado para el detector activo sin cargar el joblib."""
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        declarado = manifest.get("detectors", {}).get(detector_name, {}).get("model_path")
+        if isinstance(declarado, str) and declarado.strip():
+            ruta = Path(declarado)
+            return ruta if ruta.is_absolute() else raiz / ruta
+    except (OSError, ValueError, TypeError):
+        pass
+    # Manifiestos históricos: el artefacto vivía junto al manifiesto.
+    return manifest_path.parent / (detector_name + ".joblib")
+
+
 def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
                       log_path: Path, schema_extra: Path | None,
                       descripciones: Path, raiz: Path | None = None,
-                      capture_dir: Path = Path("/var/lib/ppi-motor-capture")) -> dict:
+                      capture_dir: Path = Path("/var/lib/ppi-motor-capture"),
+                      detector_name: str = "ocsvm_scaled") -> dict:
     """Los ficheros que cada componente USA de verdad, con su estado en vivo.
 
     Da nombre y forma al mapa de artefactos del panel: por cada nodo de la
@@ -3271,7 +4944,9 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
     except OSError:
         pass
 
-    modelo_dir = manifest_path.parent
+    modelo_activo = ruta_modelo_activo(manifest_path, detector_name, r)
+    config_local = r / "configs/cyberflow.local.toml"
+    config_usada = config_local if config_local.is_file() else r / "configs/cyberflow.toml"
     return {
         "captura": [anillo,
                     rel("scripts/setup/cyberflow_config.py", "py",
@@ -3282,7 +4957,37 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
                       "atribuye, extrae y puntua cada ventana"),
                   rel("scripts/features/extract_multilayer_v2.py", "py",
                       "extractor congelado de las 28 variables"),
-                  rel("configs/cyberflow.toml", "toml", "alcance, umbral, rutas")],
+                  rel("scripts/features/extract_multilayer_v3.py", "py",
+                      "trama con contexto (VLAN, MAC) y deduplicacion del espejo"),
+                   _stat_fichero(config_usada, "toml", "configuracion de este despliegue")],
+        "parser_eve": [_stat_fichero(eve_path, "json", "fuente: eventos de Suricata"),
+                       rel("scripts/features/extract_multilayer_v2.py", "py",
+                           "load_app_observations: http, dns y tls")],
+        "pcap": [anillo, rel("scripts/engine/vista_vivo.py", "py",
+                             "«Datos en vivo»: la misma cadena del motor sobre el tramo reciente")],
+        "eve": [_stat_fichero(eve_path, "json", "una linea JSON por evento"),
+                rel("scripts/engine/vista_vivo.py", "py",
+                    "«Datos en vivo»: la misma cadena del motor sobre el tramo reciente")],
+        "c_part": [rel("scripts/dataset/particionar_linea_base.py", "py",
+                       "bloques horarios y banda de guarda")],
+        "c_cand": [rel("scripts/analysis/compare_frozen_models_metrics.py", "py",
+                       "comparacion historica de 7 candidatos"),
+                   rel("scripts/modeling/experiments/significancia_modelos.py", "py",
+                       "McNemar + Holm entre pares")],
+        "c_metr": [rel("scripts/modeling/entrenar_preliminar.py", "py",
+                       "FPR de validacion y prueba con el umbral congelado")],
+        "c_cong": [rel("scripts/modeling/entrenar_preliminar.py", "py",
+                       "entrena y fija el umbral desde validacion"),
+                   _stat_fichero(manifest_path, "json", "umbral, orden y hash")],
+        "c_desp": [rel("scripts/modeling/promover_preliminar.py", "py",
+                       "paquete -> Pipeline + manifiesto"),
+                   rel("scripts/modeling/verificar_equivalencia_umbral.py", "py",
+                       "hash, orden y umbral equivalente"),
+                   rel("scripts/setup/cyberflow_config.py", "py", "unidades systemd")],
+        "c_acum": [rel("scripts/features/acumular_v3.py", "py",
+                       "acumula filas del anillo al dataset")],
+        "c_antes": [rel("scripts/modeling/comparar_reentrenamiento.py", "py",
+                        "metricas previas vs posteriores")],
         "variables": [_stat_fichero(schema_extra, "json", "contrato de las 31 variables")
                       if schema_extra else rel("configs/features/multilayer-v3.json",
                                                "json", "contrato de las 31 variables"),
@@ -3292,13 +4997,17 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
                       (_stat_fichero(dataset, "csv", "dataset acumulado")
                        if dataset else rel("artifacts/linea-base/multilayer-v3.csv",
                                            "csv", "dataset acumulado"))],
-        "modelo": [_stat_fichero(modelo_dir / "ocsvm_scaled.joblib", "joblib",
-                                 "modelo entrenado, umbral congelado"),
+        "modelo": [_stat_fichero(modelo_activo, "joblib",
+                                  "artefacto del detector activo; umbral en el manifiesto"),
                    _stat_fichero(manifest_path, "json", "hashes y evaluacion")],
-        "reentrenamiento": [rel("scripts/dataset/particionar_linea_base.py", "py",
-                                "parte sin fuga temporal"),
-                            rel("scripts/modeling/entrenar_preliminar.py", "py",
-                                "entrena y congela el umbral")],
+        "reentrenamiento": [rel("scripts/modeling/cyberflow_aprendizaje.py", "py",
+                                "reentrenamiento supervisado: lote, deriva, candidato"),
+                            rel("artifacts/aprendizaje/registro.jsonl", "jsonl",
+                                "linaje: un registro encadenado por lote"),
+                            _stat_fichero(config_usada, "toml", "politica: seccion [reentrenamiento]")],
+        **artefactos_aprendizaje(r, config_usada, log_path, eve_path),
+        "heuristicos": [rel("scripts/engine/heuristicos.py", "py",
+                            "las cuatro reglas y sus umbrales")],
         "control": [rel("scripts/engine/responder_iptables.py", "py",
                         "bloqueo con interlock de calibracion")],
         "registro": [_stat_fichero(log_path, "log", "una linea JSON por decision")],
@@ -3360,6 +5069,15 @@ def parse_args() -> argparse.Namespace:
              "configs/cyberflow.local.toml (o cyberflow.toml), [motor] detector",
     )
     parser.add_argument("--enforce-command", default="/usr/local/sbin/ppi-enforce")
+    parser.add_argument(
+        "--comparacion", type=Path, default=None,
+        help="episodios de la comparacion con Suricata (docs/evaluacion/comparacion-suricata.json)")
+    parser.add_argument(
+        "--feed-path", type=Path, default=Path.home() / "feed" / "feed.json",
+        help="feed publicado por publicar_feed.py: caducidad exacta de cada accion")
+    parser.add_argument(
+        "--feed-estado", type=Path, default=Path.home() / "feed" / "estado.json",
+        help="estado de la escalera del publicador: nivel de reincidencia por IP")
     parser.add_argument(
         "--eve-path",
         type=Path,
@@ -3451,6 +5169,16 @@ def parse_args() -> argparse.Namespace:
         help="arranca sin login, como antes. Solo para desarrollo local: "
              "el panel queda accesible a cualquiera que alcance el puerto",
     )
+    # «Datos en vivo»: por omisión, los mismos valores que el generador pasa al
+    # motor, leídos de configs/cyberflow.local.toml (o cyberflow.toml).
+    parser.add_argument("--capture-dir", default=None,
+                        help="anillo PCAP del motor; por omisión [captura] directorio")
+    parser.add_argument("--capture-glob", default=None)
+    parser.add_argument("--entity-network", default=None,
+                        help="red de entidades; por omisión [red] red_entidades")
+    parser.add_argument("--excluir", default=None,
+                        help="redes excluidas separadas por comas; por omisión [red] excluir")
+    parser.add_argument("--excluir-protocolos", default=None)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8788)
     parser.add_argument(
@@ -3651,6 +5379,10 @@ def main() -> int:
                         "services": service_status([] if args.demo else service_names),
                         "model": model_summary,
                         "blocked": enforcement_list(args.enforce_command),
+                        "vigentes": acciones_vigentes(
+                            decisions, time.time(),
+                            None if args.demo else args.feed_path,
+                            None if args.demo else args.feed_estado),
                         "counters": compute_counters(decisions, detector_modelo=args.detector_name),
                         "activity": bucket_by_minute(decisions),
                         # eve.json primero: no necesita privilegios. El ayudante
@@ -3683,10 +5415,63 @@ def main() -> int:
             if path == "/api/artefactos":
                 self._send_json(estado_artefactos(
                     args.eve_path, args.dataset, args.manifest_path, args.log_path,
-                    args.schema_extra, args.descripciones))
+                    args.schema_extra, args.descripciones, detector_name=args.detector_name))
                 return
             if path == "/api/escenarios":
                 self._send_json(cargar_escenarios(args.escenarios))
+                return
+            if path in ("/api/vivo", "/api/vivo/flujo", "/api/trazabilidad"):
+                # Se importa aquí: el panel arranca igual aunque falte el
+                # extractor, y solo esta sección lo necesita.
+                try:
+                    if str(Path(__file__).resolve().parent) not in sys.path:
+                        sys.path.insert(0, str(Path(__file__).resolve().parent))
+                    import vista_vivo
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"error": "vista_vivo no disponible: %s" % exc})
+                    return
+                if path == "/api/trazabilidad":
+                    self._send_json({"filas": vista_vivo.matriz_trazabilidad()})
+                    return
+                params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+                if args.demo:
+                    self._send_json({"error": "en modo demostración no hay captura en vivo"})
+                    return
+                cfg = vista_vivo.config(
+                    red_entidades=args.entity_network, directorio=args.capture_dir,
+                    anillo_glob=args.capture_glob,
+                    excluir=None if args.excluir is None else
+                    [t.strip() for t in args.excluir.split(",") if t.strip()],
+                    excluir_protocolos=None if args.excluir_protocolos is None else
+                    [int(t) for t in args.excluir_protocolos.split(",") if t.strip()])
+                if not cfg.get("red_entidades"):
+                    self._send_json({"error": "falta la red de entidades (--entity-network "
+                                              "o [red] red_entidades)"})
+                    return
+                try:
+                    if path == "/api/vivo/flujo":
+                        # El cursor lo guarda el navegador. Del fichero solo se
+                        # acepta el NOMBRE, y vista_vivo lo busca entre los del
+                        # anillo: no hay ruta que se pueda colar.
+                        cursor = {}
+                        pf = urllib.parse.unquote(params.get("pf", ""))
+                        if pf and "/" not in pf and "\\" not in pf:
+                            cursor["pf"] = pf
+                        for clave in ("po", "pn", "eo"):
+                            if params.get(clave, "").isdigit():
+                                cursor[clave] = int(params[clave])
+                        self._send_json(vista_vivo.flujo(
+                            args.eve_path, cfg, cursor, todos=params.get("todos") == "1"))
+                        return
+                    limite = params.get("limite", "150")
+                    self._send_json(vista_vivo.calcular_con_cache(
+                        args.eve_path, cfg, todos=params.get("todos") == "1",
+                        limite=min(int(limite), 3000) if limite.isdigit() else 150))
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"error": "%s: %s" % (type(exc).__name__, exc)})
+                return
+            if path == "/api/comparacion":
+                self._send_json(estado_comparacion(args.comparacion))
                 return
             if path == "/api/aprendizaje":
                 self._send_json(estado_aprendizaje(args.config_toml, args.demo))
@@ -3715,6 +5500,40 @@ def main() -> int:
             if path == "/api/score-histogram":
                 decisions = read_decisions(args.log_path, limit=500)
                 self._send_json(histogram_scores(decisions, model_summary["threshold"]))
+                return
+            if path == "/api/archivo":
+                # Modo desarrollador: muestra el CONTENIDO de un script del
+                # pipeline. Whitelist estricta -solo rutas que estado_artefactos
+                # declara- y solo tipos de TEXTO: ni path traversal, ni binarios.
+                import urllib.parse as _u
+                params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+                ruta = _u.unquote(params.get("ruta", ""))
+                mapa = estado_artefactos(
+                    args.eve_path, args.dataset, args.manifest_path, args.log_path,
+                    args.schema_extra, args.descripciones, detector_name=args.detector_name)
+                permitidas = {}
+                for lst in mapa.values():
+                    for art in lst:
+                        if art.get("ruta"):
+                            permitidas[art["ruta"]] = art.get("tipo", "")
+                if ruta not in permitidas:
+                    self.send_error(403)
+                    return
+                tipo = permitidas[ruta]
+                TEXTO = {"py", "sh", "toml", "md", "json", "log", "yml", "yaml", "cfg", "txt"}
+                fp = Path(ruta)
+                if tipo not in TEXTO or not fp.is_file():
+                    self._send_json({"ruta": ruta, "tipo": tipo, "contenido": None,
+                                     "nota": "no es texto legible, o no existe en este despliegue"})
+                    return
+                try:
+                    crudo = fp.read_bytes()
+                    contenido = crudo[:524288].decode("utf-8", errors="replace")
+                    self._send_json({"ruta": ruta, "tipo": tipo, "contenido": contenido,
+                                     "truncado": len(crudo) > 524288, "bytes": len(crudo)})
+                except OSError:
+                    self._send_json({"ruta": ruta, "tipo": tipo, "contenido": None,
+                                     "nota": "no se pudo leer"})
                 return
             self.send_error(404)
 
