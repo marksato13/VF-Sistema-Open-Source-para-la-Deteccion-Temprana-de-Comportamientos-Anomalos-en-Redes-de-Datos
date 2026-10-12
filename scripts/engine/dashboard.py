@@ -436,8 +436,15 @@ HTML = """<!doctype html>
     color: var(--text-dim); background: var(--surface-2); padding: 0.4rem 0.8rem;
     border-bottom: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--cc-color, var(--border)); }
   .var-grupo b { color: var(--cc-color, var(--accent)); font-weight: 700; }
+  .var-fila .vs { display: flex; align-items: center; gap: 0.55rem; justify-content: flex-end;
+    font: 600 0.8rem var(--mono); font-variant-numeric: tabular-nums; color: var(--text); min-width: 170px; }
+  .var-fila .vs svg { width: 96px; height: 22px; flex: none; }
+  .var-fila .vs.fuera { color: var(--amber); }
+  .var-fila .vs .sin { color: var(--text-dim); font-weight: 400; }
+  .var-serie { display: block; width: 100%; height: 76px; margin: 0.2rem 0 0.5rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
   .var-fila {
-    display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; align-items: center;
+    display: grid; grid-template-columns: 1fr auto auto auto; gap: 0.6rem; align-items: center;
     width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
     background: none; border: none; border-bottom: 1px solid var(--border);
     padding: 0.55rem 0.8rem; transition: background .12s;
@@ -3492,6 +3499,40 @@ function varFmt(v) {
   return v.toPrecision(2);
 }
 
+// Serie reciente de una variable: el maximo entre entidades en cada una de las
+// ultimas ventanas del dataset. Con rango del oro, lo que lo supera va en ambar.
+function varFuera(v) {
+  const m = v.muestra;
+  if (!m || !m.ultimo || !v.rango) return false;
+  return m.ultimo.valor > v.rango[1] || m.ultimo.valor < v.rango[0];
+}
+function varSerieSVG(v, w, h, clase) {
+  const m = v.muestra;
+  if (!m || !m.serie || m.serie.length < 2) return '';
+  const s = m.serie;
+  let lo = Math.min(...s), hi = Math.max(...s);
+  if (v.rango && clase) { lo = Math.min(lo, v.rango[0]); hi = Math.max(hi, v.rango[1]); }
+  if (hi === lo) { hi = lo + 1; }
+  const y = val => (h - 3 - (val - lo) / (hi - lo) * (h - 6)).toFixed(1);
+  const pts = s.map((val, i) => (i * w / (s.length - 1)).toFixed(1) + ',' + y(val)).join(' ');
+  let g = '';
+  if (v.rango && clase) {
+    const y1 = parseFloat(y(v.rango[1])), y0 = parseFloat(y(v.rango[0]));
+    g += `<rect x="0" y="${y1}" width="${w}" height="${Math.max(1, y0 - y1).toFixed(1)}" fill="var(--ok)" fill-opacity="0.09"/>`;
+    g += `<line x1="0" y1="${y1}" x2="${w}" y2="${y1}" stroke="var(--ok)" stroke-opacity="0.55" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>`;
+  }
+  const color = varFuera(v) ? 'var(--amber)' : capaColor(v.layer);
+  g += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  return `<svg${clase ? ' class="' + clase + '"' : ''} viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Serie reciente de ${varEsc(v.name)}">${g}</svg>`;
+}
+function varAhoraHTML(v) {
+  const m = v.muestra;
+  if (!m || !m.ultimo) return '<span class="vs"><span class="sin">sin dato</span></span>';
+  const fuera = varFuera(v);
+  return `<span class="vs${fuera ? ' fuera' : ''}" title="${fuera ? 'Fuera del rango normal del conjunto de oro' : 'Máximo entre entidades en la última ventana del dataset'}">`
+    + varSerieSVG(v, 96, 22, '') + varFmt(m.ultimo.valor) + '</span>';
+}
+
 function varDetalleHTML(v) {
   const m = v.muestra;
   let html = '<div class="var-det">';
@@ -3500,6 +3541,17 @@ function varDetalleHTML(v) {
   if (!m) {
     html += '<p class="var-vacio" style="padding:0">Sin muestra: el dataset todavía no existe o no contiene esta variable. No se inventa ningún ejemplo.</p>';
     return html + '</div>';
+  }
+
+  if (m.serie && m.serie.length > 1) {
+    html += varSerieSVG(v, 600, 76, 'var-serie');
+    html += '<div class="stats">'
+      + `<span>última ventana <b>${m.ultimo ? varEsc(String(m.ultimo.ventana).slice(11, 19)) : '—'}</b></span>`
+      + `<span>máximo ahora <b>${m.ultimo ? varFmt(m.ultimo.valor) : '—'}</b>${m.ultimo ? ' en ' + varEsc(m.ultimo.entidad) : ''}</span>`
+      + (v.rango ? `<span>rango normal (oro) <b>${varFmt(v.rango[0])} a ${varFmt(v.rango[1])}</b></span>` : '<span>sin rango del oro</span>')
+      + (varFuera(v) ? '<span style="color:var(--amber)"><b style="color:var(--amber)">fuera del rango</b></span>' : '')
+      + `<span>${m.serie.length} ventanas en la serie</span>`
+      + '</div>';
   }
 
   html += '<div class="stats">'
@@ -3553,6 +3605,7 @@ function renderVariables() {
     const badge = v.en_motor ? '' : '<span class="var-badge">EN ACUMULACIÓN</span>';
     html += `<button class="var-fila" data-var="${varEsc(v.name)}" aria-expanded="${abierta}">`
       + `<span><span class="vn">${varEsc(v.name)}</span>${badge}<span class="vq">${varEsc(v.que)}</span></span>`
+      + varAhoraHTML(v)
       + `<span class="vw">${v.window_seconds}s · ${varEsc(v.unit)}</span>`
       + '<svg class="var-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,5 16,12 9,19"/></svg>'
       + '</button>';
@@ -3568,6 +3621,10 @@ function renderVariables() {
   txt += d
     ? ` · muestra: ${d.filas} filas de ${d.entidades} entidades, ${d.desde} → ${d.hasta}`
     : ' · sin dataset: la tabla se pinta sin valores de ejemplo';
+  if (d && varDatos.variables.some(v => v.rango)) {
+    const nf = varDatos.variables.filter(varFuera).length;
+    txt += nf ? ` · ${nf} variable${nf === 1 ? '' : 's'} fuera del rango normal del oro` : ' · todas dentro del rango normal del oro';
+  }
   pie.textContent = txt;
 }
 
@@ -5037,8 +5094,61 @@ def _cola_de_fichero(path: Path, max_bytes: int) -> list[str]:
     return crudo.splitlines()[1:]
 
 
+_CACHE_ORO: dict[str, object] = {}
+
+
+def rango_oro(config_toml: Path | None, nombres: list[str],
+              respaldo: Path | None = None) -> dict:
+    """Rango normal de cada variable segun el conjunto de oro: {nombre: [lo, hi]}.
+
+    Son los mismos cuantiles con los que el saneamiento decide que una fila es
+    atipica (cuantil_referencia de la politica), asi el panel y el aprendizaje
+    no usan dos definiciones de «normal». El oro no cambia: se calcula una vez
+    y se guarda mientras el fichero sea el mismo. Sin oro, vacio.
+    """
+    if respaldo is None:
+        respaldo = TOML_LOCAL
+    if config_toml is None and respaldo is not None and Path(respaldo).is_file():
+        config_toml = respaldo
+    if config_toml is None:
+        return {}
+    try:
+        modulo = Path(__file__).resolve().parents[1] / "modeling"
+        if str(modulo) not in sys.path:
+            sys.path.insert(0, str(modulo))
+        import cyberflow_aprendizaje as ap
+        cfg = ap.cargar_config(config_toml)
+        ruta = ap.ruta_politica(cfg, "oro")
+        if ruta is None or not ruta.is_file():
+            return {}
+        st = ruta.stat()
+        sello = (str(ruta), st.st_mtime_ns, st.st_size)
+        if _CACHE_ORO.get("sello") == sello:
+            return _CACHE_ORO["rangos"]          # type: ignore[return-value]
+        q = float(cfg["politica"]["cuantil_referencia"])
+        columnas: dict[str, list[float]] = {}
+        with ruta.open(newline="", encoding="utf-8") as fh:
+            import csv
+            lector = csv.reader(fh)
+            cabecera = next(lector, [])
+            idx = [(n, cabecera.index(n)) for n in nombres if n in cabecera]
+            for n, _ in idx:
+                columnas[n] = []
+            for fila in lector:
+                for n, i in idx:
+                    try:
+                        columnas[n].append(float(fila[i]))
+                    except (ValueError, IndexError):
+                        pass
+        rangos = {n: [ap.cuantil(v, 1 - q), ap.cuantil(v, q)] for n, v in columnas.items() if v}
+        _CACHE_ORO.update(sello=sello, rangos=rangos)
+        return rangos
+    except (OSError, ValueError, KeyError, SystemExit):
+        return {}
+
+
 def muestra_del_dataset(dataset: Path, nombres: list[str],
-                        max_bytes: int = 262_144) -> dict:
+                        max_bytes: int = 524_288) -> dict:
     """Valores reales por variable, tomados del CSV que se esta acumulando.
 
     Es lo que convierte la tabla del panel en una medicion y no en un folleto:
@@ -5060,6 +5170,14 @@ def muestra_del_dataset(dataset: Path, nombres: list[str],
         idx = {n: i for i, n in enumerate(cabecera)}
         i_ent = idx.get("entity_ip")
         i_ven = idx.get("window_end_utc")
+
+        # Las ultimas ventanas, en orden: de cada una se toma el maximo entre
+        # entidades, que es lo que un analista mira primero en una variable.
+        por_ventana: dict[str, list[list[str]]] = {}
+        if i_ven is not None:
+            for c in filas:
+                por_ventana.setdefault(c[i_ven], []).append(c)
+        ultimas = sorted(por_ventana)[-60:]
 
         salida: dict[str, object] = {}
         for nombre in nombres:
@@ -5097,7 +5215,23 @@ def muestra_del_dataset(dataset: Path, nombres: list[str],
             no_cero = [(c, v) for c, v in recientes if v != 0.0]
             elegidos = (no_cero or recientes)[:3]
             ejemplos = [fila_ejemplo(c, v) for c, v in elegidos]
+            serie: list[float] = []
+            ultimo = None
+            for ven in ultimas:
+                mejor = None
+                for c in por_ventana[ven]:
+                    try:
+                        v = float(c[i])
+                    except ValueError:
+                        continue
+                    if mejor is None or v > mejor[0]:
+                        mejor = (v, c)
+                if mejor is not None:
+                    serie.append(mejor[0])
+                    ultimo = fila_ejemplo(mejor[1], mejor[0])
             salida[nombre] = {
+                "serie": serie,
+                "ultimo": ultimo,
                 "n": len(ordenados),
                 "min": ordenados[0],
                 "p50": ordenados[len(ordenados) // 2],
@@ -5123,7 +5257,8 @@ def muestra_del_dataset(dataset: Path, nombres: list[str],
 
 
 def resumen_variables(schema_path: Path, extra_path: Path | None,
-                      descripciones_path: Path, dataset: Path | None) -> dict:
+                      descripciones_path: Path, dataset: Path | None,
+                      rangos: dict | None = None) -> dict:
     """Esquema + texto editorial + muestra real, listo para pintar la tabla.
 
     La tabla se GENERA desde el esquema; no se escribe a mano. El texto que
@@ -5164,6 +5299,7 @@ def resumen_variables(schema_path: Path, extra_path: Path | None,
             "que": t.get("que", ""),
             "senal": t.get("senal", ""),
             "muestra": por_variable.get(f["name"]),
+            "rango": (rangos or {}).get(f["name"]),
         })
 
     capas = []
@@ -5780,6 +5916,13 @@ def main() -> int:
                     _CACHE_VARIABLES["datos"] = resumen_variables(
                         args.schema, args.schema_extra, args.descripciones,
                         args.dataset)
+                    # El rango del oro, una vez leido el esquema: no depende
+                    # del dataset y se calcula una sola vez por fichero de oro.
+                    rangos = rango_oro(
+                        args.config_toml,
+                        [v["name"] for v in _CACHE_VARIABLES["datos"]["variables"]])
+                    for v in _CACHE_VARIABLES["datos"]["variables"]:
+                        v["rango"] = rangos.get(v["name"])
                 self._send_json(_CACHE_VARIABLES["datos"])
                 return
             if path == "/api/artefactos":
