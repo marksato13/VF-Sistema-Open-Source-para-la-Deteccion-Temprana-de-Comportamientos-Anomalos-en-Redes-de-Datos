@@ -90,7 +90,10 @@ HTML = """<!doctype html>
   .side-state.ok .dot { background: var(--ok); box-shadow: 0 0 7px var(--ok); }
   .side-state.warn .dot { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
   .side-state.bad .dot { background: var(--danger); box-shadow: 0 0 7px var(--danger); }
-  .side nav { display: flex; flex-direction: column; gap: 0.15rem; }
+  .side nav { display: flex; flex-direction: column; gap: 0.1rem; }
+  .nav-grupo { font: 600 0.66rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-dim); opacity: 0.65; padding: 0.7rem 0.6rem 0.25rem; }
+  .nav-grupo:first-child { padding-top: 0.1rem; }
   .side nav a {
     display: flex; align-items: center; gap: 0.6rem; text-decoration: none;
     color: var(--text-dim); font-size: 0.86rem; padding: 0.46rem 0.55rem; border-radius: 8px;
@@ -161,6 +164,26 @@ HTML = """<!doctype html>
   .fam-b i { display: block; height: 100%; border-radius: 0 4px 4px 0; }
   .fam-v { font: 600 0.86rem var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
   .fam-v small { font-weight: 400; color: var(--text-dim); margin-left: 0.5rem; }
+  /* Despliegue: la cadena sensor -> relay -> host, cada eslabon una tarjeta. */
+  .desp { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 0.9rem; align-items: stretch; }
+  @media (max-width: 900px) { .desp { grid-template-columns: 1fr; } }
+  .desp-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1rem; position: relative; }
+  .desp-card.sensor { border-left: 3px solid var(--accent); }
+  .desp-card.relay { border-left: 3px solid var(--capa-b); }
+  .desp-card.agente { border-left: 3px solid var(--amber); }
+  .desp-rol { font: 600 0.66rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+  .desp-h { font-size: 1.02rem; font-weight: 700; color: var(--text); margin: 0.1rem 0 0.15rem; }
+  .desp-host { font: 600 0.8rem var(--mono); color: var(--accent); }
+  .desp-meta { font-size: 0.74rem; color: var(--text-dim); margin: 0.1rem 0 0.6rem; }
+  .desp-comp { display: flex; align-items: center; gap: 0.5rem; padding: 0.28rem 0; border-top: 1px solid var(--border); font-size: 0.82rem; }
+  .desp-comp .c-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex: none; }
+  .desp-comp.ok .c-dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .desp-comp.bad .c-dot { background: var(--danger); }
+  .desp-comp .c-n { color: var(--text); }
+  .desp-comp .c-u { margin-left: auto; font: 0.7rem var(--mono); color: var(--text-dim); }
+  .desp-nota { font-size: 0.74rem; color: var(--text-dim); margin-top: 0.6rem; font-style: italic; }
+  .desp-flecha { display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 1.4rem; }
+  @media (max-width: 860px) { .desp-flecha { transform: rotate(90deg); } }
   .apr-graf { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.8rem; margin-bottom: 1.1rem; }
   .apr-chart { display: block; width: 100%; height: 170px; }
   #histogram { display: block; width: 100%; height: 190px; }
@@ -722,21 +745,27 @@ HTML = """<!doctype html>
   <div class="brand">CyberFlow<small>Motor en vivo</small></div>
   <div class="side-state" id="sideState"><span class="dot"></span><span id="sideStateText">conectando&hellip;</span></div>
   <nav id="nav">
+    <div class="nav-grupo">Vigilancia</div>
     <a href="#s-salud" data-sec="s-salud"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>Salud</a>
+    <a href="#s-actividad" data-sec="s-actividad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg>Actividad<span class="pill" id="navAlertPill" hidden></span></a>
+    <a href="#s-decisiones" data-sec="s-decisiones"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>Decisiones</a>
+    <a href="#s-bloqueos" data-sec="s-bloqueos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Bloqueos</a>
+    <a href="#s-scores" data-sec="s-scores"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg>Scores</a>
     <!--ADMIN-->
-    <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Mapa</a>
+    <div class="nav-grupo">Sistema</div>
+    <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Mapa del sistema</a>
+    <a href="#s-despliegue" data-sec="s-despliegue"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="3" y="17" width="6" height="5" rx="1"/><rect x="15" y="17" width="6" height="5" rx="1"/><path d="M12 7v4M6 17v-3h12v3"/></svg>Despliegue</a>
+    <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
+    <div class="nav-grupo">Datos</div>
     <a href="#s-variables" data-sec="s-variables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg>Variables</a>
     <a href="#s-vivo" data-sec="s-vivo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 2-6 2 3h6"/></svg>Datos en vivo</a>
+    <div class="nav-grupo">Modelo</div>
     <a href="#s-modelo" data-sec="s-modelo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>Modelo</a>
-    <a href="#s-comparacion" data-sec="s-comparacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg>Suricata</a>
-    <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
-    <a href="#s-simulacion" data-sec="s-simulacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg>Simulación</a>
     <a href="#s-aprendizaje" data-sec="s-aprendizaje"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><polyline points="20,4 20,9 15,9"/></svg>Aprendizaje</a>
+    <div class="nav-grupo">Evaluación</div>
+    <a href="#s-comparacion" data-sec="s-comparacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg>Suricata</a>
+    <a href="#s-simulacion" data-sec="s-simulacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg>Simulación</a>
     <!--/ADMIN-->
-    <a href="#s-scores" data-sec="s-scores"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg>Scores</a>
-    <a href="#s-actividad" data-sec="s-actividad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg>Actividad<span class="pill" id="navAlertPill" hidden></span></a>
-    <a href="#s-bloqueos" data-sec="s-bloqueos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Bloqueos</a>
-    <a href="#s-decisiones" data-sec="s-decisiones"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>Decisiones</a>
   </nav>
   <div class="foot">SOLO LECTURA</div>
 </aside>
@@ -807,6 +836,13 @@ HTML = """<!doctype html>
       </div>
       <div class="topo-detail" id="topoDetail"></div>
     </div>
+  </section>
+
+  <section id="s-despliegue">
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="2.5" y="17" width="6" height="5" rx="1"/><rect x="15.5" y="17" width="6" height="5" rx="1"/><path d="M12 7v4M5.5 17v-3h13v3"/></svg><h2>Despliegue y agentes</h2></div>
+    <p class="lede-small">Dónde está instalado cada componente y cómo viaja el feed firmado del sensor a los hosts protegidos. El sensor no tiene credenciales de los demás hosts: su estado sale de los servicios reales; el resto es el despliegue declarado.</p>
+    <div class="desp" id="despliegue"></div>
+    <p class="toolbar-hint" id="desplieguePie"></p>
   </section>
 
   <section id="s-variables">
@@ -1656,6 +1692,7 @@ async function refresh() {
     renderKpis(status);
     renderHealthbar(status.services, status.counters, status.capture_metrics, status.calibracion, status.modo);
     renderPulso(status);
+    if (document.getElementById('despliegue')) renderDespliegue(status);
     tourQuizasAuto(status.modo);
     renderSidebar(status);
     // Las tres secciones de desarrollo -topologia, modelo y alcance- no estan
@@ -1907,6 +1944,48 @@ async function cargarHistorial() {
 }
 cargarHistorial();
 setInterval(cargarHistorial, 30000);
+
+// Despliegue: la cadena sensor -> relay -> host protegido. La topologia se
+// declara (el panel no tiene credenciales de los otros hosts); la vivacidad del
+// sensor sale de los servicios reales de /api/status.
+let despliegueDatos = null;
+function renderDespliegue(status) {
+  const cont = document.getElementById('despliegue');
+  if (!cont || !despliegueDatos) return;
+  const serv = (status && status.services) || {};
+  const ROL = { sensor: 'Sensor', relay: 'Relay', agente: 'Agente' };
+  const tarjetas = (despliegueDatos.cadena || []).map(n => {
+    const comps = (n.componentes || []).map(c => {
+      // Solo el sensor tiene estado real; en relay y agente el servicio es remoto.
+      let cls = '', est = '';
+      if (n.rol === 'sensor' && c.servicio && (c.servicio in serv)) {
+        cls = serv[c.servicio] ? 'ok' : 'bad';
+        est = serv[c.servicio] ? 'activo' : 'inactivo';
+      }
+      const meta = c.cadencia || c.detalle || c.fichero || c.unidad || '';
+      return `<div class="desp-comp ${cls}"><span class="c-dot"></span><span class="c-n">${varEsc(c.nombre)}`
+        + (est ? ` <span class="hace" style="display:inline">${est}</span>` : '') + `</span>`
+        + (meta ? `<span class="c-u" title="${varEsc(c.unidad || '')}">${varEsc(meta)}</span>` : '') + `</div>`;
+    }).join('');
+    return `<div class="desp-card ${n.rol}"><div class="desp-rol">${ROL[n.rol] || n.rol}</div>`
+      + `<div class="desp-h">${varEsc(n.titulo)}</div>`
+      + `<div class="desp-host">${varEsc(n.host)} · ${varEsc(n.ip)}</div>`
+      + `<div class="desp-meta">VLAN ${varEsc(n.vlan || '—')} · ${varEsc(n.donde || '')}</div>`
+      + comps + (n.nota ? `<div class="desp-nota">${varEsc(n.nota)}</div>` : '') + `</div>`;
+  });
+  // Flechas entre eslabones (el feed firmado viaja de izquierda a derecha).
+  cont.innerHTML = tarjetas.join('<div class="desp-flecha" title="feed firmado">&rarr;</div>');
+  const pie = document.getElementById('desplieguePie');
+  if (pie) pie.textContent = despliegueDatos.para_anadir_un_host || '';
+}
+async function cargarDespliegue() {
+  if (!document.getElementById('despliegue')) return;
+  try {
+    despliegueDatos = await (await fetch('/api/despliegue')).json();
+    renderDespliegue(topoUltimo);
+  } catch (e) { /* se reintenta al proximo refresh */ }
+}
+cargarDespliegue();
 on('histTabla', 'click', (ev) => {
   const tr = ev.target.closest('tr[data-ip]');
   if (!tr) return;
@@ -5112,6 +5191,22 @@ def load_model_summary(manifest_path: Path, detector_name: str) -> dict:
 EVALUACION_VIGENTE = Path(__file__).resolve().parents[2] / "docs" / "evaluacion" / "modelo-vigente.json"
 
 
+DESPLIEGUE_INVENTARIO = Path(__file__).resolve().parents[2] / "docs" / "evaluacion" / "despliegue.json"
+
+
+def inventario_despliegue(ruta: Path = DESPLIEGUE_INVENTARIO) -> dict:
+    """Inventario declarado del despliegue (sensor, relay, agentes).
+
+    Es un fichero versionado, no una sonda: el panel corre en el sensor y no
+    tiene credenciales de los demas hosts. La vivacidad del sensor la pone el
+    navegador cruzando esto con los servicios reales de /api/status.
+    """
+    try:
+        return json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"cadena": [], "error": "no se encontro el inventario de despliegue"}
+
+
 def evaluacion_del_vigente(detector_name: str, ruta: Path = EVALUACION_VIGENTE) -> dict | None:
     """Cifras medidas del detector en uso que el manifiesto no trae.
 
@@ -5196,7 +5291,7 @@ ROLES = ("admin", "lector")
 # nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
 RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios", "/api/archivo",
                          "/api/vivo", "/api/vivo/flujo", "/api/trazabilidad",
-                         "/api/aprendizaje", "/api/comparacion"})
+                         "/api/aprendizaje", "/api/comparacion", "/api/despliegue"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -6251,6 +6346,9 @@ def main() -> int:
                 return
             if path == "/api/acciones":
                 self._send_json(historial_acciones(args.log_path, time.time()))
+                return
+            if path == "/api/despliegue":
+                self._send_json(inventario_despliegue())
                 return
             if path == "/api/variables":
                 # El dataset crece durante toda la linea base: se relee solo
