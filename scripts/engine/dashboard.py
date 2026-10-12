@@ -350,6 +350,19 @@ HTML = """<!doctype html>
   .perfil-n { color: var(--text); font-weight: 600; white-space: nowrap; }
   .perfil-n small { color: var(--text-dim); font-weight: 400; font-family: var(--mono); margin-left: 0.3rem; }
   .perfil-d { color: var(--text-dim); }
+  /* Archivos del sistema con el host donde corre cada uno (vista Carpetas). */
+  .archivos { display: grid; gap: 0.35rem; margin: 0.4rem 0 0.2rem; }
+  .arch { display: grid; grid-template-columns: 22px auto auto 1fr; align-items: center; gap: 0.5rem; font-size: 0.82rem; }
+  .arch-ico { color: var(--text-dim); display: inline-flex; }
+  .arch-n { color: var(--text); font-family: var(--mono); font-size: 0.78rem; white-space: nowrap; }
+  .arch-d { color: var(--text-dim); font-size: 0.78rem; }
+  .host-badge { display: inline-flex; align-items: center; gap: 0.25rem;
+    font: 600 0.6rem var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 0.1rem 0.45rem; border-radius: 999px; white-space: nowrap; }
+  .host-sensor { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }
+  .host-servidor { background: var(--amber-soft); color: var(--amber); }
+  .host-bastion { background: color-mix(in srgb, var(--capa-b) 26%, transparent); color: var(--capa-b); }
+  .host-leyenda { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.6rem 0 0; }
   /* Mapa de artefactos: los "cuadraditos" de ficheros por componente. */
   .export-btn.active { border-color: var(--accent); color: var(--accent); }
   .topo-node .fbadge { fill: var(--accent); font: 9px var(--mono); }
@@ -1144,20 +1157,49 @@ HTML = """<!doctype html>
 <style>
 .ver-codigo{margin-top:6px;background:#15202c;border:1px solid #2b3a4a;color:#9fd0ff;border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer}
 .ver-codigo:hover{background:#1b2a39;border-color:#3a5169}
-.code-modal{position:fixed;inset:0;background:rgba(2,6,12,.72);z-index:300;display:flex;align-items:center;justify-content:center;padding:26px}
+.code-modal{position:fixed;inset:0;background:rgba(2,6,12,.72);z-index:300;display:flex;align-items:center;justify-content:center;padding:22px}
 .code-modal[hidden]{display:none}
-.code-box{background:#0f1720;border:1px solid #27333f;border-radius:12px;width:min(1000px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.code-box{background:#0f1720;border:1px solid #27333f;border-radius:12px;width:min(1240px,96vw);height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.6)}
 .code-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid #27333f;font-weight:600;color:#e6eef7}
 .code-head button{background:none;border:none;color:#8aa0b2;font-size:24px;line-height:1;cursor:pointer}
 .code-head button:hover{color:#fff}
-.code-sub{padding:7px 16px;font:11px ui-monospace,SFMono-Regular,Menlo,monospace;color:#7d93a6;border-bottom:1px solid #1b2530}
-.code-pre{margin:0;padding:14px 16px;overflow:auto;white-space:pre;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#d6e2ee;background:#0a1118;border-radius:0 0 12px 12px}
+/* Dos paneles: izquierda el codigo real + su ruta; derecha pseudocodigo y
+   explicacion. Al pulsar un paso del pseudocodigo, el codigo salta a su parte. */
+.code-panes{display:grid;grid-template-columns:1.7fr 1fr;min-height:0;flex:1}
+.code-left{display:flex;flex-direction:column;min-height:0;border-right:1px solid #1b2530}
+.code-right{display:flex;flex-direction:column;min-height:0;overflow:auto;padding:12px 14px}
+.code-sub{padding:7px 16px;font:11px ui-monospace,Menlo,monospace;color:#7d93a6;border-bottom:1px solid #1b2530;overflow-wrap:anywhere;flex:none}
+.code-pre{margin:0;padding:10px 0;overflow:auto;font:12px/1.6 ui-monospace,Menlo,Consolas,monospace;color:#d6e2ee;background:#0a1118;min-height:0;flex:1}
+.cl{display:grid;grid-template-columns:46px 1fr;gap:10px;padding:0 14px;white-space:pre}
+.cl .ln{color:#3a4a5c;text-align:right;user-select:none}
+.cl.hl{background:#14314a}
+.cl.hl .ln{color:#9fd0ff}
+.code-rtit{font:600 .64rem ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:#7d93a6;margin-bottom:.45rem}
+.code-explica{font-size:.84rem;color:#cdd9e5;margin-bottom:.9rem;line-height:1.5}
+.code-pseudo{list-style:none;margin:0;padding:0;counter-reset:ps}
+.code-pseudo li{counter-increment:ps;display:grid;grid-template-columns:20px 1fr;gap:9px;align-items:start;padding:7px 8px;border:1px solid transparent;border-radius:8px;cursor:pointer;font-size:.82rem;color:#d6e2ee}
+.code-pseudo li::before{content:counter(ps);font:600 10px ui-monospace,monospace;color:#06251f;background:#5ee6c3;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.code-pseudo li.nolink{cursor:default;color:#7d93a6}
+.code-pseudo li.nolink::before{background:#2b3a4a;color:#7d93a6}
+.code-pseudo li:not(.nolink):hover{border-color:#2b3a4a;background:#13202c}
+.code-pseudo li.sel{border-color:#5ee6c3;background:#122a28}
+.code-pseudo li small{display:block;color:#7d93a6;font-family:ui-monospace,monospace;font-size:10px;margin-top:2px}
+@media (max-width:820px){.code-panes{grid-template-columns:1fr;grid-template-rows:1.4fr 1fr}.code-left{border-right:none;border-bottom:1px solid #1b2530}}
 </style>
 <div class="code-modal" id="codeModal" hidden>
   <div class="code-box">
     <div class="code-head"><span id="codeTitle"></span><button id="codeClose" type="button" aria-label="Cerrar">&times;</button></div>
-    <div class="code-sub" id="codeSub"></div>
-    <pre class="code-pre"><code id="codeBody"></code></pre>
+    <div class="code-panes">
+      <div class="code-left">
+        <div class="code-sub" id="codeSub"></div>
+        <div class="code-pre" id="codeBody"></div>
+      </div>
+      <div class="code-right">
+        <div class="code-rtit">Pseudocódigo y explicación</div>
+        <div class="code-explica" id="codeExplica"></div>
+        <ol class="code-pseudo" id="codePseudo"></ol>
+      </div>
+    </div>
   </div>
 </div>
 <button class="tour-fab" id="tourBtn" title="Recorrido guiado">
@@ -2326,7 +2368,12 @@ const TOPO_ICON = {
   aplicacion: '<rect x="2.4" y="2.4" width="5.2" height="5.2" rx="1"/><rect x="10.4" y="2.4" width="5.2" height="5.2" rx="1"/><rect x="2.4" y="10.4" width="5.2" height="5.2" rx="1"/><rect x="10.4" y="10.4" width="5.2" height="5.2" rx="1"/>',
   ligero:     '<path d="M2.6 13.4C6 5 11 3.6 15.4 3.6 15 10 10.2 13.8 4.2 13.4"/><path d="M2.6 15.4 7 11"/>',
   erratico:   '<path d="M1.8 10.5 4.3 4.6l2 8L8.8 3l1.9 7.2 1.8-3.8 1.8 3.4 1.9-1.4"/>',
+  // Hosts: sensor (antena que escucha), servidor (torre), bastion (fortaleza).
+  host_sensor:   '<circle cx="9" cy="9.5" r="1.6"/><path d="M9 11v4"/><path d="M5.8 6.3a4.4 4.4 0 0 0 0 6.4M12.2 6.3a4.4 4.4 0 0 1 0 6.4M3.6 4.1a7.4 7.4 0 0 0 0 10.8M14.4 4.1a7.4 7.4 0 0 1 0 10.8"/>',
+  host_servidor: '<rect x="3.4" y="2.2" width="11.2" height="13.6" rx="1.3"/><path d="M3.4 6.6h11.2M3.4 11h11.2"/><circle cx="6" cy="4.4" r="0.55" fill="currentColor" stroke="none"/><circle cx="6" cy="8.8" r="0.55" fill="currentColor" stroke="none"/><circle cx="6" cy="13.2" r="0.55" fill="currentColor" stroke="none"/>',
+  host_bastion:  '<path d="M3 15.4V6.6l6-3.8 6 3.8v8.8"/><path d="M2.2 15.4h13.6"/><path d="M7.3 15.4v-3.4h3.4v3.4"/>',
 };
+const HOST_ICON = { sensor: 'host_sensor', servidor: 'host_servidor', bastion: 'host_bastion' };
 
 // Dos vistas del mismo sistema. "esencial" es el camino del paquete en siete
 // pasos; "completa" anade los artefactos que se escriben en disco, la rama de
@@ -3000,14 +3047,23 @@ const TOPO_TEXTO = {
   },
   // ---- Vista CARPETAS: arquitectura del repositorio ----
   cf_root: {
-    que: 'La raíz del repositorio de CyberFlow. Todo lo versionado cuelga de aquí: el código, la configuración, los artefactos del modelo, la documentación y las pruebas.',
-    nota: 'Lo que corre en el sensor es una copia de este repositorio en /home/m4rk/cyberflow.',
+    que: 'La raíz del repositorio de CyberFlow. Todo lo versionado cuelga de aquí: el código, la configuración, los artefactos del modelo, la documentación y las pruebas. Pulsa cada carpeta para ver sus archivos del sistema y en qué host corre cada uno.',
+    leyenda: ['sensor', 'servidor', 'bastion'],
+    nota: 'Casi todo corre en el Sensor (copia del repo en /home/m4rk/cyberflow). Solo dos piezas viven fuera: el relay en el Bastión y el agente en el Servidor protegido.',
   },
   cf_scripts: {
     que: 'Todo el código, organizado por función: el motor en vivo (engine), los extractores de variables (features), el modelado y el aprendizaje (modeling), el agente del host (enforce) y la instalación (setup).',
   },
   cf_engine: {
-    que: 'El motor en vivo y este panel.',
+    que: 'El motor en vivo y este panel. Todo corre en el Sensor.',
+    archivos: [
+      { n: 'dashboard.py',      host: 'sensor', d: 'este panel' },
+      { n: 'motor_decision.py', host: 'sensor', d: 'decide cada ventana' },
+      { n: 'heuristicos.py',    host: 'sensor', d: 'las 4 reglas' },
+      { n: 'publicar_feed.py',  host: 'sensor', d: 'publica el feed' },
+      { n: 'feed.py',           host: 'sensor', d: 'firma ed25519' },
+      { n: 'escalada.py',       host: 'sensor', d: 'caducidad por reincidencia' },
+    ],
     codigo: {
       archivo: 'scripts/engine/',
       pseudo: [
@@ -3022,7 +3078,12 @@ const TOPO_TEXTO = {
     },
   },
   cf_features: {
-    que: 'Los extractores que convierten PCAP y eve.json en las 28 variables por IP y ventana. Están congelados: sus fórmulas no se tocan.',
+    que: 'Los extractores que convierten PCAP y eve.json en las 28 variables por IP y ventana. Están congelados: sus fórmulas no se tocan. Corren en el Sensor.',
+    archivos: [
+      { n: 'extract_multilayer_v2.py', host: 'sensor', d: 'ventaneo + variables L7' },
+      { n: 'extract_multilayer_v3.py', host: 'sensor', d: 'decodifica cada trama' },
+      { n: 'acumular_v3.py',           host: 'sensor', d: 'acumula la línea base' },
+    ],
     codigo: {
       archivo: 'scripts/features/',
       pseudo: [
@@ -3033,24 +3094,40 @@ const TOPO_TEXTO = {
     },
   },
   cf_modeling: {
-    que: 'El entrenamiento del modelo y el aprendizaje supervisado nocturno (saneo, deriva, candidato, promoción).',
+    que: 'El entrenamiento del modelo y el aprendizaje supervisado nocturno (saneo, deriva, candidato, promoción). Corre en el Sensor.',
+    archivos: [
+      { n: 'cyberflow_aprendizaje.py', host: 'sensor', d: 'aprendizaje nocturno' },
+      { n: 'entrenar_preliminar.py',   host: 'sensor', d: 'entrena y fija el umbral' },
+      { n: 'promover_preliminar.py',   host: 'sensor', d: 'promueve el candidato' },
+    ],
     codigo: {
       archivo: 'scripts/modeling/cyberflow_aprendizaje.py',
       editar: 'cd ~/cyberflow/scripts/modeling',
     },
   },
   cf_enforce: {
-    que: 'El agente que corre en cada host protegido: trae el feed, verifica la firma y aplica nftables. No vive en el sensor sino en el host.',
+    que: 'El agente que trae el feed, verifica la firma y aplica nftables. NO corre en el sensor: se instala en el Servidor (host protegido, p.ej. srv-dmz).',
+    archivos: [
+      { n: 'agente_enforce.py', host: 'servidor', d: 'verifica la firma y aplica nftables' },
+    ],
     codigo: {
       archivo: 'scripts/enforce/agente_enforce.py',
       editar: '(se instala en el host protegido, p.ej. srv-dmz)',
     },
   },
   cf_setup: {
-    que: 'La instalación: genera las unidades systemd y la configuración del sensor a partir del .toml.',
+    que: 'La instalación: genera las unidades systemd y la configuración del sensor a partir del .toml. Corre en el Sensor.',
+    archivos: [
+      { n: 'cyberflow_config.py', host: 'sensor', d: 'genera las unidades systemd' },
+    ],
   },
   cf_configs: {
-    que: 'La configuración. El .toml manda: de ahí salen las unidades y el alcance. También el esquema de variables y las reglas de Suricata.',
+    que: 'La configuración. El .toml manda: de ahí salen las unidades y el alcance. También el esquema de variables y las reglas de Suricata. Vive en el Sensor.',
+    archivos: [
+      { n: 'cyberflow.local.toml', host: 'sensor', d: 'config de esta red' },
+      { n: 'features/*.json',      host: 'sensor', d: 'esquema de las 28 variables' },
+      { n: 'suricata/*',           host: 'sensor', d: 'reglas de Suricata' },
+    ],
     codigo: {
       archivo: 'configs/',
       pseudo: [
@@ -3062,7 +3139,12 @@ const TOPO_TEXTO = {
     },
   },
   cf_artifacts: {
-    que: 'Lo que no es código: el modelo congelado (pipeline + manifiesto con su hash), la línea base y los lotes del aprendizaje.',
+    que: 'Lo que no es código: el modelo congelado (pipeline + manifiesto con su hash), la línea base y los lotes del aprendizaje. Están en el Sensor.',
+    archivos: [
+      { n: 'if_recalibrado_*.joblib', host: 'sensor', d: 'modelo congelado' },
+      { n: 'manifest-*.json',         host: 'sensor', d: 'umbral + orden + hash' },
+      { n: 'linea-base/*.csv',        host: 'sensor', d: 'dataset acumulado' },
+    ],
   },
   cf_docs: {
     que: 'La documentación: la evaluación del modelo vigente, las evidencias de las mediciones (tiempos, bloqueos en vivo) y las imágenes.',
@@ -3075,7 +3157,12 @@ const TOPO_TEXTO = {
     },
   },
   cf_deploy: {
-    que: 'La instalación reproducible: los scripts de despliegue y los playbooks de Ansible para levantar el sensor desde cero.',
+    que: 'La instalación reproducible: scripts de despliegue y playbooks de Ansible. Es la única carpeta con piezas que corren FUERA del sensor: el relay en el Bastión y la unidad del agente en el Servidor.',
+    archivos: [
+      { n: 'instalar / desplegar',       host: 'sensor',   d: 'levanta el sensor desde cero' },
+      { n: 'relay-feed.sh',              host: 'bastion',  d: 'copia el feed firmado a los hosts' },
+      { n: 'ppi-enforce-agent (unidad)', host: 'servidor', d: 'temporizador del agente, cada 60 s' },
+    ],
   },
   cf_mas: {
     que: 'Otras carpetas de scripts: dataset (construir el conjunto), evaluacion (comparar con Suricata), campaign (campañas de ataque), analysis, kali, f1/f6, articulo y entregables.',
@@ -3735,6 +3822,24 @@ function perfilesHTML(perfiles) {
     + '<div class="perfiles">' + perfiles.map(fila).join('') + '</div>';
 }
 
+// Archivos del sistema de una carpeta, cada uno con el host donde corre.
+const HOST_NOMBRE = { sensor: 'Sensor', servidor: 'Servidor', bastion: 'Bastión' };
+function hostBadge(h) {
+  const ic = HOST_ICON[h]
+    ? '<svg width="11" height="11" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + TOPO_ICON[HOST_ICON[h]] + '</svg>'
+    : '';
+  return `<span class="host-badge host-${h}">${ic}${HOST_NOMBRE[h] || h}</span>`;
+}
+function archivosHostHTML(archivos) {
+  if (!archivos || !archivos.length) return '';
+  const fila = a => '<div class="arch"><span class="arch-ico"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + TOPO_ICON.fichero + '</svg></span>'
+    + `<span class="arch-n">${a.n}</span>`
+    + hostBadge(a.host)
+    + (a.d ? `<span class="arch-d">${a.d}</span>` : '') + '</div>';
+  return '<div class="cod-sub">Archivos del sistema · dónde corre cada uno</div>'
+    + '<div class="archivos">' + archivos.map(fila).join('') + '</div>';
+}
+
 // Info de codigo del nodo: ruta del archivo, pseudocodigo y comando para editar.
 function codigoHTML(c) {
   if (!c) return '';
@@ -3763,7 +3868,9 @@ function renderTopoDetalle() {
     `<h3>${n.titulo}${cabIp}</h3>` +
     (t.que ? `<p>${t.que}</p>` : '') +
     (n.id === 'modelo' ? decisionModeloHTML() : '') +
+    (t.leyenda ? '<div class="host-leyenda">' + t.leyenda.map(hostBadge).join('') + '</div>' : '') +
     perfilesHTML(t.perfiles) +
+    archivosHostHTML(t.archivos) +
     (filas ? `<dl>${filas}</dl>` : '') +
     (t.cmd ? `<pre class="topo-cmd">${t.cmd.replace(/</g, '&lt;')}</pre>` : '') +
     (t.flujo ? flujoHTML(t.flujo, t.flujoTit) : '') +
@@ -3857,7 +3964,7 @@ function filesHTML(nodeId) {
             .filter(Boolean).join(' · ')
         : '<span class="aus">no existe todavía</span>';
       const verbtn = f.existe
-        ? `<button class="ver-codigo" data-ruta="${String(f.ruta).replace(/"/g, '&quot;')}">◎ Ver contenido</button>`
+        ? `<button class="ver-codigo" data-ruta="${String(f.ruta).replace(/"/g, '&quot;')}" data-que="${String(f.que || '').replace(/"/g, '&quot;')}">◎ Ver contenido</button>`
         : '';
       html += `<div class="topo-file-det"><div class="ruta">${f.ruta}</div>`
         + `<div>${f.que}</div><div>${estado}</div>${verbtn}</div>`;
@@ -3945,7 +4052,7 @@ on('topoArchivosBtn', 'click', async () => {
 
 on('topoDetail', 'click', async (ev) => {
   const vc = ev.target.closest('.ver-codigo');
-  if (vc) { await verCodigo(vc.dataset.ruta); return; }
+  if (vc) { await verCodigo(vc.dataset.ruta, vc.dataset.que); return; }
   const f = ev.target.closest('.topo-file');
   if (!f) return;
   const clave = f.dataset.file;
@@ -3953,28 +4060,143 @@ on('topoDetail', 'click', async (ev) => {
   renderTopoDetalle();
 });
 
-// Modo desarrollador: abre un modal con el CONTENIDO del script (solo lectura).
-async function verCodigo(ruta) {
+// Pseudocodigo POR ARCHIVO, con ancla: cada paso apunta a un trozo real del
+// codigo (un nombre de funcion). Al pulsarlo, el panel izquierdo salta a esa
+// linea. Si un archivo no tiene guia, el panel derecho muestra su explicacion.
+const GUIA_CODIGO = {
+  'motor_decision.py': {
+    explica: 'El bucle del motor: cada 10 s lee los PCAP ya cerrados del anillo, atribuye cada paquete a quien inició el flujo, extrae las variables por ventana y escribe la decisión.',
+    pseudo: [
+      { t: 'Argumentos y configuración de arranque', ancla: 'def parse_args' },
+      { t: 'Umbral del modelo (del manifiesto)', ancla: 'def load_threshold' },
+      { t: 'Seguir eve.json en vivo', ancla: 'class EveTail' },
+      { t: 'Listar los PCAP ya cerrados del anillo', ancla: 'def list_closed_pcap_files' },
+      { t: 'Decodificar cada PCAP a paquetes', ancla: 'def parse_pcap_to_packets' },
+      { t: 'Bucle principal cada 10 s', ancla: 'def main' },
+      { t: 'IP fuera de alcance (no se puntúa)', ancla: 'def entidad_excluida' },
+      { t: 'Aplicar la acción (solo en el host)', ancla: 'def apply_enforcement' },
+    ],
+  },
+  'heuristicos.py': {
+    explica: 'Las cuatro reglas deterministas sobre las variables de la ventana. Cada una devuelve una acción (BLOCK/LIMIT) o nada; evaluar() se queda con la más severa.',
+    pseudo: [
+      { t: 'Versión de los umbrales', ancla: 'VERSION_UMBRALES' },
+      { t: 'Fuerza bruta → BLOCK', ancla: 'def _brute_force' },
+      { t: 'Escaneo de puertos → BLOCK', ancla: 'def _port_scan' },
+      { t: 'Abuso HTTP → LIMIT', ancla: 'def _http_abuse' },
+      { t: 'DNS de alta entropía → LIMIT', ancla: 'def _dns_entropy' },
+      { t: 'Combina las reglas (la más severa)', ancla: 'def evaluar' },
+    ],
+  },
+  'extract_multilayer_v2.py': {
+    explica: 'El extractor congelado: de tramas PCAP y eventos eve.json a las 28 variables por IP y ventana. Sus fórmulas no se tocan.',
+    pseudo: [
+      { t: 'Recorrer las tramas del PCAP', ancla: 'def iter_pcap_frames' },
+      { t: 'Decodificar Ethernet / IPv4', ancla: 'def parse_ethernet_ipv4' },
+      { t: 'Atribuir cada paquete a quien inició', ancla: 'def attribute_packets' },
+      { t: 'Observaciones L7 (http · dns · tls)', ancla: 'def load_app_observations' },
+      { t: 'Entropía de nombres (DNS)', ancla: 'def shannon_entropy_bits' },
+      { t: 'Una fila por IP y ventana', ancla: 'def build_rows' },
+    ],
+  },
+  'publicar_feed.py': {
+    explica: 'Cada 60 s combina las decisiones del motor por IP, aplica la escalera de reincidencia y publica el feed.',
+    pseudo: [
+      { t: 'Veredicto de una decisión', ancla: 'def _verdicto_de' },
+      { t: 'De decisiones a entradas del feed', ancla: 'def decisiones_a_entradas' },
+      { t: 'Versión de umbrales', ancla: 'def version_umbrales' },
+      { t: 'Leer las decisiones recientes', ancla: 'def _leer_decisiones' },
+      { t: 'Publicar (bucle principal)', ancla: 'def main' },
+    ],
+  },
+  'feed.py': {
+    explica: 'Construye, serializa y FIRMA el feed con ed25519. El host verifica la firma antes de aplicar nada.',
+    pseudo: [
+      { t: 'Construir el feed', ancla: 'def construir' },
+      { t: 'Serializar a bytes', ancla: 'def serializar' },
+      { t: 'Generar las claves', ancla: 'def generar_claves' },
+      { t: 'Firmar (ed25519)', ancla: 'def firmar' },
+      { t: 'Verificar la firma', ancla: 'def verificar' },
+    ],
+  },
+  'escalada.py': {
+    explica: 'La escalera de caducidad por reincidencia: 300 → 1800 → 3600 s dentro de 24 h.',
+    pseudo: [
+      { t: 'Procesar una ofensa (sube el nivel)', ancla: 'def procesar' },
+      { t: 'Podar lo viejo (decaimiento)', ancla: 'def podar' },
+    ],
+  },
+  'cyberflow_aprendizaje.py': {
+    explica: 'El aprendizaje supervisado nocturno: sanea el lote, mide la deriva contra el oro, entrena un candidato y lo deja listo para que una persona lo promueva.',
+    pseudo: [
+      { t: 'PSI (índice de deriva)', ancla: 'def psi' },
+      { t: 'Comprobar la política del .toml', ancla: 'def comprobar_politica' },
+      { t: 'Conjunto de oro (fijo, nunca entrena)', ancla: 'def crear_oro' },
+      { t: 'Cerrar el lote del día (saneo)', ancla: 'def cerrar_lote' },
+      { t: 'Medir la deriva', ancla: 'def medir_deriva' },
+      { t: 'Puntuar con el modelo', ancla: 'def puntuar' },
+    ],
+  },
+};
+
+// Modo desarrollador: modal de dos paneles. Izquierda el codigo real con sus
+// numeros de linea; derecha la explicacion y el pseudocodigo enlazado.
+async function verCodigo(ruta, que) {
   const modal = document.getElementById('codeModal');
-  document.getElementById('codeTitle').textContent = nombreFichero(ruta);
+  const nombre = nombreFichero(ruta);
+  document.getElementById('codeTitle').textContent = nombre;
   document.getElementById('codeSub').textContent = ruta;
-  document.getElementById('codeBody').textContent = 'cargando…';
+  const body = document.getElementById('codeBody');
+  body.textContent = 'cargando…';
+  const guia = GUIA_CODIGO[nombre] || null;
+  document.getElementById('codeExplica').textContent =
+    (guia && guia.explica) || que || 'Archivo del sistema (solo lectura).';
+  const ol = document.getElementById('codePseudo');
+  ol.innerHTML = (guia && guia.pseudo)
+    ? guia.pseudo.map(p =>
+        `<li data-ancla="${(p.ancla || '').replace(/"/g, '&quot;')}">${p.t}`
+        + (p.ancla ? '<small>' + p.ancla + '</small>' : '') + '</li>').join('')
+    : '<li class="nolink">Este archivo no tiene pseudocódigo enlazado; se muestra tal cual a la izquierda.</li>';
   modal.hidden = false;
   try {
     const r = await fetch('/api/archivo?ruta=' + encodeURIComponent(ruta));
     const d = await r.json();
     if (!d || d.contenido == null) {
-      document.getElementById('codeBody').textContent = (d && d.nota) || 'no disponible';
-    } else {
-      document.getElementById('codeBody').textContent =
-        d.contenido + (d.truncado ? '\\n\\n…(archivo truncado: se muestran los primeros 512 KB)…' : '');
-      document.getElementById('codeSub').textContent =
-        ruta + '  ·  ' + (d.bytes || 0) + ' bytes';
+      body.textContent = (d && d.nota) || 'no disponible';
+      return;
     }
+    const nl = String.fromCharCode(10);
+    const esc = s => s.split('&').join('&amp;').split('<').join('&lt;');
+    const lineas = String(d.contenido).split(nl);
+    body.innerHTML = lineas.map((l, i) =>
+      `<div class="cl" data-i="${i}"><span class="ln">${i + 1}</span><span class="tx">${esc(l) || ' '}</span></div>`).join('');
+    document.getElementById('codeSub').textContent =
+      ruta + '  ·  ' + (d.bytes || 0) + ' bytes' + (d.truncado ? ' · truncado a 512 KB' : '');
   } catch (e) {
-    document.getElementById('codeBody').textContent = 'error al cargar el archivo';
+    body.textContent = 'error al cargar el archivo';
   }
 }
+
+// Al pulsar un paso del pseudocodigo: buscar su ancla en el codigo, resaltar la
+// linea y desplazar el panel izquierdo hasta ella.
+on('codePseudo', 'click', (ev) => {
+  const li = ev.target.closest('li[data-ancla]');
+  if (!li) return;
+  document.querySelectorAll('#codePseudo li').forEach(x => x.classList.remove('sel'));
+  li.classList.add('sel');
+  const ancla = li.getAttribute('data-ancla');
+  if (!ancla) return;
+  const filas = [...document.querySelectorAll('#codeBody .cl')];
+  filas.forEach(cl => cl.classList.remove('hl'));
+  const obj = filas.find(cl => {
+    const tx = cl.querySelector('.tx');
+    return tx && tx.textContent.indexOf(ancla) !== -1;
+  });
+  if (obj) {
+    obj.classList.add('hl');
+    obj.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+});
 on('codeClose', 'click', () => { document.getElementById('codeModal').hidden = true; });
 on('codeModal', 'click', (ev) => { if (ev.target.id === 'codeModal') ev.currentTarget.hidden = true; });
 document.addEventListener('keydown', (ev) => {
