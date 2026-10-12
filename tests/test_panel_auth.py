@@ -164,8 +164,10 @@ class RutasClasificadas(unittest.TestCase):
         cuerpo = fuente.split("def do_GET", 1)[1].split("\n    def ", 1)[0]
         rutas = set(re.findall(r'path == "(/[a-z/-]*)"', cuerpo))
 
+        # /api/acciones: el historial de LIMIT/BLOCK. Lo ve tambien el lector,
+        # porque es la misma informacion de «IPs bloqueadas» y de las decisiones.
         operativas = {"/", "/login", "/api/status", "/api/decisions",
-                      "/api/activity", "/api/score-histogram"}
+                      "/api/activity", "/api/score-histogram", "/api/acciones"}
         sin_clasificar = rutas - dash.RUTAS_ADMIN - operativas
         self.assertEqual(sin_clasificar, set(),
                          "rutas sin decidir quien las ve: %s" % sin_clasificar)
