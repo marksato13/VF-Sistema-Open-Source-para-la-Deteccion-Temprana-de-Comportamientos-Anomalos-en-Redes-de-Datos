@@ -517,6 +517,43 @@ HTML = """<!doctype html>
   .badge.acc-block { background: var(--danger-soft); color: var(--danger); }
   .why { color: var(--text-dim); font-size: 0.82rem; }
 
+  /* Filas por accion: el analista ve primero lo que se corto o se degrado. */
+  tr.row-block td:first-child { box-shadow: inset 4px 0 0 var(--danger); }
+  tr.row-limit td:first-child { box-shadow: inset 4px 0 0 var(--amber); }
+  tr.row-nueva td { animation: fila-nueva 6s ease-out; }
+  @keyframes fila-nueva { from { background: rgba(94,234,212,0.16); } to { background: transparent; } }
+  .badge.acc-block, .badge.acc-limit { font-size: 0.8rem; padding: 0.22rem 0.65rem; letter-spacing: 0.03em; }
+  .hace { display: block; font-size: 0.72rem; color: var(--text-dim); }
+  .modelo-celda { display: inline-flex; align-items: center; gap: 0.45rem; font-family: var(--mono); font-size: 0.78rem; }
+  .modelo-celda .m-alert { color: var(--danger); font-weight: 600; }
+  .modelo-celda .m-permit { color: var(--text-dim); }
+
+  /* Acciones vigentes: cuenta atras visible y barra de lo que queda. */
+  .vig-barra { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: 0.3rem; min-width: 90px; }
+  .vig-barra i { display: block; height: 100%; }
+  .vig-fuente { font-size: 0.7rem; color: var(--text-dim); font-family: var(--mono); }
+  .sec-sub { color: var(--text-dim); font-size: 0.82rem; margin: -0.3rem 0 0.7rem; }
+
+  /* Actividad: cifras por accion y las IPs que mas actuaron. */
+  .act-cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1rem; margin-top: 0.9rem; }
+  @media (max-width: 900px) { .act-cols { grid-template-columns: 1fr; } }
+  .act-h { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin: 0 0 0.45rem; font-weight: 600; }
+
+  /* Alertas flotantes: una por IP y accion, apiladas arriba a la derecha. */
+  .toasts { position: fixed; top: 16px; right: 16px; z-index: 400; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+  .toast { pointer-events: auto; background: var(--surface-2); border: 1px solid var(--border); border-left: 5px solid var(--amber);
+    border-radius: 10px; padding: 0.75rem 0.9rem 0.7rem; box-shadow: 0 10px 30px rgba(0,0,0,0.45); cursor: pointer;
+    animation: toast-in .25s ease-out; }
+  .toast.block { border-left-color: var(--danger); }
+  .toast .t-cab { display: flex; align-items: center; gap: 0.5rem; }
+  .toast .t-ip { font-family: var(--mono); font-weight: 700; color: var(--text); font-size: 0.95rem; }
+  .toast .t-x { margin-left: auto; background: none; border: none; color: var(--text-dim); font-size: 1.1rem; cursor: pointer; line-height: 1; }
+  .toast .t-mot { margin-top: 0.35rem; font-size: 0.84rem; color: var(--text); line-height: 1.35; }
+  .toast .t-meta { margin-top: 0.3rem; font-size: 0.72rem; color: var(--text-dim); font-family: var(--mono); }
+  @keyframes toast-in { from { transform: translateX(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .btn-avisos { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); border-radius: 7px; padding: 0.3rem 0.6rem; font: 0.78rem var(--sans); cursor: pointer; }
+  .btn-avisos[data-on="1"] { color: var(--accent); border-color: var(--accent); }
+
   /* Tabla de decisiones: cabecera fija al desplazar la lista larga, y la celda
      de score lleva una mini-barra que situa el valor respecto al umbral. */
   .tbl-scroll { max-height: 420px; overflow-y: auto; }
@@ -638,11 +675,14 @@ HTML = """<!doctype html>
     <div class="sesion">
       <!--ADMIN--><button id="modoBtn" class="btn-modo" type="button"
         title="Cambia entre la vista operativa y la de desarrollo. Las dos son de solo lectura."></button><!--/ADMIN-->
+      <button id="avisosBtn" class="btn-avisos" type="button" data-on="1"
+        title="Alertas flotantes cuando una IP recibe LIMIT o BLOCK">Avisos: sí</button>
       <span class="quien" id="quien"></span>
       <form method="post" action="/logout"><button class="btn-salir" type="submit">Salir</button></form>
     </div>
   </header>
 
+  <div class="toasts" id="toasts" aria-live="polite"></div>
   <div class="kpi-row" id="kpis"></div>
   <div class="healthbar" id="healthbar"></div>
 
@@ -654,7 +694,7 @@ HTML = """<!doctype html>
   <!--ADMIN-->
   <section id="s-topologia">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg><h2>Topología y flujo</h2></div>
-    <p class="lede-small">Tres vistas del sistema. <strong>Operacional</strong>: cómo funciona en vivo; del espejo salen dos fuentes (PCAP crudo y eve.json de Suricata), cada una con su parser, que juntas arman las variables por IP y ventana. <strong>Construcción y entrenamiento</strong>: de los datos al modelo congelado y su ciclo de vida (partición, candidatos, métricas, selección, congelación, despliegue, reentrenamiento y comparación antes/después). <strong>Fases del método</strong>: las siete fases de la tesis. Pulsa cualquier componente para ver su detalle; desde las fuentes se abre «Datos en vivo».</p>
+    <p class="lede-small">Pulsa un componente para ver su detalle.</p>
     <div class="topo-wrap" id="topoWrap">
       <div class="topo-canvas" id="topoCanvas">
         <div class="topo-bar">
@@ -792,22 +832,34 @@ HTML = """<!doctype html>
       </div>
     </div>
     <div class="grid" id="counters"></div>
-    <div class="spark-wrap">
-      <svg id="spark" width="100%" height="46" viewBox="0 0 610 46" preserveAspectRatio="none"></svg>
-      <div class="chart-tip" id="sparkTip"></div>
-      <div class="spark-legend">
-        <span><i class="swatch" style="background:var(--danger)"></i>intervalo con ALERT</span>
-        <span><i class="swatch" style="background:var(--accent)"></i>solo PERMIT</span>
-        <span><i class="swatch" style="background:var(--border)"></i>sin tráfico</span>
-        <span id="sparkRangeLabel">&larr; hace 60 min&nbsp;&nbsp;&nbsp;ahora &rarr;</span>
+    <div class="act-cols">
+      <div>
+        <p class="act-h">Ventanas por minuto</p>
+        <div class="spark-wrap">
+          <svg id="spark" width="100%" height="46" viewBox="0 0 610 46" preserveAspectRatio="none"></svg>
+          <div class="chart-tip" id="sparkTip"></div>
+          <div class="spark-legend">
+            <span><i class="swatch" style="background:var(--danger)"></i>con alerta</span>
+            <span><i class="swatch" style="background:var(--accent)"></i>normal</span>
+            <span><i class="swatch" style="background:var(--border)"></i>sin tráfico</span>
+            <span id="sparkRangeLabel">&larr; hace 60 min&nbsp;&nbsp;&nbsp;ahora &rarr;</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="act-h">IPs con más acciones</p>
+        <div class="tbl-wrap">
+          <table><thead><tr><th>IP</th><th>Acciones</th><th>Última</th></tr></thead><tbody id="topIps"></tbody></table>
+        </div>
       </div>
     </div>
   </section>
 
   <section id="s-bloqueos">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><h2>IPs bloqueadas ahora</h2></div>
+    <p class="sec-sub" id="vigentesSub">LIMIT y BLOCK en vigor, con su caducidad. Los aplica el agente en el host protegido.</p>
     <div class="tbl-wrap">
-      <table><thead><tr><th>IP</th><th>Expira en</th></tr></thead><tbody id="blocked"></tbody></table>
+      <table><thead><tr><th>IP</th><th>Acción</th><th>Motivo</th><th>Desde</th><th>Expira en</th><th>Reincidencia</th></tr></thead><tbody id="blocked"></tbody></table>
     </div>
   </section>
 
@@ -815,6 +867,10 @@ HTML = """<!doctype html>
     <div class="sec-head-row">
       <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg><h2>Decisiones recientes</h2></div>
       <div class="toolbar">
+        <div class="range-toggle" id="decVista">
+          <button data-dv="accion" class="active">Con acción</button>
+          <button data-dv="todas">Todas</button>
+        </div>
         <input type="text" id="ipFilter" placeholder="Filtrar por IP..." class="ip-filter">
         <button id="exportCsv" class="export-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7,10 12,15 17,10"/><path d="M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
@@ -825,7 +881,7 @@ HTML = """<!doctype html>
     <p class="toolbar-hint" id="filterHint"></p>
     <div class="tbl-wrap tbl-scroll">
       <table>
-        <thead><tr><th>Hora</th><th>IP</th><th>Decisión</th><th>Acción</th><th>Motivo</th><th>Score <span class="th-sub">(← umbral)</span></th><th>Paquetes</th></tr></thead>
+        <thead><tr><th>Hora</th><th>IP</th><th>Acción</th><th>Motivo</th><th>Modelo <span class="th-sub">score frente al umbral</span></th><th>Paquetes</th></tr></thead>
         <tbody id="decisions"></tbody>
       </table>
     </div>
@@ -900,15 +956,24 @@ const seenDecisionKeys = new Set();
 let unseenAlertCount = 0;
 let sessionStart = true; // evita contar todo el historial como "nuevo" en la primera carga
 
+// Decisiones que llegaron en este refresco (para resaltar su fila).
+let nuevasClaves = new Set();
+
 function markSeenAndCountNewAlerts(decisions) {
   let newAlerts = 0;
+  const nuevas = [];
+  nuevasClaves = new Set();
   for (const d of decisions) {
     const key = d.entity_ip + '|' + d.window_end_utc;
     if (seenDecisionKeys.has(key)) continue;
     seenDecisionKeys.add(key);
-    if (!sessionStart && d.decision === 'ALERT') newAlerts++;
+    if (sessionStart) continue;
+    nuevasClaves.add(key);
+    // Se avisa por ACCION: un heuristico puede pedir BLOCK con el modelo en PERMIT.
+    if (accionDeDecision(d) !== 'PERMIT') { newAlerts++; nuevas.push(d); }
   }
   sessionStart = false;
+  if (nuevas.length) avisar(nuevas);
   if (seenDecisionKeys.size > 5000) {
     // evita crecimiento sin limite en una sesion de navegador larga
     const it = seenDecisionKeys.values();
@@ -919,6 +984,84 @@ function markSeenAndCountNewAlerts(decisions) {
     document.title = `(${unseenAlertCount}) ` + BASE_TITLE;
     document.getElementById('favicon').href = ALERT_FAVICON;
   }
+}
+
+// ---- Alertas flotantes ---------------------------------------------------
+// Una tarjeta por IP y accion, con el motivo. BLOCK se queda hasta cerrarla (o
+// 45 s); LIMIT se va sola a los 15 s. Pulsarla filtra Decisiones por esa IP.
+// Se pueden silenciar con el boton «Avisos» (se recuerda en este navegador).
+let avisosOn = true;
+try { avisosOn = localStorage.getItem('cf_avisos') !== '0'; } catch (e) { /* por omision, si */ }
+
+function pintarBotonAvisos() {
+  const b = document.getElementById('avisosBtn');
+  if (!b) return;
+  b.dataset.on = avisosOn ? '1' : '0';
+  b.textContent = avisosOn ? 'Avisos: sí' : 'Avisos: no';
+}
+pintarBotonAvisos();
+on('avisosBtn', 'click', () => {
+  avisosOn = !avisosOn;
+  try { localStorage.setItem('cf_avisos', avisosOn ? '1' : '0'); } catch (e) { /* sin persistir */ }
+  pintarBotonAvisos();
+});
+
+const REGLA_LEGACY = { auth_failure_heuristic: 'fallos de autenticación repetidos' };
+
+function motivoDeDecision(d) {
+  if (d.heuristico && d.heuristico.heuristico) {
+    return { regla: d.heuristico.heuristico, texto: d.heuristico.motivo || '' };
+  }
+  if (d.decision === 'ALERT' && String(d.detector_name || '').endsWith('_heuristic')) {
+    return { regla: d.detector_name, texto: REGLA_LEGACY[d.detector_name] || 'regla determinista' };
+  }
+  if (d.decision === 'ALERT') {
+    const s = d.score != null ? 'score ' + d.score.toFixed(3) : '';
+    const u = d.threshold != null ? ' bajo el umbral ' + Number(d.threshold).toFixed(3) : '';
+    return { regla: 'modelo', texto: 'anomalía: ' + s + u };
+  }
+  return { regla: '', texto: '' };
+}
+
+function avisar(nuevas) {
+  if (!avisosOn) return;
+  const cont = document.getElementById('toasts');
+  if (!cont) return;
+  const grupos = new Map();
+  for (const d of nuevas) {
+    const acc = accionDeDecision(d);
+    const k = d.entity_ip + '|' + acc;
+    const g = grupos.get(k) || { ip: d.entity_ip, acc: acc, n: 0, d: d };
+    g.n += 1;
+    if ((d.logged_at || 0) > (g.d.logged_at || 0)) g.d = d;
+    grupos.set(k, g);
+  }
+  for (const g of grupos.values()) {
+    const id = 'toast-' + g.ip.split('.').join('-') + '-' + g.acc;
+    const viejo = document.getElementById(id);
+    if (viejo) viejo.remove();
+    const m = motivoDeDecision(g.d);
+    const el = document.createElement('div');
+    el.className = 'toast ' + (g.acc === 'BLOCK' ? 'block' : 'limit');
+    el.id = id;
+    el.innerHTML = '<div class="t-cab"><span class="badge acc-' + g.acc.toLowerCase() + '">' + g.acc + '</span>'
+      + '<span class="t-ip">' + varEsc(g.ip) + '</span>'
+      + '<button class="t-x" title="Cerrar" aria-label="Cerrar">×</button></div>'
+      + '<div class="t-mot">' + varEsc(m.texto || 'acción del sistema') + '</div>'
+      + '<div class="t-meta">' + varEsc(m.regla) + ' · ' + fmtTime(g.d.logged_at)
+      + (g.n > 1 ? ' · ' + g.n + ' ventanas' : '') + (g.d.simulado ? ' · simulado' : '') + '</div>';
+    el.addEventListener('click', (ev) => {
+      if (ev.target.closest('.t-x')) { el.remove(); return; }
+      const f = document.getElementById('ipFilter');
+      if (f) { f.value = g.ip; decVista = 'todas'; pintarDecVista(); renderDecisionsTable(); }
+      const s = document.getElementById('s-decisiones');
+      if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.remove();
+    });
+    cont.prepend(el);
+    setTimeout(() => el.remove(), g.acc === 'BLOCK' ? 45000 : 15000);
+  }
+  while (cont.children.length > 4) cont.lastElementChild.remove();
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -933,7 +1076,7 @@ function card(label, value, cls) {
   return `<div class="card ${cls||''}"><div class="label">${label}</div><div class="value">${value}</div></div>`;
 }
 function fmtTime(t) {
-  return new Date(t * 1000).toLocaleTimeString();
+  return new Date(t * 1000).toLocaleTimeString('es-PE', { hour12: false });
 }
 
 // Fila de KPIs: las cuatro cifras que un operador mira primero. Todo sale de
@@ -1151,7 +1294,7 @@ function on(id, evento, fn) {
 const TOUR_PASOS = [
   { sel: '#kpis', t: 'Las cifras clave', d: 'Cuatro números de un vistazo: entidades vigiladas, ventanas analizadas por hora, cuántos scores rozan el umbral y las alertas reales de la última hora.' },
   { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo y heurísticos → decisión → respuesta en el host. Pulsa cualquier componente para ver qué hace.' },
-  { sel: '#topoVista', t: 'Tres vistas del sistema', d: 'Operacional: dos fuentes y dos parsers hasta la decisión. Construcción y entrenamiento: de los datos al modelo congelado y su reentrenamiento. Fases del método: las siete fases de la tesis.' },
+  { sel: '#topoVista', t: 'Tres vistas', d: 'Operacional, Construcción y entrenamiento, y Fases del método.' },
   { sel: '#topoArchivosBtn', t: 'Código auditable', d: 'En modo desarrollador, pulsa Ver archivos, elige un componente y un archivo; en su ficha pulsa ◎ Ver contenido. El visor es de solo lectura y solo muestra rutas permitidas.' },
   { sel: '#s-modelo', t: 'El detector activo y su umbral', d: 'El detector desplegado aprende la normalidad de esta red; el umbral se fijó con validación. Aquí ves el modelo activo y sus métricas, no una etiqueta fija de OCSVM.' },
   { sel: '#pruebasPrevias', t: 'Pruebas previas', d: 'Siete modelos se compararon en el estudio; la ablación sobre nueve episodios separa modelo solo (6), heurísticos solos (7) y ambos combinados (9). No confundas el 9/9 del sistema con el modelo solo.' },
@@ -1273,17 +1416,15 @@ async function refresh() {
       ].join('');
     }
 
-    blocked.innerHTML = status.blocked.length
-      ? status.blocked.map(b => `<tr><td class="ip">${b.ip}</td><td class="num">${b.expires_seconds != null ? b.expires_seconds + 's' : '?'}</td></tr>`).join('')
-      : '<tr class="empty-row"><td colspan="2">Ninguna IP bloqueada ahora mismo.</td></tr>';
+    renderVigentes(status.vigentes || [], status.blocked || []);
 
     const c = status.counters;
     counters.innerHTML = [
-      card('Total', c.total),
-      card('ALERT (modelo)', c.alert_model, c.alert_model > 0 ? 'bad' : ''),
-      card('ALERT (fuerza bruta)', c.alert_auth_heuristic, c.alert_auth_heuristic > 0 ? 'bad' : ''),
-      card('PERMIT (modelo)', c.permit_model, 'ok'),
-      card('PERMIT (sin tráfico)', c.permit_heuristic),
+      card('Ventanas analizadas', (c.total || 0).toLocaleString('es')),
+      card('BLOCK', c.block || 0, c.block > 0 ? 'bad' : ''),
+      card('LIMIT', c.limit || 0, c.limit > 0 ? 'amber' : ''),
+      card('IPs con acción', c.ips_con_accion || 0, c.ips_con_accion > 0 ? 'amber' : ''),
+      card('Anomalías del modelo', c.alert_model || 0, c.alert_model > 0 ? 'bad' : ''),
     ].join('');
 
     const alcanceEl = document.getElementById('alcance');
@@ -1303,9 +1444,10 @@ async function refresh() {
     if (currentRange === '1h') renderSparkline(status.activity);
     else loadActivity(currentRange);
 
-    lastDecisions = await (await fetch('/api/decisions?limit=100')).json();
+    lastDecisions = await (await fetch('/api/decisions?limit=600')).json();
     markSeenAndCountNewAlerts(lastDecisions);
     renderDecisionsTable();
+    renderTopIps();
   } catch (e) {
     stamp.textContent = 'Error al actualizar: ' + e;
   }
@@ -1340,47 +1482,145 @@ function miniBarraScore(score) {
 // anomalia del modelo (ALERT) degrada a LIMIT; lo demas, PERMIT. Si el motor
 // aun no emite el campo `heuristico` (no reiniciado), se cae a modelo/PERMIT.
 function accionDeDecision(d) {
-  if (d.heuristico && d.heuristico.accion) return d.heuristico.accion;
-  return d.decision === 'ALERT' ? 'LIMIT' : 'PERMIT';
+  const sev = { BLOCK: 2, LIMIT: 1, PERMIT: 0 };
+  let acc = 'PERMIT';
+  if (d.decision === 'ALERT') {
+    acc = String(d.detector_name || '').endsWith('_heuristic') ? 'BLOCK' : 'LIMIT';
+  }
+  if (d.heuristico && sev[d.heuristico.accion] > sev[acc]) acc = d.heuristico.accion;
+  return acc;
+}
+
+function haceTexto(t) {
+  const s = Math.max(0, Math.round(Date.now() / 1000 - t));
+  if (s < 60) return 'hace ' + s + ' s';
+  if (s < 3600) return 'hace ' + Math.floor(s / 60) + ' min';
+  return 'hace ' + Math.floor(s / 3600) + ' h';
+}
+
+function duracionTexto(s) {
+  if (s < 60) return s + ' s';
+  const m = Math.floor(s / 60), r = s % 60;
+  return m + ' min' + (r ? ' ' + r + ' s' : '');
+}
+
+// Acciones vigentes: del feed publicado (caducidad exacta) o reconstruidas del
+// registro con la misma escalera. Si el host tuviera nftables local, tambien.
+function renderVigentes(vigentes, locales) {
+  const filas = vigentes.map(v => {
+    const total = v.accion === 'BLOCK' ? ({ 1: 300, 2: 1800, 3: 3600 }[v.nivel] || 300) + 60 : 360;
+    const pct = Math.max(2, Math.min(100, Math.round(100 * v.expira_s / total)));
+    const color = v.accion === 'BLOCK' ? 'var(--danger)' : 'var(--amber)';
+    const reinc = v.accion === 'BLOCK'
+      ? 'nivel ' + (v.nivel || 1) + (v.revisar_humano ? ' · revisar' : '')
+      : '—';
+    return `<tr class="row-${v.accion.toLowerCase()}"><td class="ip">${varEsc(v.ip)}</td>`
+      + `<td><span class="badge acc-${v.accion.toLowerCase()}">${v.accion}</span></td>`
+      + `<td class="why">${varEsc(v.origen || '')}${v.motivo ? ' · ' + varEsc(v.motivo) : ''}</td>`
+      + `<td class="num">${v.desde ? fmtTime(v.desde) : '—'}${v.ofensas ? '<span class="hace">' + v.ofensas + ' ventanas</span>' : ''}</td>`
+      + `<td class="num">${duracionTexto(v.expira_s)}<div class="vig-barra"><i style="width:${pct}%;background:${color}"></i></div></td>`
+      + `<td>${reinc}<div class="vig-fuente">${v.fuente === 'feed' ? 'feed publicado' : 'según registro'}</div></td></tr>`;
+  });
+  for (const b of locales) {
+    filas.push(`<tr class="row-block"><td class="ip">${varEsc(b.ip)}</td><td><span class="badge acc-block">BLOCK</span></td>`
+      + `<td class="why">nftables local</td><td class="num">—</td>`
+      + `<td class="num">${b.expires_seconds != null ? duracionTexto(b.expires_seconds) : '?'}</td><td>—</td></tr>`);
+  }
+  document.getElementById('blocked').innerHTML = filas.length ? filas.join('')
+    : '<tr class="empty-row"><td colspan="6">Ninguna IP limitada ni bloqueada ahora mismo.</td></tr>';
+}
+
+function renderTopIps() {
+  const el = document.getElementById('topIps');
+  if (!el) return;
+  const hora = Date.now() / 1000 - 3600;
+  const por = new Map();
+  for (const d of lastDecisions) {
+    if ((d.logged_at || 0) < hora) continue;
+    const acc = accionDeDecision(d);
+    if (acc === 'PERMIT') continue;
+    const p = por.get(d.entity_ip) || { ip: d.entity_ip, n: 0, block: 0, ult: 0, acc: acc };
+    p.n += 1;
+    if (acc === 'BLOCK') p.block += 1;
+    if ((d.logged_at || 0) > p.ult) { p.ult = d.logged_at; p.acc = acc; }
+    por.set(d.entity_ip, p);
+  }
+  const lista = Array.from(por.values()).sort((a, b) => b.block - a.block || b.n - a.n).slice(0, 6);
+  el.innerHTML = lista.length ? lista.map(p =>
+    `<tr class="row-${p.acc.toLowerCase()}" data-ip="${varEsc(p.ip)}" style="cursor:pointer"><td class="ip">${varEsc(p.ip)}</td>`
+    + `<td class="num">${p.n}</td><td><span class="badge acc-${p.acc.toLowerCase()}">${p.acc}</span><span class="hace">${haceTexto(p.ult)}</span></td></tr>`).join('')
+    : '<tr class="empty-row"><td colspan="3">Ninguna IP con acciones en la última hora.</td></tr>';
+}
+
+on('topIps', 'click', (ev) => {
+  const tr = ev.target.closest('tr[data-ip]');
+  if (!tr) return;
+  document.getElementById('ipFilter').value = tr.dataset.ip;
+  decVista = 'todas'; pintarDecVista(); renderDecisionsTable();
+  document.getElementById('s-decisiones').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// Vista de la tabla: por omision solo lo que pidio una accion; «Todas» incluye
+// los PERMIT. Un analista empieza por lo que se corto o se degrado.
+let decVista = 'accion';
+function pintarDecVista() {
+  document.querySelectorAll('#decVista button').forEach(b => b.classList.toggle('active', b.dataset.dv === decVista));
+}
+on('decVista', 'click', (ev) => {
+  const b = ev.target.closest('button[data-dv]');
+  if (!b) return;
+  decVista = b.dataset.dv;
+  pintarDecVista();
+  renderDecisionsTable();
+});
+
+function filasFiltradas() {
+  const query = document.getElementById('ipFilter').value.trim();
+  let rows = lastDecisions;
+  if (decVista === 'accion') rows = rows.filter(d => accionDeDecision(d) !== 'PERMIT');
+  if (query) rows = rows.filter(d => d.entity_ip.includes(query));
+  return { rows, query };
 }
 
 function renderDecisionsTable() {
-  const query = document.getElementById('ipFilter').value.trim();
-  const rows = query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions;
-  document.getElementById('filterHint').textContent = query
-    ? `${rows.length} de ${lastDecisions.length} decisiones coinciden con "${query}"`
-    : '';
+  const { rows, query } = filasFiltradas();
+  const nAcc = lastDecisions.filter(d => accionDeDecision(d) !== 'PERMIT').length;
+  document.getElementById('filterHint').textContent =
+    (decVista === 'accion' ? nAcc + ' con acción de ' + lastDecisions.length + ' decisiones recientes' : lastDecisions.length + ' decisiones recientes')
+    + (query ? ' · ' + rows.length + ' coinciden con «' + query + '»' : '');
   document.getElementById('decisions').innerHTML = rows.length ? rows.map(d => {
-    const isAlert = d.decision === 'ALERT';
-    const badge = isAlert ? `<span class="badge alert">${ICON.bad} ALERT</span>` : `<span class="badge permit">${ICON.ok} PERMIT</span>`;
     const accion = accionDeDecision(d);
     const accBadge = `<span class="badge acc-${accion.toLowerCase()}">${accion}</span>`;
-    const scoreCell = d.score != null
-      ? `<span class="score-cell"><span>${d.score.toFixed(4)}</span>${miniBarraScore(d.score)}</span>`
-      : '&mdash;';
-    // Si disparo un heuristico (deteccion SIN firma), se muestra cual y su motivo;
-    // si no, la etiqueta del detector/modelo.
-    const motivoTxt = (d.heuristico && d.heuristico.heuristico)
-      ? `<span class="badge heur" title="heurístico determinista — detección sin firma">${d.heuristico.heuristico}</span> ${d.heuristico.motivo || ''}`
-      : (DETECTOR_LABEL[d.detector_name] || d.detector_name);
-    return `<tr class="${isAlert ? 'row-alert' : ''}"><td>${fmtTime(d.logged_at)}</td><td class="ip">${d.entity_ip}</td>` +
-      `<td>${badge}</td><td>${accBadge}</td><td class="why">${motivoTxt}</td>` +
-      `<td class="num">${scoreCell}</td><td class="num">${d.packet_count_10s}</td></tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="7">${query ? 'Ninguna decisión coincide con el filtro.' : 'Sin decisiones recientes.'}</td></tr>`;
+    const isAlert = d.decision === 'ALERT';
+    const modelo = d.score != null
+      ? `<span class="modelo-celda"><span class="${isAlert ? 'm-alert' : 'm-permit'}">${isAlert ? 'ALERT' : 'normal'}</span>`
+        + `<span>${d.score.toFixed(3)}</span>${miniBarraScore(d.score)}</span>`
+      : '<span class="modelo-celda"><span class="m-permit">sin puntuar</span></span>';
+    const m = motivoDeDecision(d);
+    const motivoTxt = m.regla && m.regla !== 'modelo'
+      ? `<span class="badge heur" title="regla determinista, sin firma">${varEsc(m.regla)}</span> ${varEsc(m.texto)}`
+      : (m.regla === 'modelo' ? varEsc(m.texto) : varEsc(DETECTOR_LABEL[d.detector_name] || d.detector_name || ''));
+    const key = d.entity_ip + '|' + d.window_end_utc;
+    const cls = (accion !== 'PERMIT' ? 'row-' + accion.toLowerCase() : '') + (nuevasClaves.has(key) ? ' row-nueva' : '');
+    return `<tr class="${cls}"><td class="num">${fmtTime(d.logged_at)}<span class="hace">${haceTexto(d.logged_at)}</span></td>`
+      + `<td class="ip">${varEsc(d.entity_ip)}</td><td>${accBadge}</td><td class="why">${motivoTxt}</td>`
+      + `<td>${modelo}</td><td class="num">${d.packet_count_10s ?? '—'}</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="6">${query ? 'Ninguna decisión coincide con el filtro.'
+      : (decVista === 'accion' ? 'Ninguna acción reciente: todo el tráfico se permitió.' : 'Sin decisiones recientes.')}</td></tr>`;
 }
 
 on('ipFilter', 'input', renderDecisionsTable);
 
 on('exportCsv', 'click', () => {
-  const query = document.getElementById('ipFilter').value.trim();
-  const rows = query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions;
+  const { rows } = filasFiltradas();
   const header = ['hora_utc', 'ip', 'decision', 'accion', 'motivo', 'score', 'paquetes_10s'];
   const csvRows = rows.map(d => [
     d.window_end_utc,
     d.entity_ip,
     d.decision,
     accionDeDecision(d),
-    DETECTOR_LABEL[d.detector_name] || d.detector_name,
+    (motivoDeDecision(d).regla ? motivoDeDecision(d).regla + ': ' + motivoDeDecision(d).texto
+      : (DETECTOR_LABEL[d.detector_name] || d.detector_name)),
     d.score != null ? d.score : '',
     d.packet_count_10s,
   ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
@@ -3494,8 +3734,12 @@ def compute_counters(decisions: list[dict], window_seconds: int = 3600,
         1 for d in recent
         if d["decision"] == "PERMIT" and d.get("detector_name") == detector_modelo
     )
+    acciones = [accion_de(d) for d in recent]
     return {
         "total": len(recent),
+        "block": sum(1 for a in acciones if a and a[0] == "BLOCK"),
+        "limit": sum(1 for a in acciones if a and a[0] == "LIMIT"),
+        "ips_con_accion": len({d.get("entity_ip") for d, a in zip(recent, acciones) if a}),
         "alert_model": alert_ocsvm,
         "alert_auth_heuristic": alert_auth_heuristic,
         "permit_model": permit_model,
@@ -3594,6 +3838,115 @@ def enforcement_list(enforce_command: str) -> list[dict]:
         return json.loads(result.stdout)
     except json.JSONDecodeError:
         return []
+
+
+# --------------------------------------------------------------- acciones
+#
+# La ACCION que corresponde a cada decision, con la misma regla que
+# publicar_feed.py: un heuristico confirmado manda (BLOCK o LIMIT); un ALERT del
+# modelo degrada a LIMIT; un ALERT de heuristico «legacy» (*_heuristic) bloquea.
+# Ojo: en un ataque real el modelo puede decir PERMIT y el heuristico pedir BLOCK
+# (escaneo del 6-oct): por eso el panel avisa por ACCION, no por decision.
+
+SEVERIDAD_ACCION = {"BLOCK": 2, "LIMIT": 1}
+ESCALERA_BLOCK_S = {1: 300, 2: 1800, 3: 3600}     # = escalada.py
+TIMEOUT_LIMIT_S = 300
+CADENCIA_FEED_S = 60                              # el publicador corre cada minuto
+REGLA_LEGACY = {"auth_failure_heuristic": "fallos de autenticación repetidos"}
+NUNCA_BLOQUEAR = {"10.10.10.30", "10.10.60.11", "10.10.30.1", "10.10.40.1",
+                  "10.10.60.1", "10.10.20.1", "10.10.10.20"}   # = publicar_feed.py
+
+
+def accion_de(d: dict) -> tuple[str, str, str] | None:
+    """(accion, motivo, origen) de una decision, o None si no pide accion."""
+    candidatos = []
+    if d.get("decision") == "ALERT":
+        det = str(d.get("detector_name", ""))
+        if det.endswith("_heuristic"):
+            candidatos.append(("BLOCK", REGLA_LEGACY.get(det, "regla determinista"), det))
+        else:
+            candidatos.append(("LIMIT", "anomalía del modelo", "modelo"))
+    h = d.get("heuristico")
+    if isinstance(h, dict) and h.get("accion") in SEVERIDAD_ACCION:
+        candidatos.append((h["accion"], str(h.get("motivo", "")), str(h.get("heuristico", "regla"))))
+    if not candidatos:
+        return None
+    # A igual severidad gana la regla: su motivo dice mas que «anomalia del modelo».
+    return max(candidatos, key=lambda c: (SEVERIDAD_ACCION[c[0]], c[2] != "modelo"))
+
+
+def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | None = None,
+                      estado_path: Path | None = None, nunca: set[str] = NUNCA_BLOQUEAR) -> list[dict]:
+    """LIMIT/BLOCK en vigor ahora, por IP.
+
+    Dos fuentes. El feed publicado (feed.json) trae la caducidad exacta de lo
+    que se publico en el ultimo minuto. Lo anterior se reconstruye del registro
+    del motor con la misma escalera: ultima ofensa + 300 s (LIMIT) o 300/1800/
+    3600 s (BLOCK, nivel leido de estado.json) + la cadencia del feed. Lo que el
+    agente del host aplica es exactamente eso; el sensor no tiene otra forma de
+    saberlo, porque el bloqueo ocurre en el host.
+    """
+    vigentes: dict[str, dict] = {}
+    if feed_path is not None:
+        try:
+            feed = json.loads(Path(feed_path).read_text(encoding="utf-8"))
+            for e in feed.get("entradas", []):
+                if float(e.get("hasta", 0)) > ahora and e.get("ip"):
+                    vigentes[e["ip"]] = {
+                        "ip": e["ip"], "accion": e.get("accion"), "motivo": e.get("motivo", ""),
+                        "origen": e.get("detector", ""), "nivel": e.get("nivel"),
+                        "hasta": float(e["hasta"]), "revisar_humano": bool(e.get("revisar_humano")),
+                        "fuente": "feed"}
+        except (OSError, ValueError, TypeError):
+            pass
+    estado = {}
+    if estado_path is not None:
+        try:
+            estado = json.loads(Path(estado_path).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            estado = {}
+
+    ofensas: dict[str, list[tuple[float, str, str, str]]] = {}
+    for d in decisions:
+        a = accion_de(d)
+        ip = str(d.get("entity_ip", ""))
+        if a is None or not ip or ip in nunca:
+            continue
+        ofensas.setdefault(ip, []).append((float(d.get("logged_at", 0)), *a))
+    for ip, lista in ofensas.items():
+        lista.sort()
+        t_ultima = lista[-1][0]
+        # El episodio: ofensas encadenadas con huecos de menos de 5 min.
+        inicio = t_ultima
+        for t, *_ in reversed(lista):
+            if inicio - t > TIMEOUT_LIMIT_S:
+                break
+            inicio = t
+        episodio = [o for o in lista if o[0] >= inicio]
+        accion, motivo, origen = max(((o[1], o[2], o[3]) for o in episodio),
+                                     key=lambda o: SEVERIDAD_ACCION[o[0]])
+        if accion == "BLOCK":
+            nivel = max(1, min(3, int((estado.get(ip) or {}).get("bloqueos", 1) or 1)))
+            hasta = t_ultima + ESCALERA_BLOCK_S[nivel] + CADENCIA_FEED_S
+        else:
+            nivel = 0
+            hasta = t_ultima + TIMEOUT_LIMIT_S + CADENCIA_FEED_S
+        previo = vigentes.get(ip)
+        if previo is None:
+            if hasta > ahora:
+                vigentes[ip] = {"ip": ip, "accion": accion, "motivo": motivo, "origen": origen,
+                                "nivel": nivel, "hasta": hasta, "revisar_humano": nivel >= 3,
+                                "fuente": "registro"}
+            previo = vigentes.get(ip)
+        if previo is not None:
+            previo["desde"] = inicio
+            previo["ofensas"] = len(episodio)
+    salida = []
+    for v in vigentes.values():
+        v["expira_s"] = max(0, int(v["hasta"] - ahora))
+        salida.append(v)
+    salida.sort(key=lambda v: (-SEVERIDAD_ACCION.get(v["accion"], 0), -v["hasta"]))
+    return salida
 
 
 def suricata_stats_desde_eve(eve_path: Path) -> dict | None:
@@ -4389,6 +4742,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--enforce-command", default="/usr/local/sbin/ppi-enforce")
     parser.add_argument(
+        "--feed-path", type=Path, default=Path.home() / "feed" / "feed.json",
+        help="feed publicado por publicar_feed.py: caducidad exacta de cada accion")
+    parser.add_argument(
+        "--feed-estado", type=Path, default=Path.home() / "feed" / "estado.json",
+        help="estado de la escalera del publicador: nivel de reincidencia por IP")
+    parser.add_argument(
         "--eve-path",
         type=Path,
         default=Path("/var/log/suricata/eve.json"),
@@ -4689,6 +5048,10 @@ def main() -> int:
                         "services": service_status([] if args.demo else service_names),
                         "model": model_summary,
                         "blocked": enforcement_list(args.enforce_command),
+                        "vigentes": acciones_vigentes(
+                            decisions, time.time(),
+                            None if args.demo else args.feed_path,
+                            None if args.demo else args.feed_estado),
                         "counters": compute_counters(decisions, detector_modelo=args.detector_name),
                         "activity": bucket_by_minute(decisions),
                         # eve.json primero: no necesita privilegios. El ayudante
