@@ -149,6 +149,18 @@ HTML = """<!doctype html>
   .topo-zoom #topoNivel { min-width: 38px; text-align: center; }
   .topo-scroll { overflow: auto; flex: 1; min-height: 0; max-height: 82vh; }
   .topo-scroll svg { display: block; }
+  /* Pulso: lo que entra y lo que se acumula, con su edad. */
+  .pulso { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.7rem; margin: 0.2rem 0 1.3rem; }
+  .pulso-t { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.65rem 0.8rem 0.45rem; min-width: 0; }
+  .pulso-l { font: 600 0.68rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); display: flex; align-items: center; gap: 0.4rem; }
+  .pulso-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex: none; }
+  .pulso-t.ok .pulso-dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .pulso-t.warn .pulso-dot { background: var(--amber); }
+  .pulso-t.warn { border-color: color-mix(in srgb, var(--amber) 55%, var(--border)); }
+  .pulso-v { font: 700 1.35rem var(--mono); color: var(--text); margin-top: 0.2rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pulso-v small { font: 600 0.72rem var(--mono); color: var(--text-dim); margin-left: 0.3rem; }
+  .pulso-s { font-size: 0.74rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pulso-spark { width: 100%; height: 26px; display: block; margin-top: 0.25rem; }
   /* Vista "Validacion": una tabla, no un diagrama. */
   .topo-tabla { display: none; padding: 0.4rem 0.2rem 0.8rem; }
   .topo-tabla table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
@@ -706,6 +718,7 @@ HTML = """<!doctype html>
   <div class="toasts" id="toasts" aria-live="polite"></div>
   <div class="kpi-row" id="kpis"></div>
   <div class="healthbar" id="healthbar"></div>
+  <div class="pulso" id="pulso" aria-label="Pulso de la ingesta"></div>
 
   <section id="s-salud">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><circle cx="7" cy="7" r="0.9" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg><h2>Salud del sistema</h2></div>
@@ -1426,6 +1439,81 @@ function tourQuizasAuto(modo) {
 }
 on('tourBtn', 'click', tourStart);
 
+// ---- Pulso: lo que entra y lo que se acumula, con su edad -----------------
+// Las tasas salen de la diferencia entre dos lecturas del mismo contador. Con
+// una sola lectura no hay tasa y se dice «—»: un cero afirmaria que no entra nada.
+const pulsoPrev = {};
+const pulsoHist = { pk: [], ev: [], dec: [] };
+let pulsoFilas0 = null;
+function pulsoTasa(clave, valor, t) {
+  const a = pulsoPrev[clave];
+  if (valor == null || t == null || isNaN(t)) return null;
+  if (a && a.t === t) return a.tasa;
+  let tasa = null;
+  if (a && t > a.t && valor >= a.v) tasa = (valor - a.v) / (t - a.t);
+  pulsoPrev[clave] = { v: valor, t: t, tasa: tasa };
+  return tasa;
+}
+function pulsoSpark(h, color) {
+  if (h.length < 2) return '<svg class="pulso-spark" viewBox="0 0 120 26"></svg>';
+  const max = Math.max.apply(null, h) || 1;
+  const pts = h.map((v, i) => (i * 120 / (h.length - 1)).toFixed(1) + ',' + (24 - v / max * 21).toFixed(1)).join(' ');
+  return `<svg class="pulso-spark" viewBox="0 0 120 26" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
+}
+function pulsoHace(seg) {
+  if (seg == null || isNaN(seg)) return 'sin dato';
+  seg = Math.max(0, Math.round(seg));
+  if (seg < 90) return 'hace ' + seg + ' s';
+  if (seg < 5400) return 'hace ' + Math.round(seg / 60) + ' min';
+  return 'hace ' + Math.round(seg / 3600) + ' h';
+}
+function pulsoNum(v) {
+  if (v == null) return '—';
+  return v >= 100 ? Math.round(v).toLocaleString('es') : v.toFixed(1).split('.').join(',');
+}
+function renderPulso(status) {
+  const el = document.getElementById('pulso');
+  const p = status.pulso;
+  if (!el || !p) return;
+  const cm = status.capture_metrics;
+  // Suricata escribe la zona como +0000; Date.parse la quiere como +00:00.
+  let marca = cm && cm.medido_en ? String(cm.medido_en) : null;
+  if (marca) {
+    const z = marca.charAt(marca.length - 5);
+    if (z === '+' || z === '-') marca = marca.slice(0, -2) + ':' + marca.slice(-2);
+  }
+  const tPk = marca ? Date.parse(marca) / 1000 : null;
+  const pk = cm ? pulsoTasa('pk', cm.kernel_packets, tPk) : null;
+  const ev = p.eve ? pulsoTasa('ev', p.eve.bytes, p.ahora) : null;
+  const guardar = (k, v) => { const h = pulsoHist[k]; h.push(v == null ? 0 : v); if (h.length > 60) h.shift(); };
+  guardar('pk', pk); guardar('ev', ev); guardar('dec', p.decisiones_60s);
+  const filas = p.dataset ? p.dataset.filas : null;
+  if (filas != null && pulsoFilas0 == null) pulsoFilas0 = filas;
+  const edad = (t) => t == null ? null : p.ahora - t;
+  const ficha = (tit, val, uni, sub, e, limite, spark) => {
+    const est = e == null || isNaN(e) ? '' : (e > limite ? 'warn' : 'ok');
+    return `<div class="pulso-t ${est}"><div class="pulso-l"><span class="pulso-dot"></span>${tit}</div>`
+      + `<div class="pulso-v">${val}<small>${uni}</small></div><div class="pulso-s">${sub}</div>${spark || ''}</div>`;
+  };
+  el.innerHTML =
+    ficha('Paquetes', pulsoNum(pk), '/s', cm ? 'medido ' + pulsoHace(edad(tPk)) : 'sin medir',
+          edad(tPk), 30, pulsoSpark(pulsoHist.pk, 'var(--accent)'))
+    + ficha('Eventos de Suricata', ev == null ? '—' : pulsoNum(ev / 1024), 'KB/s',
+            p.eve ? 'último ' + pulsoHace(edad(p.eve.mtime)) : 'sin dato',
+            p.eve ? edad(p.eve.mtime) : null, 30, pulsoSpark(pulsoHist.ev, 'var(--accent)'))
+    + ficha('Decisiones', String(p.decisiones_60s), '/min',
+            'última ' + pulsoHace(edad(p.ultima_decision)), edad(p.ultima_decision), 60,
+            pulsoSpark(pulsoHist.dec, 'var(--ok)'))
+    + ficha('Dataset acumulado', filas == null ? '—' : filas.toLocaleString('es'), 'filas',
+            p.dataset ? 'escrito ' + pulsoHace(edad(p.dataset.mtime))
+              + (filas != null && filas > pulsoFilas0 ? ' · +' + (filas - pulsoFilas0).toLocaleString('es') + ' en esta sesión' : '')
+              : 'sin dato',
+            p.dataset ? edad(p.dataset.mtime) : null, 1200, '')
+    + ficha('Feed publicado', p.feed ? String(p.feed.entradas) : '—', p.feed && p.feed.entradas === 1 ? 'entrada' : 'entradas',
+            p.feed ? 'firmado ' + pulsoHace(edad(p.feed.generado)) : 'sin dato',
+            p.feed ? edad(p.feed.generado) : null, 150, '');
+}
+
 async function refresh() {
   try {
     // El histograma se pide junto al estado para que la tarjeta "Cerca del
@@ -1439,6 +1527,7 @@ async function refresh() {
     renderHistogram(histogramData);
     renderKpis(status);
     renderHealthbar(status.services, status.counters, status.capture_metrics, status.calibracion, status.modo);
+    renderPulso(status);
     tourQuizasAuto(status.modo);
     renderSidebar(status);
     // Las tres secciones de desarrollo -topologia, modelo y alcance- no estan
@@ -4264,6 +4353,79 @@ def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | Non
 COMPARACION_POR_OMISION = Path(__file__).resolve().parents[2] / "docs" / "evaluacion" / "comparacion-suricata.json"
 
 
+_CACHE_FILAS: dict[str, object] = {}
+
+
+def contar_filas(path: Path) -> int | None:
+    """Filas de datos de un CSV que crece, sin releerlo entero cada vez.
+
+    El panel refresca cada 5 s y el dataset pasa de 70 MB: se recuerda hasta
+    donde se conto y solo se leen los bytes nuevos. Si el fichero encoge o
+    cambia de ruta (rotacion), se cuenta desde cero.
+    """
+    try:
+        tam = path.stat().st_size
+    except OSError:
+        return None
+    c = _CACHE_FILAS
+    if c.get("ruta") != str(path) or tam < int(c.get("pos", 0)):
+        c.clear()
+        c.update(ruta=str(path), pos=0, n=0)
+    if tam > int(c["pos"]):
+        try:
+            with path.open("rb") as fh:
+                fh.seek(int(c["pos"]))
+                n = int(c["n"])
+                while True:
+                    bloque = fh.read(1 << 20)
+                    if not bloque:
+                        break
+                    n += bloque.count(b"\n")
+                c["n"], c["pos"] = n, fh.tell()
+        except OSError:
+            return None
+    return max(0, int(c["n"]) - 1)          # menos la cabecera
+
+
+def pulso_ingesta(decisions: list[dict], eve_path: Path | None, dataset: Path | None,
+                  feed_path: Path | None, ahora: float) -> dict:
+    """Lo que entra y lo que se acumula, con la hora de cada cosa.
+
+    Devuelve contadores y marcas de tiempo, no tasas: la tasa la saca el
+    navegador de dos lecturas seguidas. Lo que no se puede leer va como None,
+    nunca como cero.
+    """
+    def ficha(p: Path | None) -> dict | None:
+        if p is None:
+            return None
+        try:
+            st = p.stat()
+        except OSError:
+            return None
+        return {"bytes": st.st_size, "mtime": st.st_mtime}
+
+    horas = [d["logged_at"] for d in decisions
+             if isinstance(d.get("logged_at"), (int, float))]
+    feed = None
+    if feed_path is not None:
+        try:
+            f = json.loads(feed_path.read_text(encoding="utf-8"))
+            feed = {"generado": f.get("generado"), "entradas": len(f.get("entradas") or [])}
+        except (OSError, ValueError, AttributeError):
+            feed = None
+    ds = ficha(dataset)
+    if ds is not None and dataset is not None:
+        ds["filas"] = contar_filas(dataset)
+    return {
+        "ahora": ahora,
+        "ultima_decision": max(horas) if horas else None,
+        "decisiones_60s": sum(1 for t in horas if t >= ahora - 60),
+        "eve": ficha(eve_path),
+        "dataset": ds,
+        "feed": feed,
+    }
+
+
 def estado_comparacion(ruta: Path | None) -> dict:
     """Tabla de la comparacion con Suricata, calculada por el evaluador."""
     ruta = ruta or COMPARACION_POR_OMISION
@@ -5198,6 +5360,16 @@ def main() -> int:
           file=sys.stderr, flush=True)
     service_names = [name.strip() for name in args.services.split(",") if name.strip()]
     model_summary = load_model_summary(args.manifest_path, args.detector_name)
+    # Sin --dataset, el que declara el .toml en [rutas]: asi el pulso puede decir
+    # cuantas filas se llevan acumuladas sin tocar la unidad del servicio.
+    if args.dataset is None and args.config_toml and not args.demo:
+        try:
+            rutas = tomllib.loads(Path(args.config_toml).read_text(encoding="utf-8")).get("rutas", {})
+            candidato = Path(rutas.get("raiz", ".")) / rutas["dataset"]
+            if candidato.is_file():
+                args.dataset = candidato
+        except (OSError, KeyError, ValueError, TypeError):
+            pass
 
     # Sin autenticacion solo si se pide EXPRESAMENTE. Si faltan los ficheros y
     # nadie lo pidio, el panel no arranca: servir sin login porque un fichero no
@@ -5392,6 +5564,10 @@ def main() -> int:
                             or suricata_metrics(args.suricata_metrics_command)
                         ),
                         "alcance": leer_alcance(args.log_path),
+                        "pulso": pulso_ingesta(
+                            decisions, None if args.demo else args.eve_path,
+                            args.dataset, None if args.demo else args.feed_path,
+                            time.time()),
                         "calibracion": {
                             "calibrado_en_esta_red": args.calibrado_en_esta_red,
                         },
