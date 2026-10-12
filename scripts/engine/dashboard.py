@@ -134,6 +134,15 @@ HTML = """<!doctype html>
   .wrap > section[id] { display: none; }
   .wrap > section[id].pag-activa { display: block; }
   .wrap > section[id][hidden] { display: none; }
+  /* Pie de "Vistas relacionadas": enlaces a las vistas que siguen el hilo. */
+  .rel-vistas { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+    margin-top: 1.6rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+  .rel-lbl { font: 600 0.66rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-dim); margin-right: 0.2rem; }
+  .rel-link { display: inline-flex; align-items: center; gap: 0.3rem; text-decoration: none;
+    font-size: 0.82rem; color: var(--accent); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 0.3rem 0.75rem; }
+  .rel-link:hover { border-color: var(--accent); background: var(--surface); }
 
   @media (max-width: 900px) {
     /* En movil se apila: bloque, no grid. Con una sola columna de grid y dos
@@ -1553,7 +1562,16 @@ const TOUR_PASOS = [
 ];
 let tourI = 0, tourPasos = [], tourAuto = false;
 
-function tourInit() { tourPasos = TOUR_PASOS.filter(p => !p.sel || document.querySelector(p.sel)); }
+// Un paso es valido si su elemento existe Y su seccion no esta oculta por el
+// modo operativo: si no, con el paginado el foco saltaba a la esquina (rect 0)
+// al intentar mostrar una seccion de desarrollo invisible.
+function tourPasoVisible(sel) {
+  const el = document.querySelector(sel);
+  if (!el) return false;
+  const sec = el.closest('.wrap > section[id]');
+  return !(sec && sec.hidden);
+}
+function tourInit() { tourPasos = TOUR_PASOS.filter(p => !p.sel || tourPasoVisible(p.sel)); }
 function tourEnd() {
   const f = document.getElementById('tourFoco'), t = document.getElementById('tourTip');
   if (f) f.style.display = 'none';
@@ -3724,6 +3742,43 @@ function renderSidebar(status) {
 // coincide con el contenido. Respeta el atributo hidden del modo operativo.
 const enlaces = new Map([...document.querySelectorAll('#nav a[data-sec]')].map(a => [a.dataset.sec, a]));
 const seccionesPag = new Map([...document.querySelectorAll('.wrap > section[id]')].map(s => [s.id, s]));
+// Titulo de cada seccion (el h2 de su cabecera), para nombrar los enlaces.
+const SEC_TITULO = new Map([...seccionesPag.entries()].map(([id, s]) => {
+  const h = s.querySelector('.sec-head h2');
+  return [id, h ? h.textContent.trim() : id];
+}));
+// Vistas relacionadas: al pie de cada seccion, enlaces a las que siguen el hilo.
+// Pensado para que desde cualquier vista se salte a la que uno suele querer ver
+// despues. Solo se muestran las que existen y no estan ocultas por el modo.
+const RELACIONES = {
+  's-salud':       ['s-actividad', 's-decisiones', 's-despliegue'],
+  's-actividad':   ['s-decisiones', 's-bloqueos', 's-scores'],
+  's-decisiones':  ['s-scores', 's-bloqueos', 's-variables'],
+  's-bloqueos':    ['s-decisiones', 's-despliegue', 's-actividad'],
+  's-scores':      ['s-decisiones', 's-modelo', 's-aprendizaje'],
+  's-topologia':   ['s-despliegue', 's-variables', 's-vivo'],
+  's-despliegue':  ['s-topologia', 's-bloqueos', 's-salud'],
+  's-alcance':     ['s-topologia', 's-modelo', 's-variables'],
+  's-variables':   ['s-vivo', 's-decisiones', 's-modelo'],
+  's-vivo':        ['s-variables', 's-decisiones', 's-topologia'],
+  's-modelo':      ['s-scores', 's-aprendizaje', 's-comparacion'],
+  's-aprendizaje': ['s-modelo', 's-scores', 's-comparacion'],
+  's-comparacion': ['s-modelo', 's-simulacion', 's-decisiones'],
+  's-simulacion':  ['s-comparacion', 's-decisiones', 's-actividad'],
+};
+function pintarRelaciones(id) {
+  const sec = seccionesPag.get(id);
+  if (!sec) return;
+  const rel = (RELACIONES[id] || []).filter(r => {
+    const s = seccionesPag.get(r);
+    return s && !s.hidden;
+  });
+  let foot = sec.querySelector(':scope > .rel-vistas');
+  if (!rel.length) { if (foot) foot.remove(); return; }
+  if (!foot) { foot = document.createElement('div'); foot.className = 'rel-vistas'; sec.appendChild(foot); }
+  foot.innerHTML = '<span class="rel-lbl">Vistas relacionadas</span>'
+    + rel.map(r => `<a href="#${r}" class="rel-link">${escSimple(SEC_TITULO.get(r) || r)} &rarr;</a>`).join('');
+}
 function primeraVisible() {
   for (const [id, s] of seccionesPag) { if (!s.hidden) return id; }
   return seccionesPag.keys().next().value;
@@ -3733,6 +3788,7 @@ function mostrarSeccion(id, subir) {
   if (!sec || sec.hidden) id = primeraVisible();
   seccionesPag.forEach((s, k) => s.classList.toggle('pag-activa', k === id));
   enlaces.forEach((a, k) => a.classList.toggle('active', k === id));
+  pintarRelaciones(id);
   try { history.replaceState(null, '', '#' + id); } catch (e) { /* sin hash */ }
   if (subir !== false) window.scrollTo({ top: 0, behavior: 'auto' });
 }
@@ -4629,6 +4685,7 @@ function aplicarModo(modo) {
   if (typeof mostrarSeccion === 'function') {
     const activa = [...seccionesPag.values()].find(s => s.classList.contains('pag-activa'));
     if (!activa || activa.hidden) mostrarSeccion(primeraVisible(), false);
+    else pintarRelaciones(activa.id);   // refresca el pie segun el modo nuevo
   }
 }
 
