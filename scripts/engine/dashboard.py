@@ -30,6 +30,7 @@ import sys
 import time
 import tomllib
 import urllib.parse
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -80,6 +81,10 @@ HTML = """<!doctype html>
 
   /* --- Distribucion: barra lateral fija + contenido --- */
   .shell { display: grid; grid-template-columns: 224px minmax(0, 1fr); }
+  /* Sin esto, el ancho de contenido minimo de la barra (su nav) estira la
+     columna mas que la pantalla y el documento desborda en movil: el min-width:0
+     deja que la pista encoja por debajo del contenido y la barra scrollee dentro. */
+  .shell > * { min-width: 0; }
   .side {
     position: sticky; top: 0; align-self: start; height: 100vh;
     border-right: 1px solid var(--border); background: var(--surface);
@@ -1300,44 +1305,17 @@ function renderKpis(status) {
          !cal ? 'warn' : (alertas > 0 ? 'bad' : 'ok'));
 }
 
-function renderHealthbar(services, counters, captureMetrics, calibracion, modo) {
+// La franja de salud la decide el servidor (status.salud): una sola verdad,
+// testeable, que separa salud de servicio de actividad de respuesta. Aqui solo
+// se pinta. Una accion LIMIT/BLOCK por heuristico ya NO queda como "todo normal":
+// el servidor la cuenta como respuesta activa, no como alerta del modelo.
+function renderHealthbar(salud) {
   const el = document.getElementById('healthbar');
-  // Modo demo: datos de ejemplo del repositorio, sin captura en vivo ni
-  // servicios reales. Se dice claramente para no aparentar una operación real.
-  if (modo === 'demo') {
-    el.className = 'healthbar warn';
-    el.innerHTML = `<span class="dot"></span><div><div class="msg">MODO DEMO &mdash; datos de ejemplo del repositorio</div>` +
-      `<div class="sub">Estás viendo cómo funciona CyberFlow con decisiones de muestra, sin captura en vivo ni sensor. ` +
-      `Para usarlo en tu red, sigue la instalación (modo despliegue).</div></div>`;
-    return;
-  }
-  const allUp = Object.values(services).every(Boolean);
-  const hasDrops = captureMetrics && (captureMetrics.kernel_drops > 0 || captureMetrics.kernel_ifdrops > 0);
-  const nAlertas = counters.alert_model + counters.alert_auth_heuristic;
-  // Un modelo calibrado en otra red no mide nada aqui: anunciar sus alertas
-  // como "reales" es dar una alarma falsa en la primera linea del panel.
-  // Medido en este despliegue: 87 % de ALERT sin ningun ataque en curso.
-  if (allUp && calibracion && !calibracion.calibrado_en_esta_red) {
-    el.className = 'healthbar warn';
-    el.innerHTML = `<span class="dot"></span><div><div class="msg">Modelo sin calibrar para esta red &mdash; las alertas aun no son fiables</div>` +
-      `<div class="sub">El umbral viene de otra red. ${nAlertas} alerta(s) en la última hora: trátalas como ruido hasta recalibrar con tráfico propio.` +
-      (hasDrops ? ' Además, Suricata está descartando paquetes.' : '') + `</div></div>`;
-    return;
-  }
-  if (!allUp) {
-    el.className = 'healthbar bad';
-    el.innerHTML = `<span class="dot"></span><div><div class="msg">Atención: un servicio no está activo</div><div class="sub">Revisar con journalctl -- el motor puede no estar observando tráfico real ahora mismo.</div></div>`;
-  } else if (counters.alert_model + counters.alert_auth_heuristic > 0) {
-    const n = counters.alert_model + counters.alert_auth_heuristic;
-    el.className = 'healthbar warn';
-    el.innerHTML = `<span class="dot"></span><div><div class="msg">Servicios activos &middot; ${n} alerta(s) real(es) en la última hora</div><div class="sub">El sistema está funcionando y respondiendo -- revisar la tabla de decisiones abajo.</div></div>`;
-  } else if (hasDrops) {
-    el.className = 'healthbar warn';
-    el.innerHTML = `<span class="dot"></span><div><div class="msg">Atención: Suricata está descartando paquetes</div><div class="sub">Las features del motor pueden estar incompletas mientras esto ocurra -- ver "Paquetes capturados" abajo.</div></div>`;
-  } else {
-    el.className = 'healthbar ok';
-    el.innerHTML = `<span class="dot"></span><div><div class="msg">Todo operando con normalidad</div><div class="sub">Servicios activos, sin alertas reales en la última hora, sin drops de captura.</div></div>`;
-  }
+  if (!el) return;
+  const s = salud || { nivel: 'warn', msg: 'Estado no disponible', sub: '' };
+  el.className = 'healthbar ' + (s.nivel || '');
+  el.innerHTML = `<span class="dot"></span><div><div class="msg">${escSimple(s.msg || '')}</div>` +
+    `<div class="sub">${escSimple(s.sub || '')}</div></div>`;
 }
 
 // La grafica de actividad guarda sus datos para el tooltip; la unidad de tiempo
@@ -1699,7 +1677,7 @@ async function refresh() {
     window._fprRef = status.model ? status.model.test_fpr : null;
     renderHistogram(histogramData);
     renderKpis(status);
-    renderHealthbar(status.services, status.counters, status.capture_metrics, status.calibracion, status.modo);
+    renderHealthbar(status.salud);
     renderPulso(status);
     if (document.getElementById('despliegue')) renderDespliegue(status);
     tourQuizasAuto(status.modo);
@@ -1715,16 +1693,25 @@ async function refresh() {
     );
     const cm = status.capture_metrics;
     if (cm) {
-      const hasDrops = cm.kernel_drops > 0 || cm.kernel_ifdrops > 0;
       healthCards.push(card(
         'Paquetes capturados',
-        cm.kernel_packets.toLocaleString('es'),
+        (cm.kernel_packets || 0).toLocaleString('es'),
         'accent'
       ));
+      // kernel_drops es ACUMULADO desde el arranque de Suricata. Rojo solo si
+      // sube entre dos muestras; un acumulado heredado no es pérdida en curso,
+      // y si el stats está viejo se dice "dato atrasado", nunca "sin drops".
+      const de = cm.drops_estado || {};
+      const total = de.total != null ? de.total : ((cm.kernel_drops || 0) + (cm.kernel_ifdrops || 0));
+      let sub, estado;
+      if (de.nivel === 'sin_dato') { sub = 'sin medir'; estado = ''; }
+      else if (de.subiendo) { sub = 'subiendo +' + de.delta + ' · acumulado desde arranque'; estado = 'bad'; }
+      else if (de.atrasado) { sub = 'acumulado desde arranque · dato atrasado'; estado = 'warn'; }
+      else { sub = 'acumulado desde arranque · sin aumento reciente'; estado = 'ok'; }
       healthCards.push(card(
         'Drops de captura',
-        (cm.kernel_drops + cm.kernel_ifdrops).toLocaleString('es'),
-        hasDrops ? 'bad' : 'ok'
+        total.toLocaleString('es') + '<small>' + sub + '</small>',
+        estado
       ));
     }
     health.innerHTML = healthCards.join('');
@@ -2588,11 +2575,12 @@ const TOPO_VISTAS = {
 // Matriz de validacion interna. Cada estado cita la nota que lo respalda; un
 // parcial dice que falta. Al cambiar un estado, cambiarlo aqui y en la figura
 // VI-7 (orquestacion: diagramas-vistas-gui/drawio/gen_vi7.py).
+const VALIDACION_FECHA = '12-oct-2026';
 const VALIDACION = [
   ['Instalación offline', 'Desde cero en una VM limpia', 'doctor.sh OK a los 30 min · nota R', 'c', ''],
   ['Captura y extracción', 'PCAP + EVE → 28 variables', 'Espejo sin descartes · notas B y D', 'c', ''],
   ['Decisión híbrida', 'Score, regla y motivo por ventana', 'Registro de decisiones · nota 31', 'c', ''],
-  ['Respuesta distribuida', 'Feed firmado → nftables', 'Escaneo bloqueado · notas O y 26', 'p', 'falta fuerza bruta'],
+  ['Respuesta distribuida', 'Feed firmado → nftables', 'Escaneo bloqueado en vivo 12-oct (srv-dmz) · notas O y 26', 'p', 'fuerza bruta en vivo: campaña C3'],
   ['Acceso por roles', 'admin y lector', '401 sin sesión, sin HTTP en claro · nota R', 'p', 'falta el ingreso por navegador'],
   ['Reentrenamiento', 'Lote → candidato → evaluación', 'Oro, linaje y lote rechazado · nota S', 'p', 'sin candidato real'],
   ['Reversión', 'Caducidad y retirada manual', 'Escalera en pruebas unitarias', 'p', 'falta registro en vivo'],
@@ -2613,8 +2601,9 @@ function validacionHTML() {
 function validacionDetalleHTML() {
   const n = k => VALIDACION.filter(f => f[3] === k).length;
   return '<h3>Validación interna</h3>'
+    + `<p class="dim">Estado <b>documental</b> al ${VALIDACION_FECHA} — no es una medición en vivo del sensor. Cada estado cita su evidencia; un parcial dice qué falta.</p>`
     + `<dl><dt>Cumplidos</dt><dd>${n('c')}</dd><dt>Parciales</dt><dd>${n('p')}</dd><dt>Pendientes</dt><dd>${n('n')}</dd></dl>`
-    + '<p class="dim">Cada estado cita su evidencia. TAM y juicio de expertos van en la validación externa.</p>';
+    + '<p class="dim">Los subtotales resumen la tabla documental; no se deriva de ellos el éxito en producción. TAM y juicio de expertos van en la validación externa.</p>';
 }
 
 let topoVista = 'completa';
@@ -4719,6 +4708,140 @@ def compute_counters(decisions: list[dict], window_seconds: int = 3600,
     }
 
 
+# Un evento stats de Suricata mas viejo que esto ya no describe "ahora": su
+# contador de drops es historia, no una perdida en curso.
+UMBRAL_STATS_VIEJO_S = 120
+
+# Ultima muestra de captura vista, para calcular el delta de drops entre dos
+# lecturas del mismo contador acumulado (el servidor es un proceso de larga
+# vida; con una sola lectura no hay forma de saber si los drops crecen).
+_CAPTURA_PREVIA: dict = {}
+
+
+def _epoch_de_ts(ts: str | None) -> float | None:
+    """Epoch (s) de una marca ISO de Suricata, o None si no se puede leer.
+
+    Suricata escribe la zona como +0000; datetime.fromisoformat la quiere como
+    +00:00. Se normaliza antes de convertir.
+    """
+    if not ts:
+        return None
+    s = str(ts).strip()
+    if len(s) >= 6 and s[-5] in "+-" and s[-3] != ":":
+        s = s[:-2] + ":" + s[-2:]
+    try:
+        return datetime.fromisoformat(s).timestamp()
+    except ValueError:
+        return None
+
+
+def drops_estado(capture_metrics: dict | None, previa: dict | None,
+                 ahora: float | None) -> dict:
+    """Estado de los drops de captura comparando dos muestras.
+
+    ``kernel_drops`` es un ACUMULADO desde que arranco Suricata, no "lo que se
+    cae ahora". Un valor > 0 heredado del arranque no es una perdida en curso.
+    Se mira el incremento entre la muestra previa y la actual (por su marca
+    ``medido_en``) y, aparte, si el evento stats esta tan viejo que ya no
+    describe el presente. ``previa`` es ``{"medido_en", "total"}`` de la lectura
+    anterior. Funcion pura: el estado se guarda fuera.
+    """
+    if not capture_metrics or "kernel_packets" not in capture_metrics:
+        return {"nivel": "sin_dato", "total": None, "delta": None,
+                "subiendo": False, "atrasado": True, "marca": None}
+    total = (int(capture_metrics.get("kernel_drops", 0) or 0)
+             + int(capture_metrics.get("kernel_ifdrops", 0) or 0))
+    marca = capture_metrics.get("medido_en")
+    t = _epoch_de_ts(marca)
+    atrasado = t is None or (ahora is not None and ahora - t > UMBRAL_STATS_VIEJO_S)
+    delta = None
+    if (previa and previa.get("total") is not None
+            and previa.get("medido_en") != marca and total >= previa["total"]):
+        delta = total - previa["total"]
+    subiendo = bool(delta)
+    nivel = "subiendo" if subiendo else ("atrasado" if atrasado else "estable")
+    return {"nivel": nivel, "total": total, "delta": delta, "subiendo": subiendo,
+            "atrasado": atrasado, "marca": marca}
+
+
+def resumen_salud(modo: str, services: dict, counters: dict, drops: dict,
+                  calibracion: dict | None) -> dict:
+    """La franja de salud del panel: nivel + mensaje, decidida en el SERVIDOR.
+
+    Una sola verdad y, al no vivir en JS, se puede probar. Separa la salud de
+    SERVICIO de la actividad de RESPUESTA: una accion LIMIT/BLOCK -incluida la
+    de un heuristico, sin ALERT del modelo- es actividad efectiva del sistema y
+    no puede quedar bajo "todo operando con normalidad". Una accion de regla se
+    nombra como accion, no como "alerta del modelo".
+    """
+    if modo == "demo":
+        return {"nivel": "warn",
+                "msg": "MODO DEMO — datos de ejemplo del repositorio",
+                "sub": "Estás viendo cómo funciona CyberFlow con decisiones de muestra, "
+                       "sin captura en vivo ni sensor. Para usarlo en tu red, sigue la "
+                       "instalación (modo despliegue)."}
+    todos_activos = all(services.values()) if services else True
+    n_block = int(counters.get("block", 0) or 0)
+    n_limit = int(counters.get("limit", 0) or 0)
+    n_alert_modelo = int(counters.get("alert_model", 0) or 0)
+    n_alert_fb = int(counters.get("alert_auth_heuristic", 0) or 0)
+    n_accion = n_block + n_limit
+    subiendo_drops = bool(drops.get("subiendo"))
+    if not todos_activos:
+        return {"nivel": "bad",
+                "msg": "Atención: un servicio no está activo",
+                "sub": "Revisar con journalctl — el motor puede no estar observando "
+                       "tráfico real ahora mismo."}
+    # El modelo sin calibrar para esta red no mide nada: sus ALERT son ruido. Una
+    # accion por regla determinista NO depende del modelo, asi que se nombra aparte.
+    if calibracion and not calibracion.get("calibrado_en_esta_red"):
+        sub = ("El umbral viene de otra red. %d alerta(s) del modelo en la última hora: "
+               "trátalas como ruido hasta recalibrar con tráfico propio." % n_alert_modelo)
+        if n_accion:
+            sub += (" Hay %d acción(es) de respuesta por reglas deterministas, "
+                    "que no dependen del modelo." % n_accion)
+        if subiendo_drops:
+            sub += " Además, Suricata está descartando paquetes ahora."
+        return {"nivel": "warn",
+                "msg": "Modelo sin calibrar para esta red — las alertas del modelo aún no son fiables",
+                "sub": sub}
+    if n_accion > 0 or n_alert_modelo > 0 or n_alert_fb > 0:
+        partes = []
+        if n_block:
+            partes.append("%d BLOCK" % n_block)
+        if n_limit:
+            partes.append("%d LIMIT" % n_limit)
+        if n_alert_modelo:
+            partes.append("%d anomalía(s) del modelo" % n_alert_modelo)
+        if n_alert_fb:
+            partes.append("%d alerta(s) de fuerza bruta" % n_alert_fb)
+        if n_accion > 0:
+            msg = "Servicios activos · respuesta activa en la última hora"
+        else:
+            msg = "Servicios activos · %d alerta(s) en la última hora" % (n_alert_modelo + n_alert_fb)
+        return {"nivel": "warn", "msg": msg,
+                "sub": "El sistema está respondiendo: " + " · ".join(partes)
+                       + ". Revisar Decisiones y Bloqueos abajo."}
+    if subiendo_drops:
+        d = drops.get("delta")
+        return {"nivel": "warn",
+                "msg": "Atención: Suricata está descartando paquetes",
+                "sub": ("Subió %s desde la última muestra. Las features del motor pueden "
+                        "quedar incompletas mientras ocurra — ver «Drops de captura» abajo."
+                        % ("+%d" % d if d else "ahora"))}
+    # Todo normal, pero el estado de drops se dice con su frescura: nunca "sin
+    # drops" cuando en realidad no hay dato fresco que lo respalde.
+    if drops.get("nivel") == "sin_dato":
+        cola = " Estado de drops: dato no disponible."
+    elif drops.get("atrasado"):
+        cola = " Estado de drops: dato atrasado (el último stats de Suricata es viejo)."
+    else:
+        cola = " Sin aumento de drops reciente."
+    return {"nivel": "ok",
+            "msg": "Todo operando con normalidad",
+            "sub": "Servicios activos, sin acciones ni alertas en la última hora." + cola}
+
+
 def bucket_activity(decisions: list[dict], bucket_seconds: int, count: int) -> list[dict]:
     """Agrega decisiones en cubos de tamano fijo para graficar actividad.
 
@@ -6323,33 +6446,47 @@ def main() -> int:
                 return
             if path == "/api/status":
                 decisions = read_decisions(args.log_path, limit=2000)
+                ahora = time.time()
+                servicios = service_status([] if args.demo else service_names)
+                contadores = compute_counters(decisions, detector_modelo=args.detector_name)
+                calibr = {"calibrado_en_esta_red": args.calibrado_en_esta_red}
+                # eve.json primero: no necesita privilegios. El ayudante queda
+                # como respaldo para despliegues que lo tengan.
+                captura = (suricata_stats_desde_eve(args.eve_path)
+                           or suricata_metrics(args.suricata_metrics_command))
+                # Drops: delta contra la lectura anterior, para no pintar en rojo
+                # un acumulado heredado del arranque. El estado se adjunta a la
+                # propia metrica y se memoriza para la proxima lectura.
+                de = drops_estado(captura, _CAPTURA_PREVIA.get("v"), ahora)
+                if captura is not None:
+                    captura["drops_estado"] = de
+                    _CAPTURA_PREVIA["v"] = {"medido_en": de.get("marca"),
+                                            "total": de.get("total")}
                 self._send_json(
                     {
                         "modo": "demo" if args.demo else "live",
-                        "services": service_status([] if args.demo else service_names),
+                        "services": servicios,
+                        # La franja de salud se decide aqui (una sola verdad,
+                        # testeable): el frontend solo la pinta.
+                        "salud": resumen_salud(
+                            "demo" if args.demo else "live",
+                            servicios, contadores, de, calibr),
                         "model": model_summary,
                         "blocked": enforcement_list(args.enforce_command),
                         "vigentes": acciones_vigentes(
-                            decisions, time.time(),
+                            decisions, ahora,
                             None if args.demo else args.feed_path,
                             None if args.demo else args.feed_estado),
-                        "counters": compute_counters(decisions, detector_modelo=args.detector_name),
+                        "counters": contadores,
                         "activity": bucket_by_minute(decisions),
-                        # eve.json primero: no necesita privilegios. El ayudante
-                        # queda como respaldo para despliegues que lo tengan.
-                        "capture_metrics": (
-                            suricata_stats_desde_eve(args.eve_path)
-                            or suricata_metrics(args.suricata_metrics_command)
-                        ),
+                        "capture_metrics": captura,
                         "alcance": dict(leer_alcance(args.log_path),
                                         **({"red_entidades": red_vigilada} if red_vigilada else {})),
                         "pulso": pulso_ingesta(
                             decisions, None if args.demo else args.eve_path,
                             args.dataset, None if args.demo else args.feed_path,
-                            time.time()),
-                        "calibracion": {
-                            "calibrado_en_esta_red": args.calibrado_en_esta_red,
-                        },
+                            ahora),
+                        "calibracion": calibr,
                     }
                 )
                 return
