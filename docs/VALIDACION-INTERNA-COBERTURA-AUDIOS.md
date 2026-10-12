@@ -10,10 +10,10 @@ Leyenda: ✅ listo en el código/documentación local · 🟡 requiere verificac
 | # | Lo que pidió el profesor | Dónde se demuestra | Estado |
 |---|---|---|---|
 | 1 | **Comparación de modelos / "pruebas previas"** (no elegir a ciegas) | Panel → **Modelo**: 7 candidatos históricos + ablación por episodio 6/9·7/9·9/9; `scripts/analysis/compare_frozen_models_metrics.py`. La selección posterior a test se declara como limitación. | ✅ local / 🟡 vivo |
-| 2 | **Fase de entrenamiento visible** (partición, métricas, ejecución) | Panel → **Topología → vista Entrenamiento**; código autorizado del pipeline, umbral/FPR en Modelo. El panel explica el procedimiento, no ejecuta entrenamiento. | ✅ local / 🟡 vivo |
+| 2 | **Fase de entrenamiento visible** (partición, métricas, ejecución) | Panel → **Mapa del sistema → vista Construcción y entrenamiento**; código autorizado del pipeline, umbral/FPR en Modelo. El panel explica el procedimiento, no ejecuta entrenamiento. | ✅ local / 🟡 vivo |
 | 3 | **Reentrenamiento definido y demostrable, con antes/después** | Runbook reparado y prueba integral **sintética** del pipeline; el comparador rechaza promoción sin normal y ataques pareados. | 🟡 faltan datos nuevos reservados y tabla real ANTES/DESPUÉS; no se despliega modelo |
 | 4 | **Acreditar todo** (reproducible, no caja negra) | Panel → modo desarrollador → **Ver archivos → ◎ Ver contenido** (código del pipeline en pantalla). Manifiesto + hashes en `artifacts/`. `docs/VALIDACION-INTERNA-TECNICA.md` | 🟡 requiere panel actualizado en el sensor (push + restart) |
-| 5 | **Dos diagramas: "cómo se construyó" vs "cómo funciona"** | Panel → **Topología**, toggle de 3 vistas: **Operacional** (cómo funciona), **Metodológica** (cómo se construyó, 7 fases), **Entrenamiento** (el ciclo) | 🟡 idem: push + restart |
+| 5 | **Dos diagramas: "cómo se construyó" vs "cómo funciona"** | Panel → **Mapa del sistema**, siete vistas; entre ellas **Operacional** (cómo funciona), **Fases del método** (cómo se construyó, 7 fases) y **Construcción y entrenamiento** (el ciclo) | 🟡 idem: push + restart |
 | 6 | **Delimitaciones** (alcance y límites, con cifra) | Panel → **Alcance** y fichas; límites con dataset/denominador abajo ↓ | ✅ local / 📄 conciliar en tesis |
 | 7 | **Lista de tablas + lista de figuras + esquema metodológico** | Esquema metodológico = Vista Metodológica del panel + `DIAGRAMAS/VISTA-1-METODOLOGICA`. Lista de tablas/figuras = **documento del artículo/tesis** | 📄 trabajo de artículo (no del panel) |
 

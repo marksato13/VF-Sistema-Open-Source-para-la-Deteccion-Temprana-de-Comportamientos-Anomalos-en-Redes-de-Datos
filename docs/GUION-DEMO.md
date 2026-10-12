@@ -17,7 +17,7 @@ pensado para responder, en vivo, los diez puntos técnicos del profesor.
       las vistas nuevas.
 - [ ] Abrir el panel a pantalla completa: `cf-panel.cmd` → `https://10.10.60.11:8788`
       (certificado autofirmado; aceptar la huella). Login como **admin**, modo
-      **desarrollador** (para que se vean Topología, Variables, Alcance, Modelo).
+      **desarrollador** (para que se vean Mapa, Variables, Alcance, Modelo).
 - [ ] Verificar que el motor y Suricata están **verdes** en *Salud del sistema*.
 - [ ] **Consultar** el estado `nft list table inet cyberflow` y esperar la
       caducidad de acciones anteriores. Un vaciado manual alteraría la evidencia
@@ -27,7 +27,7 @@ pensado para responder, en vivo, los diez puntos técnicos del profesor.
 
 ## 1. Arquitectura y alcance (2–3 min) — *responde req. 2, 7, 9*
 
-1. Sección **Topología y flujo**: recorrer el camino SPAN → sensor → motor →
+1. Sección **Mapa del sistema** (vista Operacional): recorrer el camino SPAN → sensor → motor →
    feed firmado → agente en el host. Recalcar: **el sensor observa por espejo
    (pasivo) y NUNCA sale a Internet**; la acción la aplica el agente EN el host.
 2. Sección **Variables por capa**: son **28 variables** que puntúa el modelo,

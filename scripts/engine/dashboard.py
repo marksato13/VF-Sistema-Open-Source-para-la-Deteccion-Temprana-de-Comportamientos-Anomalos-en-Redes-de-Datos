@@ -796,7 +796,7 @@ HTML = """<!doctype html>
     <div class="grid" id="model"></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="16.5" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Punto débil conocido:</strong> este modelo detecta peor la fuerza bruta de contraseñas (50&ndash;55%) que el resto de familias de ataque (&gt;80%). Una decisión PERMIT en ese escenario es menos confiable que en otros.</span></div>
 
-    <p class="lede-small" id="pruebasPrevias" style="margin-top:1.4rem"><strong style="color:var(--text)">Pruebas previas &mdash; comparación exploratoria de modelos.</strong> Se compararon <strong>7 candidatos</strong> con las mismas variables y la misma partición (<code>compare_frozen_models_metrics.py</code>, auditable desde <em>Topología &rarr; Ver contenido</em>). El conjunto positivo son 179 ventanas de anomalía; el negativo, 276 ventanas normales de prueba. Se reportan F1, MCC, ROC&#8209;AUC y precisión media, sin reentrenar y verificando cada modelo contra el manifiesto. La selección posterior a ver resultados de prueba limita la estimación de generalización.</p>
+    <p class="lede-small" id="pruebasPrevias" style="margin-top:1.4rem"><strong style="color:var(--text)">Pruebas previas &mdash; comparación exploratoria de modelos.</strong> Se compararon <strong>7 candidatos</strong> con las mismas variables y la misma partición (<code>compare_frozen_models_metrics.py</code>, auditable desde <em>Mapa &rarr; Ver archivos</em>). El conjunto positivo son 179 ventanas de anomalía; el negativo, 276 ventanas normales de prueba. Se reportan F1, MCC, ROC&#8209;AUC y precisión media, sin reentrenar y verificando cada modelo contra el manifiesto. La selección posterior a ver resultados de prueba limita la estimación de generalización.</p>
     <p class="lede-small">Y la detección no la hace el modelo solo. La <strong>ablación por componentes</strong> mide qué aporta cada pieza sobre 9 episodios (3 familias con 3 repeticiones):</p>
     <div class="grid">
       <div class="card"><div class="label">Modelo solo</div><div class="value">6 / 9</div></div>
@@ -1887,7 +1887,7 @@ const TOPO_VISTAS = {
       { id: 'c_acum',    x: 808,  y: 252, w: 200, h: 64, icono: 'fichero',  titulo: 'Acumulación',          tag: 'temporizador · v3', val: 'cada 10 min' },
       { id: 'c_vivo',    x: 552,  y: 252, w: 200, h: 64, icono: 'escudo',   titulo: 'Motor en vivo',        tag: 'PERMIT · ALERT · BLOCK', val: 'marca IPs sospechosas' },
       { id: 'a_oro',     x: 40,   y: 432, w: 176, h: 64, icono: 'disco',    titulo: 'Conjunto de oro',      tag: 'FIJO · NUNCA ENTRENA', val: 'test de la nota L', clase: 'artefacto' },
-      { id: 'a_san',     x: 256,  y: 432, w: 176, h: 64, icono: 'tijera',   titulo: '1 · Saneamiento',        tag: 'LOTE DEL DÍA', val: 'fuera lo marcado y atípico' },
+      { id: 'a_san',     x: 256,  y: 432, w: 176, h: 64, icono: 'tijera',   titulo: '1 · Saneamiento',        tag: 'LOTE · EXCLUYE VENTANAS', val: 'fuera lo marcado y atípico' },
       { id: 'a_lin',     x: 472,  y: 432, w: 176, h: 64, icono: 'fichero',  titulo: '2 · Linaje',             tag: 'SHA256 ENCADENADO', val: 'registro.jsonl', clase: 'artefacto' },
       { id: 'a_der',     x: 688,  y: 432, w: 176, h: 64, icono: 'lupa',     titulo: '4 · Deriva',             tag: 'CONTRA EL ORO', val: 'PSI · % anómalo' },
       { id: 'a_inf',     x: 904,  y: 432, w: 176, h: 64, icono: 'modelo',   titulo: '3 · Candidato',          tag: 'LÍMITE DE INFLUENCIA', val: 'nuevo ≤ 30 % · IP ≤ 10 %' },
@@ -2437,13 +2437,14 @@ const TOPO_TEXTO = {
   },
   a_san: {
     que: '① Saneamiento: cada noche se cierra el lote del día anterior y se filtra antes de que pueda entrenar.',
-    flujoTit: 'Tres filtros',
+    flujoTit: 'Cuatro filtros',
     flujo: [
+      {paso: 'Ventanas excluidas', fichero: 'excluir_ventanas', garantia: 'fuera los tramos declarados, como la ráfaga de la Kali del 27-sep'},
       {paso: 'Contaminación', fichero: 'motor_decision.log + eve.json', garantia: 'fuera las ventanas de IPs marcadas a ±5 min'},
       {paso: 'Atípicas', fichero: 'límites del oro', garantia: 'fuera la fila que se sale en 3 o más variables'},
       {paso: 'Lote anómalo', fichero: 'PSI frente al oro', garantia: 'PSI > 0,5: lote rechazado, lo revisa una persona'},
     ],
-    nota: 'Un lote rechazado puede ser un cambio de red legítimo; se acepta a mano con «lote --dia … --aceptar» tras revisarlo.',
+    nota: 'Un lote rechazado puede ser un cambio de red legítimo; se acepta a mano con «lote --dia … --aceptar» tras revisarlo. Caso real: el lote del 10-oct se rechazó con PSI 2,41, porque la red no tenía tráfico de usuarios.',
   },
   a_lin: {
     que: '② Linaje: cada lote queda registrado con su sha256, su origen y lo que se filtró, en un registro encadenado (cada línea lleva el hash de la anterior).',
@@ -2451,7 +2452,7 @@ const TOPO_TEXTO = {
   },
   a_der: {
     que: '④ Deriva: cada noche el modelo vigente se mide contra el oro (FPR) y contra el lote del día (PSI de sus puntuaciones y % que marcaría anómalo).',
-    nota: 'Si la señal se sostiene 3 días, toca reentrenar antes de la cadencia de 30 días.',
+    nota: 'Si la señal se sostiene 3 días, toca reentrenar antes de la cadencia de 30 días. La deriva solo adelanta el reentrenamiento: nunca cambia el modelo por sí sola.',
   },
   a_inf: {
     que: '③ Candidato con límite de influencia: se suman los lotes aceptados a la base de la calibración, con topes, y se repite la misma cadena (partición sin fuga → entrenar → umbral en validación → Pipeline + manifiesto).',
