@@ -129,7 +129,11 @@ HTML = """<!doctype html>
   section { scroll-margin-top: 1rem; }
 
   @media (max-width: 900px) {
-    .shell { grid-template-columns: 1fr; }
+    /* En movil se apila: bloque, no grid. Con una sola columna de grid y dos
+       hijos, .wrap caia en una columna implicita 'auto' dimensionada al
+       contenido (~827 px) y desbordaba a la derecha. Como bloques, cada hijo
+       toma el ancho de la pantalla y la barra scrollea dentro de si. */
+    .shell { display: block; }
     .side {
       position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border);
       flex-direction: row; align-items: center; gap: 0.8rem; padding: 0.7rem 0.9rem; overflow-x: auto;
@@ -138,6 +142,12 @@ HTML = """<!doctype html>
     .side nav { flex-direction: row; gap: 0.2rem; }
     .side nav a { border-left: none; border-bottom: 2px solid transparent; white-space: nowrap; }
     .side nav a.active { border-left-color: transparent; border-bottom-color: var(--accent); }
+    /* Las tablas (Decisiones, Bloqueos) tienen mas columnas de las que caben:
+       scrollean dentro de si, no ensanchan el documento. display:block hace de
+       la tabla un bloque con scroll; sus filas conservan el layout de tabla. */
+    .wrap table { display: block; overflow-x: auto; }
+    /* Los filtros se envuelven en varias lineas en vez de salirse. */
+    .toolbar { flex-wrap: wrap; }
   }
 
   /* --- Topologia --- */
