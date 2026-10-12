@@ -1,0 +1,19 @@
+{
+  "detector": "if_recalibrado_2026_09",
+  "fpr_oro": {
+    "valor": 0.044527,
+    "ventanas": 65421,
+    "fuente": "conjunto de oro (partición de prueba de la nota L); el aprendizaje lo vuelve a medir cada noche"
+  },
+  "deteccion_kali": {
+    "detectadas": 54,
+    "total": 84,
+    "fuente": "ventanas de ataque de la Kali (nota M), con el recuento corregido en la nota S"
+  },
+  "por_familia": [
+    {"familia": "HTTP", "detectadas": 35, "total": 43},
+    {"familia": "Escaneo de puertos", "detectadas": 19, "total": 33},
+    {"familia": "DNS de alta entropía", "detectadas": 0, "total": 8}
+  ],
+  "nota": "Es la detección del modelo solo. En operación lo complementan los heurísticos, que cubren DNS y fuerza bruta."
+}

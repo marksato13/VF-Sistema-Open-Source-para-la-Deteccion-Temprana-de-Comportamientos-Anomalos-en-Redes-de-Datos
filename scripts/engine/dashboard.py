@@ -56,7 +56,10 @@ HTML = """<!doctype html>
        distintos entre si, elegidos para NO chocar con los colores semanticos
        (verde=ok, ambar=aviso, rojo=alerta). Contraste medido sobre las
        superficies del panel >= 5.9 (AA de texto normal). */
-    --capa-a: #2dd4bf; --capa-b: #60a5fa; --capa-c: #c084fc; --capa-d: #f472b6;
+    /* Revisada el 12-oct con el validador de la skill de visualizacion: el
+       azul y el violeta anteriores eran indistinguibles con deuteranopia
+       (dE 1,3). Estos cuatro pasan separacion para daltonismo y contraste. */
+    --capa-a: #199e70; --capa-b: #3987e5; --capa-c: #d55181; --capa-d: #9085e9;
     --mono: ui-monospace, "Cascadia Code", "Roboto Mono", "SF Mono", Menlo, Consolas, monospace;
     --sans: ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
   }
@@ -149,6 +152,15 @@ HTML = """<!doctype html>
   .topo-zoom #topoNivel { min-width: 38px; text-align: center; }
   .topo-scroll { overflow: auto; flex: 1; min-height: 0; max-height: 82vh; }
   .topo-scroll svg { display: block; }
+  .card .value small { display: block; font: 400 0.72rem var(--sans); color: var(--text-dim); margin-top: 0.15rem; letter-spacing: 0; }
+  .card.txt .value { font-size: 1rem; line-height: 1.3; overflow-wrap: anywhere; }
+  .fam-wrap { margin: 0.9rem 0 0.4rem; }
+  .fam { display: grid; grid-template-columns: 190px 1fr 120px; gap: 0.8rem; align-items: center; padding: 0.28rem 0; }
+  .fam-n { font-size: 0.86rem; color: var(--text); }
+  .fam-b { height: 10px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .fam-b i { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+  .fam-v { font: 600 0.86rem var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+  .fam-v small { font-weight: 400; color: var(--text-dim); margin-left: 0.5rem; }
   .apr-graf { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.8rem; margin-bottom: 1.1rem; }
   .apr-chart { display: block; width: 100%; height: 170px; }
   #histogram { display: block; width: 100%; height: 190px; }
@@ -833,7 +845,8 @@ HTML = """<!doctype html>
   <section id="s-modelo">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg><h2>Modelo congelado</h2></div>
     <div class="grid" id="model"></div>
-    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="16.5" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Punto débil conocido:</strong> este modelo detecta peor la fuerza bruta de contraseñas (50&ndash;55%) que el resto de familias de ataque (&gt;80%). Una decisión PERMIT en ese escenario es menos confiable que en otros.</span></div>
+    <div class="fam-wrap" id="modeloFamilias"></div>
+    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="16.5" r="0.7" fill="currentColor" stroke="none"/></svg><span id="modeloDebil"><strong>Punto débil conocido:</strong> un PERMIT del modelo no descarta un ataque por sí solo; los heurísticos cubren lo que el modelo no ve.</span></div>
 
     <p class="lede-small" id="pruebasPrevias" style="margin-top:1.4rem"><strong style="color:var(--text)">Pruebas previas &mdash; comparación exploratoria de modelos.</strong> Se compararon <strong>7 candidatos</strong> con las mismas variables y la misma partición (<code>compare_frozen_models_metrics.py</code>, auditable desde <em>Mapa &rarr; Ver archivos</em>). El conjunto positivo son 179 ventanas de anomalía; el negativo, 276 ventanas normales de prueba. Se reportan F1, MCC, ROC&#8209;AUC y precisión media, sin reentrenar y verificando cada modelo contra el manifiesto. La selección posterior a ver resultados de prueba limita la estimación de generalización.</p>
     <p class="lede-small">Y la detección no la hace el modelo solo. La <strong>ablación por componentes</strong> mide qué aporta cada pieza sobre 9 episodios (3 familias con 3 repeticiones):</p>
@@ -1416,7 +1429,8 @@ function renderHistogram(data) {
   bars += `<line x1="${thresholdX.toFixed(1)}" y1="${Y0 - 8}" x2="${thresholdX.toFixed(1)}" y2="${base}" stroke="var(--text)" stroke-width="1.3" stroke-dasharray="4 3"/>`;
   const derecha = thresholdX < w - 150;
   bars += `<text x="${(thresholdX + (derecha ? 6 : -6)).toFixed(1)}" y="${Y0 - 9}" text-anchor="${derecha ? 'start' : 'end'}" style="fill:var(--text)">umbral ${coma(data.threshold, 3)}</text>`;
-  bars += `<text x="${X0 + 4}" y="${Y0 - 9}" style="fill:var(--danger)">← anomalía</text>`;
+  // El rotulo de la zona solo si cabe: con el umbral pegado al borde se encimaria.
+  if (thresholdX - X0 > 110) bars += `<text x="${X0 + 4}" y="${Y0 - 9}" style="fill:var(--danger)">← anomalía</text>`;
   // Eje X: cinco marcas de score entre el minimo y el maximo observados.
   for (let i = 0; i <= 4; i++) {
     const v = data.min + (data.max - data.min) * i / 4, x = X0 + (X1 - X0) * i / 4;
@@ -1661,13 +1675,40 @@ async function refresh() {
       // Una métrica que el manifiesto no trae llega como null: se muestra «—»,
       // no un 0 % que parecería una medición.
       const pct = (v, d) => (v == null ? '—' : (v * 100).toFixed(d) + '%');
-      modelEl.innerHTML = [
-        card('Detector', escSimple(DETECTOR_LABEL[m.detector_name] || m.detector_name || 'no disponible')),
-        card('Umbral', m.threshold.toFixed(4), 'accent'),
-        card('FPR benigno', pct(m.test_fpr, 2)),
-        card('Detección global', pct(m.detection_rate, 1), 'accent'),
-        card('Detección Kali-real', pct(m.kali_real_detection_rate, 1), 'accent'),
-      ].join('');
+      const ev = m.evaluacion;
+      const coma = (v, d) => v.toFixed(d).split('.').join(',');
+      const tarjetas = [
+        card('Detector', escSimple(DETECTOR_LABEL[m.detector_name] || m.detector_name || 'no disponible'), 'txt'),
+        card('Umbral', coma(m.threshold, 4), 'accent'),
+      ];
+      if (ev) {
+        // Cifras medidas del detector en uso (docs/evaluacion/modelo-vigente.json).
+        const dk = ev.deteccion_kali;
+        tarjetas.push(card('FPR en el oro', coma(ev.fpr_oro.valor * 100, 2) + ' %<small>' + ev.fpr_oro.ventanas.toLocaleString('es') + ' ventanas</small>'));
+        tarjetas.push(card('Detección del modelo solo', coma(100 * dk.detectadas / dk.total, 1) + ' %<small>' + dk.detectadas + ' de ' + dk.total + ' ventanas de ataque</small>', 'accent'));
+      } else {
+        tarjetas.push(card('FPR benigno', pct(m.test_fpr, 2)));
+        tarjetas.push(card('Detección global', pct(m.detection_rate, 1), 'accent'));
+        tarjetas.push(card('Detección Kali-real', pct(m.kali_real_detection_rate, 1), 'accent'));
+      }
+      modelEl.innerHTML = tarjetas.join('');
+      const fam = document.getElementById('modeloFamilias'), debil = document.getElementById('modeloDebil');
+      if (ev && fam) {
+        // Barras por familia: la mas floja es el punto debil, dicho con su cifra.
+        const filas = ev.por_familia.map(f => Object.assign({ p: f.total ? f.detectadas / f.total : 0 }, f));
+        fam.innerHTML = '<p class="act-h">Detección del modelo por familia de ataque</p>' + filas.map(f =>
+          `<div class="fam"><span class="fam-n">${escSimple(f.familia)}</span>`
+          + `<span class="fam-b"><i style="width:${Math.max(1.5, f.p * 100).toFixed(1)}%;background:${f.p < 0.5 ? 'var(--amber)' : 'var(--accent)'}"></i></span>`
+          + `<span class="fam-v">${coma(f.p * 100, 0)} %<small>${f.detectadas}/${f.total}</small></span></div>`).join('')
+          + `<p class="toolbar-hint">${escSimple(ev.nota || '')} Fuente: ${escSimple(ev.deteccion_kali.fuente)}.</p>`;
+        const peor = filas.slice().sort((a, b) => a.p - b.p)[0];
+        if (debil && peor) {
+          debil.innerHTML = `<strong>Punto débil conocido:</strong> el modelo solo detecta ${peor.detectadas} de ${peor.total} ventanas de `
+            + `${escSimple(peor.familia)}. En esa familia, un PERMIT del modelo dice poco: la decisión la sostienen los heurísticos.`;
+        }
+      } else if (fam) {
+        fam.innerHTML = '';
+      }
     }
 
     renderVigentes(status.vigentes || [], status.blocked || []);
@@ -1684,15 +1725,22 @@ async function refresh() {
     const alcanceEl = document.getElementById('alcance');
     if (alcanceEl) {
       const ex = status.alcance || {};
+      // Lo que el motor no midio se muestra «—», no cero: un cero diria que no hubo.
+      const cifra = (v) => v == null ? '&mdash;' : Number(v).toLocaleString('es');
+      const ile = ex.pcaps_ilegibles;
       alcanceEl.innerHTML = [
-        card('Paquetes de plano de control descartados', (ex.plano_control_descartado ?? 0).toLocaleString('es')),
-        card('Ventanas de entidades excluidas', (ex.ventanas_excluidas ?? 0).toLocaleString('es')),
-        card('Red analizada', ex.red_entidades || '&mdash;'),
+        card('Red analizada', ex.red_entidades || '&mdash;', 'txt'),
+        card('Plano de control descartado', cifra(ex.plano_control_descartado) + '<small>paquetes</small>'),
+        card('Copias del espejo descartadas', cifra(ex.duplicados_espejo) + '<small>paquetes duplicados</small>'),
+        card('Ventanas de entidades excluidas', cifra(ex.ventanas_excluidas) + '<small>se cuentan, no se puntúan</small>'),
+        card('PCAP que el motor no pudo leer', cifra(ile) + '<small>ficheros del anillo</small>', ile > 0 ? 'amber' : ''),
       ].join('');
       const protos = (ex.protocolos_excluidos || []).map(p => PROTO[p] || ('proto ' + p));
+      const motivo = ex.pcaps_ilegibles_motivo ? Object.keys(ex.pcaps_ilegibles_motivo).map(k => k + ': ' + ex.pcaps_ilegibles_motivo[k]).join(' · ') : '';
       document.getElementById('alcanceDetalle').textContent =
         (protos.length ? 'Protocolos fuera del cálculo: ' + protos.join(', ') + '. ' : '') +
-        ((ex.excluidas || []).length ? 'Entidades fuera del cálculo: ' + ex.excluidas.join(', ') + '.' : '');
+        ((ex.excluidas || []).length ? 'Entidades fuera del cálculo: ' + ex.excluidas.join(', ') + '. ' : '') +
+        (ile > 0 && motivo ? 'PCAP ilegible: ' + motivo + '. Las cifras son acumuladas desde que arrancó el motor.' : 'Las cifras son acumuladas desde que arrancó el motor.');
     }
 
     if (currentRange === '1h') renderSparkline(status.activity);
@@ -1878,7 +1926,10 @@ function renderDecChart() {
   }
   s += `<line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1}" stroke="var(--border)"/><line x1="${X0}" y1="${Y1}" x2="${X1}" y2="${Y1}" stroke="var(--border)"/>`;
   if (conScore.length) {
-    s += `<text x="${X0 - 6}" y="${Y0 + 8}" text-anchor="end">${coma(hi)}</text><text x="${X0 - 6}" y="${Y1}" text-anchor="end">${coma(lo)}</text>`;
+    // Las marcas de los extremos se omiten si quedarian encima de la del umbral.
+    const yu = umbral != null ? py(umbral) : -99;
+    if (Math.abs(yu - (Y0 + 5)) > 13) s += `<text x="${X0 - 6}" y="${Y0 + 8}" text-anchor="end">${coma(hi)}</text>`;
+    if (Math.abs(yu - Y1) > 13) s += `<text x="${X0 - 6}" y="${Y1}" text-anchor="end">${coma(lo)}</text>`;
   }
   s += `<text x="${X0 - 6}" y="${YS + 3}" text-anchor="end">sin score</text>`;
   s += `<line x1="${X0}" y1="${YS}" x2="${X1}" y2="${YS}" stroke="var(--border)" stroke-dasharray="2 4"/>`;
@@ -4905,6 +4956,41 @@ def load_model_summary(manifest_path: Path, detector_name: str) -> dict:
     }
 
 
+EVALUACION_VIGENTE = Path(__file__).resolve().parents[2] / "docs" / "evaluacion" / "modelo-vigente.json"
+
+
+def evaluacion_del_vigente(detector_name: str, ruta: Path = EVALUACION_VIGENTE) -> dict | None:
+    """Cifras medidas del detector en uso que el manifiesto no trae.
+
+    Solo se devuelven si el fichero nombra a ESTE detector: ensenar las cifras
+    de otro modelo es justo lo que el panel no debe hacer. Sin fichero, None, y
+    el panel muestra «—».
+    """
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if datos.get("detector") != detector_name:
+        return None
+    return datos
+
+
+def red_analizada(explicita: str | None, config_toml: Path | None) -> str | None:
+    """La red de entidades: el argumento, o [red] red_entidades del .toml."""
+    if explicita:
+        return str(explicita)
+    for candidato in (config_toml, TOML_LOCAL):
+        try:
+            if candidato and Path(candidato).is_file():
+                with Path(candidato).open("rb") as fh:
+                    red = tomllib.load(fh).get("red", {}).get("red_entidades")
+                if red:
+                    return str(red)
+        except (OSError, ValueError):
+            continue
+    return None
+
+
 TOML_LOCAL = Path(__file__).resolve().parents[2] / "configs" / "cyberflow.local.toml"
 
 
@@ -5793,6 +5879,8 @@ def main() -> int:
           file=sys.stderr, flush=True)
     service_names = [name.strip() for name in args.services.split(",") if name.strip()]
     model_summary = load_model_summary(args.manifest_path, args.detector_name)
+    model_summary["evaluacion"] = evaluacion_del_vigente(args.detector_name)
+    red_vigilada = None if args.demo else red_analizada(args.entity_network, args.config_toml)
     # Sin --dataset, el que declara el .toml en [rutas]: asi el pulso puede decir
     # cuantas filas se llevan acumuladas sin tocar la unidad del servicio.
     if args.dataset is None and args.config_toml and not args.demo:
@@ -5996,7 +6084,8 @@ def main() -> int:
                             suricata_stats_desde_eve(args.eve_path)
                             or suricata_metrics(args.suricata_metrics_command)
                         ),
-                        "alcance": leer_alcance(args.log_path),
+                        "alcance": dict(leer_alcance(args.log_path),
+                                        **({"red_entidades": red_vigilada} if red_vigilada else {})),
                         "pulso": pulso_ingesta(
                             decisions, None if args.demo else args.eve_path,
                             args.dataset, None if args.demo else args.feed_path,
