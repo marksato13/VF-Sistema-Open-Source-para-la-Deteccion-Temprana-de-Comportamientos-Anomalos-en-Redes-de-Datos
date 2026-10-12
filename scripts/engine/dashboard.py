@@ -294,6 +294,10 @@ HTML = """<!doctype html>
   .topo-node.warn .ico { color: var(--amber); }
   .topo-node.bad .ico { color: var(--danger); }
   .topo-node .led { stroke: none; }
+  /* Nodo de decision: rombo. Texto centrado; fondo algo mas marcado. */
+  .topo-node .box.rombo { fill: #15233a; }
+  .topo-node .rombo-ttl { fill: var(--text); font: 700 12.5px var(--sans); }
+  .topo-node .rombo-sub { fill: var(--text-dim); font: 600 10px var(--mono); }
   /* Artefacto = algo que se escribe en disco, no un proceso. Se distingue con
      trazo discontinuo para que el diagrama no mienta sobre qué es cada caja. */
   .topo-node.artefacto .box { stroke-dasharray: 5 4; fill: #101827; }
@@ -331,6 +335,21 @@ HTML = """<!doctype html>
   .topo-cmd { background: #0b1220; border: 1px solid var(--border); border-radius: 7px;
     padding: 0.5rem 0.6rem; margin: 0.5rem 0; font: 11px var(--mono); color: var(--text-dim);
     white-space: pre-wrap; overflow-x: auto; }
+  /* Bloque de codigo del nodo: ruta, pseudocodigo y comando para editar. */
+  .cod-bloque { margin: 0.9rem 0 0; }
+  .cod-sub { font: 600 0.64rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-dim); margin-top: 0.7rem; }
+  .cod-ruta { display: inline-block; margin-top: 0.25rem; font: 0.8rem var(--mono);
+    color: var(--accent); background: #0b1220; border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.2rem 0.5rem; overflow-wrap: anywhere; }
+  /* Perfiles de trafico legitimo, con icono. */
+  .perfiles { display: grid; gap: 0.35rem; margin: 0.4rem 0 0.2rem; }
+  .perfil { display: grid; grid-template-columns: 24px auto 1fr; align-items: center; gap: 0.5rem;
+    font-size: 0.82rem; }
+  .perfil-ico { color: var(--accent); display: inline-flex; }
+  .perfil-n { color: var(--text); font-weight: 600; white-space: nowrap; }
+  .perfil-n small { color: var(--text-dim); font-weight: 400; font-family: var(--mono); margin-left: 0.3rem; }
+  .perfil-d { color: var(--text-dim); }
   /* Mapa de artefactos: los "cuadraditos" de ficheros por componente. */
   .export-btn.active { border-color: var(--accent); color: var(--accent); }
   .topo-node .fbadge { fill: var(--accent); font: 9px var(--mono); }
@@ -846,13 +865,14 @@ HTML = """<!doctype html>
       <div class="topo-canvas" id="topoCanvas">
         <div class="topo-bar">
           <div class="range-toggle" id="topoVista">
-            <button data-vista="red">Red y captura</button>
-            <button data-vista="completa" class="active">Operacional</button>
-            <button data-vista="decision">Decisión</button>
-            <button data-vista="respuesta">Respuesta</button>
-            <button data-vista="construccion">Construcción y entrenamiento</button>
-            <button data-vista="metodologica">Fases del método</button>
-            <button data-vista="validacion">Validación</button>
+            <button data-vista="metodologica" class="active">1 · Fases del método</button>
+            <button data-vista="completa">2 · Operacional</button>
+            <button data-vista="red">3 · Red y captura</button>
+            <button data-vista="construccion">4 · Construcción y entrenamiento</button>
+            <button data-vista="decision">5 · Decisión</button>
+            <button data-vista="respuesta">6 · Respuesta</button>
+            <button data-vista="carpetas">7 · Carpetas</button>
+            <button data-vista="validacion">8 · Validación</button>
           </div>
           <div class="topo-zoom">
             <button id="topoMenos" title="Reducir" aria-label="Reducir">&minus;</button>
@@ -2295,6 +2315,17 @@ const TOPO_ICON = {
   reglas:   '<path d="M4 2.4h7l3 3v10.2H4Z"/><path d="M6.4 7h5M6.4 9.8h5M6.4 12.6h3"/>',
   ciclo:    '<path d="M15.2 9a6.2 6.2 0 1 1-1.9-4.5"/><path d="M15.4 2.6V6.1h-3.5"/>',
   decision: '<path d="M9 2 16 9 9 16 2 9Z"/><path d="M9 6.2v2.4M6.9 11h4.2"/>',
+  // Cortafuegos: muro de ladrillos. Conmutador: caja con flujo bidireccional.
+  firewall: '<rect x="2" y="3.3" width="14" height="11.4" rx="1"/><path d="M2 7.1h14M2 10.9h14M6.6 3.3v3.8M11.4 3.3v3.8M4.3 7.1v3.8M9 7.1v3.8M13.7 7.1v3.8M6.6 10.9v3.8M11.4 10.9v3.8"/>',
+  switch:   '<rect x="1.6" y="5.4" width="14.8" height="7.2" rx="1.3"/><path d="M4 9h10"/><path d="M6.4 6.9 4 9l2.4 2.1M11.6 6.9 14 9l-2.4 2.1"/>',
+  carpeta:  '<path d="M2 4.6h4.4l1.5 2H16v7.8H2Z"/><path d="M2 8.6h14"/>',
+  // Perfiles de trafico legitimo (clientes .21-.26).
+  ofimatica:  '<rect x="3.6" y="2" width="10.8" height="14" rx="1.1"/><path d="M6 5.4h6M6 8h6M6 10.6h4"/>',
+  navegacion: '<rect x="2" y="3.4" width="14" height="11.2" rx="1.3"/><path d="M2 6.6h14"/><circle cx="4.2" cy="5" r="0.5" fill="currentColor" stroke="none"/><circle cx="6" cy="5" r="0.5" fill="currentColor" stroke="none"/><path d="M9 8.4a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8M6.6 10.8h4.8M9 8.4v4.8"/>',
+  descargas:  '<path d="M9 2.4v8.2"/><path d="M5.4 7 9 10.6 12.6 7"/><path d="M2.8 14.2h12.4"/>',
+  aplicacion: '<rect x="2.4" y="2.4" width="5.2" height="5.2" rx="1"/><rect x="10.4" y="2.4" width="5.2" height="5.2" rx="1"/><rect x="2.4" y="10.4" width="5.2" height="5.2" rx="1"/><rect x="10.4" y="10.4" width="5.2" height="5.2" rx="1"/>',
+  ligero:     '<path d="M2.6 13.4C6 5 11 3.6 15.4 3.6 15 10 10.2 13.8 4.2 13.4"/><path d="M2.6 15.4 7 11"/>',
+  erratico:   '<path d="M1.8 10.5 4.3 4.6l2 8L8.8 3l1.9 7.2 1.8-3.8 1.8 3.4 1.9-1.4"/>',
 };
 
 // Dos vistas del mismo sistema. "esencial" es el camino del paquete en siete
@@ -2345,9 +2376,9 @@ const TOPO_VISTAS = {
       { id: 'atacante', x: 24, y: 70,  w: 176, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',   host: true, ip: '10.10.20.30',     desc: 'lanza los ataques' },
       { id: 'clientes', x: 24, y: 140, w: 176, h: 48, icono: 'red',    titulo: 'Clientes',          host: true, ip: '10.10.20.21-.26', desc: '6 perfiles legítimos' },
       { id: 'servidor', x: 24, y: 210, w: 176, h: 48, icono: 'disco',  titulo: 'Servidor',          host: true, ip: '10.10.30.10',     desc: 'objetivo HTTP/HTTPS' },
-      { id: 'gateway',  x: 24, y: 280, w: 176, h: 48, icono: 'escudo', titulo: 'pfSense / gateway', host: true, ip: '10.10.20.1',      desc: 'enruta entre VLAN' },
+      { id: 'gateway',  x: 24, y: 280, w: 176, h: 48, icono: 'firewall', titulo: 'Firewall', host: true, ip: '10.10.20.1',      desc: 'enruta entre VLAN' },
       { id: 'red',       x: 286, y: 70,  w: 176, h: 58, icono: 'red',    titulo: 'Red de la entidad',  tag: 'VLAN 10-100' },
-      { id: 'span',      x: 286, y: 158, w: 176, h: 58, icono: 'espejo', titulo: 'Espejo SPAN',        tag: 'CORE-STACK' },
+      { id: 'span',      x: 286, y: 158, w: 176, h: 58, icono: 'switch', titulo: 'Espejo SPAN',        tag: 'CORE-STACK' },
       { id: 'nic',       x: 286, y: 246, w: 176, h: 58, icono: 'nic',    titulo: 'Interfaz en escucha', tag: 'ens37 · SIN IP' },
       { id: 'captura',   x: 540, y: 110, w: 176, h: 58, icono: 'captura', titulo: 'tcpdump',           tag: 'SERVICIO' },
       { id: 'pcap',      x: 540, y: 192, w: 176, h: 46, icono: 'fichero', titulo: 'anillo live-*.pcap', tag: 'ARTEFACTO', clase: 'artefacto' },
@@ -2360,7 +2391,7 @@ const TOPO_VISTAS = {
       { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Aprendizaje', tag: 'SUPERVISADO · CADA NOCHE' },
       { id: 'modelo',    x: 1060, y: 158, w: 176, h: 58, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
       { id: 'heuristicos', x: 1060, y: 276, w: 176, h: 58, icono: 'reglas', titulo: 'Heurísticos',     tag: 'DETERMINISTAS' },
-      { id: 'control',   x: 1336, y: 158, w: 176, h: 58, icono: 'decision', titulo: 'Decisión',        tag: 'PERMIT · ALERT → LIMIT/BLOCK' },
+      { id: 'control',   x: 1336, y: 158, w: 176, h: 58, icono: 'decision', titulo: 'Decisión', forma: 'rombo', rsub: 'PERMIT / acción' },
       { id: 'feed',      x: 1336, y: 246, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',     tag: 'ed25519 · CADA 60 s' },
       { id: 'relay',     x: 1336, y: 334, w: 176, h: 52, icono: 'espejo', titulo: 'Relay (bastión)',   val: 'réplica · cada 60 s' },
       { id: 'agente',    x: 1336, y: 416, w: 176, h: 58, icono: 'escudo', titulo: 'Agente en host',   tag: 'PULL 60 s · nftables' },
@@ -2454,7 +2485,7 @@ const TOPO_VISTAS = {
       { id: 'c_part',    x: 552,  y: 72,  w: 200, h: 64, icono: 'tabla',    titulo: 'Partición',            tag: 'train / validación / test', val: '204 148 / 65 633 / 65 421' },
       { id: 'c_cand',    x: 808,  y: 72,  w: 200, h: 64, icono: 'modelo',   titulo: 'Candidatos',           tag: 'IF · LOF · OCSVM · EE', val: '7 (laboratorio) · IF aquí' },
       { id: 'c_metr',    x: 1064, y: 72,  w: 200, h: 64, icono: 'lupa',     titulo: 'Comparar métricas',    tag: 'FPR · recall · F1 · AUC', val: 'criterio fijado antes' },
-      { id: 'c_sel',     x: 1320, y: 72,  w: 200, h: 64, icono: 'decision', titulo: 'Selección',            tag: 'transfiere a esta red', val: 'IF recalibrado' },
+      { id: 'c_sel',     x: 1320, y: 72,  w: 200, h: 64, icono: 'decision', titulo: 'Selección', forma: 'rombo', rsub: 'IF → esta red' },
       { id: 'c_cong',    x: 1320, y: 252, w: 200, h: 64, icono: 'cpu',      titulo: 'Congelar modelo', tag: 'α=0,05 · −0,568892', val: 'sha256 d27f6871…' },
       { id: 'c_desp',    x: 1064, y: 252, w: 200, h: 64, icono: 'nic',      titulo: 'Despliegue',           tag: 'promover + verificar', val: 'manifiesto + hash' },
       { id: 'c_acum',    x: 808,  y: 252, w: 200, h: 64, icono: 'fichero',  titulo: 'Acumulación',          tag: 'temporizador · v3', val: 'cada 10 min' },
@@ -2464,7 +2495,7 @@ const TOPO_VISTAS = {
       { id: 'a_lin',     x: 472,  y: 432, w: 176, h: 64, icono: 'fichero',  titulo: '2 · Linaje',             tag: 'SHA256 ENCADENADO', val: 'registro.jsonl', clase: 'artefacto' },
       { id: 'a_der',     x: 688,  y: 432, w: 176, h: 64, icono: 'lupa',     titulo: '4 · Deriva',             tag: 'CONTRA EL ORO', val: 'PSI · % anómalo' },
       { id: 'a_inf',     x: 904,  y: 432, w: 176, h: 64, icono: 'modelo',   titulo: '3 · Candidato',          tag: 'LÍMITE DE INFLUENCIA', val: 'nuevo ≤ 30 % · IP ≤ 10 %' },
-      { id: 'a_ver',     x: 1120, y: 432, w: 176, h: 64, icono: 'decision', titulo: 'Veredicto',            tag: 'MISMOS CONJUNTOS', val: 'FPR ≤ · detección ≥' },
+      { id: 'a_ver',     x: 1120, y: 432, w: 176, h: 64, icono: 'decision', titulo: 'Veredicto', forma: 'rombo', rsub: 'FPR≤ · det≥' },
       { id: 'a_hum',     x: 1332, y: 432, w: 176, h: 64, icono: 'ojo',      titulo: 'Aprobación humana',    tag: 'PROMOVER · REVERTIR', val: 'con copia del .toml' },
     ],
     aristas: [
@@ -2509,8 +2540,8 @@ const TOPO_VISTAS = {
       { id: 'servidor',  x: 24,  y: 216, w: 176, h: 48, icono: 'disco',  titulo: 'srv-dmz · objetivo', host: true, ip: '10.10.30.10',   desc: '' },
       { id: 'r_bastion', x: 24,  y: 316, w: 176, h: 48, icono: 'ojo',    titulo: 'VM-GESTION',       host: true, ip: '10.10.10.30',     desc: '' },
       { id: 'r_dns',     x: 24,  y: 374, w: 176, h: 48, icono: 'red',    titulo: 'DNS / AD',         host: true, ip: '10.10.10.20',     desc: '' },
-      { id: 'gateway',   x: 330, y: 70,  w: 196, h: 48, icono: 'escudo', titulo: 'pfSense A/B',      host: true, ip: 'enruta entre VLAN', desc: '' },
-      { id: 'span',      x: 330, y: 216, w: 196, h: 58, icono: 'espejo', titulo: 'CORE-STACK',       tag: 'NO ENRUTA · ESPEJA' },
+      { id: 'gateway',   x: 330, y: 70,  w: 196, h: 48, icono: 'firewall', titulo: 'Firewall A/B',   host: true, ip: 'enruta entre VLAN', desc: '' },
+      { id: 'span',      x: 330, y: 216, w: 196, h: 58, icono: 'switch', titulo: 'CORE-STACK',       tag: 'NO ENRUTA · ESPEJA' },
       { id: 'r_pg',      x: 760, y: 70,  w: 240, h: 58, icono: 'nic',    titulo: 'PG-CYBERFLOW-SPAN', tag: 'GRUPO DE PUERTOS', val: 'modo promiscuo' },
       { id: 'nic',       x: 760, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor1 · ens37',  tag: 'SIN IP · 10.10.60.11' },
       { id: 'r_sensor2', x: 990, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor2 · ens37',  tag: 'RÉPLICA · 10.10.60.12', val: 'recibe la misma copia' },
@@ -2552,7 +2583,7 @@ const TOPO_VISTAS = {
       { id: 'd_reglas',    x: 630,  y: 170, w: 300, h: 58, icono: 'reglas', titulo: 'Regla disparada',  tag: 'ABUSO HTTP · DNS → LIMIT', val: 'fuerza bruta · escaneo → BLOCK' },
       { id: 'registro',    x: 1060, y: 124, w: 200, h: 50, icono: 'fichero', titulo: 'motor_decision.log', tag: 'IP · VENTANA · SCORE · REGLA', clase: 'artefacto' },
       { id: 'd_nunca',     x: 40,   y: 330, w: 200, h: 58, icono: 'tijera', titulo: 'Nunca bloquear',   tag: 'FILTRO', val: 'bastión · sensor · DNS' },
-      { id: 'd_severa',    x: 300,  y: 330, w: 200, h: 58, icono: 'decision', titulo: 'La más severa',  tag: 'POR IP', val: 'BLOCK > LIMIT' },
+      { id: 'd_severa',    x: 300,  y: 330, w: 200, h: 58, icono: 'decision', titulo: 'La más severa', forma: 'rombo', rsub: 'BLOCK > LIMIT · por IP' },
       { id: 'd_escalera',  x: 560,  y: 330, w: 200, h: 58, icono: 'ciclo',  titulo: 'Escalera',         tag: 'REINCIDENCIA EN 24 h', val: '300 → 1800 → 3600 s' },
       { id: 'feed',        x: 820,  y: 330, w: 200, h: 58, icono: 'fichero', titulo: 'Feed firmado',    tag: 'CON VERSIÓN DE UMBRALES' },
       { id: 'd_permit',    x: 560,  y: 440, w: 200, h: 58, icono: 'ojo',    titulo: 'PERMIT',           val: 'sin entrada en el feed' },
@@ -2589,7 +2620,7 @@ const TOPO_VISTAS = {
       { x: 1340, y: 32, w: 208, h: 290, txt: 'Persona',        n: 4 },
     ],
     nodos: [
-      { id: 'control',    x: 40,   y: 110, w: 176, h: 58, icono: 'decision', titulo: 'Decisión',     tag: 'DETECCIÓN ~2–40 s' },
+      { id: 'control',    x: 40,   y: 110, w: 176, h: 58, icono: 'decision', titulo: 'Decisión', forma: 'rombo', rsub: 'detección ~2–40 s' },
       { id: 'feed',       x: 320,  y: 110, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',  tag: 'DECISIÓN 17–18 s (N=2)' },
       { id: 'relay',      x: 592,  y: 110, w: 176, h: 58, icono: 'espejo',  titulo: 'Relay',         tag: 'RÉPLICA', val: 'cada 60 s' },
       { id: 'agente',     x: 860,  y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'Agente',        tag: 'VERIFICA LA FIRMA' },
@@ -2606,6 +2637,46 @@ const TOPO_VISTAS = {
       { d: 'M948,168 L948,230',   desde: 'agente',  hasta: 'p_noaplica', tipo: 'descarte' },
       { d: 'M1198,168 L1198,230', desde: 'p_nft',   hasta: 'p_caduca',   tipo: 'fijo' },
       { d: 'M1356,139 L1286,139', desde: 'p_manual', hasta: 'p_nft',     tipo: 'persona', etiqueta: 'retira', ex: 1322, ey: 130 },
+    ],
+  },
+  // --- Vista CARPETAS: la arquitectura del repositorio como un arbol de tres
+  // columnas (raiz -> carpetas de primer nivel -> dentro de scripts/). Es
+  // estatico: no tiene estado vivo, cada nodo lleva su descriptor en `val` y el
+  // contenido en el panel de detalle.
+  carpetas: {
+    w: 880, h: 472, packet: '',
+    grupos: [
+      { x: 290, y: 6, w: 226, h: 460, txt: 'Carpetas de primer nivel' },
+      { x: 590, y: 6, w: 260, h: 374, txt: 'Dentro de scripts/' },
+    ],
+    nodos: [
+      { id: 'cf_root',      x: 20,  y: 214, w: 188, h: 60, icono: 'carpeta', titulo: 'CYBERFLOW/',  val: 'repositorio' },
+      { id: 'cf_scripts',   x: 300, y: 30,  w: 206, h: 54, icono: 'carpeta', titulo: 'scripts/',    val: 'todo el código' },
+      { id: 'cf_configs',   x: 300, y: 104, w: 206, h: 54, icono: 'carpeta', titulo: 'configs/',    val: '.toml · features · suricata' },
+      { id: 'cf_artifacts', x: 300, y: 178, w: 206, h: 54, icono: 'carpeta', titulo: 'artifacts/',  val: 'modelo · línea base' },
+      { id: 'cf_docs',      x: 300, y: 252, w: 206, h: 54, icono: 'carpeta', titulo: 'docs/',       val: 'evaluación · evidencias' },
+      { id: 'cf_tests',     x: 300, y: 326, w: 206, h: 54, icono: 'carpeta', titulo: 'tests/',      val: 'batería unittest' },
+      { id: 'cf_deploy',    x: 300, y: 400, w: 206, h: 54, icono: 'carpeta', titulo: 'deploy/ · ansible/', val: 'instalación' },
+      { id: 'cf_engine',    x: 600, y: 18,  w: 240, h: 50, icono: 'carpeta', titulo: 'scripts/engine/',   val: 'motor · panel · feed' },
+      { id: 'cf_features',  x: 600, y: 78,  w: 240, h: 50, icono: 'carpeta', titulo: 'scripts/features/', val: 'extractores de variables' },
+      { id: 'cf_modeling',  x: 600, y: 138, w: 240, h: 50, icono: 'carpeta', titulo: 'scripts/modeling/', val: 'entrenar · aprendizaje' },
+      { id: 'cf_enforce',   x: 600, y: 198, w: 240, h: 50, icono: 'carpeta', titulo: 'scripts/enforce/',  val: 'agente del host' },
+      { id: 'cf_setup',     x: 600, y: 258, w: 240, h: 50, icono: 'carpeta', titulo: 'scripts/setup/',    val: 'instalación · config' },
+      { id: 'cf_mas',       x: 600, y: 318, w: 240, h: 50, icono: 'fichero', titulo: '+ dataset · evaluacion · campaign…', val: 'y más', clase: 'artefacto' },
+    ],
+    aristas: [
+      { d: 'M208,244 C256,244 256,57 300,57',   desde: 'cf_root', hasta: 'cf_scripts',   tipo: 'fijo' },
+      { d: 'M208,244 C256,244 256,131 300,131', desde: 'cf_root', hasta: 'cf_configs',   tipo: 'fijo' },
+      { d: 'M208,244 C256,232 256,205 300,205', desde: 'cf_root', hasta: 'cf_artifacts', tipo: 'fijo' },
+      { d: 'M208,244 C256,258 256,279 300,279', desde: 'cf_root', hasta: 'cf_docs',      tipo: 'fijo' },
+      { d: 'M208,244 C256,290 256,353 300,353', desde: 'cf_root', hasta: 'cf_tests',     tipo: 'fijo' },
+      { d: 'M208,244 C256,320 256,427 300,427', desde: 'cf_root', hasta: 'cf_deploy',    tipo: 'fijo' },
+      { d: 'M506,57 C556,57 556,43 600,43',     desde: 'cf_scripts', hasta: 'cf_engine',   tipo: 'fijo' },
+      { d: 'M506,57 C556,70 556,103 600,103',   desde: 'cf_scripts', hasta: 'cf_features', tipo: 'fijo' },
+      { d: 'M506,57 C556,90 556,163 600,163',   desde: 'cf_scripts', hasta: 'cf_modeling', tipo: 'fijo' },
+      { d: 'M506,57 C556,110 556,223 600,223',  desde: 'cf_scripts', hasta: 'cf_enforce',  tipo: 'fijo' },
+      { d: 'M506,57 C556,140 556,283 600,283',  desde: 'cf_scripts', hasta: 'cf_setup',    tipo: 'fijo' },
+      { d: 'M506,57 C556,170 556,343 600,343',  desde: 'cf_scripts', hasta: 'cf_mas',      tipo: 'fijo' },
     ],
   },
   // --- Vista VALIDACION: una tabla (requisito, prueba, evidencia, estado), no
@@ -2647,7 +2718,7 @@ function validacionDetalleHTML() {
     + '<p class="dim">Los subtotales resumen la tabla documental; no se deriva de ellos el éxito en producción. TAM y juicio de expertos van en la validación externa.</p>';
 }
 
-let topoVista = 'completa';
+let topoVista = 'metodologica';
 // Ultimo estado de /api/aprendizaje (lo llena cargarAprendizaje). Los nodos del
 // aprendizaje en la topologia lo leen; con var y aqui arriba para que exista
 // desde el primer pintado, aunque llegue despues.
@@ -2667,14 +2738,22 @@ const TOPO_TEXTO = {
   span: {
     que: 'La sesión de espejo del conmutador copia el troncal del cortafuegos hacia el puerto del sensor.',
     nota: 'Desde el sensor no se puede leer el estado de la sesión: se infiere de que lleguen paquetes. Si deja de llegar tráfico, el problema puede estar aquí y el panel no lo distingue de una red en silencio.',
-    cmd: 'monitor session 1 source interface Gi1/0/23 , Gi2/0/23 both\\nmonitor session 1 destination interface Gi2/0/19 encapsulation replicate\\n! Gi1/0/23 y Gi2/0/23: troncales de pfSense A/B\\n! Gi2/0/19: hacia el hipervisor del sensor (172.17.25.2)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
+    cmd: 'monitor session 1 source interface Gi1/0/23 , Gi2/0/23 both\\nmonitor session 1 destination interface Gi2/0/19 encapsulation replicate\\n! Gi1/0/23 y Gi2/0/23: troncales del Firewall A/B\\n! Gi2/0/19: hacia el hipervisor del sensor (172.17.25.2)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
   },
   atacante: {
     que: 'La VM Kali (10.10.20.30). Genera los ataques del ensayo: escaneo, nikto, flood HTTP y ARP spoofing.',
     nota: 'Fuera de la fase de ataque debe estar apagada: si emite durante la línea base, el modelo aprendería el ataque como normal.',
   },
   clientes: {
-    que: 'Una VM con seis alias .21-.26, cada uno un perfil de tráfico legítimo (ofimática, navegación, descargas, aplicación, ligero, errático) contra el servidor.',
+    que: 'Una VM con seis alias .21-.26, cada uno un perfil de tráfico legítimo contra el servidor. Así la línea base tiene variedad realista, no un único patrón.',
+    perfiles: [
+      { icono: 'ofimatica',  n: 'Ofimática',  ip: '.21', d: 'ráfagas cortas de peticiones pequeñas' },
+      { icono: 'navegacion', n: 'Navegación', ip: '.22', d: 'muchas conexiones a destinos variados' },
+      { icono: 'descargas',  n: 'Descargas',  ip: '.23', d: 'flujos largos, volumen sostenido' },
+      { icono: 'aplicacion', n: 'Aplicación', ip: '.24', d: 'API/HTTP regular, tamaños homogéneos' },
+      { icono: 'ligero',     n: 'Ligero',     ip: '.25', d: 'poco tráfico, intervalos amplios' },
+      { icono: 'erratico',   n: 'Errático',   ip: '.26', d: 'irregular, sin patrón fijo' },
+    ],
     nota: 'Seis IP sobre una sola MAC, a propósito: el motor puntúa por IP, así que son seis entidades distintas para el modelo.',
   },
   servidor: {
@@ -2682,7 +2761,7 @@ const TOPO_TEXTO = {
     nota: 'Aparece con pocos paquetes propios porque el motor atribuye cada flujo a quien lo inicia -el cliente-, no al destino.',
   },
   gateway: {
-    que: 'La puerta de enlace de la VLAN 20 (10.10.20.1, VIP CARP de pfSense). Enruta entre VLAN.',
+    que: 'La puerta de enlace de la VLAN 20 (10.10.20.1, VIP CARP del Firewall). Enruta entre VLAN.',
     nota: 'En el ARP spoofing su IP pasó a verse con dos MAC: esa es la anomalía de capa 2 que dispara unique_src_mac_30s.',
   },
   reentrenamiento: {
@@ -2695,6 +2774,18 @@ const TOPO_TEXTO = {
       {paso: '4 · Deriva', fichero: 'deriva.jsonl', garantia: 'medida contra el conjunto de oro, que nunca entra a entrenar'},
       {paso: 'Promoción', fichero: 'promover / revertir', garantia: 'solo si FPR ≤ y detección ≥ el vigente; a mano y con copia'},
     ],
+    codigo: {
+      archivo: 'scripts/modeling/cyberflow_aprendizaje.py',
+      pseudo: [
+        'cada noche:',
+        '  lote ← sanear (fuera IPs marcadas y atípicos); rechazar si PSI alto',
+        '  encadenar sha256 del lote (linaje)',
+        '  medir deriva contra el conjunto de oro (nunca entrena)',
+        '  si toca: entrenar candidato y evaluar (FPR≤ y detección≥ el vigente)',
+        '  promover ← SOLO una persona',
+      ],
+      editar: 'nano ~/cyberflow/scripts/modeling/cyberflow_aprendizaje.py',
+    },
     nota: 'Se entrena cada 30 días o antes si la deriva se sostiene 3 días, y es OBLIGATORIO al cambiar la red (nueva VLAN, Wazuh, AAA). La política vive en la sección [reentrenamiento] del .toml; el estado, en la sección Aprendizaje.',
   },
   nic: {
@@ -2718,6 +2809,17 @@ const TOPO_TEXTO = {
       {paso: 'Atribución por flujo', fichero: 'extract_multilayer_v2.py', garantia: 'attribute_packets: el SYN-ACK y el eco ICMP se apuntan a quien preguntó'},
       {paso: 'Ventaneo + variables', fichero: 'extract_multilayer_v2.py', garantia: 'build_rows: una fila por IP y ventana (10/30/60 s), junto con lo del parser de eventos'},
     ],
+    codigo: {
+      archivo: 'scripts/engine/motor_decision.py  (+ scripts/features/extract_multilayer_v2.py / _v3.py)',
+      pseudo: [
+        'cada 10 s:',
+        '  tramas ← leer PCAP cerrados del anillo',
+        '  tramas ← quitar plano de control y copias del espejo',
+        '  por cada trama: atribuir a la IP que inició el flujo',
+        '  filas ← ventanear por IP (10/30/60 s) → 28 variables',
+      ],
+      editar: 'nano ~/cyberflow/scripts/engine/motor_decision.py && sudo systemctl restart ppi-motor',
+    },
     nota: 'El filtrado es ALCANCE, no fórmula: el extractor está congelado (sus fórmulas no se tocan); los filtros actúan sobre su ENTRADA. En «Datos en vivo → Tramas PCAP» se ve cada trama con la variable que actualiza.',
     enlace: { href: '#s-vivo', vtab: 'pcap', txt: 'Ver tramas parseadas en vivo' },
   },
@@ -2730,11 +2832,30 @@ const TOPO_TEXTO = {
       {paso: 'Atribuir', fichero: 'extract_multilayer_v2.py', garantia: 'a src_ip (en tls, dest_ip si src está fuera de la red); NXDOMAIN a quien preguntó'},
       {paso: 'Ventanas de 60 s', fichero: 'extract_multilayer_v2.py', garantia: 'las 11 variables L7 de la misma fila que las de red'},
     ],
+    codigo: {
+      archivo: 'scripts/features/extract_multilayer_v2.py',
+      pseudo: [
+        'leer eve.json (líneas del último tramo de 60 s)',
+        'quedarse solo con http · dns · tls',
+        'atribuir a la IP de origen (NXDOMAIN → quien preguntó)',
+        '→ 11 variables L7 en la fila de esa IP y ventana',
+      ],
+      editar: 'nano ~/cyberflow/scripts/features/extract_multilayer_v2.py && sudo systemctl restart ppi-motor',
+    },
     nota: 'Suricata NO decide aquí: sus alertas por firma no se usan como etiqueta ni como variable. Solo se aprovecha su parseo de protocolos.',
     enlace: { href: '#s-vivo', vtab: 'eve', txt: 'Ver eventos parseados en vivo' },
   },
   modelo: {
     que: 'El modelo one-class RECALIBRADO en esta red (IsolationForest). Aprende la normalidad propia; el umbral se congela desde validación (score_samples < -0,568892).',
+    codigo: {
+      archivo: 'modelo congelado en artifacts/ · entrenamiento en scripts/modeling/',
+      pseudo: [
+        'score ← modelo.score_samples(features)',
+        'si score < umbral (−0,568892): ALERT → LIMIT',
+        'si no: PERMIT',
+      ],
+      editar: 'no se edita a mano: se reentrena y una persona lo promueve (ver Aprendizaje)',
+    },
     nota: 'Ya calibrado en esta red: la recalibración bajó el FPR del 92,4 % (umbral de otra red) al 4,45 %. Score bajo el umbral = anomalía → LIMIT.',
   },
   heuristicos: {
@@ -2747,6 +2868,17 @@ const TOPO_TEXTO = {
       {paso: 'Abuso HTTP', fichero: 'heuristicos.py', garantia: '≥100 req/60s con <80% de fallo de auth (no es fuerza bruta) → LIMIT'},
       {paso: 'DNS-entropy', fichero: 'heuristicos.py', garantia: '≥20 consultas/60s con ≥45% de nombres únicos o ≥50% de NXDOMAIN → LIMIT'},
     ],
+    codigo: {
+      archivo: 'scripts/engine/heuristicos.py',
+      pseudo: [
+        'por cada ventana (IP):',
+        '  si req_http≥5 y fallo_auth≥80%:          BLOCK (fuerza bruta)',
+        '  si intentos≥20 y completadas≤30%:        BLOCK (escaneo)',
+        '  si req_http≥100:                          LIMIT (abuso HTTP)',
+        '  si dns≥20 y (únicos≥45% o NXDOMAIN≥50%):  LIMIT (DNS)',
+      ],
+      editar: 'nano ~/cyberflow/scripts/engine/heuristicos.py && sudo systemctl restart ppi-motor',
+    },
   },
   control: {
     que: 'Fusiona las dos señales en UNA decisión por entidad y ventana. El motor registra PERMIT o ALERT (score bajo el umbral, o heurístico); la ALERT se traduce en acción: LIMIT (degradar la tasa) para la anomalía del modelo y para abuso HTTP o DNS, BLOCK (cortar) para fuerza bruta o escaneo confirmados.',
@@ -2757,6 +2889,15 @@ const TOPO_TEXTO = {
       {paso: 'Escalada por reincidencia', fichero: 'escalada.py', garantia: '300→1800→3600 s; nunca ∞ automático'},
       {paso: 'Lista nunca-bloquear', fichero: 'publicar_feed.py', garantia: 'gateways y DNS quedan siempre fuera'},
     ],
+    codigo: {
+      archivo: 'scripts/engine/motor_decision.py + publicar_feed.py + escalada.py',
+      pseudo: [
+        'acción ← la más severa entre modelo y heurístico  (BLOCK>LIMIT>PERMIT)',
+        'si IP en lista nunca_bloquear: acción ← PERMIT',
+        'caducidad ← escalera por reincidencia (300→1800→3600 s)',
+      ],
+      editar: 'nano ~/cyberflow/scripts/engine/publicar_feed.py',
+    },
     nota: 'LIMIT existe para el coste de un falso positivo (con 4,45 % de FPR, degradar es mejor que cortar). El sensor DECIDE pero no ejecuta: solo observa por espejo. La acción la aplica el agente en el host, con el feed firmado de por medio.',
   },
   feed: {
@@ -2768,6 +2909,16 @@ const TOPO_TEXTO = {
       {paso: 'Firmar', fichero: 'feed.py', garantia: 'ed25519 vía openssl; el host verifica antes de aplicar'},
       {paso: 'Caducidad', fichero: 'escalada.py', garantia: '300→1800→3600 s por reincidencia; ∞ solo revisión humana'},
     ],
+    codigo: {
+      archivo: 'scripts/engine/publicar_feed.py + feed.py',
+      pseudo: [
+        'cada 60 s:',
+        '  entradas ← acciones vigentes por IP (con su caducidad)',
+        '  feed.json ← {ip, acción, hasta, motivo}',
+        '  firmar feed.json con ed25519 (la clave privada vive solo aquí)',
+      ],
+      editar: 'nano ~/cyberflow/scripts/engine/publicar_feed.py',
+    },
   },
   agente: {
     que: 'Corre en cada host protegido: trae el feed, verifica la firma y sincroniza nftables (LIMIT con rate-limit, BLOCK con drop y timeout).',
@@ -2777,6 +2928,16 @@ const TOPO_TEXTO = {
       {paso: 'Pull + verifica', fichero: 'agente_enforce.py', garantia: 'firma ed25519; fail-safe si falla'},
       {paso: 'Aplica', fichero: 'nftables', garantia: 'set con timeout nativo → caduca solo'},
     ],
+    codigo: {
+      archivo: 'scripts/enforce/agente_enforce.py   (corre en el host protegido)',
+      pseudo: [
+        'cada 60 s:',
+        '  feed ← traer del relay (bastión)',
+        '  si la firma ed25519 no verifica: no tocar nada (fail-safe)',
+        '  sincronizar nftables: LIMIT=rate-limit, BLOCK=drop con timeout',
+      ],
+      editar: 'nano ~/enforce/agente_enforce.py && sudo systemctl restart ppi-enforce-agent.timer   (en srv-dmz)',
+    },
   },
   wazuh: {
     que: 'El concentrador de alertas (SIEM) en la VLAN de gestión. El sensor le emite por syslog; Wazuh correlaciona y guarda el histórico.',
@@ -2836,6 +2997,88 @@ const TOPO_TEXTO = {
   r_cmp: {
     que: 'La máquina reservada para comparar con Suricata. Está conectada al grupo de puertos, pero su interfaz de captura estaba apagada.',
     nota: 'La comparación publicada se hizo reproduciendo el mismo PCAP, no con esta máquina en vivo.',
+  },
+  // ---- Vista CARPETAS: arquitectura del repositorio ----
+  cf_root: {
+    que: 'La raíz del repositorio de CyberFlow. Todo lo versionado cuelga de aquí: el código, la configuración, los artefactos del modelo, la documentación y las pruebas.',
+    nota: 'Lo que corre en el sensor es una copia de este repositorio en /home/m4rk/cyberflow.',
+  },
+  cf_scripts: {
+    que: 'Todo el código, organizado por función: el motor en vivo (engine), los extractores de variables (features), el modelado y el aprendizaje (modeling), el agente del host (enforce) y la instalación (setup).',
+  },
+  cf_engine: {
+    que: 'El motor en vivo y este panel.',
+    codigo: {
+      archivo: 'scripts/engine/',
+      pseudo: [
+        'dashboard.py       — este panel',
+        'motor_decision.py  — decide cada ventana',
+        'heuristicos.py     — las 4 reglas',
+        'publicar_feed.py   — publica el feed',
+        'feed.py            — firma ed25519',
+        'escalada.py        — caducidad por reincidencia',
+      ],
+      editar: 'cd ~/cyberflow/scripts/engine',
+    },
+  },
+  cf_features: {
+    que: 'Los extractores que convierten PCAP y eve.json en las 28 variables por IP y ventana. Están congelados: sus fórmulas no se tocan.',
+    codigo: {
+      archivo: 'scripts/features/',
+      pseudo: [
+        'extract_multilayer_v2.py — ventaneo + variables L7',
+        'extract_multilayer_v3.py — decodifica cada trama',
+      ],
+      editar: 'cd ~/cyberflow/scripts/features',
+    },
+  },
+  cf_modeling: {
+    que: 'El entrenamiento del modelo y el aprendizaje supervisado nocturno (saneo, deriva, candidato, promoción).',
+    codigo: {
+      archivo: 'scripts/modeling/cyberflow_aprendizaje.py',
+      editar: 'cd ~/cyberflow/scripts/modeling',
+    },
+  },
+  cf_enforce: {
+    que: 'El agente que corre en cada host protegido: trae el feed, verifica la firma y aplica nftables. No vive en el sensor sino en el host.',
+    codigo: {
+      archivo: 'scripts/enforce/agente_enforce.py',
+      editar: '(se instala en el host protegido, p.ej. srv-dmz)',
+    },
+  },
+  cf_setup: {
+    que: 'La instalación: genera las unidades systemd y la configuración del sensor a partir del .toml.',
+  },
+  cf_configs: {
+    que: 'La configuración. El .toml manda: de ahí salen las unidades y el alcance. También el esquema de variables y las reglas de Suricata.',
+    codigo: {
+      archivo: 'configs/',
+      pseudo: [
+        'cyberflow.local.toml — configuración de ESTA red',
+        'features/            — esquema de las 28 variables',
+        'suricata/            — reglas de Suricata',
+      ],
+      editar: 'nano ~/cyberflow/configs/cyberflow.local.toml',
+    },
+  },
+  cf_artifacts: {
+    que: 'Lo que no es código: el modelo congelado (pipeline + manifiesto con su hash), la línea base y los lotes del aprendizaje.',
+  },
+  cf_docs: {
+    que: 'La documentación: la evaluación del modelo vigente, las evidencias de las mediciones (tiempos, bloqueos en vivo) y las imágenes.',
+  },
+  cf_tests: {
+    que: 'La batería de pruebas (unittest): la regla de acción, los contadores, la salud del panel, los drops, el historial y más.',
+    codigo: {
+      archivo: 'tests/',
+      editar: '~/cf-venv/bin/python -m unittest discover -s tests',
+    },
+  },
+  cf_deploy: {
+    que: 'La instalación reproducible: los scripts de despliegue y los playbooks de Ansible para levantar el sensor desde cero.',
+  },
+  cf_mas: {
+    que: 'Otras carpetas de scripts: dataset (construir el conjunto), evaluacion (comparar con Suricata), campaign (campañas de ataque), analysis, kali, f1/f6, articulo y entregables.',
   },
   // ---- Vista DECISION ----
   d_alert: {
@@ -3334,6 +3577,20 @@ function renderTopologia(status) {
     const cy = n.y + n.h / 2;
     const color = e.estado === 'ok' ? 'var(--ok)' : e.estado === 'warn' ? 'var(--amber)'
                 : e.estado === 'bad' ? 'var(--danger)' : 'var(--border)';
+    // Nodo de DECISION: rombo (diamante). Lleva el titulo centrado y una
+    // etiqueta corta debajo; sus conectores salientes ya van rotulados.
+    if (n.forma === 'rombo') {
+      const cx = n.x + n.w / 2;
+      const pts = `${cx},${n.y} ${n.x + n.w},${cy} ${cx},${n.y + n.h} ${n.x},${cy}`;
+      const rsub = n.rsub
+        ? `<text class="rombo-sub" x="${cx}" y="${cy + 13}" text-anchor="middle">${n.rsub}</text>` : '';
+      return `<g class="topo-node ${e.estado} ${n.clase || ''} ${topoSel === n.id ? 'sel' : ''}" data-node="${n.id}" tabindex="0" role="button" aria-label="${n.titulo}">
+        <polygon class="box rombo" points="${pts}"/>
+        <text class="rombo-ttl" x="${cx}" y="${n.rsub ? cy - 1 : cy + 4}" text-anchor="middle">${n.titulo}</text>
+        ${rsub}
+        <circle class="led" cx="${cx}" cy="${n.y + 11}" r="4" fill="${color}"/>
+      </g>`;
+    }
     const etiqueta = n.tag
       ? `<text class="tag" x="${n.x + 46}" y="${n.y + n.h - 5}">${n.tag}</text>` : '';
     const desplazar = n.tag ? -8 : 0;
@@ -3468,6 +3725,30 @@ document.addEventListener('fullscreenchange', () => {
 });
 window.addEventListener('resize', () => { if (topoZoom == null) aplicarZoom(); });
 
+// Perfiles de trafico legitimo, cada uno con su icono (nodo "Clientes").
+function perfilesHTML(perfiles) {
+  if (!perfiles || !perfiles.length) return '';
+  const fila = p => `<div class="perfil"><span class="perfil-ico"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[p.icono] || ''}</svg></span>`
+    + `<span class="perfil-n">${p.n}${p.ip ? '<small>' + p.ip + '</small>' : ''}</span>`
+    + `<span class="perfil-d">${p.d || ''}</span></div>`;
+  return '<div class="cod-sub">Perfiles de tráfico legítimo</div>'
+    + '<div class="perfiles">' + perfiles.map(fila).join('') + '</div>';
+}
+
+// Info de codigo del nodo: ruta del archivo, pseudocodigo y comando para editar.
+function codigoHTML(c) {
+  if (!c) return '';
+  const nl = String.fromCharCode(10);
+  const esc = s => s.split('<').join('&lt;');
+  const pseudo = (c.pseudo && c.pseudo.length)
+    ? '<div class="cod-sub">Pseudocódigo</div><pre class="topo-cmd">'
+      + c.pseudo.map(esc).join(nl) + '</pre>' : '';
+  const editar = c.editar
+    ? '<div class="cod-sub">Editar</div><pre class="topo-cmd">' + esc(c.editar) + '</pre>' : '';
+  return '<div class="cod-bloque"><div class="cod-sub">Archivo</div>'
+    + '<code class="cod-ruta">' + esc(c.archivo || '') + '</code>' + pseudo + editar + '</div>';
+}
+
 function renderTopoDetalle() {
   if (!topoUltimo) return;
   const lista = TOPO_VISTAS[topoVista].nodos;
@@ -3482,9 +3763,11 @@ function renderTopoDetalle() {
     `<h3>${n.titulo}${cabIp}</h3>` +
     (t.que ? `<p>${t.que}</p>` : '') +
     (n.id === 'modelo' ? decisionModeloHTML() : '') +
+    perfilesHTML(t.perfiles) +
     (filas ? `<dl>${filas}</dl>` : '') +
     (t.cmd ? `<pre class="topo-cmd">${t.cmd.replace(/</g, '&lt;')}</pre>` : '') +
     (t.flujo ? flujoHTML(t.flujo, t.flujoTit) : '') +
+    codigoHTML(t.codigo) +
     filesHTML(n.id) +
     (t.nota ? `<p class="dim">${t.nota}</p>` : '') +
     (t.enlace ? `<p><a href="${t.enlace.href}"${t.enlace.vtab ? ` data-vtab="${t.enlace.vtab}"` : ''}>${t.enlace.txt} &rarr;</a></p>` : '');
