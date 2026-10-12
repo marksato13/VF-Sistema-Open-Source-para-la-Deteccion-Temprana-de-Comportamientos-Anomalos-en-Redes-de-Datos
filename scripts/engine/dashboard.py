@@ -164,7 +164,9 @@ HTML = """<!doctype html>
   .apr-graf { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.8rem; margin-bottom: 1.1rem; }
   .apr-chart { display: block; width: 100%; height: 170px; }
   #histogram { display: block; width: 100%; height: 190px; }
-  .apr-chart text, #histogram text { font: 600 10px var(--mono); fill: var(--text-dim); }
+  .hist-chart { display: block; width: 100%; }
+  .apr-chart text, #histogram text, .hist-chart text { font: 600 10px var(--mono); fill: var(--text-dim); }
+  .var-fila .vw { min-width: 190px; text-align: right; }
   /* Graficos con eje: las marcas van en HTML junto al SVG. */
   .act-chart { display: grid; grid-template-columns: 40px 1fr; }
   .act-y { position: relative; font: 600 10px var(--mono); color: var(--text-dim); }
@@ -987,6 +989,18 @@ HTML = """<!doctype html>
     <p class="sec-sub" id="vigentesSub">LIMIT y BLOCK en vigor, con su caducidad. Los aplica el agente en el host protegido.</p>
     <div class="tbl-wrap">
       <table><thead><tr><th>IP</th><th>Acción</th><th>Motivo</th><th>Desde</th><th>Expira en</th><th>Reincidencia</th></tr></thead><tbody id="blocked"></tbody></table>
+    </div>
+    <p class="act-h" style="margin-top:1.2rem">Acciones de las últimas 24 h <span class="th-sub" id="histSub"></span></p>
+    <div class="spark-wrap" style="margin-bottom:0.8rem">
+      <svg id="histChart" class="hist-chart" role="img" aria-label="Línea de tiempo de acciones por IP en las últimas 24 horas"></svg>
+      <div class="spark-legend">
+        <span><i class="swatch" style="background:var(--danger)"></i>BLOCK</span>
+        <span><i class="swatch" style="background:var(--amber)"></i>LIMIT</span>
+        <span>cada barra es una racha de ventanas de la misma IP; la zona rayada es anterior al registro leído</span>
+      </div>
+    </div>
+    <div class="tbl-wrap tbl-scroll" style="max-height:280px">
+      <table><thead><tr><th>Inicio</th><th>IP</th><th>Acción</th><th>Motivo</th><th>Duración</th><th>Ventanas</th><th>Estado</th></tr></thead><tbody id="histTabla"></tbody></table>
     </div>
   </section>
 
@@ -1831,6 +1845,75 @@ function renderVigentes(vigentes, locales) {
   document.getElementById('blocked').innerHTML = filas.length ? filas.join('')
     : '<tr class="empty-row"><td colspan="6">Ninguna IP limitada ni bloqueada ahora mismo.</td></tr>';
 }
+
+// Historial de acciones: lo que ya paso, no solo lo vigente. Una fila por IP en
+// la linea de tiempo; la zona anterior al registro leido se raya, porque ahi no
+// se sabe si hubo acciones.
+function renderHistorial(d) {
+  const svg = document.getElementById('histChart'), tb = document.getElementById('histTabla');
+  if (!svg || !tb || !d) return;
+  const eps = d.episodios || [];
+  const t1 = d.ahora, t0 = d.ahora - d.horas * 3600;
+  const corto = d.desde != null && d.desde > t0 + 600;
+  document.getElementById('histSub').textContent = eps.length + ' episodio' + (eps.length === 1 ? '' : 's')
+    + (corto ? ' · el registro leído empieza a las ' + fmtTime(d.desde) : '');
+  const ips = [];
+  eps.forEach(e => { if (ips.indexOf(e.ip) < 0) ips.push(e.ip); });
+  const filas = ips.slice(0, 10);
+  const W = Math.max(320, svg.clientWidth || 900), FH = 24, Y0 = 8;
+  const H = Y0 + Math.max(1, filas.length) * FH + 26;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.height = H + 'px';
+  const X0 = 118, X1 = W - 12, YB = Y0 + Math.max(1, filas.length) * FH;
+  const px = t => X0 + (Math.max(t0, t) - t0) / (t1 - t0) * (X1 - X0);
+  let g = '<defs><pattern id="histRaya" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+    + '<line x1="0" y1="0" x2="0" y2="6" stroke="var(--border)" stroke-width="2"/></pattern></defs>';
+  if (corto) g += `<rect x="${X0}" y="${Y0}" width="${(px(d.desde) - X0).toFixed(1)}" height="${YB - Y0}" fill="url(#histRaya)"><title>Anterior al registro leído</title></rect>`;
+  for (let i = 0; i <= 4; i++) {
+    const x = X0 + (X1 - X0) * i / 4;
+    g += `<line x1="${x.toFixed(1)}" y1="${Y0}" x2="${x.toFixed(1)}" y2="${YB + 3}" stroke="var(--border)"${i ? ' stroke-dasharray="2 4"' : ''}/>`;
+    g += `<text x="${x.toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${i === 4 ? 'ahora' : '−' + (d.horas - d.horas * i / 4) + ' h'}</text>`;
+  }
+  g += `<line x1="${X0}" y1="${YB}" x2="${X1}" y2="${YB}" stroke="var(--border)"/>`;
+  if (!filas.length) {
+    g += `<text x="${(X0 + X1) / 2}" y="${Y0 + FH / 2 + 4}" text-anchor="middle">Sin acciones en este tramo</text>`;
+  }
+  filas.forEach((ip, k) => {
+    const y = Y0 + k * FH;
+    g += `<text x="${X0 - 8}" y="${y + FH / 2 + 3}" text-anchor="end" style="fill:var(--text)">${varEsc(ip)}</text>`;
+    if (k) g += `<line x1="${X0}" y1="${y}" x2="${X1}" y2="${y}" stroke="var(--border)" stroke-opacity="0.5"/>`;
+    // LIMIT primero: un BLOCK de la misma IP se dibuja encima y no queda tapado.
+    ['LIMIT', 'BLOCK'].forEach(tipo => eps.forEach(e => {
+      if (e.ip !== ip || e.accion !== tipo) return;
+      const xa = px(e.inicio), xb = Math.max(px(e.fin), xa + 4);
+      g += `<rect x="${xa.toFixed(1)}" y="${y + 5}" width="${(xb - xa).toFixed(1)}" height="${FH - 10}" rx="3" fill="${tipo === 'BLOCK' ? 'var(--danger)' : 'var(--amber)'}">`
+        + `<title>${varEsc(ip)} · ${tipo} · ${fmtTime(e.inicio)} · ${e.ventanas} ventana(s) · ${varEsc(e.motivo || e.origen)}</title></rect>`;
+    }));
+  });
+  svg.innerHTML = g;
+  tb.innerHTML = eps.length ? eps.slice(0, 60).map(e => {
+    const dur = Math.round(e.fin - e.inicio);
+    return `<tr class="row-${e.accion.toLowerCase()}" data-ip="${varEsc(e.ip)}" style="cursor:pointer" title="Pulsa para filtrar las decisiones de esta IP">`
+      + `<td class="num">${fmtTime(e.inicio)}<span class="hace">${haceTexto(e.inicio)}</span></td>`
+      + `<td class="ip">${varEsc(e.ip)}</td><td><span class="badge acc-${e.accion.toLowerCase()}">${e.accion}</span></td>`
+      + `<td class="why">${e.origen && e.origen !== 'modelo' ? '<span class="badge heur">' + varEsc(e.origen) + '</span> ' : ''}${varEsc(e.motivo || '')}</td>`
+      + `<td class="num">${dur > 0 ? duracionTexto(dur) : 'una ventana'}</td><td class="num">${e.ventanas}</td>`
+      + `<td>${e.vigente ? '<span class="badge acc-' + e.accion.toLowerCase() + '">en vigor</span>' : '<span class="hace" style="display:inline">caducada</span>'}</td></tr>`;
+  }).join('') : '<tr class="empty-row"><td colspan="7">Ninguna IP limitada ni bloqueada en este tramo.</td></tr>';
+}
+async function cargarHistorial() {
+  if (!document.getElementById('histChart')) return;
+  try { renderHistorial(await (await fetch('/api/acciones')).json()); } catch (e) { /* se reintenta en el siguiente ciclo */ }
+}
+cargarHistorial();
+setInterval(cargarHistorial, 30000);
+on('histTabla', 'click', (ev) => {
+  const tr = ev.target.closest('tr[data-ip]');
+  if (!tr) return;
+  document.getElementById('ipFilter').value = tr.dataset.ip;
+  decVista = 'todas'; pintarDecVista(); renderDecisionsTable();
+  document.getElementById('s-decisiones').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 function renderTopIps() {
   const el = document.getElementById('topIps');
@@ -4758,6 +4841,76 @@ def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | Non
 COMPARACION_POR_OMISION = Path(__file__).resolve().parents[2] / "docs" / "evaluacion" / "comparacion-suricata.json"
 
 
+_CACHE_HISTORIAL: dict[str, object] = {}
+SEPARACION_EPISODIO_S = 600      # dos ofensas a mas de 10 min son episodios distintos
+
+
+def historial_acciones(log_path: Path, ahora: float, horas: int = 24,
+                       max_bytes: int = 33_554_432, nunca: set[str] | None = None,
+                       cache_s: float = 30.0) -> dict:
+    """Episodios de LIMIT/BLOCK de las ultimas horas, uno por IP y racha.
+
+    «IPs bloqueadas ahora» ensena lo vigente; esto ensena lo que ya paso. Se lee
+    la cola del registro y solo se interpretan las lineas que pueden pedir una
+    accion (un ALERT o un heuristico), que son muy pocas. `desde` dice hasta
+    donde alcanza de verdad el registro leido: si no llega a las horas pedidas,
+    el panel lo dice en vez de dar a entender que antes no hubo nada.
+    """
+    c = _CACHE_HISTORIAL
+    if c.get("ruta") == str(log_path) and ahora - float(c.get("t", 0)) < cache_s:
+        return c["datos"]                                   # type: ignore[return-value]
+    if nunca is None:
+        nunca = NUNCA_BLOQUEAR
+    limite = ahora - horas * 3600
+    lineas = tail_lines(log_path, max_bytes=max_bytes)
+    primera = None
+    for linea in lineas[:50]:
+        try:
+            primera = float(json.loads(linea)["logged_at"])
+            break
+        except (ValueError, KeyError, TypeError):
+            continue
+    ofensas: dict[str, list[tuple[float, str, str, str]]] = {}
+    for linea in lineas:
+        if '"ALERT"' not in linea and '"accion"' not in linea:
+            continue
+        try:
+            d = json.loads(linea)
+        except ValueError:
+            continue
+        t = d.get("logged_at")
+        ip = str(d.get("entity_ip", ""))
+        if not isinstance(t, (int, float)) or t < limite or not ip or ip in nunca:
+            continue
+        a = accion_de(d)
+        if a is not None:
+            ofensas.setdefault(ip, []).append((float(t), *a))
+    episodios = []
+    for ip, lista in ofensas.items():
+        lista.sort()
+        racha = [lista[0]]
+        for o in lista[1:] + [None]:                       # type: ignore[list-item]
+            if o is not None and o[0] - racha[-1][0] <= SEPARACION_EPISODIO_S:
+                racha.append(o)
+                continue
+            peor = max(racha, key=lambda x: (SEVERIDAD_ACCION[x[1]], x[3] != "modelo"))
+            caduca = racha[-1][0] + (ESCALERA_BLOCK_S[1] if peor[1] == "BLOCK" else TIMEOUT_LIMIT_S) \
+                + CADENCIA_FEED_S
+            episodios.append({
+                "ip": ip, "accion": peor[1], "motivo": peor[2], "origen": peor[3],
+                "inicio": racha[0][0], "fin": racha[-1][0], "ventanas": len(racha),
+                "vigente": caduca > ahora,
+            })
+            if o is not None:
+                racha = [o]
+    episodios.sort(key=lambda e: e["inicio"], reverse=True)
+    datos = {"ahora": ahora, "horas": horas,
+             "desde": max(limite, primera) if primera is not None else None,
+             "episodios": episodios[:200]}
+    c.update(ruta=str(log_path), t=ahora, datos=datos)
+    return datos
+
+
 _CACHE_FILAS: dict[str, object] = {}
 
 
@@ -6095,6 +6248,9 @@ def main() -> int:
                         },
                     }
                 )
+                return
+            if path == "/api/acciones":
+                self._send_json(historial_acciones(args.log_path, time.time()))
                 return
             if path == "/api/variables":
                 # El dataset crece durante toda la linea base: se relee solo
