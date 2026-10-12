@@ -149,6 +149,21 @@ HTML = """<!doctype html>
   .topo-zoom #topoNivel { min-width: 38px; text-align: center; }
   .topo-scroll { overflow: auto; flex: 1; min-height: 0; max-height: 82vh; }
   .topo-scroll svg { display: block; }
+  /* Graficos con eje: las marcas van en HTML junto al SVG. */
+  .act-chart { display: grid; grid-template-columns: 40px 1fr; }
+  .act-y { position: relative; font: 600 10px var(--mono); color: var(--text-dim); }
+  .act-y span { position: absolute; right: 7px; transform: translateY(-50%); white-space: nowrap; }
+  .act-x { display: flex; justify-content: space-between; margin-left: 40px; padding-top: 4px;
+    font: 600 10px var(--mono); color: var(--text-dim); }
+  .act-h .th-sub { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 0.4rem; }
+  .dec-chart { margin: 0 0 0.8rem; }
+  .dec-chart svg { display: block; width: 100%; height: 170px; cursor: crosshair; }
+  .dec-chart text { font: 600 10px var(--mono); fill: var(--text-dim); }
+  tr.dec-fila { cursor: pointer; }
+  tr.dec-det td { background: var(--surface-2); padding: 0.6rem 1rem 0.8rem; }
+  .dec-det dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.45rem 1.2rem; margin: 0; }
+  .dec-det dt { font: 600 0.66rem var(--mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-dim); }
+  .dec-det dd { margin: 0.1rem 0 0; font: 600 0.82rem var(--mono); color: var(--text); overflow-wrap: anywhere; }
   /* Pulso: lo que entra y lo que se acumula, con su edad. */
   .pulso { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.7rem; margin: 0.2rem 0 1.3rem; }
   .pulso-t { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.65rem 0.8rem 0.45rem; min-width: 0; }
@@ -912,15 +927,19 @@ HTML = """<!doctype html>
     <div class="grid" id="counters"></div>
     <div class="act-cols">
       <div>
-        <p class="act-h">Ventanas por minuto</p>
+        <p class="act-h">Acciones y ventanas analizadas <span class="th-sub" id="sparkRangeLabel">por minuto</span></p>
         <div class="spark-wrap">
-          <svg id="spark" width="100%" height="46" viewBox="0 0 610 46" preserveAspectRatio="none"></svg>
+          <div class="act-chart">
+            <div class="act-y" id="actY"></div>
+            <svg id="spark" width="100%" style="height:150px" viewBox="0 0 610 150" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="act-x" id="actX"></div>
           <div class="chart-tip" id="sparkTip"></div>
           <div class="spark-legend">
-            <span><i class="swatch" style="background:var(--danger)"></i>con alerta</span>
-            <span><i class="swatch" style="background:var(--accent)"></i>normal</span>
-            <span><i class="swatch" style="background:var(--border)"></i>sin tráfico</span>
-            <span id="sparkRangeLabel">&larr; hace 60 min&nbsp;&nbsp;&nbsp;ahora &rarr;</span>
+            <span><i class="swatch" style="background:var(--danger)"></i>BLOCK</span>
+            <span><i class="swatch" style="background:var(--amber)"></i>LIMIT</span>
+            <span><i class="swatch" style="background:var(--accent)"></i>ventanas analizadas</span>
+            <span>arriba, acciones · abajo, volumen</span>
           </div>
         </div>
       </div>
@@ -947,6 +966,8 @@ HTML = """<!doctype html>
       <div class="toolbar">
         <div class="range-toggle" id="decVista">
           <button data-dv="accion" class="active">Con acción</button>
+          <button data-dv="limit">LIMIT</button>
+          <button data-dv="block">BLOCK</button>
           <button data-dv="todas">Todas</button>
         </div>
         <input type="text" id="ipFilter" placeholder="Filtrar por IP..." class="ip-filter">
@@ -954,6 +975,16 @@ HTML = """<!doctype html>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7,10 12,15 17,10"/><path d="M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
           Exportar CSV
         </button>
+      </div>
+    </div>
+    <div class="spark-wrap dec-chart">
+      <svg id="decChart" role="img" aria-label="Score de cada decisión en el tiempo, con el umbral"></svg>
+      <div class="chart-tip" id="decTip"></div>
+      <div class="spark-legend">
+        <span><i class="swatch" style="background:var(--danger)"></i>BLOCK</span>
+        <span><i class="swatch" style="background:var(--amber)"></i>LIMIT</span>
+        <span><i class="swatch" style="background:var(--accent)"></i>sin acción</span>
+        <span>bajo la línea del umbral, el modelo ve anomalía · pulsa un punto para filtrar su IP · pulsa una fila para ver su detalle</span>
       </div>
     </div>
     <p class="toolbar-hint" id="filterHint"></p>
@@ -1228,28 +1259,53 @@ function _sparkCuando(b) {
   return b.offset === 0 ? 'ahora' : ('hace ' + b.offset + ' ' + _sparkData.unidad);
 }
 
+// Tope de eje redondo (1, 2, 5 x 10^n), para que las marcas se lean de un vistazo.
+function ejeBonito(v) {
+  if (v <= 4) return 4;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  const m = v / p;
+  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
+}
+
+// Dos bandas con escala propia y lineal: arriba las acciones (LIMIT y BLOCK
+// apiladas), abajo el volumen de ventanas. En una sola escala las acciones,
+// que son pocas frente al volumen, no se verian.
 function renderSparkline(activity) {
   const svg = document.getElementById('spark');
   const n = activity.length;
-  const w = 610, h = 46, bw = w / n;
+  const W = 610, H = 150, bw = W / n;
+  const A0 = 6, A1 = 52, V0 = 70, V1 = 146;
   _sparkData = { activity: activity, unidad: currentRange === '24h' ? 'h' : 'min' };
-  let bars = '';
-  activity.forEach((b, i) => {
-    const total = b.alert + b.permit;
-    const x = i * bw;
-    let color = 'var(--border)';
-    let barH = 3;
-    if (total > 0) {
-      barH = Math.max(4, Math.min(h - 2, 4 + Math.log2(total + 1) * 9));
-      color = b.alert > 0 ? 'var(--danger)' : 'var(--accent)';
-    }
-    // <title> nativo por barra: el tooltip basico funciona aunque el JS de la
-    // cruz falle. La cruz y el recuadro de abajo lo enriquecen, no lo sustituyen.
-    bars += `<rect x="${x.toFixed(1)}" y="${(h - barH).toFixed(1)}" width="${Math.max(1, bw - 1.2).toFixed(1)}" height="${barH.toFixed(1)}" rx="1" fill="${color}">`
-      + `<title>${_sparkCuando(b)} · ${b.permit} PERMIT · ${b.alert} ALERT</title></rect>`;
+  const maxV = ejeBonito(Math.max(1, ...activity.map(b => b.alert + b.permit)));
+  const maxA = ejeBonito(Math.max(1, ...activity.map(b => (b.limit || 0) + (b.block || 0))));
+  let s = '';
+  [A0, A1, V0, (V0 + V1) / 2, V1].forEach(y => {
+    const base = y === A1 || y === V1;
+    s += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="var(--border)" stroke-width="1" vector-effect="non-scaling-stroke"${base ? '' : ' stroke-dasharray="2 4"'}/>`;
   });
-  bars += `<line id="sparkCross" x1="0" y1="0" x2="0" y2="${h}" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="3 2" visibility="hidden"/>`;
-  svg.innerHTML = bars;
+  activity.forEach((b, i) => {
+    const x = (i * bw + 0.6).toFixed(1), w = Math.max(1, bw - 1.2).toFixed(1);
+    const total = b.alert + b.permit;
+    if (total > 0) {
+      const h = Math.max(1.5, total / maxV * (V1 - V0));
+      s += `<rect x="${x}" y="${(V1 - h).toFixed(1)}" width="${w}" height="${h.toFixed(1)}" fill="var(--accent)" fill-opacity="0.6"/>`;
+    }
+    const li = b.limit || 0, bl = b.block || 0;
+    const hl = li / maxA * (A1 - A0), hb = bl / maxA * (A1 - A0);
+    if (li) s += `<rect x="${x}" y="${(A1 - hl).toFixed(1)}" width="${w}" height="${hl.toFixed(1)}" fill="var(--amber)"/>`;
+    if (bl) s += `<rect x="${x}" y="${(A1 - hl - hb).toFixed(1)}" width="${w}" height="${hb.toFixed(1)}" fill="var(--danger)"/>`;
+  });
+  s += `<line id="sparkCross" x1="0" y1="0" x2="0" y2="${H}" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="3 2" vector-effect="non-scaling-stroke" visibility="hidden"/>`;
+  svg.innerHTML = s;
+  // Las marcas van en HTML: el SVG se estira a lo ancho y deformaria el texto.
+  const pct = y => (y / H * 100).toFixed(1) + '%';
+  document.getElementById('actY').innerHTML =
+    `<span style="top:${pct(A0)}">${maxA}</span><span style="top:${pct(A1)}">0</span>`
+    + `<span style="top:${pct(V0)}">${maxV.toLocaleString('es')}</span><span style="top:${pct((V0 + V1) / 2)}">${(maxV / 2).toLocaleString('es')}</span>`
+    + `<span style="top:${pct(V1)}">0</span>`;
+  const u = _sparkData.unidad, tot = n - 1;
+  document.getElementById('actX').innerHTML = [1, 0.75, 0.5, 0.25].map(f =>
+    `<span>−${Math.round(tot * f)} ${u}</span>`).join('') + '<span>ahora</span>';
 }
 
 function _sparkMove(ev) {
@@ -1267,8 +1323,9 @@ function _sparkMove(ev) {
   cross.setAttribute('x2', cx.toFixed(1));
   cross.setAttribute('visibility', 'visible');
   tip.innerHTML = `<div class="t-when">${_sparkCuando(b)}</div>`
-    + `<div><span class="t-p">PERMIT</span> <b>${b.permit}</b></div>`
-    + `<div><span class="t-a">ALERT</span> <b>${b.alert}</b></div>`;
+    + `<div><span class="t-p">ventanas</span> <b>${(b.alert + b.permit).toLocaleString('es')}</b></div>`
+    + `<div><span style="color:var(--amber)">LIMIT</span> <b>${b.limit || 0}</b></div>`
+    + `<div><span class="t-a">BLOCK</span> <b>${b.block || 0}</b></div>`;
   // Situa el recuadro sobre la barra sin salirse del contenedor. Un <svg> no
   // tiene offsetLeft (es API de HTMLElement), asi que se calcula con los rects
   // de cliente respecto al contenedor posicionado.
@@ -1343,9 +1400,7 @@ function renderHistogram(data) {
 async function loadActivity(range) {
   const data = await (await fetch('/api/activity?range=' + range)).json();
   renderSparkline(data.activity);
-  document.getElementById('sparkRangeLabel').textContent = range === '24h'
-    ? '← hace 24h    ahora →'
-    : '← hace 60 min    ahora →';
+  document.getElementById('sparkRangeLabel').textContent = range === '24h' ? 'por hora' : 'por minuto';
 }
 
 on('rangeToggle', 'click', (e) => {
@@ -1732,16 +1787,148 @@ function filasFiltradas() {
   const query = document.getElementById('ipFilter').value.trim();
   let rows = lastDecisions;
   if (decVista === 'accion') rows = rows.filter(d => accionDeDecision(d) !== 'PERMIT');
+  if (decVista === 'limit') rows = rows.filter(d => accionDeDecision(d) === 'LIMIT');
+  if (decVista === 'block') rows = rows.filter(d => accionDeDecision(d) === 'BLOCK');
   if (query) rows = rows.filter(d => d.entity_ip.includes(query));
   return { rows, query };
 }
 
+// Score de cada decision en el tiempo, con el umbral. Las ventanas sin score
+// (sin paquetes: el modelo no puntua) van en un carril aparte abajo, no en cero.
+// El lienzo usa los pixeles reales del elemento, asi los puntos son redondos.
+let decPuntos = [];
+function renderDecChart() {
+  const svg = document.getElementById('decChart');
+  if (!svg) return;
+  const query = document.getElementById('ipFilter').value.trim();
+  const datos = (query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions)
+    .filter(d => d.logged_at);
+  const W = Math.max(320, svg.clientWidth || 900), H = 170;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const X0 = 64, X1 = W - 10, Y0 = 10, Y1 = H - 46, YS = H - 30;
+  decPuntos = [];
+  if (!datos.length) {
+    svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">Sin decisiones que graficar.</text>`;
+    return;
+  }
+  const ahora = Date.now() / 1000;
+  const t0 = Math.min(...datos.map(d => d.logged_at)), t1 = Math.max(ahora, t0 + 60);
+  const conScore = datos.filter(d => d.score != null);
+  const umbral = conScore.length ? conScore[0].threshold : (window._escalaScore ? window._escalaScore.umbral : null);
+  let lo = Math.min(...conScore.map(d => d.score)), hi = Math.max(...conScore.map(d => d.score));
+  if (umbral != null) { lo = Math.min(lo, umbral); hi = Math.max(hi, umbral); }
+  if (!conScore.length) { lo = 0; hi = 1; }
+  const margen = (hi - lo) * 0.08 || 0.05;
+  lo -= margen; hi += margen;
+  const px = t => X0 + (t - t0) / (t1 - t0) * (X1 - X0);
+  const py = v => Y1 - (v - lo) / (hi - lo) * (Y1 - Y0);
+  const coma = v => v.toFixed(3).split('.').join(',');
+  let s = '';
+  if (umbral != null && conScore.length) {
+    const yu = py(umbral);
+    s += `<rect x="${X0}" y="${yu.toFixed(1)}" width="${X1 - X0}" height="${(Y1 - yu).toFixed(1)}" fill="var(--danger)" fill-opacity="0.07"/>`;
+    s += `<line x1="${X0}" y1="${yu.toFixed(1)}" x2="${X1}" y2="${yu.toFixed(1)}" stroke="var(--text)" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+    s += `<text x="${X1}" y="${(yu - 4).toFixed(1)}" text-anchor="end" style="fill:var(--text)">umbral ${coma(umbral)}</text>`;
+    s += `<text x="${X0 - 6}" y="${(yu + 3).toFixed(1)}" text-anchor="end" style="fill:var(--text)">${coma(umbral)}</text>`;
+  }
+  s += `<line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1}" stroke="var(--border)"/><line x1="${X0}" y1="${Y1}" x2="${X1}" y2="${Y1}" stroke="var(--border)"/>`;
+  if (conScore.length) {
+    s += `<text x="${X0 - 6}" y="${Y0 + 8}" text-anchor="end">${coma(hi)}</text><text x="${X0 - 6}" y="${Y1}" text-anchor="end">${coma(lo)}</text>`;
+  }
+  s += `<text x="${X0 - 6}" y="${YS + 3}" text-anchor="end">sin score</text>`;
+  s += `<line x1="${X0}" y1="${YS}" x2="${X1}" y2="${YS}" stroke="var(--border)" stroke-dasharray="2 4"/>`;
+  for (let i = 0; i <= 4; i++) {
+    const t = t0 + (t1 - t0) * i / 4, x = px(t);
+    s += `<line x1="${x.toFixed(1)}" y1="${Y1}" x2="${x.toFixed(1)}" y2="${Y1 + 3}" stroke="var(--border)"/>`;
+    s += `<text x="${x.toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${i === 4 ? 'ahora' : fmtTime(t)}</text>`;
+  }
+  const estilo = { PERMIT: ['var(--accent)', 2, 0.4], LIMIT: ['var(--amber)', 3.8, 0.95], BLOCK: ['var(--danger)', 4.4, 1] };
+  // Los PERMIT primero: las acciones se dibujan encima y no quedan tapadas.
+  ['PERMIT', 'LIMIT', 'BLOCK'].forEach(tipo => {
+    datos.forEach(d => {
+      if (accionDeDecision(d) !== tipo) return;
+      const x = px(d.logged_at), y = d.score != null ? py(d.score) : YS;
+      const e = estilo[tipo];
+      s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${e[1]}" fill="${e[0]}" fill-opacity="${e[2]}"/>`;
+      decPuntos.push({ x: x, y: y, d: d, accion: tipo });
+    });
+  });
+  s += '<circle id="decFoco" r="7" fill="none" stroke="var(--text)" stroke-width="1.4" visibility="hidden"/>';
+  svg.innerHTML = s;
+}
+
+function decPuntoCercano(ev) {
+  const svg = document.getElementById('decChart');
+  const r = svg.getBoundingClientRect();
+  const x = ev.clientX - r.left, y = ev.clientY - r.top;
+  let mejor = null, dist = 18 * 18;
+  for (const p of decPuntos) {
+    // Una accion gana a un PERMIT que este a la misma distancia.
+    const dd = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y) - (p.accion === 'PERMIT' ? 0 : 40);
+    if (dd < dist) { dist = dd; mejor = p; }
+  }
+  return mejor;
+}
+on('decChart', 'mousemove', (ev) => {
+  const tip = document.getElementById('decTip'), foco = document.getElementById('decFoco');
+  const p = decPuntoCercano(ev);
+  if (!p || !foco) { tip.style.visibility = 'hidden'; if (foco) foco.setAttribute('visibility', 'hidden'); return; }
+  foco.setAttribute('cx', p.x.toFixed(1)); foco.setAttribute('cy', p.y.toFixed(1)); foco.setAttribute('visibility', 'visible');
+  const m = motivoDeDecision(p.d);
+  tip.innerHTML = `<div class="t-when">${fmtTime(p.d.logged_at)} · ${varEsc(p.d.entity_ip)}</div>`
+    + `<div><b>${p.accion}</b> ${p.d.score != null ? '· score ' + p.d.score.toFixed(3) : '· sin score'}</div>`
+    + (m.texto ? `<div>${varEsc(m.texto)}</div>` : '');
+  const ancho = tip.offsetParent.getBoundingClientRect().width, media = tip.offsetWidth / 2;
+  tip.style.left = Math.max(media + 2, Math.min(ancho - media - 2, p.x + 16)).toFixed(0) + 'px';
+  tip.style.visibility = 'visible';
+});
+on('decChart', 'mouseleave', () => {
+  document.getElementById('decTip').style.visibility = 'hidden';
+  const foco = document.getElementById('decFoco');
+  if (foco) foco.setAttribute('visibility', 'hidden');
+});
+on('decChart', 'click', (ev) => {
+  const p = decPuntoCercano(ev);
+  if (!p) return;
+  document.getElementById('ipFilter').value = p.d.entity_ip;
+  decVista = 'todas'; pintarDecVista(); renderDecisionsTable();
+});
+
+// Filas abiertas: el detalle sobrevive al refresco de 5 s.
+const decAbiertas = new Set();
+function decDetalleHTML(d, accion) {
+  const h = d.heuristico;
+  const margen = d.score != null && d.threshold != null ? d.score - d.threshold : null;
+  const caduca = accion === 'LIMIT' ? '300 s' : (accion === 'BLOCK' ? '300, 1800 o 3600 s según reincidencia' : 'no aplica');
+  const fila = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
+  return '<dl>'
+    + fila('Ventana (UTC)', varEsc(String(d.window_end_utc || '—')))
+    + fila('Detector', varEsc(String(d.detector_name || '—')))
+    + fila('Score y umbral', d.score != null ? d.score.toFixed(4) + ' frente a ' + (d.threshold != null ? d.threshold.toFixed(4) : '—') : 'sin puntuar: ventana sin paquetes')
+    + fila('Margen al umbral', margen == null ? '—' : (margen >= 0 ? '+' : '') + margen.toFixed(4) + (margen < 0 ? ' · anomalía' : ' · normal'))
+    + fila('Regla', h && h.heuristico ? varEsc(h.heuristico) + ' → ' + varEsc(h.accion || '') : 'ninguna')
+    + fila('Qué midió la regla', h && h.motivo ? varEsc(h.motivo) : '—')
+    + fila('Paquetes en 10 s', d.packet_count_10s ?? '—')
+    + fila('Historia cubierta', d.history_coverage_s != null ? d.history_coverage_s + ' s' : '—')
+    + fila('Acción y caducidad', accion + ' · ' + caduca)
+    + '</dl>';
+}
+on('decisions', 'click', (ev) => {
+  const tr = ev.target.closest('tr.dec-fila');
+  if (!tr) return;
+  const k = tr.dataset.key;
+  if (decAbiertas.has(k)) decAbiertas.delete(k); else decAbiertas.add(k);
+  renderDecisionsTable();
+});
+
 function renderDecisionsTable() {
   const { rows, query } = filasFiltradas();
   const nAcc = lastDecisions.filter(d => accionDeDecision(d) !== 'PERMIT').length;
+  const quees = { accion: 'con acción', limit: 'con LIMIT', block: 'con BLOCK' }[decVista];
   document.getElementById('filterHint').textContent =
-    (decVista === 'accion' ? nAcc + ' con acción de ' + lastDecisions.length + ' decisiones recientes' : lastDecisions.length + ' decisiones recientes')
+    (quees ? (decVista === 'accion' ? nAcc : rows.length) + ' ' + quees + ' de ' + lastDecisions.length + ' decisiones recientes' : lastDecisions.length + ' decisiones recientes')
     + (query ? ' · ' + rows.length + ' coinciden con «' + query + '»' : '');
+  renderDecChart();
   document.getElementById('decisions').innerHTML = rows.length ? rows.map(d => {
     const accion = accionDeDecision(d);
     const accBadge = `<span class="badge acc-${accion.toLowerCase()}">${accion}</span>`;
@@ -1755,10 +1942,11 @@ function renderDecisionsTable() {
       ? `<span class="badge heur" title="regla determinista, sin firma">${varEsc(m.regla)}</span> ${varEsc(m.texto)}`
       : (m.regla === 'modelo' ? varEsc(m.texto) : varEsc(DETECTOR_LABEL[d.detector_name] || d.detector_name || ''));
     const key = d.entity_ip + '|' + d.window_end_utc;
-    const cls = (accion !== 'PERMIT' ? 'row-' + accion.toLowerCase() : '') + (nuevasClaves.has(key) ? ' row-nueva' : '');
-    return `<tr class="${cls}"><td class="num">${fmtTime(d.logged_at)}<span class="hace">${haceTexto(d.logged_at)}</span></td>`
+    const cls = 'dec-fila ' + (accion !== 'PERMIT' ? 'row-' + accion.toLowerCase() : '') + (nuevasClaves.has(key) ? ' row-nueva' : '');
+    return `<tr class="${cls}" data-key="${varEsc(key)}" title="Pulsa para ver el detalle"><td class="num">${fmtTime(d.logged_at)}<span class="hace">${haceTexto(d.logged_at)}</span></td>`
       + `<td class="ip">${varEsc(d.entity_ip)}</td><td>${accBadge}</td><td class="why">${motivoTxt}</td>`
-      + `<td>${modelo}</td><td class="num">${d.packet_count_10s ?? '—'}</td></tr>`;
+      + `<td>${modelo}</td><td class="num">${d.packet_count_10s ?? '—'}</td></tr>`
+      + (decAbiertas.has(key) ? `<tr class="dec-det"><td colspan="6">${decDetalleHTML(d, accion)}</td></tr>` : '');
   }).join('') : `<tr class="empty-row"><td colspan="6">${query ? 'Ninguna decisión coincide con el filtro.'
       : (decVista === 'accion' ? 'Ninguna acción reciente: todo el tráfico se permitió.' : 'Sin decisiones recientes.')}</td></tr>`;
 }
@@ -4158,7 +4346,8 @@ def bucket_activity(decisions: list[dict], bucket_seconds: int, count: int) -> l
     una linea de tiempo continua, no solo los intervalos con actividad.
     """
     now = time.time()
-    buckets = [{"offset": i, "alert": 0, "permit": 0} for i in range(count, -1, -1)]
+    buckets = [{"offset": i, "alert": 0, "permit": 0, "limit": 0, "block": 0}
+               for i in range(count, -1, -1)]
     index_by_offset = {b["offset"]: b for b in buckets}
     for item in decisions:
         age_seconds = now - item.get("logged_at", 0)
@@ -4172,6 +4361,11 @@ def bucket_activity(decisions: list[dict], bucket_seconds: int, count: int) -> l
             bucket["alert"] += 1
         else:
             bucket["permit"] += 1
+        # La accion (LIMIT/BLOCK) no coincide con ALERT: una regla puede pedir
+        # BLOCK con el modelo en PERMIT. El grafico cuenta acciones.
+        accion = accion_de(item)
+        if accion is not None:
+            bucket[accion[0].lower()] += 1
     return buckets
 
 
