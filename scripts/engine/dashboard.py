@@ -533,6 +533,11 @@ HTML = """<!doctype html>
   .vig-barra i { display: block; height: 100%; }
   .vig-fuente { font-size: 0.7rem; color: var(--text-dim); font-family: var(--mono); }
   .sec-sub { color: var(--text-dim); font-size: 0.82rem; margin: -0.3rem 0 0.7rem; }
+  .cmp-fig { background: #0f1722; border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; margin-bottom: 0.9rem; }
+  .cmp-fig svg { width: 100%; height: auto; display: block; }
+  .cmp-notas { margin: 0.5rem 0 0; padding-left: 1.1rem; color: var(--text-dim); font-size: 0.8rem; line-height: 1.5; }
+  td.cmp-bien { color: var(--ok); } td.cmp-mal { color: var(--danger); } td.cmp-nm { color: var(--text-dim); font-style: italic; }
+  tr.cmp-total td { font-weight: 600; border-top: 2px solid var(--border); }
 
   /* Actividad: cifras por accion y las IPs que mas actuaron. */
   .act-cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1rem; margin-top: 0.9rem; }
@@ -656,6 +661,7 @@ HTML = """<!doctype html>
     <a href="#s-variables" data-sec="s-variables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg>Variables</a>
     <a href="#s-vivo" data-sec="s-vivo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 2-6 2 3h6"/></svg>Datos en vivo</a>
     <a href="#s-modelo" data-sec="s-modelo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>Modelo</a>
+    <a href="#s-comparacion" data-sec="s-comparacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg>Suricata</a>
     <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
     <a href="#s-simulacion" data-sec="s-simulacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg>Simulación</a>
     <a href="#s-aprendizaje" data-sec="s-aprendizaje"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><polyline points="20,4 20,9 15,9"/></svg>Aprendizaje</a>
@@ -779,6 +785,45 @@ HTML = """<!doctype html>
       <div class="card accent"><div class="label">Modelo + heurísticos</div><div class="value">9 / 9</div></div>
     </div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span>La <strong>complementariedad es el resultado medido</strong>: el modelo detectó flood HTTP y escaneo en esta batería, pero <strong>0/3 DNS</strong>; el heurístico DNS cubrió ese hueco. La fuerza bruta en vivo la confirma el heurístico <code>brute_force</code>. La combinación cubrió 9/9 episodios de las tres primeras familias; no significa que el modelo solo los cubra. La comparación con Suricata y sus límites están en la nota 32 del repositorio de orquestación.</span></div>
+  </section>
+
+  <section id="s-comparacion">
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg><h2>Comparación con Suricata</h2></div>
+    <p class="lede-small">Mismo PCAP para todos; qué es un ataque lo dice la referencia, no las alertas. Se cuenta por episodio.</p>
+    <div class="cmp-fig">
+      <svg viewBox="0 0 900 250" role="img" aria-label="Protocolo: entrada común y referencia independiente, cuatro condiciones, evaluación por episodio">
+        <defs><marker id="cmpFl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8aa0b4"/></marker></defs>
+        <g font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="13" fill="#dce8f5">
+          <rect x="10" y="30" width="190" height="72" rx="10" fill="#15202c" stroke="#3a5169"/>
+          <text x="105" y="60" text-anchor="middle" font-weight="600">Entrada común</text>
+          <text x="105" y="80" text-anchor="middle" fill="#9fb2c4" font-size="12">mismo PCAP · config. fija</text>
+          <rect x="10" y="150" width="190" height="72" rx="10" fill="#2a1d12" stroke="#b5741b"/>
+          <text x="105" y="180" text-anchor="middle" font-weight="600">Referencia</text>
+          <text x="105" y="200" text-anchor="middle" fill="#e8c9a4" font-size="12">guion y orquestador</text>
+          <rect x="290" y="10" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
+          <text x="415" y="37" text-anchor="middle">Suricata · firmas</text>
+          <rect x="290" y="66" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
+          <text x="415" y="93" text-anchor="middle">Solo modelo · score</text>
+          <rect x="290" y="122" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
+          <text x="415" y="149" text-anchor="middle">Solo heurísticos · eventos EVE</text>
+          <rect x="290" y="178" width="250" height="44" rx="9" fill="#0e3b3a" stroke="#5eead4"/>
+          <text x="415" y="205" text-anchor="middle" font-weight="600">CyberFlow · combinado</text>
+          <rect x="640" y="60" width="250" height="130" rx="10" fill="#15202c" stroke="#3a5169"/>
+          <text x="765" y="92" text-anchor="middle" font-weight="600">Evaluación por episodio</text>
+          <text x="765" y="116" text-anchor="middle" fill="#9fb2c4" font-size="12">detección por familia</text>
+          <text x="765" y="136" text-anchor="middle" fill="#9fb2c4" font-size="12">latencia desde el inicio</text>
+          <text x="765" y="156" text-anchor="middle" fill="#9fb2c4" font-size="12">falsos positivos aparte</text>
+        </g>
+        <g stroke="#8aa0b4" stroke-width="1.6" fill="none" marker-end="url(#cmpFl)">
+          <path d="M200,66 L288,32"/><path d="M200,66 L288,88"/><path d="M200,66 L288,144"/><path d="M200,66 L288,200"/>
+          <path d="M540,32 L638,110"/><path d="M540,88 L638,118"/><path d="M540,144 L638,128"/><path d="M540,200 L638,136"/>
+        </g>
+        <path d="M105,222 L105,242 L765,242 L765,194" stroke="#b5741b" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#cmpFl)"/>
+      </svg>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr><th>Familia</th><th>Suricata</th><th>Solo modelo</th><th>Solo heurísticos</th><th>CyberFlow</th></tr></thead><tbody id="cmpTabla"></tbody></table></div>
+    <p class="toolbar-hint">Celda: episodios detectados / medidos · latencia mediana [mín–máx]. CyberFlow lee eventos de EVE, no alertas de Suricata. En SPAN, Suricata es IDS: se compara detección, no bloqueo.</p>
+    <ul class="cmp-notas" id="cmpNotas"></ul>
   </section>
 
   <section id="s-alcance">
@@ -3053,6 +3098,42 @@ if (document.getElementById('varTabla')) {
 // Escenarios: catalogo estatico, se pide una vez (solo el admin tiene la seccion).
 if (document.getElementById('simGrid')) cargarEscenarios();
 
+// ---- Comparacion con Suricata: la tabla la calcula el evaluador del servidor
+// (scripts/evaluacion/comparacion.py) desde el fichero de episodios.
+function cmpCelda(c) {
+  if (!c || c.n === 0) return '<td class="cmp-nm">no medido</td>';
+  const coma = (v) => String(v).split('.').join(',');
+  let t = c.detectados + '/' + c.n;
+  if (c.detectados) {
+    t += c.latencia_min_s === c.latencia_max_s ? ' · ' + coma(c.latencia_mediana_s) + ' s'
+      : ' · ' + coma(c.latencia_mediana_s) + ' s [' + coma(c.latencia_min_s) + '–' + coma(c.latencia_max_s) + ']';
+  }
+  const cls = c.detectados === c.n ? 'cmp-bien' : (c.detectados === 0 ? 'cmp-mal' : '');
+  return '<td class="num ' + cls + '">' + t + '</td>';
+}
+
+async function cargarComparacion() {
+  const tb = document.getElementById('cmpTabla');
+  if (!tb) return;
+  try {
+    const r = await (await fetch('/api/comparacion')).json();
+    if (r.error) { tb.innerHTML = '<tr class="empty-row"><td colspan="5">' + varEsc(r.error) + '</td></tr>'; return; }
+    const conds = ['suricata', 'modelo', 'heuristicos', 'combinado'];
+    let html = r.por_familia.map(f => '<tr><td>' + varEsc(f.nombre) + (f.con_firma ? ' <span class="badge heur">con firma</span>' : '') + '</td>'
+      + conds.map(c => cmpCelda(f[c])).join('') + '</tr>').join('');
+    html += '<tr class="cmp-total"><td>Total sin firma</td>' + conds.map(c => cmpCelda(r.sin_firma[c])).join('') + '</tr>';
+    const fp = r.falsos_positivos;
+    const fpTxt = (x) => x.valor === 'no medido' ? '<td class="cmp-nm">no medido</td>'
+      : '<td class="num">' + x.valor + (x.de ? ' / ' + x.de : '') + '</td>';
+    html += '<tr><td>Falsos positivos <span class="hace">ventanas normales con acción</span></td>' + conds.map(c => fpTxt(fp[c])).join('') + '</tr>';
+    tb.innerHTML = html;
+    document.getElementById('cmpNotas').innerHTML = (r.notas || []).map(n => '<li>' + varEsc(n) + '</li>').join('');
+  } catch (e) {
+    tb.innerHTML = '<tr class="empty-row"><td colspan="5">No se pudo cargar la comparación.</td></tr>';
+  }
+}
+cargarComparacion();
+
 // ---- Datos en vivo -------------------------------------------------------
 // Captura en vivo al estilo de Wireshark. Tres llamadas, todas solo admin:
 //  - /api/vivo/flujo cada 1 s: SOLO lo escrito desde la llamada anterior en el
@@ -3607,7 +3688,7 @@ if (document.getElementById('aprDefensas')) {
 // quitarse de encima lo que no necesita mientras opera. Por eso vive en
 // localStorage y no en la sesion: es preferencia, no autorizacion.
 const SESION = JSON.parse(document.getElementById('datosSesion').textContent);
-const DEV_SECS = ['s-topologia', 's-variables', 's-vivo', 's-modelo', 's-alcance', 's-simulacion', 's-aprendizaje'];
+const DEV_SECS = ['s-topologia', 's-variables', 's-vivo', 's-modelo', 's-comparacion', 's-alcance', 's-simulacion', 's-aprendizaje'];
 
 function aplicarModo(modo) {
   const dev = modo === 'desarrollo';
@@ -3949,6 +4030,22 @@ def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | Non
     return salida
 
 
+COMPARACION_POR_OMISION = Path(__file__).resolve().parents[2] / "docs" / "evaluacion" / "comparacion-suricata.json"
+
+
+def estado_comparacion(ruta: Path | None) -> dict:
+    """Tabla de la comparacion con Suricata, calculada por el evaluador."""
+    ruta = ruta or COMPARACION_POR_OMISION
+    try:
+        modulo = Path(__file__).resolve().parents[1] / "evaluacion"
+        if str(modulo) not in sys.path:
+            sys.path.insert(0, str(modulo))
+        import comparacion
+        return comparacion.evaluar(json.loads(Path(ruta).read_text(encoding="utf-8")))
+    except (OSError, ValueError, KeyError, ImportError) as err:
+        return {"error": "No se pudo leer la comparación (%s): %s" % (Path(ruta).name, err)}
+
+
 def suricata_stats_desde_eve(eve_path: Path) -> dict | None:
     """Contadores de captura leidos del ultimo evento 'stats' de eve.json.
 
@@ -4113,7 +4210,7 @@ ROLES = ("admin", "lector")
 # nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
 RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios", "/api/archivo",
                          "/api/vivo", "/api/vivo/flujo", "/api/trazabilidad",
-                         "/api/aprendizaje"})
+                         "/api/aprendizaje", "/api/comparacion"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -4742,6 +4839,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--enforce-command", default="/usr/local/sbin/ppi-enforce")
     parser.add_argument(
+        "--comparacion", type=Path, default=None,
+        help="episodios de la comparacion con Suricata (docs/evaluacion/comparacion-suricata.json)")
+    parser.add_argument(
         "--feed-path", type=Path, default=Path.home() / "feed" / "feed.json",
         help="feed publicado por publicar_feed.py: caducidad exacta de cada accion")
     parser.add_argument(
@@ -5138,6 +5238,9 @@ def main() -> int:
                         limite=min(int(limite), 3000) if limite.isdigit() else 150))
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"error": "%s: %s" % (type(exc).__name__, exc)})
+                return
+            if path == "/api/comparacion":
+                self._send_json(estado_comparacion(args.comparacion))
                 return
             if path == "/api/aprendizaje":
                 self._send_json(estado_aprendizaje(args.config_toml, args.demo))
