@@ -149,6 +149,10 @@ HTML = """<!doctype html>
   .topo-zoom #topoNivel { min-width: 38px; text-align: center; }
   .topo-scroll { overflow: auto; flex: 1; min-height: 0; max-height: 82vh; }
   .topo-scroll svg { display: block; }
+  .apr-graf { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.8rem; margin-bottom: 1.1rem; }
+  .apr-chart { display: block; width: 100%; height: 170px; }
+  #histogram { display: block; width: 100%; height: 190px; }
+  .apr-chart text, #histogram text { font: 600 10px var(--mono); fill: var(--text-dim); }
   /* Graficos con eje: las marcas van en HTML junto al SVG. */
   .act-chart { display: grid; grid-template-columns: 40px 1fr; }
   .act-y { position: relative; font: 600 10px var(--mono); color: var(--text-dim); }
@@ -906,6 +910,12 @@ HTML = """<!doctype html>
       <div><h3 class="apr-h">Último candidato</h3><div id="aprCandidato"></div></div>
       <div><h3 class="apr-h">Política vigente</h3><div class="tbl-wrap" id="aprPolitica"></div></div>
     </div>
+    <h3 class="apr-h">Tendencia <span class="th-sub">cada punto es una noche; la línea discontinua es el límite de la política</span></h3>
+    <div class="apr-graf">
+      <div class="spark-wrap"><p class="act-h">PSI máximo del lote <span class="th-sub">por encima, el lote se rechaza</span></p><svg id="aprGLote" class="apr-chart"></svg></div>
+      <div class="spark-wrap"><p class="act-h">PSI de las puntuaciones <span class="th-sub">por encima, señal de deriva</span></p><svg id="aprGPsi" class="apr-chart"></svg></div>
+      <div class="spark-wrap"><p class="act-h">FPR en el oro y anómalo en el lote</p><svg id="aprGTasa" class="apr-chart"></svg></div>
+    </div>
     <h3 class="apr-h">Lotes diarios <span class="th-sub">saneamiento y linaje</span></h3>
     <div class="tbl-wrap" id="aprLotes"></div>
     <h3 class="apr-h">Deriva <span class="th-sub">modelo vigente frente al conjunto de oro</span></h3>
@@ -918,7 +928,7 @@ HTML = """<!doctype html>
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg><h2>Distribución de scores recientes</h2></div>
     <p class="lede-small">Qué tan cerca del umbral está pasando el tráfico reciente &mdash; no solo si alertó o no, sino cuánto margen hubo. La línea marca el umbral operativo.</p>
     <div class="spark-wrap">
-      <svg id="histogram" width="100%" height="90" viewBox="0 0 610 90" preserveAspectRatio="none"></svg>
+      <svg id="histogram" role="img" aria-label="Histograma de scores recientes con el umbral"></svg>
       <p class="toolbar-hint" id="histogramHint"></p>
     </div>
   </section>
@@ -1366,15 +1376,26 @@ function renderHistogram(data) {
     hint.textContent = 'Sin scores recientes para graficar (solo hay decisiones del heurístico de ventana vacía).';
     return;
   }
-  const w = 610, h = 90, padBottom = 16;
-  const maxCount = Math.max(...data.buckets.map(b => b.count), 1);
-  const bw = w / data.buckets.length;
-  const base = h - padBottom;
+  // Lienzo en pixeles reales: el texto no se deforma y caben ejes de verdad.
+  const w = Math.max(320, svg.clientWidth || 900), h = 190;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const X0 = 46, X1 = w - 10, Y0 = 22, base = h - 28;
+  const maxCount = ejeBonito(Math.max(...data.buckets.map(b => b.count), 1));
+  const bw = (X1 - X0) / data.buckets.length;
+  const coma = (v, d) => v.toFixed(d).split('.').join(',');
   let bars = '';
   let bajoUmbral = 0;
+  const thresholdX = X0 + ((data.threshold - data.min) / (data.max - data.min)) * (X1 - X0);
+  // Zona de anomalia (a la izquierda del umbral) y rejilla con el conteo.
+  bars += `<rect x="${X0}" y="${Y0}" width="${Math.max(0, thresholdX - X0).toFixed(1)}" height="${base - Y0}" fill="var(--danger)" fill-opacity="0.06"/>`;
+  [0, maxCount / 2, maxCount].forEach(c => {
+    const y = base - c / maxCount * (base - Y0);
+    bars += `<text x="${X0 - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end">${c.toLocaleString('es')}</text>`;
+    bars += `<line x1="${X0}" y1="${y.toFixed(1)}" x2="${X1}" y2="${y.toFixed(1)}" stroke="var(--border)"${c ? ' stroke-dasharray="2 4"' : ''}/>`;
+  });
   data.buckets.forEach((b, i) => {
-    const barH = b.count > 0 ? Math.max(3, (b.count / maxCount) * (base - 4)) : 0;
-    const x = i * bw;
+    const barH = b.count > 0 ? Math.max(3, (b.count / maxCount) * (base - Y0)) : 0;
+    const x = X0 + i * bw;
     // Rojo: cubo enteramente en zona ALERT (por debajo del umbral). Verde:
     // enteramente en zona PERMIT. Ambar: el cubo cruza el umbral -- scores
     // ahi mezclan ambas decisiones, la zona mas interesante para mirar.
@@ -1384,24 +1405,40 @@ function renderHistogram(data) {
     // Barra con tope redondeado (spec de marcas) y, encima, un area invisible de
     // toda la altura como diana de hover: el <title> da el tooltip nativo sin
     // depender de JS -robusto, y el raton no tiene que acertar la barra fina-.
-    if (barH > 0)
-      bars += `<rect x="${x.toFixed(1)}" y="${(base - barH).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${barH.toFixed(1)}" rx="2" fill="${color}"/>`;
-    bars += `<rect x="${x.toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${base}" fill="transparent">`
+    if (barH > 0) {
+      bars += `<rect x="${(x + 1).toFixed(1)}" y="${(base - barH).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${barH.toFixed(1)}" rx="2" fill="${color}"/>`;
+      // El conteo encima de la barra, si cabe: se lee sin pasar el raton.
+      if (bw >= 22) bars += `<text x="${(x + bw / 2).toFixed(1)}" y="${(base - barH - 4).toFixed(1)}" text-anchor="middle" style="fill:var(--text)">${b.count}</text>`;
+    }
+    bars += `<rect x="${x.toFixed(1)}" y="${Y0}" width="${bw.toFixed(1)}" height="${base - Y0}" fill="transparent">`
       + `<title>score ${b.lo.toFixed(3)} a ${b.hi.toFixed(3)} · ${b.count} ventana(s) · ${zona}</title></rect>`;
   });
-  const thresholdX = ((data.threshold - data.min) / (data.max - data.min)) * w;
-  bars += `<line x1="${thresholdX.toFixed(1)}" y1="0" x2="${thresholdX.toFixed(1)}" y2="${base}" stroke="var(--text)" stroke-width="1.3" stroke-dasharray="3 2"/>`;
-  bars += `<text x="${Math.min(w - 40, thresholdX + 4).toFixed(1)}" y="10" font-size="9" fill="var(--text)" font-family="ui-monospace, monospace">umbral ${data.threshold.toFixed(2)}</text>`;
-  // Eje X: score minimo y maximo, para que las barras tengan escala.
-  bars += `<text x="2" y="${h - 3}" font-size="9" fill="var(--text-dim)" font-family="ui-monospace, monospace">${data.min.toFixed(2)}</text>`;
-  bars += `<text x="${w - 2}" y="${h - 3}" font-size="9" fill="var(--text-dim)" text-anchor="end" font-family="ui-monospace, monospace">${data.max.toFixed(2)}</text>`;
+  bars += `<line x1="${thresholdX.toFixed(1)}" y1="${Y0 - 8}" x2="${thresholdX.toFixed(1)}" y2="${base}" stroke="var(--text)" stroke-width="1.3" stroke-dasharray="4 3"/>`;
+  const derecha = thresholdX < w - 150;
+  bars += `<text x="${(thresholdX + (derecha ? 6 : -6)).toFixed(1)}" y="${Y0 - 9}" text-anchor="${derecha ? 'start' : 'end'}" style="fill:var(--text)">umbral ${coma(data.threshold, 3)}</text>`;
+  bars += `<text x="${X0 + 4}" y="${Y0 - 9}" style="fill:var(--danger)">← anomalía</text>`;
+  // Eje X: cinco marcas de score entre el minimo y el maximo observados.
+  for (let i = 0; i <= 4; i++) {
+    const v = data.min + (data.max - data.min) * i / 4, x = X0 + (X1 - X0) * i / 4;
+    bars += `<line x1="${x.toFixed(1)}" y1="${base}" x2="${x.toFixed(1)}" y2="${base + 3}" stroke="var(--border)"/>`;
+    bars += `<text x="${x.toFixed(1)}" y="${h - 8}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${coma(v, 3)}</text>`;
+  }
   svg.innerHTML = bars;
   const pct = data.n ? Math.round(100 * bajoUmbral / data.n) : 0;
   window._histResumen = { pct: pct, n: data.n, bajoUmbral: bajoUmbral };
   // La misma escala del histograma la reusa la mini-barra de la tabla.
   window._escalaScore = { min: data.min, max: data.max, umbral: data.threshold };
-  hint.textContent = `${data.n} score(s) real(es) · ${bajoUmbral} (${pct}%) por debajo del umbral. `
-    + `Pasa el ratón por una barra para ver su rango. Rojo = ALERT, ámbar = cruza el umbral, verde = PERMIT.`;
+  // Referencia: la fraccion que quedo bajo el umbral al calibrar (FPR del
+  // manifiesto). Si lo de ahora la dobla, se dice; no es un veredicto, es un aviso.
+  const ref = window._fprRef;
+  const real = data.n ? 100 * bajoUmbral / data.n : 0;
+  let comp = '';
+  if (ref != null && data.n) {
+    comp = ` En la calibración fue el ${coma(ref * 100, 2)} %`
+      + (real > 2 * ref * 100 && bajoUmbral >= 5 ? ': ahora hay más del doble.' : '.');
+  }
+  hint.textContent = `${data.n} ventanas puntuadas · ${bajoUmbral} (${coma(real, 1)} %) bajo el umbral.${comp} `
+    + `Rojo, anomalía; ámbar, la barra cruza el umbral; verde, normal.`;
 }
 
 async function loadActivity(range) {
@@ -1586,6 +1623,7 @@ async function refresh() {
     const histogramData = await histRes.json();
     stamp.textContent = 'Actualizado ' + new Date().toLocaleTimeString();
 
+    window._fprRef = status.model ? status.model.test_fpr : null;
     renderHistogram(histogramData);
     renderKpis(status);
     renderHealthbar(status.services, status.counters, status.capture_metrics, status.calibracion, status.modo);
@@ -4126,6 +4164,58 @@ function aprTarjeta(titulo, valor, cls, sub) {
     '<div class="value">' + valor + '</div><div class="sub">' + sub + '</div></div>';
 }
 
+// Serie diaria con el limite de la politica. Un punto por noche; lo que falta
+// (null) no se une con una linea que afirmaria un valor intermedio.
+function graficoDias(svg, dias, series, limites, fmt) {
+  if (!svg) return;
+  const W = Math.max(280, svg.clientWidth || 420), H = 170;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  if (!dias.length) {
+    svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">Sin mediciones todavía</text>`;
+    return;
+  }
+  const X0 = 52, X1 = W - 14, Y0 = 22, Y1 = H - 26;
+  let hi = 0;
+  series.forEach(s => s.valores.forEach(v => { if (v != null && v > hi) hi = v; }));
+  limites.forEach(l => { if (l.valor != null && l.valor > hi) hi = l.valor; });
+  hi = hi * 1.18 || 1;
+  const px = i => dias.length === 1 ? (X0 + X1) / 2 : X0 + i / (dias.length - 1) * (X1 - X0);
+  const py = v => Y1 - v / hi * (Y1 - Y0);
+  let g = `<line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1}" stroke="var(--border)"/><line x1="${X0}" y1="${Y1}" x2="${X1}" y2="${Y1}" stroke="var(--border)"/>`;
+  [0, hi / 2, hi].forEach(v => {
+    g += `<text x="${X0 - 6}" y="${(py(v) + 3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`;
+    if (v) g += `<line x1="${X0}" y1="${py(v).toFixed(1)}" x2="${X1}" y2="${py(v).toFixed(1)}" stroke="var(--border)" stroke-dasharray="2 4"/>`;
+  });
+  limites.forEach(l => {
+    if (l.valor == null) return;
+    const y = py(l.valor).toFixed(1);
+    g += `<line x1="${X0}" y1="${y}" x2="${X1}" y2="${y}" stroke="var(--danger)" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+    g += `<text x="${X1}" y="${(py(l.valor) - 4).toFixed(1)}" text-anchor="end" style="fill:var(--danger)">${l.etq}</text>`;
+  });
+  series.forEach((s, k) => {
+    let tramo = [];
+    const cerrar = () => {
+      if (tramo.length > 1) g += `<polyline points="${tramo.join(' ')}" fill="none" stroke="${s.color}" stroke-width="1.6" stroke-linejoin="round"/>`;
+      tramo = [];
+    };
+    s.valores.forEach((v, i) => {
+      if (v == null) { cerrar(); return; }
+      tramo.push(px(i).toFixed(1) + ',' + py(v).toFixed(1));
+    });
+    cerrar();
+    s.valores.forEach((v, i) => {
+      if (v == null) return;
+      g += `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="3.2" fill="${s.colores ? s.colores[i] : s.color}"><title>${dias[i]} · ${s.nombre} ${fmt(v)}</title></circle>`;
+    });
+    g += `<circle cx="${X0 + 6 + k * 100}" cy="9" r="3.2" fill="${s.color}"/><text x="${X0 + 14 + k * 100}" y="12">${s.nombre}</text>`;
+  });
+  const marcas = dias.length > 2 ? [0, Math.floor((dias.length - 1) / 2), dias.length - 1] : dias.map((d, i) => i);
+  marcas.forEach((i, n) => {
+    g += `<text x="${px(i).toFixed(1)}" y="${H - 8}" text-anchor="${n === 0 ? 'start' : (n === marcas.length - 1 && marcas.length > 1 ? 'end' : 'middle')}">${String(dias[i]).slice(5)}</text>`;
+  });
+  svg.innerHTML = g;
+}
+
 function renderAprendizaje(e) {
   aprEstado = e;                     // lo leen tambien los nodos de la topologia
   const pie = document.getElementById('aprPie');
@@ -4207,6 +4297,19 @@ function renderAprendizaje(e) {
       : '<tr class="empty-row"><td colspan="7">Sin lotes todavía</td></tr>') + '</table>';
 
   const medidas = der.filter(d => d.fpr_oro !== undefined);
+  const ult = lotes.slice(-30), med = medidas.slice(-30);
+  graficoDias(document.getElementById('aprGLote'), ult.map(l => l.dia),
+    [{ nombre: 'PSI máx', color: 'var(--accent)', valores: ult.map(l => l.psi_max),
+       colores: ult.map(l => l.estado === 'rechazado' ? 'var(--danger)' : 'var(--accent)') }],
+    [{ valor: p.psi_rechazo_lote, etq: 'rechazo ' + p.psi_rechazo_lote }], v => v.toFixed(2).split('.').join(','));
+  graficoDias(document.getElementById('aprGPsi'), med.map(d => d.dia),
+    [{ nombre: 'PSI', color: 'var(--accent)', valores: med.map(d => d.psi_puntuaciones),
+       colores: med.map(d => d.senal ? 'var(--amber)' : 'var(--accent)') }],
+    [{ valor: p.psi_alerta, etq: 'alerta ' + p.psi_alerta }], v => v.toFixed(2).split('.').join(','));
+  graficoDias(document.getElementById('aprGTasa'), med.map(d => d.dia),
+    [{ nombre: 'FPR en oro', color: 'var(--ok)', valores: med.map(d => d.fpr_oro) },
+     { nombre: 'anómalo', color: 'var(--accent)', valores: med.map(d => d.tasa_anomala_lote) }],
+    [{ valor: p.tasa_anomala_max, etq: 'máx. ' + aprPct(p.tasa_anomala_max) }], v => (v * 100).toFixed(1).split('.').join(',') + ' %');
   document.getElementById('aprDeriva').innerHTML = '<table><tr><th>Día</th><th>FPR en oro</th>' +
     '<th>PSI de scores</th><th>Anómalo en el lote</th><th>ALERT del motor</th><th>Señal</th></tr>' +
     (medidas.length ? medidas.slice(-10).reverse().map(d => '<tr><td class="num">' + d.dia + '</td>' +
@@ -6012,7 +6115,8 @@ def main() -> int:
                 return
             if path == "/api/score-histogram":
                 decisions = read_decisions(args.log_path, limit=500)
-                self._send_json(histogram_scores(decisions, model_summary["threshold"]))
+                self._send_json(histogram_scores(decisions, model_summary["threshold"],
+                                                 num_buckets=24))
                 return
             if path == "/api/archivo":
                 # Modo desarrollador: muestra el CONTENIDO de un script del
