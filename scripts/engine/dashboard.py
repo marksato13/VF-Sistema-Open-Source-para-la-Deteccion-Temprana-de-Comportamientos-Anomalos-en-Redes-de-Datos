@@ -3800,6 +3800,13 @@ on('topoExpandir', 'click', () => {
 document.addEventListener('fullscreenchange', () => {
   const dentro = !!document.fullscreenElement;
   document.getElementById('topoExpandirTxt').textContent = dentro ? 'Salir' : 'Expandir';
+  // Si el visor esta abierto al entrar o salir de pantalla completa, recolocarlo
+  // para que siga viendose (dentro del elemento expandido, o de vuelta al body).
+  const m = document.getElementById('codeModal');
+  if (m && !m.hidden) {
+    const destino = document.fullscreenElement || document.body;
+    if (m.parentElement !== destino) destino.appendChild(m);
+  }
   // En pantalla completa cabe la vista detallada: se cambia sola la primera vez.
   if (dentro && topoVista === 'esencial') {
     topoVista = 'completa';
@@ -4141,8 +4148,24 @@ const GUIA_CODIGO = {
 
 // Modo desarrollador: modal de dos paneles. Izquierda el codigo real con sus
 // numeros de linea; derecha la explicacion y el pseudocodigo enlazado.
+// El visor es un overlay a nivel de body. En pantalla completa el navegador
+// solo pinta el subarbol del elemento expandido (#topoWrap), asi que la modal
+// se MUEVE dentro de el al abrirse y vuelve al body al cerrarse.
+function modalAlFrente() {
+  const m = document.getElementById('codeModal');
+  const destino = document.fullscreenElement || document.body;
+  if (m.parentElement !== destino) destino.appendChild(m);
+  return m;
+}
+function cerrarModal() {
+  const m = document.getElementById('codeModal');
+  if (!m) return;
+  m.hidden = true;
+  if (m.parentElement !== document.body) document.body.appendChild(m);
+}
+
 async function verCodigo(ruta, que) {
-  const modal = document.getElementById('codeModal');
+  const modal = modalAlFrente();
   const nombre = nombreFichero(ruta);
   document.getElementById('codeTitle').textContent = nombre;
   document.getElementById('codeSub').textContent = ruta;
@@ -4197,10 +4220,10 @@ on('codePseudo', 'click', (ev) => {
     obj.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 });
-on('codeClose', 'click', () => { document.getElementById('codeModal').hidden = true; });
-on('codeModal', 'click', (ev) => { if (ev.target.id === 'codeModal') ev.currentTarget.hidden = true; });
+on('codeClose', 'click', cerrarModal);
+on('codeModal', 'click', (ev) => { if (ev.target.id === 'codeModal') cerrarModal(); });
 document.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Escape') { const m = document.getElementById('codeModal'); if (m) m.hidden = true; }
+  if (ev.key === 'Escape') cerrarModal();
 });
 
 on('topo', 'click', (ev) => {
