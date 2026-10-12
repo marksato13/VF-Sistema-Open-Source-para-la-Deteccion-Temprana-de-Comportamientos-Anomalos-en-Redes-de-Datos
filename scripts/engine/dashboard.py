@@ -127,6 +127,13 @@ HTML = """<!doctype html>
 
   .wrap { max-width: 1080px; margin: 0 auto; padding: 1.6rem 1.4rem 4rem; }
   section { scroll-margin-top: 1rem; }
+  /* Navegacion por paginas: una seccion a la vez, asi el menu de la izquierda y
+     el contenido de la derecha SIEMPRE coinciden. La activa lleva .pag-activa.
+     El atributo hidden (modo operativo) gana: misma especificidad, declarado
+     despues, para que una seccion de desarrollo oculta no reaparezca. */
+  .wrap > section[id] { display: none; }
+  .wrap > section[id].pag-activa { display: block; }
+  .wrap > section[id][hidden] { display: none; }
 
   @media (max-width: 900px) {
     /* En movil se apila: bloque, no grid. Con una sola columna de grid y dos
@@ -1267,8 +1274,7 @@ function avisar(nuevas) {
       if (ev.target.closest('.t-x')) { el.remove(); return; }
       const f = document.getElementById('ipFilter');
       if (f) { f.value = g.ip; decVista = 'todas'; pintarDecVista(); renderDecisionsTable(); }
-      const s = document.getElementById('s-decisiones');
-      if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (typeof mostrarSeccion === 'function') mostrarSeccion('s-decisiones');
       el.remove();
     });
     cont.prepend(el);
@@ -1571,6 +1577,9 @@ function tourShow() {
     + `</div></div>`;
   tip.style.display = 'block';
   if (el) {
+    // Con paginado, el paso puede apuntar a otra seccion: se abre antes.
+    const secPaso = el.closest('.wrap > section[id]');
+    if (secPaso && typeof mostrarSeccion === 'function') mostrarSeccion(secPaso.id, false);
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => {
       const r = el.getBoundingClientRect();
@@ -1997,7 +2006,7 @@ on('histTabla', 'click', (ev) => {
   if (!tr) return;
   document.getElementById('ipFilter').value = tr.dataset.ip;
   decVista = 'todas'; pintarDecVista(); renderDecisionsTable();
-  document.getElementById('s-decisiones').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  mostrarSeccion('s-decisiones');
 });
 
 function renderTopIps() {
@@ -2027,7 +2036,7 @@ on('topIps', 'click', (ev) => {
   if (!tr) return;
   document.getElementById('ipFilter').value = tr.dataset.ip;
   decVista = 'todas'; pintarDecVista(); renderDecisionsTable();
-  document.getElementById('s-decisiones').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  mostrarSeccion('s-decisiones');
 });
 
 // Vista de la tabla: por omision solo lo que pidio una accion; «Todas» incluye
@@ -3704,20 +3713,38 @@ function renderSidebar(status) {
   pill.textContent = alertas;
 }
 
-const secciones = [...document.querySelectorAll('section[id]')];
+// --- Navegacion por paginas: una seccion a la vez --------------------------
+// Antes todo era una sola pagina larga y el menu solo hacia scroll (con un
+// scrollspy que al desplazarse no cuadraba con lo que se veia). Ahora al pulsar
+// el menu se muestra SOLO esa seccion, como paginas, y el enlace activo siempre
+// coincide con el contenido. Respeta el atributo hidden del modo operativo.
 const enlaces = new Map([...document.querySelectorAll('#nav a[data-sec]')].map(a => [a.dataset.sec, a]));
-const spy = new IntersectionObserver((entradas) => {
-  // Se marca la seccion mas alta que este visible, no la ultima que cruzo el
-  // umbral: al desplazarse rapido, varias entran a la vez.
-  const visibles = entradas.filter(e => e.isIntersecting)
-    .map(e => e.target.id)
-    .sort((a, b) => secciones.findIndex(s => s.id === a) - secciones.findIndex(s => s.id === b));
-  if (!visibles.length) return;
-  enlaces.forEach(a => a.classList.remove('active'));
-  const activo = enlaces.get(visibles[0]);
-  if (activo) activo.classList.add('active');
-}, { rootMargin: '-10% 0px -70% 0px', threshold: 0 });
-secciones.forEach(s => spy.observe(s));
+const seccionesPag = new Map([...document.querySelectorAll('.wrap > section[id]')].map(s => [s.id, s]));
+function primeraVisible() {
+  for (const [id, s] of seccionesPag) { if (!s.hidden) return id; }
+  return seccionesPag.keys().next().value;
+}
+function mostrarSeccion(id, subir) {
+  const sec = seccionesPag.get(id);
+  if (!sec || sec.hidden) id = primeraVisible();
+  seccionesPag.forEach((s, k) => s.classList.toggle('pag-activa', k === id));
+  enlaces.forEach((a, k) => a.classList.toggle('active', k === id));
+  try { history.replaceState(null, '', '#' + id); } catch (e) { /* sin hash */ }
+  if (subir !== false) window.scrollTo({ top: 0, behavior: 'auto' });
+}
+// Un solo delegado cubre el menu y los enlaces de contenido (p.ej. "Ver en
+// vivo" del diagrama), todos con href="#s-...".
+document.addEventListener('click', (ev) => {
+  const a = ev.target.closest('a[href^="#s-"]');
+  if (!a) return;
+  const id = (a.getAttribute('href') || '').slice(1);
+  if (!seccionesPag.has(id)) return;
+  ev.preventDefault();
+  mostrarSeccion(id);
+});
+// Seccion inicial: la del hash si es valida y visible; si no, la primera visible.
+const hashInicial = (location.hash || '').slice(1);
+mostrarSeccion(seccionesPag.has(hashInicial) ? hashInicial : primeraVisible());
 
 refresh();
 // ---- Variables por capa ---------------------------------------------------
@@ -4593,6 +4620,12 @@ function aplicarModo(modo) {
     b.textContent = dev ? 'Modo desarrollo' : 'Modo operativo';
   }
   try { localStorage.setItem('cyberflow_modo', modo); } catch (e) { /* sin persistir */ }
+  // Si la seccion que se veia quedo oculta al pasar a operativo, saltar a una
+  // visible para no dejar el contenido en blanco.
+  if (typeof mostrarSeccion === 'function') {
+    const activa = [...seccionesPag.values()].find(s => s.classList.contains('pag-activa'));
+    if (!activa || activa.hidden) mostrarSeccion(primeraVisible(), false);
+  }
 }
 
 document.getElementById('quien').textContent = SESION.usuario + ' · ' + SESION.rol;
