@@ -815,7 +815,7 @@ HTML = """<!doctype html>
         <g font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="13" fill="#dce8f5">
           <rect x="10" y="30" width="190" height="72" rx="10" fill="#15202c" stroke="#3a5169"/>
           <text x="105" y="60" text-anchor="middle" font-weight="600">Entrada común</text>
-          <text x="105" y="80" text-anchor="middle" fill="#9fb2c4" font-size="12">mismo PCAP · config. fija</text>
+          <text x="105" y="80" text-anchor="middle" fill="#9fb2c4" font-size="12">ataques · Nikto · tramo normal</text>
           <rect x="10" y="150" width="190" height="72" rx="10" fill="#2a1d12" stroke="#b5741b"/>
           <text x="105" y="180" text-anchor="middle" font-weight="600">Referencia</text>
           <text x="105" y="200" text-anchor="middle" fill="#e8c9a4" font-size="12">guion y orquestador</text>
@@ -842,6 +842,7 @@ HTML = """<!doctype html>
     </div>
     <div class="tbl-wrap"><table><thead><tr><th>Familia</th><th>Suricata</th><th>Solo modelo</th><th>Solo heurísticos</th><th>CyberFlow</th></tr></thead><tbody id="cmpTabla"></tbody></table></div>
     <p class="toolbar-hint">Celda: episodios detectados / medidos · latencia mediana [mín–máx]. CyberFlow lee eventos de EVE, no alertas de Suricata. En SPAN, Suricata es IDS: se compara detección, no bloqueo.</p>
+    <p class="toolbar-hint"><span class="badge heur">ejecutada</span> Batería N=3 por familia, con el mismo PCAP y la configuración fija. <span class="badge">propuesta</span> Campaña C3: N=5 por familia, fuerza bruta, tráfico legítimo intenso y 2 h de tráfico normal con los falsos positivos de Suricata medidos.</p>
     <ul class="cmp-notas" id="cmpNotas"></ul>
   </section>
 
