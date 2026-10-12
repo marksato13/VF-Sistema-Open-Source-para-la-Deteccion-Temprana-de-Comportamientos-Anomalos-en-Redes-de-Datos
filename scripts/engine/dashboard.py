@@ -816,12 +816,16 @@ HTML = """<!doctype html>
   </header>
 
   <div class="toasts" id="toasts" aria-live="polite"></div>
-  <div class="kpi-row" id="kpis"></div>
-  <div class="healthbar" id="healthbar"></div>
-  <div class="pulso" id="pulso" aria-label="Pulso de la ingesta"></div>
 
+  <!-- El resumen (KPIs, barra de salud y pulso) vive en la pagina Salud, no
+       como franja repetida en todas: antes se veia identico en cada seccion y
+       daba sensacion de que "todo mostraba lo mismo". El estado sigue siempre a
+       la vista en la barra lateral (punto + texto + pastilla de alertas). -->
   <section id="s-salud">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><circle cx="7" cy="7" r="0.9" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg><h2>Salud del sistema</h2></div>
+    <div class="kpi-row" id="kpis"></div>
+    <div class="healthbar" id="healthbar"></div>
+    <div class="pulso" id="pulso" aria-label="Pulso de la ingesta"></div>
     <div class="grid" id="health"></div>
   </section>
 
