@@ -149,15 +149,19 @@ HTML = """<!doctype html>
   .topo-zoom #topoNivel { min-width: 38px; text-align: center; }
   .topo-scroll { overflow: auto; flex: 1; min-height: 0; max-height: 82vh; }
   .topo-scroll svg { display: block; }
-  /* Zoom por seccion: un boton por fase que encuadra ese grupo. */
-  .topo-fases { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }
-  .topo-fases .lbl { font: 0.72rem var(--mono); color: var(--text-dim); margin-right: 0.15rem; }
-  .topo-fases button {
-    font: 600 0.76rem var(--sans); line-height: 1; min-width: 22px;
-    background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border);
-    border-radius: 6px; padding: 0.25rem 0.5rem; cursor: pointer;
-  }
-  .topo-fases button:hover { border-color: var(--accent); color: var(--accent); }
+  /* Vista "Validacion": una tabla, no un diagrama. */
+  .topo-tabla { display: none; padding: 0.4rem 0.2rem 0.8rem; }
+  .topo-tabla table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .topo-tabla th { text-align: left; font: 600 0.72rem var(--mono); letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-dim); padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--border); }
+  .topo-tabla td { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .topo-tabla td:first-child { font-weight: 700; color: var(--text); }
+  .topo-tabla .falta { display: block; color: var(--text-dim); font-size: 0.78rem; }
+  .val-est { display: inline-block; font: 700 0.74rem var(--mono); padding: 0.16rem 0.55rem;
+    border-radius: 999px; border: 1px solid var(--border); }
+  .val-est.c { color: var(--ok); border-color: var(--ok); }
+  .val-est.p { color: var(--amber); border-color: var(--amber); }
+  .val-est.n { color: var(--text-dim); }
 
   /* Pantalla completa: el diagrama manda y el detalle se queda al lado. */
   .topo-wrap:fullscreen { background: var(--bg); padding: 1rem; gap: 1rem; height: 100%; grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
@@ -192,6 +196,17 @@ HTML = """<!doctype html>
   .topo-edge.live { stroke: var(--accent); stroke-dasharray: 5 6; animation: flow 1.1s linear infinite; }
   .topo-edge.dim { stroke: color-mix(in srgb, var(--text-dim) 45%, var(--border)); stroke-dasharray: 3 5; }
   .topo-edge.descarte { stroke: var(--danger); opacity: 0.55; stroke-dasharray: 2 4; animation: none; }
+  /* Conectores por naturaleza, para las vistas que no dependen del estado vivo. */
+  .topo-edge.fijo { stroke: var(--accent); }
+  .topo-edge.copia { stroke: var(--amber); stroke-dasharray: 6 4; }
+  .topo-edge.previsto { stroke: var(--text-dim); stroke-dasharray: 3 5; opacity: 0.75; }
+  .topo-edge.retorno { stroke: var(--text-dim); stroke-dasharray: 5 4; }
+  .topo-edge.persona { stroke: var(--ok); }
+  .topo-edge.enlace { stroke: color-mix(in srgb, var(--text-dim) 60%, var(--border)); }
+  .topo-node.acc-limit .box { stroke: var(--amber); }
+  .topo-node.acc-block .box { stroke: var(--danger); }
+  .topo-node.acc-limit .ico { color: var(--amber); }
+  .topo-node.acc-block .ico { color: var(--danger); }
   @keyframes flow { to { stroke-dashoffset: -22; } }
   @media (prefers-reduced-motion: reduce) { .topo-edge.live { animation: none; } }
   .topo-edge-label { fill: var(--text); font: 600 10px var(--mono); }
@@ -657,7 +672,7 @@ HTML = """<!doctype html>
   <nav id="nav">
     <a href="#s-salud" data-sec="s-salud"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>Salud</a>
     <!--ADMIN-->
-    <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Topología</a>
+    <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Mapa</a>
     <a href="#s-variables" data-sec="s-variables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg>Variables</a>
     <a href="#s-vivo" data-sec="s-vivo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 2-6 2 3h6"/></svg>Datos en vivo</a>
     <a href="#s-modelo" data-sec="s-modelo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>Modelo</a>
@@ -699,15 +714,19 @@ HTML = """<!doctype html>
 
   <!--ADMIN-->
   <section id="s-topologia">
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg><h2>Topología y flujo</h2></div>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg><h2>Mapa del sistema</h2></div>
     <p class="lede-small">Pulsa un componente para ver su detalle.</p>
     <div class="topo-wrap" id="topoWrap">
       <div class="topo-canvas" id="topoCanvas">
         <div class="topo-bar">
           <div class="range-toggle" id="topoVista">
+            <button data-vista="red">Red y captura</button>
             <button data-vista="completa" class="active">Operacional</button>
+            <button data-vista="decision">Decisión</button>
+            <button data-vista="respuesta">Respuesta</button>
             <button data-vista="construccion">Construcción y entrenamiento</button>
             <button data-vista="metodologica">Fases del método</button>
+            <button data-vista="validacion">Validación</button>
           </div>
           <div class="topo-zoom">
             <button id="topoMenos" title="Reducir" aria-label="Reducir">&minus;</button>
@@ -715,7 +734,6 @@ HTML = """<!doctype html>
             <button id="topoMas" title="Ampliar" aria-label="Ampliar">+</button>
             <button id="topoReset" title="Ver todo el diagrama" aria-label="Ver todo el diagrama">Ajustar</button>
           </div>
-          <div class="topo-fases" id="topoFases"></div>
           <button id="topoArchivosBtn" class="export-btn" title="Muestra los ficheros que usa cada componente" aria-pressed="false">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6l2 3h8v13H4Z"/></svg>
             <span>Ver archivos</span>
@@ -730,7 +748,8 @@ HTML = """<!doctype html>
           </button>
         </div>
         <div class="topo-scroll" id="topoScroll">
-          <svg id="topo" role="img" aria-label="Diagrama de arquitectura y flujo de CyberFlow"></svg>
+          <svg id="topo" role="img" aria-label="Mapa del sistema CyberFlow"></svg>
+          <div class="topo-tabla" id="topoTabla"></div>
         </div>
       </div>
       <div class="topo-detail" id="topoDetail"></div>
@@ -1339,7 +1358,7 @@ function on(id, evento, fn) {
 const TOUR_PASOS = [
   { sel: '#kpis', t: 'Las cifras clave', d: 'Cuatro números de un vistazo: entidades vigiladas, ventanas analizadas por hora, cuántos scores rozan el umbral y las alertas reales de la última hora.' },
   { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo y heurísticos → decisión → respuesta en el host. Pulsa cualquier componente para ver qué hace.' },
-  { sel: '#topoVista', t: 'Tres vistas', d: 'Operacional, Construcción y entrenamiento, y Fases del método.' },
+  { sel: '#topoVista', t: 'Siete vistas', d: 'De la red a la validación: cada botón es un diagrama del mismo sistema.' },
   { sel: '#topoArchivosBtn', t: 'Código auditable', d: 'En modo desarrollador, pulsa Ver archivos, elige un componente y un archivo; en su ficha pulsa ◎ Ver contenido. El visor es de solo lectura y solo muestra rutas permitidas.' },
   { sel: '#s-modelo', t: 'El detector activo y su umbral', d: 'El detector desplegado aprende la normalidad de esta red; el umbral se fijó con validación. Aquí ves el modelo activo y sus métricas, no una etiqueta fija de OCSVM.' },
   { sel: '#pruebasPrevias', t: 'Pruebas previas', d: 'Siete modelos se compararon en el estudio; la ablación sobre nueve episodios separa modelo solo (6), heurísticos solos (7) y ambos combinados (9). No confundas el 9/9 del sistema con el modelo solo.' },
@@ -1769,11 +1788,12 @@ const TOPO_VISTAS = {
       { id: 'modelo',    x: 1060, y: 158, w: 176, h: 58, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
       { id: 'heuristicos', x: 1060, y: 276, w: 176, h: 58, icono: 'reglas', titulo: 'Heurísticos',     tag: 'DETERMINISTAS' },
       { id: 'control',   x: 1336, y: 158, w: 176, h: 58, icono: 'decision', titulo: 'Decisión',        tag: 'PERMIT · ALERT → LIMIT/BLOCK' },
-      { id: 'feed',      x: 1336, y: 256, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',     tag: 'ed25519' },
-      { id: 'agente',    x: 1336, y: 354, w: 176, h: 58, icono: 'escudo', titulo: 'Agente en host',   tag: 'nftables LIMIT/BLOCK' },
+      { id: 'feed',      x: 1336, y: 246, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',     tag: 'ed25519 · CADA 60 s' },
+      { id: 'relay',     x: 1336, y: 334, w: 176, h: 52, icono: 'espejo', titulo: 'Relay (bastión)',   val: 'réplica · cada 60 s' },
+      { id: 'agente',    x: 1336, y: 416, w: 176, h: 58, icono: 'escudo', titulo: 'Agente en host',   tag: 'PULL 60 s · nftables' },
       { id: 'registro',  x: 1592, y: 160, w: 176, h: 46, icono: 'fichero', titulo: 'motor_decision.log', tag: 'ARTEFACTO', clase: 'artefacto' },
       { id: 'panel',     x: 1592, y: 256, w: 176, h: 52, icono: 'ojo',    titulo: 'Este panel',        tag: 'SOLO LECTURA' },
-      { id: 'wazuh',     x: 1592, y: 352, w: 176, h: 52, icono: 'ojo',    titulo: 'Wazuh (SIEM)',      tag: 'CONCENTRADOR' },
+      { id: 'wazuh',     x: 1592, y: 352, w: 176, h: 52, icono: 'ojo',    titulo: 'Wazuh (SIEM)',      tag: 'PREVISTO', clase: 'artefacto' },
     ],
     aristas: [
       { d: 'M200,94 L286,90',                       desde: 'atacante', hasta: 'red', etiqueta: 'ataca',    ex: 243, ey: 82 },
@@ -1796,42 +1816,48 @@ const TOPO_VISTAS = {
       { d: 'M1148,128 L1148,158',                   desde: 'reentrenamiento', hasta: 'modelo', etiqueta: 'promover', ex: 1186, ey: 143 },
       { d: 'M1236,187 L1336,187',                   desde: 'modelo',   hasta: 'control', etiqueta: 'score &lt; umbral', ex: 1286, ey: 178 },
       { d: 'M1236,305 C1290,300 1302,196 1336,192', desde: 'heuristicos', hasta: 'control', etiqueta: 'confirmado', ex: 1290, ey: 250 },
-      { d: 'M1424,216 L1424,256',                   desde: 'control',  hasta: 'feed', etiqueta: 'veredicto firmado', ex: 1424, ey: 243 },
-      { d: 'M1424,314 L1424,354',                   desde: 'feed',     hasta: 'agente', etiqueta: 'pull + verifica', ex: 1424, ey: 337 },
+      { d: 'M1424,216 L1424,246',                   desde: 'control',  hasta: 'feed' },
+      { d: 'M1424,304 L1424,334',                   desde: 'feed',     hasta: 'relay' },
+      { d: 'M1424,386 L1424,416',                   desde: 'relay',    hasta: 'agente', tipo: 'fijo' },
       { d: 'M1512,187 C1550,185 1562,184 1592,183', desde: 'control',  hasta: 'registro', etiqueta: 'cada decisión', ex: 1552, ey: 175 },
       { d: 'M1680,206 L1680,256',                   desde: 'registro', hasta: 'panel', etiqueta: 'lee', ex: 1698, ey: 234 },
-      { d: 'M1660,206 C1585,270 1585,330 1660,352', desde: 'registro', hasta: 'wazuh', etiqueta: 'syslog', ex: 1642, ey: 336 },
+      { d: 'M1660,206 C1585,270 1585,330 1660,352', desde: 'registro', hasta: 'wazuh', tipo: 'previsto', etiqueta: 'syslog', ex: 1642, ey: 336 },
     ],
   },
   // --- Vista METODOLOGICA: como se CONSTRUYO (las 7 fases del metodo) -------
   metodologica: {
-    w: 1632, h: 300,
-    packet: 'M32,149 L1608,149',
+    w: 1632, h: 330,
+    packet: 'M32,109 L1608,109',
     grupos: [
-      { x: 20,   y: 20, w: 210, h: 240, txt: 'Datos y línea base',  n: 1 },
-      { x: 250,  y: 20, w: 210, h: 240, txt: 'Preproceso y features', n: 2 },
-      { x: 480,  y: 20, w: 210, h: 240, txt: 'Modelado híbrido',    n: 3 },
-      { x: 710,  y: 20, w: 210, h: 240, txt: 'Experimento y eval.', n: 4 },
-      { x: 940,  y: 20, w: 210, h: 240, txt: 'Respuesta',           n: 5 },
-      { x: 1170, y: 20, w: 210, h: 240, txt: 'Despliegue',          n: 6 },
-      { x: 1400, y: 20, w: 210, h: 240, txt: 'Validación',          n: 7 },
+      { x: 20,   y: 20, w: 210, h: 150, txt: 'Datos y línea base',  n: 1 },
+      { x: 250,  y: 20, w: 210, h: 150, txt: 'Preproceso y features', n: 2 },
+      { x: 480,  y: 20, w: 210, h: 150, txt: 'Modelado híbrido',    n: 3 },
+      { x: 710,  y: 20, w: 210, h: 150, txt: 'Experimento y eval.', n: 4 },
+      { x: 940,  y: 20, w: 210, h: 150, txt: 'Respuesta',           n: 5 },
+      { x: 1170, y: 20, w: 210, h: 150, txt: 'Despliegue',          n: 6 },
+      { x: 1400, y: 20, w: 210, h: 150, txt: 'Validación',          n: 7 },
     ],
+    // val = estado de la fase; las tres vueltas atras van anidadas por debajo
+    // (la mas corta arriba) para que no se crucen.
     nodos: [
-      { id: 'm_datos',  x: 32,   y: 118, w: 196, h: 62, icono: 'disco',    titulo: 'Línea base real',       tag: 'SPAN · PCAP · eve' },
-      { id: 'm_feat',   x: 262,  y: 118, w: 196, h: 62, icono: 'tabla',    titulo: '28 features L3/L4/L7',  tag: 'extractor congelado' },
-      { id: 'm_modelo', x: 492,  y: 118, w: 196, h: 62, icono: 'modelo',   titulo: 'IF + heurísticos',      tag: 'híbrido' },
-      { id: 'm_eval',   x: 722,  y: 118, w: 196, h: 62, icono: 'lupa',     titulo: 'Replay vs Suricata',    tag: '9/9 vs 0/9' },
-      { id: 'm_resp',   x: 952,  y: 118, w: 196, h: 62, icono: 'escudo',   titulo: 'PERMIT/LIMIT/BLOCK',    tag: 'feed firmado' },
-      { id: 'm_desp',   x: 1182, y: 118, w: 196, h: 62, icono: 'nic',      titulo: 'Desplegado en sensor',  tag: 'systemd · replicable' },
-      { id: 'm_valid',  x: 1412, y: 118, w: 196, h: 62, icono: 'ojo',      titulo: 'Interna + externa',     tag: 'demo · TAM' },
+      { id: 'm_datos',  x: 32,   y: 78, w: 196, h: 62, icono: 'disco',    titulo: 'Línea base real',       tag: 'SPAN · PCAP · eve', val: 'hecho' },
+      { id: 'm_feat',   x: 262,  y: 78, w: 196, h: 62, icono: 'tabla',    titulo: '28 variables L3/L4/L7', tag: 'extractor congelado', val: 'hecho' },
+      { id: 'm_modelo', x: 492,  y: 78, w: 196, h: 62, icono: 'modelo',   titulo: 'IF + heurísticos',      tag: 'θ = −0,568892', val: 'hecho' },
+      { id: 'm_eval',   x: 722,  y: 78, w: 196, h: 62, icono: 'lupa',     titulo: 'Replay vs Suricata',    tag: '9/9 vs 0/9 · N=3', val: 'parcial · falta C3' },
+      { id: 'm_resp',   x: 952,  y: 78, w: 196, h: 62, icono: 'escudo',   titulo: 'PERMIT/LIMIT/BLOCK',    tag: 'feed firmado', val: 'hecho' },
+      { id: 'm_desp',   x: 1182, y: 78, w: 196, h: 62, icono: 'nic',      titulo: 'Desplegado en sensor',  tag: 'systemd · replicable', val: 'hecho' },
+      { id: 'm_valid',  x: 1412, y: 78, w: 196, h: 62, icono: 'ojo',      titulo: 'Interna + externa',     tag: 'demo · TAM · expertos', val: 'en curso' },
     ],
     aristas: [
-      { d: 'M228,149 L262,149',   desde: 'm_datos',  hasta: 'm_feat' },
-      { d: 'M458,149 L492,149',   desde: 'm_feat',   hasta: 'm_modelo' },
-      { d: 'M688,149 L722,149',   desde: 'm_modelo', hasta: 'm_eval' },
-      { d: 'M918,149 L952,149',   desde: 'm_eval',   hasta: 'm_resp' },
-      { d: 'M1148,149 L1182,149', desde: 'm_resp',   hasta: 'm_desp' },
-      { d: 'M1378,149 L1412,149', desde: 'm_desp',   hasta: 'm_valid' },
+      { d: 'M228,109 L262,109',   desde: 'm_datos',  hasta: 'm_feat',   tipo: 'fijo' },
+      { d: 'M458,109 L492,109',   desde: 'm_feat',   hasta: 'm_modelo', tipo: 'fijo' },
+      { d: 'M688,109 L722,109',   desde: 'm_modelo', hasta: 'm_eval',   tipo: 'fijo' },
+      { d: 'M918,109 L952,109',   desde: 'm_eval',   hasta: 'm_resp',   tipo: 'fijo' },
+      { d: 'M1148,109 L1182,109', desde: 'm_resp',   hasta: 'm_desp',   tipo: 'fijo' },
+      { d: 'M1378,109 L1412,109', desde: 'm_desp',   hasta: 'm_valid',  tipo: 'fijo' },
+      { d: 'M790,140 L790,196 L640,196 L640,140',     desde: 'm_eval',  hasta: 'm_modelo', tipo: 'retorno', etiqueta: 'recalibrar', ex: 715, ey: 190 },
+      { d: 'M1280,140 L1280,240 L560,240 L560,140',   desde: 'm_desp',  hasta: 'm_modelo', tipo: 'persona', etiqueta: 'reentrenar con aprobación humana', ex: 920, ey: 234 },
+      { d: 'M1510,140 L1510,286 L360,286 L360,140',   desde: 'm_valid', hasta: 'm_feat',   tipo: 'retorno', etiqueta: 'observaciones → mejoras', ex: 935, ey: 280 },
     ],
   },
   // --- Vista CONSTRUCCION Y ENTRENAMIENTO: de los datos al modelo congelado
@@ -1861,10 +1887,10 @@ const TOPO_VISTAS = {
       { id: 'c_acum',    x: 808,  y: 252, w: 200, h: 64, icono: 'fichero',  titulo: 'Acumulación',          tag: 'temporizador · v3', val: 'cada 10 min' },
       { id: 'c_vivo',    x: 552,  y: 252, w: 200, h: 64, icono: 'escudo',   titulo: 'Motor en vivo',        tag: 'PERMIT · ALERT · BLOCK', val: 'marca IPs sospechosas' },
       { id: 'a_oro',     x: 40,   y: 432, w: 176, h: 64, icono: 'disco',    titulo: 'Conjunto de oro',      tag: 'FIJO · NUNCA ENTRENA', val: 'test de la nota L', clase: 'artefacto' },
-      { id: 'a_san',     x: 256,  y: 432, w: 176, h: 64, icono: 'tijera',   titulo: '① Saneamiento',        tag: 'LOTE DEL DÍA', val: 'fuera lo marcado y atípico' },
-      { id: 'a_lin',     x: 472,  y: 432, w: 176, h: 64, icono: 'fichero',  titulo: '② Linaje',             tag: 'SHA256 ENCADENADO', val: 'registro.jsonl', clase: 'artefacto' },
-      { id: 'a_der',     x: 688,  y: 432, w: 176, h: 64, icono: 'lupa',     titulo: '④ Deriva',             tag: 'CONTRA EL ORO', val: 'PSI · % anómalo' },
-      { id: 'a_inf',     x: 904,  y: 432, w: 176, h: 64, icono: 'modelo',   titulo: '③ Candidato',          tag: 'LÍMITE DE INFLUENCIA', val: 'nuevo ≤ 30 % · IP ≤ 10 %' },
+      { id: 'a_san',     x: 256,  y: 432, w: 176, h: 64, icono: 'tijera',   titulo: '1 · Saneamiento',        tag: 'LOTE DEL DÍA', val: 'fuera lo marcado y atípico' },
+      { id: 'a_lin',     x: 472,  y: 432, w: 176, h: 64, icono: 'fichero',  titulo: '2 · Linaje',             tag: 'SHA256 ENCADENADO', val: 'registro.jsonl', clase: 'artefacto' },
+      { id: 'a_der',     x: 688,  y: 432, w: 176, h: 64, icono: 'lupa',     titulo: '4 · Deriva',             tag: 'CONTRA EL ORO', val: 'PSI · % anómalo' },
+      { id: 'a_inf',     x: 904,  y: 432, w: 176, h: 64, icono: 'modelo',   titulo: '3 · Candidato',          tag: 'LÍMITE DE INFLUENCIA', val: 'nuevo ≤ 30 % · IP ≤ 10 %' },
       { id: 'a_ver',     x: 1120, y: 432, w: 176, h: 64, icono: 'decision', titulo: 'Veredicto',            tag: 'MISMOS CONJUNTOS', val: 'FPR ≤ · detección ≥' },
       { id: 'a_hum',     x: 1332, y: 432, w: 176, h: 64, icono: 'ojo',      titulo: 'Aprobación humana',    tag: 'PROMOVER · REVERTIR', val: 'con copia del .toml' },
     ],
@@ -1891,7 +1917,160 @@ const TOPO_VISTAS = {
       { d: 'M1420,432 L1420,316', desde: 'a_hum',    hasta: 'c_cong', etiqueta: 'promover: modelo nuevo', ex: 1476, ey: 374 },
     ],
   },
+  // --- Vista RED Y CAPTURA: por donde va el trafico de prueba y por donde
+  // llega su copia al sensor. Reusa los nodos vivos (span, nic, captura,
+  // suricata) para que el estado sea el real. El recorrido de prueba y la copia
+  // SPAN llevan estilos distintos: el sensor no esta en el recorrido.
+  red: {
+    w: 1480, h: 480,
+    packet: 'M200,84 L330,240 L400,216 L400,118 L456,118 L456,216 L330,250 L200,240',
+    grupos: [
+      { x: 12,  y: 32,  w: 200, h: 146, txt: 'VLAN 20 · usuarios' },
+      { x: 12,  y: 190, w: 200, h: 86,  txt: 'VLAN 30 · DMZ' },
+      { x: 12,  y: 288, w: 200, h: 146, txt: 'VLAN 10 · gestión' },
+      { x: 740, y: 32,  w: 720, h: 430, txt: 'Host ESXi · 172.17.25.2' },
+    ],
+    nodos: [
+      { id: 'atacante',  x: 24,  y: 60,  w: 176, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',  host: true, ip: '10.10.20.30',     desc: '' },
+      { id: 'clientes',  x: 24,  y: 118, w: 176, h: 48, icono: 'red',    titulo: 'Clientes',         host: true, ip: '10.10.20.21-.26', desc: '' },
+      { id: 'servidor',  x: 24,  y: 216, w: 176, h: 48, icono: 'disco',  titulo: 'srv-dmz · objetivo', host: true, ip: '10.10.30.10',   desc: '' },
+      { id: 'r_bastion', x: 24,  y: 316, w: 176, h: 48, icono: 'ojo',    titulo: 'VM-GESTION',       host: true, ip: '10.10.10.30',     desc: '' },
+      { id: 'r_dns',     x: 24,  y: 374, w: 176, h: 48, icono: 'red',    titulo: 'DNS / AD',         host: true, ip: '10.10.10.20',     desc: '' },
+      { id: 'gateway',   x: 330, y: 70,  w: 196, h: 48, icono: 'escudo', titulo: 'pfSense A/B',      host: true, ip: 'enruta entre VLAN', desc: '' },
+      { id: 'span',      x: 330, y: 216, w: 196, h: 58, icono: 'espejo', titulo: 'CORE-STACK',       tag: 'NO ENRUTA · ESPEJA' },
+      { id: 'r_pg',      x: 760, y: 70,  w: 240, h: 58, icono: 'nic',    titulo: 'PG-CYBERFLOW-SPAN', tag: 'GRUPO DE PUERTOS', val: 'modo promiscuo' },
+      { id: 'nic',       x: 760, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor1 · ens37',  tag: 'SIN IP · 10.10.60.11' },
+      { id: 'r_sensor2', x: 990, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor2 · ens37',  tag: 'RÉPLICA · 10.10.60.12', val: 'recibe la misma copia' },
+      { id: 'r_cmp',     x: 1220, y: 200, w: 216, h: 58, icono: 'lupa',  titulo: 'VM-SURICATA',      tag: 'COMPARADOR · 10.10.60.13', val: 'recepción por comprobar', clase: 'artefacto' },
+      { id: 'captura',   x: 760, y: 340, w: 176, h: 58, icono: 'captura', titulo: 'tcpdump',         tag: 'ANILLO PCAP' },
+      { id: 'suricata',  x: 970, y: 340, w: 176, h: 58, icono: 'lupa',   titulo: 'Suricata',         tag: 'eve.json' },
+    ],
+    aristas: [
+      { d: 'M200,84 C270,84 270,232 330,232',     desde: 'atacante', hasta: 'span',     tipo: 'fijo', etiqueta: '1 · generado', ex: 262, ey: 76 },
+      { d: 'M200,142 C262,142 268,240 330,240',   desde: 'clientes', hasta: 'span',     tipo: 'fijo' },
+      { d: 'M400,216 L400,118',                   desde: 'span',     hasta: 'gateway',  tipo: 'fijo' },
+      { d: 'M456,118 L456,216',                   desde: 'gateway',  hasta: 'span',     tipo: 'fijo', etiqueta: '2 · troncales Gi1/0/23 · Gi2/0/23', ex: 606, ey: 170 },
+      { d: 'M330,252 C280,252 260,240 200,240',   desde: 'span',     hasta: 'servidor', tipo: 'fijo', etiqueta: '3 · recibido', ex: 268, ey: 268 },
+      { d: 'M200,340 C290,340 340,320 380,274',   desde: 'r_bastion', hasta: 'span',    tipo: 'enlace' },
+      { d: 'M526,245 C650,245 640,99 760,99',     desde: 'span',     hasta: 'r_pg',     tipo: 'copia', etiqueta: 'copia SPAN · Gi2/0/19', ex: 640, ey: 150 },
+      { d: 'M858,128 L858,200',                   desde: 'r_pg',     hasta: 'nic',      tipo: 'copia' },
+      { d: 'M940,128 C940,170 1088,160 1088,200', desde: 'r_pg',     hasta: 'r_sensor2', tipo: 'copia' },
+      { d: 'M1000,99 C1328,99 1328,140 1328,200', desde: 'r_pg',     hasta: 'r_cmp',    tipo: 'previsto' },
+      { d: 'M848,258 L848,340',                   desde: 'nic',      hasta: 'captura',  etiqueta: '4 · observado', ex: 800, ey: 304 },
+      { d: 'M880,258 C880,300 1058,296 1058,340', desde: 'nic',      hasta: 'suricata' },
+    ],
+  },
+  // --- Vista DECISION: dos niveles. El motor decide cada ventana; el publicador
+  // combina por IP cada 60 s sobre los ultimos 120 s y fija la caducidad.
+  // Fuentes: motor_decision.py, heuristicos.py, publicar_feed.py, escalada.py.
+  decision: {
+    w: 1560, h: 520,
+    packet: 'M230,149 L330,99 L630,99 L1060,140 L1160,174 L140,330 L240,359 L820,359 L920,388 L1140,440',
+    grupos: [
+      { x: 12, y: 32,  w: 1536, h: 236, txt: 'Motor · decide cada ventana', n: 1 },
+      { x: 12, y: 296, w: 1536, h: 112, txt: 'Publicador · cada 60 s, últimos 120 s, por IP', n: 2 },
+    ],
+    nodos: [
+      { id: 'variables',   x: 40,   y: 120, w: 190, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s', tag: 'POR IP Y VENTANA' },
+      { id: 'descartes',   x: 40,   y: 204, w: 190, h: 48, icono: 'tijera', titulo: 'IP excluida',      tag: 'SE CUENTA · NO SE PUNTÚA', clase: 'sumidero' },
+      { id: 'modelo',      x: 330,  y: 70,  w: 200, h: 58, icono: 'modelo', titulo: 'Isolation Forest', tag: 'SOLO CON PAQUETES' },
+      { id: 'heuristicos', x: 330,  y: 170, w: 200, h: 58, icono: 'reglas', titulo: 'Heurísticos',      tag: 'TAMBIÉN SIN PAQUETES (L7)' },
+      { id: 'd_alert',     x: 630,  y: 70,  w: 200, h: 58, icono: 'decision', titulo: 'ALERT del modelo', tag: 's(x) < −0,568892', val: 'pasa a LIMIT' },
+      { id: 'd_reglas',    x: 630,  y: 170, w: 300, h: 58, icono: 'reglas', titulo: 'Regla disparada',  tag: 'ABUSO HTTP · DNS → LIMIT', val: 'fuerza bruta · escaneo → BLOCK' },
+      { id: 'registro',    x: 1060, y: 124, w: 200, h: 50, icono: 'fichero', titulo: 'motor_decision.log', tag: 'IP · VENTANA · SCORE · REGLA', clase: 'artefacto' },
+      { id: 'd_nunca',     x: 40,   y: 330, w: 200, h: 58, icono: 'tijera', titulo: 'Nunca bloquear',   tag: 'FILTRO', val: 'bastión · sensor · DNS' },
+      { id: 'd_severa',    x: 300,  y: 330, w: 200, h: 58, icono: 'decision', titulo: 'La más severa',  tag: 'POR IP', val: 'BLOCK > LIMIT' },
+      { id: 'd_escalera',  x: 560,  y: 330, w: 200, h: 58, icono: 'ciclo',  titulo: 'Escalera',         tag: 'REINCIDENCIA EN 24 h', val: '300 → 1800 → 3600 s' },
+      { id: 'feed',        x: 820,  y: 330, w: 200, h: 58, icono: 'fichero', titulo: 'Feed firmado',    tag: 'CON VERSIÓN DE UMBRALES' },
+      { id: 'd_permit',    x: 560,  y: 440, w: 200, h: 58, icono: 'ojo',    titulo: 'PERMIT',           val: 'sin entrada en el feed' },
+      { id: 'd_limit',     x: 820,  y: 440, w: 200, h: 58, icono: 'ciclo',  titulo: 'LIMIT',            val: 'tasa limitada · 300 s', clase: 'acc-limit' },
+      { id: 'd_block',     x: 1080, y: 440, w: 240, h: 58, icono: 'escudo', titulo: 'BLOCK',            tag: 'REVISIÓN HUMANA DESDE EL 3.º', val: '300 · 1800 · 3600 s', clase: 'acc-block' },
+    ],
+    aristas: [
+      { d: 'M135,178 L135,204',                      desde: 'variables',   hasta: 'descartes',  tipo: 'descarte' },
+      { d: 'M230,149 C280,149 280,99 330,99',        desde: 'variables',   hasta: 'modelo',     etiqueta: '28 variables', ex: 276, ey: 106 },
+      { d: 'M230,149 C280,149 280,199 330,199',      desde: 'variables',   hasta: 'heuristicos', etiqueta: '+ conteos', ex: 280, ey: 204 },
+      { d: 'M530,99 L630,99',                        desde: 'modelo',      hasta: 'd_alert',    etiqueta: 'score &lt; umbral', ex: 580, ey: 90 },
+      { d: 'M530,199 L630,199',                      desde: 'heuristicos', hasta: 'd_reglas',   tipo: 'fijo' },
+      { d: 'M830,99 C960,99 950,140 1060,140',       desde: 'd_alert',     hasta: 'registro',   tipo: 'fijo' },
+      { d: 'M930,199 C1000,199 990,158 1060,158',    desde: 'd_reglas',    hasta: 'registro',   tipo: 'fijo' },
+      { d: 'M1160,174 C1160,300 140,236 140,330',    desde: 'registro',    hasta: 'd_nunca',    tipo: 'fijo', etiqueta: 'decisiones por ventana', ex: 660, ey: 286 },
+      { d: 'M240,359 L300,359',                      desde: 'd_nunca',     hasta: 'd_severa',   tipo: 'fijo' },
+      { d: 'M500,359 L560,359',                      desde: 'd_severa',    hasta: 'd_escalera', tipo: 'fijo' },
+      { d: 'M760,359 L820,359',                      desde: 'd_escalera',  hasta: 'feed',       tipo: 'fijo' },
+      { d: 'M900,388 C900,416 660,412 660,440',      desde: 'feed',        hasta: 'd_permit',   tipo: 'previsto' },
+      { d: 'M920,388 L920,440',                      desde: 'feed',        hasta: 'd_limit',    tipo: 'fijo' },
+      { d: 'M940,388 C940,416 1200,412 1200,440',    desde: 'feed',        hasta: 'd_block',    tipo: 'fijo' },
+    ],
+  },
+  // --- Vista RESPUESTA: del veredicto a la regla en el host y a su retirada.
+  // Los tres tiempos se miden desde el inicio del ataque con el reloj del sensor
+  // (docs/evidencias/tiempos-2026-10-06.md).
+  respuesta: {
+    w: 1560, h: 350,
+    packet: 'M40,139 L1286,139 L1198,230',
+    grupos: [
+      { x: 12,   y: 32, w: 510, h: 290, txt: 'Sensor',         n: 1 },
+      { x: 560,  y: 32, w: 240, h: 290, txt: 'Bastión',        n: 2 },
+      { x: 830,  y: 32, w: 480, h: 290, txt: 'Host protegido', n: 3 },
+      { x: 1340, y: 32, w: 208, h: 290, txt: 'Persona',        n: 4 },
+    ],
+    nodos: [
+      { id: 'control',    x: 40,   y: 110, w: 176, h: 58, icono: 'decision', titulo: 'Decisión',     tag: 'DETECCIÓN ~2–40 s' },
+      { id: 'feed',       x: 320,  y: 110, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',  tag: 'DECISIÓN 17–18 s (N=2)' },
+      { id: 'relay',      x: 592,  y: 110, w: 176, h: 58, icono: 'espejo',  titulo: 'Relay',         tag: 'RÉPLICA', val: 'cada 60 s' },
+      { id: 'agente',     x: 860,  y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'Agente',        tag: 'VERIFICA LA FIRMA' },
+      { id: 'p_nft',      x: 1110, y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'nftables',      tag: 'RESPUESTA 51–141 s', val: 'LIMIT · BLOCK', clase: 'acc-block' },
+      { id: 'p_noaplica', x: 860,  y: 230, w: 176, h: 58, icono: 'tijera',  titulo: 'Firma inválida', tag: 'LO VIGENTE CADUCA', val: 'no aplica nada', clase: 'sumidero' },
+      { id: 'p_caduca',   x: 1110, y: 230, w: 176, h: 58, icono: 'ciclo',   titulo: 'Caduca sola',   tag: 'TIMEOUT DEL SET', val: '300 · 1800 · 3600 s' },
+      { id: 'p_manual',   x: 1356, y: 110, w: 176, h: 58, icono: 'ojo',     titulo: 'Retirada manual', tag: 'UNA PERSONA', val: 'nft delete element' },
+    ],
+    aristas: [
+      { d: 'M216,139 L320,139',   desde: 'control', hasta: 'feed',       etiqueta: 'cada 60 s', ex: 268, ey: 130 },
+      { d: 'M496,139 L592,139',   desde: 'feed',    hasta: 'relay',      tipo: 'fijo', etiqueta: 'cada 60 s', ex: 544, ey: 130 },
+      { d: 'M768,139 L860,139',   desde: 'relay',   hasta: 'agente',     tipo: 'fijo', etiqueta: 'pull · 60 s', ex: 814, ey: 130 },
+      { d: 'M1036,139 L1110,139', desde: 'agente',  hasta: 'p_nft',      tipo: 'fijo', etiqueta: 'válida', ex: 1073, ey: 130 },
+      { d: 'M948,168 L948,230',   desde: 'agente',  hasta: 'p_noaplica', tipo: 'descarte' },
+      { d: 'M1198,168 L1198,230', desde: 'p_nft',   hasta: 'p_caduca',   tipo: 'fijo' },
+      { d: 'M1356,139 L1286,139', desde: 'p_manual', hasta: 'p_nft',     tipo: 'persona', etiqueta: 'retira', ex: 1322, ey: 130 },
+    ],
+  },
+  // --- Vista VALIDACION: una tabla (requisito, prueba, evidencia, estado), no
+  // un diagrama. La pinta validacionHTML().
+  validacion: { w: 1200, h: 420, tabla: true, packet: '', grupos: [], nodos: [], aristas: [] },
 };
+
+// Matriz de validacion interna. Cada estado cita la nota que lo respalda; un
+// parcial dice que falta. Al cambiar un estado, cambiarlo aqui y en la figura
+// VI-7 (orquestacion: diagramas-vistas-gui/drawio/gen_vi7.py).
+const VALIDACION = [
+  ['Instalación offline', 'Desde cero en una VM limpia', 'doctor.sh OK a los 30 min · nota R', 'c', ''],
+  ['Captura y extracción', 'PCAP + EVE → 28 variables', 'Espejo sin descartes · notas B y D', 'c', ''],
+  ['Decisión híbrida', 'Score, regla y motivo por ventana', 'Registro de decisiones · nota 31', 'c', ''],
+  ['Respuesta distribuida', 'Feed firmado → nftables', 'Escaneo bloqueado · notas O y 26', 'p', 'falta fuerza bruta'],
+  ['Acceso por roles', 'admin y lector', '401 sin sesión, sin HTTP en claro · nota R', 'p', 'falta el ingreso por navegador'],
+  ['Reentrenamiento', 'Lote → candidato → evaluación', 'Oro, linaje y lote rechazado · nota S', 'p', 'sin candidato real'],
+  ['Reversión', 'Caducidad y retirada manual', 'Escalera en pruebas unitarias', 'p', 'falta registro en vivo'],
+  ['Comparación con Suricata', 'Mismo PCAP, cuatro condiciones', 'Batería N=3 · notas 26, 28 y 31', 'p', 'C3 propuesta · nota 33'],
+  ['Tres tiempos', 'Detección, decisión, respuesta', 'Mediciones del 06-oct (N=3 y N=2)', 'c', 'N pequeño'],
+];
+const VAL_NOMBRE = { c: 'Cumplido', p: 'Parcial', n: 'Pendiente' };
+
+function validacionHTML() {
+  const filas = VALIDACION.map(f =>
+    `<tr><td>${f[0]}</td><td>${f[1]}</td><td>${f[2]}</td>` +
+    `<td><span class="val-est ${f[3]}">${VAL_NOMBRE[f[3]]}</span>` +
+    (f[4] ? `<span class="falta">${f[4]}</span>` : '') + '</td></tr>').join('');
+  return '<table><thead><tr><th>Requisito</th><th>Prueba</th><th>Evidencia</th><th>Estado</th></tr></thead>'
+    + `<tbody>${filas}</tbody></table>`;
+}
+
+function validacionDetalleHTML() {
+  const n = k => VALIDACION.filter(f => f[3] === k).length;
+  return '<h3>Validación interna</h3>'
+    + `<dl><dt>Cumplidos</dt><dd>${n('c')}</dd><dt>Parciales</dt><dd>${n('p')}</dd><dt>Pendientes</dt><dd>${n('n')}</dd></dl>`
+    + '<p class="dim">Cada estado cita su evidencia. TAM y juicio de expertos van en la validación externa.</p>';
+}
 
 let topoVista = 'completa';
 // Ultimo estado de /api/aprendizaje (lo llena cargarAprendizaje). Los nodos del
@@ -1913,7 +2092,7 @@ const TOPO_TEXTO = {
   span: {
     que: 'La sesión de espejo del conmutador copia el troncal del cortafuegos hacia el puerto del sensor.',
     nota: 'Desde el sensor no se puede leer el estado de la sesión: se infiere de que lleguen paquetes. Si deja de llegar tráfico, el problema puede estar aquí y el panel no lo distingue de una red en silencio.',
-    cmd: 'monitor session 1 source interface Gi1/0/20 , Gi2/0/20 both\\nmonitor session 1 destination interface Gi1/0/48 encapsulation replicate\\n! Gi1/0/20 y Gi2/0/20: troncales al hipervisor A (172.17.25.3)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
+    cmd: 'monitor session 1 source interface Gi1/0/23 , Gi2/0/23 both\\nmonitor session 1 destination interface Gi2/0/19 encapsulation replicate\\n! Gi1/0/23 y Gi2/0/23: troncales de pfSense A/B\\n! Gi2/0/19: hacia el hipervisor del sensor (172.17.25.2)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
   },
   atacante: {
     que: 'La VM Kali (10.10.20.30). Genera los ataques del ensayo: escaneo, nikto, flood HTTP y ARP spoofing.',
@@ -2058,6 +2237,77 @@ const TOPO_TEXTO = {
   panel: {
     que: 'Lee el registro del motor, el estado de los servicios y la tabla nftables. No ejecuta ninguna acción.',
     nota: 'Solo lectura a propósito. Un panel que pudiera desbloquear una IP sería otro camino hacia el cortafuegos, y con su propia superficie de ataque.',
+  },
+  relay: {
+    que: 'El bastión copia el feed firmado del sensor a la red interna. Los hosts lo traen de aquí: nunca hablan con el sensor.',
+    nota: 'Es uno de los tres temporizadores de 60 s (publicador, relay, agente) que dominan el tiempo de respuesta.',
+  },
+  // ---- Vista RED Y CAPTURA ----
+  r_bastion: {
+    que: 'La máquina de gestión. Desde aquí se administra el sensor y aquí corre el relay del feed.',
+    nota: 'Está en la lista «nunca bloquear».',
+  },
+  r_dns: {
+    que: 'El DNS y directorio de la red. Las consultas DNS de las pruebas van contra esta máquina.',
+    nota: 'Está en la lista «nunca bloquear»: cortarlo dejaría sin resolver a toda la red.',
+  },
+  r_pg: {
+    que: 'El grupo de puertos del hipervisor que recibe la copia del puerto Gi2/0/19. En modo promiscuo la entrega a toda máquina virtual conectada.',
+    nota: 'Por eso un solo puerto destino del espejo alimenta a varios sensores.',
+  },
+  r_sensor2: {
+    que: 'El segundo sensor, instalado desde cero para probar que el sistema se replica. Cuelga del mismo grupo de puertos.',
+  },
+  r_cmp: {
+    que: 'La máquina reservada para comparar con Suricata. Está conectada al grupo de puertos, pero su interfaz de captura estaba apagada.',
+    nota: 'La comparación publicada se hizo reproduciendo el mismo PCAP, no con esta máquina en vivo.',
+  },
+  // ---- Vista DECISION ----
+  d_alert: {
+    que: 'Una ventana con paquetes cuyo score queda por debajo del umbral. El modelo no bloquea: su alerta se traduce en LIMIT.',
+    nota: 'Sin paquetes en la ventana el modelo no puntúa, para no alertar por silencio de red.',
+  },
+  d_reglas: {
+    que: 'Cuatro reglas versionadas. Fuerza bruta y escaneo de puertos piden BLOCK; abuso HTTP y DNS de alta entropía piden LIMIT.',
+    nota: 'Sus umbrales son criterio razonado, no calibración estadística como el umbral del modelo.',
+  },
+  d_nunca: {
+    que: 'Antes de combinar, el publicador descarta la infraestructura: bastión, sensor, gateways y DNS.',
+    nota: 'Pase lo que pase en el motor, esas direcciones no llegan al feed.',
+  },
+  d_severa: {
+    que: 'Por cada IP se queda con el veredicto más severo de los últimos 120 s: BLOCK gana a LIMIT.',
+  },
+  d_escalera: {
+    que: 'La caducidad crece con la reincidencia en 24 h: 300 s, luego 1800 s, luego 3600 s. LIMIT es siempre 300 s.',
+    nota: 'Desde el tercer BLOCK la entrada queda marcada para revisión humana. Nunca hay bloqueo automático indefinido.',
+  },
+  d_permit: {
+    que: 'Sin señal del modelo ni de las reglas, la IP no entra al feed y no se le aplica nada.',
+  },
+  d_limit: {
+    que: 'Limitación de tasa durante 300 s. Degrada sin cortar: es la respuesta cuando la señal es ambigua.',
+  },
+  d_block: {
+    que: 'Corte del tráfico de esa IP hacia el host, con caducidad de 300, 1800 o 3600 s según la reincidencia.',
+    nota: 'Desde el tercer bloqueo, revisión humana.',
+  },
+  // ---- Vista RESPUESTA ----
+  p_nft: {
+    que: 'La regla ya aplicada en el núcleo del host protegido. Es el final del tiempo de respuesta.',
+    nota: 'Medido desde el inicio del ataque: entre 51 y 141 s. Lo dominan los tres temporizadores de 60 s, no el cómputo.',
+  },
+  p_noaplica: {
+    que: 'Si la firma del feed no verifica, el agente no toca nada.',
+    nota: 'Lo que ya estaba aplicado no se borra: caduca a su hora.',
+  },
+  p_caduca: {
+    que: 'Cada entrada vive en un conjunto de nftables con caducidad propia. Al vencer, el núcleo la retira solo.',
+  },
+  p_manual: {
+    que: 'Una persona puede retirar una entrada antes de que caduque.',
+    cmd: 'nft delete element inet <tabla> <conjunto> { <ip> }',
+    nota: 'El panel no lo hace: es de solo lectura a propósito.',
   },
   // ---- Vista METODOLOGICA (como se construyo) ----
   m_datos: {
@@ -2440,6 +2690,16 @@ function renderTopologia(status) {
   topoUltimo = status;
   const v = TOPO_VISTAS[topoVista];
   const svg = document.getElementById('topo');
+  const tabla = document.getElementById('topoTabla');
+  if (v.tabla) {
+    svg.style.display = 'none';
+    tabla.style.display = 'block';
+    tabla.innerHTML = validacionHTML();
+    document.getElementById('topoDetail').innerHTML = validacionDetalleHTML();
+    return;
+  }
+  svg.style.display = '';
+  tabla.style.display = 'none';
   const est = {};
   for (const n of v.nodos) {
     est[n.id] = topoEstado(n.id, status);
@@ -2462,16 +2722,18 @@ function renderTopologia(status) {
   // Un aviso -por ejemplo, umbral sin calibrar- no interrumpe el flujo, asi
   // que no apaga la arista; solo un servicio caido lo hace. La rama de
   // descarte nunca se anima: no es el camino del dato, es donde se queda.
+  const PUNTA = ' marker-end="url(#topoPunta)"';
   const aristas = v.aristas.map(e => {
-    if (e.tipo === 'descarte') {
-      return `<path class="topo-edge descarte" d="${e.d}"/>` +
-             (e.etiqueta ? `<text class="topo-edge-label" x="${e.ex}" y="${e.ey}" text-anchor="middle">${e.etiqueta}</text>` : '');
+    const label = e.etiqueta
+      ? `<text class="topo-edge-label" x="${e.ex}" y="${e.ey}" text-anchor="middle">${e.etiqueta}</text>` : '';
+    // Con tipo, el conector dice su naturaleza (copia, previsto, persona...) y
+    // no depende del estado vivo. Un enlace fisico no lleva punta.
+    if (e.tipo) {
+      return `<path class="topo-edge ${e.tipo}" d="${e.d}"${e.tipo === 'enlace' ? '' : PUNTA}/>` + label;
     }
     const vivo = est[e.desde].estado !== 'bad' && est[e.hasta].estado !== 'bad'
                  && est[e.desde].estado !== '';
-    const label = e.etiqueta
-      ? `<text class="topo-edge-label" x="${e.ex}" y="${e.ey}" text-anchor="middle">${e.etiqueta}</text>` : '';
-    return `<path class="topo-edge ${vivo ? 'live' : 'dim'}" d="${e.d}"/>` + label;
+    return `<path class="topo-edge ${vivo ? 'live' : 'dim'}" d="${e.d}"${PUNTA}/>` + label;
   }).join('');
 
   // Un punto recorre la tuberia en bucle: hace visible que el dato fluye.
@@ -2514,8 +2776,9 @@ function renderTopologia(status) {
     </g>`;
   }).join('');
 
-  svg.innerHTML = grupos + aristas + packet + hosts + nodos;
-  if (topoFasesVista !== topoVista) { renderFases(); topoFasesVista = topoVista; }
+  // La punta de flecha toma el color de su conector (context-stroke).
+  const defs = '<defs><marker id="topoPunta" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse"><path d="M0,0.8 L9.5,5 L0,9.2 Z" fill="context-stroke" stroke="none"/></marker></defs>';
+  svg.innerHTML = defs + grupos + aristas + packet + hosts + nodos;
   aplicarZoom();
   renderTopoDetalle();
 }
@@ -2552,40 +2815,6 @@ function aplicarZoom() {
 function escalaActual() {
   return topoZoom != null ? topoZoom : escalaAjuste();
 }
-
-// Zoom por seccion: encuadra un grupo (fase) y lo centra en el lienzo.
-function zoomAGrupo(g) {
-  const caja = document.getElementById('topoScroll');
-  const m = 28;
-  const esc = Math.max(0.3, Math.min(3, Math.min(
-    (caja.clientWidth - m) / g.w, (caja.clientHeight - m) / g.h)));
-  topoZoom = esc;
-  aplicarZoom();
-  caja.scrollLeft = Math.max(0, (g.x + g.w / 2) * esc - caja.clientWidth / 2);
-  caja.scrollTop = Math.max(0, (g.y + g.h / 2) * esc - caja.clientHeight / 2);
-}
-
-// Un boton por fase (solo en vistas con grupos numerados) + "Todo".
-let topoFasesVista = null;
-function renderFases() {
-  const cont = document.getElementById('topoFases');
-  if (!cont) return;
-  const grupos = (TOPO_VISTAS[topoVista].grupos || []).filter(g => g.n);
-  if (!grupos.length) { cont.innerHTML = ''; cont.style.display = 'none'; return; }
-  cont.style.display = 'flex';
-  cont.innerHTML = '<span class="lbl">Fase</span>'
-    + grupos.map(g => `<button type="button" data-fase="${g.n}" title="Encuadrar: ${g.txt}">${g.n}</button>`).join('')
-    + '<button type="button" data-fase="all" title="Ver todo el diagrama">Todo</button>';
-}
-
-on('topoFases', 'click', (ev) => {
-  const b = ev.target.closest('button[data-fase]');
-  if (!b) return;
-  const caja = document.getElementById('topoScroll');
-  if (b.dataset.fase === 'all') { topoZoom = null; aplicarZoom(); caja.scrollTop = 0; caja.scrollLeft = 0; return; }
-  const g = (TOPO_VISTAS[topoVista].grupos || []).find(x => String(x.n) === b.dataset.fase);
-  if (g) zoomAGrupo(g);
-});
 
 on('topoVista', 'click', (ev) => {
   const b = ev.target.closest('button[data-vista]');
