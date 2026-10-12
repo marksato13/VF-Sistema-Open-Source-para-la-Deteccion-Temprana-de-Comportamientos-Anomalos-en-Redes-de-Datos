@@ -64,6 +64,15 @@ HTML = """<!doctype html>
     --sans: ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
   }
   * { box-sizing: border-box; }
+  /* Barras de desplazamiento al tono del tema: la blanca del navegador cantaba
+     sobre el fondo oscuro, sobre todo en el menu lateral. */
+  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px;
+    border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); background-clip: content-box; }
+  ::-webkit-scrollbar-corner { background: transparent; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font-family: var(--sans); font-size: 15px; line-height: 1.5;
