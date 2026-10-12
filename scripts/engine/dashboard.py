@@ -149,6 +149,37 @@ HTML = """<!doctype html>
   .topo-zoom #topoNivel { min-width: 38px; text-align: center; }
   .topo-scroll { overflow: auto; flex: 1; min-height: 0; max-height: 82vh; }
   .topo-scroll svg { display: block; }
+  .apr-graf { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.8rem; margin-bottom: 1.1rem; }
+  .apr-chart { display: block; width: 100%; height: 170px; }
+  #histogram { display: block; width: 100%; height: 190px; }
+  .apr-chart text, #histogram text { font: 600 10px var(--mono); fill: var(--text-dim); }
+  /* Graficos con eje: las marcas van en HTML junto al SVG. */
+  .act-chart { display: grid; grid-template-columns: 40px 1fr; }
+  .act-y { position: relative; font: 600 10px var(--mono); color: var(--text-dim); }
+  .act-y span { position: absolute; right: 7px; transform: translateY(-50%); white-space: nowrap; }
+  .act-x { display: flex; justify-content: space-between; margin-left: 40px; padding-top: 4px;
+    font: 600 10px var(--mono); color: var(--text-dim); }
+  .act-h .th-sub { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 0.4rem; }
+  .dec-chart { margin: 0 0 0.8rem; }
+  .dec-chart svg { display: block; width: 100%; height: 170px; cursor: crosshair; }
+  .dec-chart text { font: 600 10px var(--mono); fill: var(--text-dim); }
+  tr.dec-fila { cursor: pointer; }
+  tr.dec-det td { background: var(--surface-2); padding: 0.6rem 1rem 0.8rem; }
+  .dec-det dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.45rem 1.2rem; margin: 0; }
+  .dec-det dt { font: 600 0.66rem var(--mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-dim); }
+  .dec-det dd { margin: 0.1rem 0 0; font: 600 0.82rem var(--mono); color: var(--text); overflow-wrap: anywhere; }
+  /* Pulso: lo que entra y lo que se acumula, con su edad. */
+  .pulso { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.7rem; margin: 0.2rem 0 1.3rem; }
+  .pulso-t { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.65rem 0.8rem 0.45rem; min-width: 0; }
+  .pulso-l { font: 600 0.68rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); display: flex; align-items: center; gap: 0.4rem; }
+  .pulso-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex: none; }
+  .pulso-t.ok .pulso-dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .pulso-t.warn .pulso-dot { background: var(--amber); }
+  .pulso-t.warn { border-color: color-mix(in srgb, var(--amber) 55%, var(--border)); }
+  .pulso-v { font: 700 1.35rem var(--mono); color: var(--text); margin-top: 0.2rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pulso-v small { font: 600 0.72rem var(--mono); color: var(--text-dim); margin-left: 0.3rem; }
+  .pulso-s { font-size: 0.74rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pulso-spark { width: 100%; height: 26px; display: block; margin-top: 0.25rem; }
   /* Vista "Validacion": una tabla, no un diagrama. */
   .topo-tabla { display: none; padding: 0.4rem 0.2rem 0.8rem; }
   .topo-tabla table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
@@ -409,8 +440,15 @@ HTML = """<!doctype html>
     color: var(--text-dim); background: var(--surface-2); padding: 0.4rem 0.8rem;
     border-bottom: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--cc-color, var(--border)); }
   .var-grupo b { color: var(--cc-color, var(--accent)); font-weight: 700; }
+  .var-fila .vs { display: flex; align-items: center; gap: 0.55rem; justify-content: flex-end;
+    font: 600 0.8rem var(--mono); font-variant-numeric: tabular-nums; color: var(--text); min-width: 170px; }
+  .var-fila .vs svg { width: 96px; height: 22px; flex: none; }
+  .var-fila .vs.fuera { color: var(--amber); }
+  .var-fila .vs .sin { color: var(--text-dim); font-weight: 400; }
+  .var-serie { display: block; width: 100%; height: 76px; margin: 0.2rem 0 0.5rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
   .var-fila {
-    display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; align-items: center;
+    display: grid; grid-template-columns: 1fr auto auto auto; gap: 0.6rem; align-items: center;
     width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
     background: none; border: none; border-bottom: 1px solid var(--border);
     padding: 0.55rem 0.8rem; transition: background .12s;
@@ -706,6 +744,7 @@ HTML = """<!doctype html>
   <div class="toasts" id="toasts" aria-live="polite"></div>
   <div class="kpi-row" id="kpis"></div>
   <div class="healthbar" id="healthbar"></div>
+  <div class="pulso" id="pulso" aria-label="Pulso de la ingesta"></div>
 
   <section id="s-salud">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><circle cx="7" cy="7" r="0.9" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg><h2>Salud del sistema</h2></div>
@@ -871,6 +910,12 @@ HTML = """<!doctype html>
       <div><h3 class="apr-h">Último candidato</h3><div id="aprCandidato"></div></div>
       <div><h3 class="apr-h">Política vigente</h3><div class="tbl-wrap" id="aprPolitica"></div></div>
     </div>
+    <h3 class="apr-h">Tendencia <span class="th-sub">cada punto es una noche; la línea discontinua es el límite de la política</span></h3>
+    <div class="apr-graf">
+      <div class="spark-wrap"><p class="act-h">PSI máximo del lote <span class="th-sub">por encima, el lote se rechaza</span></p><svg id="aprGLote" class="apr-chart"></svg></div>
+      <div class="spark-wrap"><p class="act-h">PSI de las puntuaciones <span class="th-sub">por encima, señal de deriva</span></p><svg id="aprGPsi" class="apr-chart"></svg></div>
+      <div class="spark-wrap"><p class="act-h">FPR en el oro y anómalo en el lote</p><svg id="aprGTasa" class="apr-chart"></svg></div>
+    </div>
     <h3 class="apr-h">Lotes diarios <span class="th-sub">saneamiento y linaje</span></h3>
     <div class="tbl-wrap" id="aprLotes"></div>
     <h3 class="apr-h">Deriva <span class="th-sub">modelo vigente frente al conjunto de oro</span></h3>
@@ -883,7 +928,7 @@ HTML = """<!doctype html>
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg><h2>Distribución de scores recientes</h2></div>
     <p class="lede-small">Qué tan cerca del umbral está pasando el tráfico reciente &mdash; no solo si alertó o no, sino cuánto margen hubo. La línea marca el umbral operativo.</p>
     <div class="spark-wrap">
-      <svg id="histogram" width="100%" height="90" viewBox="0 0 610 90" preserveAspectRatio="none"></svg>
+      <svg id="histogram" role="img" aria-label="Histograma de scores recientes con el umbral"></svg>
       <p class="toolbar-hint" id="histogramHint"></p>
     </div>
   </section>
@@ -899,15 +944,19 @@ HTML = """<!doctype html>
     <div class="grid" id="counters"></div>
     <div class="act-cols">
       <div>
-        <p class="act-h">Ventanas por minuto</p>
+        <p class="act-h">Acciones y ventanas analizadas <span class="th-sub" id="sparkRangeLabel">por minuto</span></p>
         <div class="spark-wrap">
-          <svg id="spark" width="100%" height="46" viewBox="0 0 610 46" preserveAspectRatio="none"></svg>
+          <div class="act-chart">
+            <div class="act-y" id="actY"></div>
+            <svg id="spark" width="100%" style="height:150px" viewBox="0 0 610 150" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="act-x" id="actX"></div>
           <div class="chart-tip" id="sparkTip"></div>
           <div class="spark-legend">
-            <span><i class="swatch" style="background:var(--danger)"></i>con alerta</span>
-            <span><i class="swatch" style="background:var(--accent)"></i>normal</span>
-            <span><i class="swatch" style="background:var(--border)"></i>sin tráfico</span>
-            <span id="sparkRangeLabel">&larr; hace 60 min&nbsp;&nbsp;&nbsp;ahora &rarr;</span>
+            <span><i class="swatch" style="background:var(--danger)"></i>BLOCK</span>
+            <span><i class="swatch" style="background:var(--amber)"></i>LIMIT</span>
+            <span><i class="swatch" style="background:var(--accent)"></i>ventanas analizadas</span>
+            <span>arriba, acciones · abajo, volumen</span>
           </div>
         </div>
       </div>
@@ -934,6 +983,8 @@ HTML = """<!doctype html>
       <div class="toolbar">
         <div class="range-toggle" id="decVista">
           <button data-dv="accion" class="active">Con acción</button>
+          <button data-dv="limit">LIMIT</button>
+          <button data-dv="block">BLOCK</button>
           <button data-dv="todas">Todas</button>
         </div>
         <input type="text" id="ipFilter" placeholder="Filtrar por IP..." class="ip-filter">
@@ -941,6 +992,16 @@ HTML = """<!doctype html>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7,10 12,15 17,10"/><path d="M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
           Exportar CSV
         </button>
+      </div>
+    </div>
+    <div class="spark-wrap dec-chart">
+      <svg id="decChart" role="img" aria-label="Score de cada decisión en el tiempo, con el umbral"></svg>
+      <div class="chart-tip" id="decTip"></div>
+      <div class="spark-legend">
+        <span><i class="swatch" style="background:var(--danger)"></i>BLOCK</span>
+        <span><i class="swatch" style="background:var(--amber)"></i>LIMIT</span>
+        <span><i class="swatch" style="background:var(--accent)"></i>sin acción</span>
+        <span>bajo la línea del umbral, el modelo ve anomalía · pulsa un punto para filtrar su IP · pulsa una fila para ver su detalle</span>
       </div>
     </div>
     <p class="toolbar-hint" id="filterHint"></p>
@@ -1215,28 +1276,53 @@ function _sparkCuando(b) {
   return b.offset === 0 ? 'ahora' : ('hace ' + b.offset + ' ' + _sparkData.unidad);
 }
 
+// Tope de eje redondo (1, 2, 5 x 10^n), para que las marcas se lean de un vistazo.
+function ejeBonito(v) {
+  if (v <= 4) return 4;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  const m = v / p;
+  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
+}
+
+// Dos bandas con escala propia y lineal: arriba las acciones (LIMIT y BLOCK
+// apiladas), abajo el volumen de ventanas. En una sola escala las acciones,
+// que son pocas frente al volumen, no se verian.
 function renderSparkline(activity) {
   const svg = document.getElementById('spark');
   const n = activity.length;
-  const w = 610, h = 46, bw = w / n;
+  const W = 610, H = 150, bw = W / n;
+  const A0 = 6, A1 = 52, V0 = 70, V1 = 146;
   _sparkData = { activity: activity, unidad: currentRange === '24h' ? 'h' : 'min' };
-  let bars = '';
-  activity.forEach((b, i) => {
-    const total = b.alert + b.permit;
-    const x = i * bw;
-    let color = 'var(--border)';
-    let barH = 3;
-    if (total > 0) {
-      barH = Math.max(4, Math.min(h - 2, 4 + Math.log2(total + 1) * 9));
-      color = b.alert > 0 ? 'var(--danger)' : 'var(--accent)';
-    }
-    // <title> nativo por barra: el tooltip basico funciona aunque el JS de la
-    // cruz falle. La cruz y el recuadro de abajo lo enriquecen, no lo sustituyen.
-    bars += `<rect x="${x.toFixed(1)}" y="${(h - barH).toFixed(1)}" width="${Math.max(1, bw - 1.2).toFixed(1)}" height="${barH.toFixed(1)}" rx="1" fill="${color}">`
-      + `<title>${_sparkCuando(b)} · ${b.permit} PERMIT · ${b.alert} ALERT</title></rect>`;
+  const maxV = ejeBonito(Math.max(1, ...activity.map(b => b.alert + b.permit)));
+  const maxA = ejeBonito(Math.max(1, ...activity.map(b => (b.limit || 0) + (b.block || 0))));
+  let s = '';
+  [A0, A1, V0, (V0 + V1) / 2, V1].forEach(y => {
+    const base = y === A1 || y === V1;
+    s += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="var(--border)" stroke-width="1" vector-effect="non-scaling-stroke"${base ? '' : ' stroke-dasharray="2 4"'}/>`;
   });
-  bars += `<line id="sparkCross" x1="0" y1="0" x2="0" y2="${h}" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="3 2" visibility="hidden"/>`;
-  svg.innerHTML = bars;
+  activity.forEach((b, i) => {
+    const x = (i * bw + 0.6).toFixed(1), w = Math.max(1, bw - 1.2).toFixed(1);
+    const total = b.alert + b.permit;
+    if (total > 0) {
+      const h = Math.max(1.5, total / maxV * (V1 - V0));
+      s += `<rect x="${x}" y="${(V1 - h).toFixed(1)}" width="${w}" height="${h.toFixed(1)}" fill="var(--accent)" fill-opacity="0.6"/>`;
+    }
+    const li = b.limit || 0, bl = b.block || 0;
+    const hl = li / maxA * (A1 - A0), hb = bl / maxA * (A1 - A0);
+    if (li) s += `<rect x="${x}" y="${(A1 - hl).toFixed(1)}" width="${w}" height="${hl.toFixed(1)}" fill="var(--amber)"/>`;
+    if (bl) s += `<rect x="${x}" y="${(A1 - hl - hb).toFixed(1)}" width="${w}" height="${hb.toFixed(1)}" fill="var(--danger)"/>`;
+  });
+  s += `<line id="sparkCross" x1="0" y1="0" x2="0" y2="${H}" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="3 2" vector-effect="non-scaling-stroke" visibility="hidden"/>`;
+  svg.innerHTML = s;
+  // Las marcas van en HTML: el SVG se estira a lo ancho y deformaria el texto.
+  const pct = y => (y / H * 100).toFixed(1) + '%';
+  document.getElementById('actY').innerHTML =
+    `<span style="top:${pct(A0)}">${maxA}</span><span style="top:${pct(A1)}">0</span>`
+    + `<span style="top:${pct(V0)}">${maxV.toLocaleString('es')}</span><span style="top:${pct((V0 + V1) / 2)}">${(maxV / 2).toLocaleString('es')}</span>`
+    + `<span style="top:${pct(V1)}">0</span>`;
+  const u = _sparkData.unidad, tot = n - 1;
+  document.getElementById('actX').innerHTML = [1, 0.75, 0.5, 0.25].map(f =>
+    `<span>−${Math.round(tot * f)} ${u}</span>`).join('') + '<span>ahora</span>';
 }
 
 function _sparkMove(ev) {
@@ -1254,8 +1340,9 @@ function _sparkMove(ev) {
   cross.setAttribute('x2', cx.toFixed(1));
   cross.setAttribute('visibility', 'visible');
   tip.innerHTML = `<div class="t-when">${_sparkCuando(b)}</div>`
-    + `<div><span class="t-p">PERMIT</span> <b>${b.permit}</b></div>`
-    + `<div><span class="t-a">ALERT</span> <b>${b.alert}</b></div>`;
+    + `<div><span class="t-p">ventanas</span> <b>${(b.alert + b.permit).toLocaleString('es')}</b></div>`
+    + `<div><span style="color:var(--amber)">LIMIT</span> <b>${b.limit || 0}</b></div>`
+    + `<div><span class="t-a">BLOCK</span> <b>${b.block || 0}</b></div>`;
   // Situa el recuadro sobre la barra sin salirse del contenedor. Un <svg> no
   // tiene offsetLeft (es API de HTMLElement), asi que se calcula con los rects
   // de cliente respecto al contenedor posicionado.
@@ -1289,15 +1376,26 @@ function renderHistogram(data) {
     hint.textContent = 'Sin scores recientes para graficar (solo hay decisiones del heurístico de ventana vacía).';
     return;
   }
-  const w = 610, h = 90, padBottom = 16;
-  const maxCount = Math.max(...data.buckets.map(b => b.count), 1);
-  const bw = w / data.buckets.length;
-  const base = h - padBottom;
+  // Lienzo en pixeles reales: el texto no se deforma y caben ejes de verdad.
+  const w = Math.max(320, svg.clientWidth || 900), h = 190;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const X0 = 46, X1 = w - 10, Y0 = 22, base = h - 28;
+  const maxCount = ejeBonito(Math.max(...data.buckets.map(b => b.count), 1));
+  const bw = (X1 - X0) / data.buckets.length;
+  const coma = (v, d) => v.toFixed(d).split('.').join(',');
   let bars = '';
   let bajoUmbral = 0;
+  const thresholdX = X0 + ((data.threshold - data.min) / (data.max - data.min)) * (X1 - X0);
+  // Zona de anomalia (a la izquierda del umbral) y rejilla con el conteo.
+  bars += `<rect x="${X0}" y="${Y0}" width="${Math.max(0, thresholdX - X0).toFixed(1)}" height="${base - Y0}" fill="var(--danger)" fill-opacity="0.06"/>`;
+  [0, maxCount / 2, maxCount].forEach(c => {
+    const y = base - c / maxCount * (base - Y0);
+    bars += `<text x="${X0 - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end">${c.toLocaleString('es')}</text>`;
+    bars += `<line x1="${X0}" y1="${y.toFixed(1)}" x2="${X1}" y2="${y.toFixed(1)}" stroke="var(--border)"${c ? ' stroke-dasharray="2 4"' : ''}/>`;
+  });
   data.buckets.forEach((b, i) => {
-    const barH = b.count > 0 ? Math.max(3, (b.count / maxCount) * (base - 4)) : 0;
-    const x = i * bw;
+    const barH = b.count > 0 ? Math.max(3, (b.count / maxCount) * (base - Y0)) : 0;
+    const x = X0 + i * bw;
     // Rojo: cubo enteramente en zona ALERT (por debajo del umbral). Verde:
     // enteramente en zona PERMIT. Ambar: el cubo cruza el umbral -- scores
     // ahi mezclan ambas decisiones, la zona mas interesante para mirar.
@@ -1307,32 +1405,46 @@ function renderHistogram(data) {
     // Barra con tope redondeado (spec de marcas) y, encima, un area invisible de
     // toda la altura como diana de hover: el <title> da el tooltip nativo sin
     // depender de JS -robusto, y el raton no tiene que acertar la barra fina-.
-    if (barH > 0)
-      bars += `<rect x="${x.toFixed(1)}" y="${(base - barH).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${barH.toFixed(1)}" rx="2" fill="${color}"/>`;
-    bars += `<rect x="${x.toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${base}" fill="transparent">`
+    if (barH > 0) {
+      bars += `<rect x="${(x + 1).toFixed(1)}" y="${(base - barH).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${barH.toFixed(1)}" rx="2" fill="${color}"/>`;
+      // El conteo encima de la barra, si cabe: se lee sin pasar el raton.
+      if (bw >= 22) bars += `<text x="${(x + bw / 2).toFixed(1)}" y="${(base - barH - 4).toFixed(1)}" text-anchor="middle" style="fill:var(--text)">${b.count}</text>`;
+    }
+    bars += `<rect x="${x.toFixed(1)}" y="${Y0}" width="${bw.toFixed(1)}" height="${base - Y0}" fill="transparent">`
       + `<title>score ${b.lo.toFixed(3)} a ${b.hi.toFixed(3)} · ${b.count} ventana(s) · ${zona}</title></rect>`;
   });
-  const thresholdX = ((data.threshold - data.min) / (data.max - data.min)) * w;
-  bars += `<line x1="${thresholdX.toFixed(1)}" y1="0" x2="${thresholdX.toFixed(1)}" y2="${base}" stroke="var(--text)" stroke-width="1.3" stroke-dasharray="3 2"/>`;
-  bars += `<text x="${Math.min(w - 40, thresholdX + 4).toFixed(1)}" y="10" font-size="9" fill="var(--text)" font-family="ui-monospace, monospace">umbral ${data.threshold.toFixed(2)}</text>`;
-  // Eje X: score minimo y maximo, para que las barras tengan escala.
-  bars += `<text x="2" y="${h - 3}" font-size="9" fill="var(--text-dim)" font-family="ui-monospace, monospace">${data.min.toFixed(2)}</text>`;
-  bars += `<text x="${w - 2}" y="${h - 3}" font-size="9" fill="var(--text-dim)" text-anchor="end" font-family="ui-monospace, monospace">${data.max.toFixed(2)}</text>`;
+  bars += `<line x1="${thresholdX.toFixed(1)}" y1="${Y0 - 8}" x2="${thresholdX.toFixed(1)}" y2="${base}" stroke="var(--text)" stroke-width="1.3" stroke-dasharray="4 3"/>`;
+  const derecha = thresholdX < w - 150;
+  bars += `<text x="${(thresholdX + (derecha ? 6 : -6)).toFixed(1)}" y="${Y0 - 9}" text-anchor="${derecha ? 'start' : 'end'}" style="fill:var(--text)">umbral ${coma(data.threshold, 3)}</text>`;
+  bars += `<text x="${X0 + 4}" y="${Y0 - 9}" style="fill:var(--danger)">← anomalía</text>`;
+  // Eje X: cinco marcas de score entre el minimo y el maximo observados.
+  for (let i = 0; i <= 4; i++) {
+    const v = data.min + (data.max - data.min) * i / 4, x = X0 + (X1 - X0) * i / 4;
+    bars += `<line x1="${x.toFixed(1)}" y1="${base}" x2="${x.toFixed(1)}" y2="${base + 3}" stroke="var(--border)"/>`;
+    bars += `<text x="${x.toFixed(1)}" y="${h - 8}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${coma(v, 3)}</text>`;
+  }
   svg.innerHTML = bars;
   const pct = data.n ? Math.round(100 * bajoUmbral / data.n) : 0;
   window._histResumen = { pct: pct, n: data.n, bajoUmbral: bajoUmbral };
   // La misma escala del histograma la reusa la mini-barra de la tabla.
   window._escalaScore = { min: data.min, max: data.max, umbral: data.threshold };
-  hint.textContent = `${data.n} score(s) real(es) · ${bajoUmbral} (${pct}%) por debajo del umbral. `
-    + `Pasa el ratón por una barra para ver su rango. Rojo = ALERT, ámbar = cruza el umbral, verde = PERMIT.`;
+  // Referencia: la fraccion que quedo bajo el umbral al calibrar (FPR del
+  // manifiesto). Si lo de ahora la dobla, se dice; no es un veredicto, es un aviso.
+  const ref = window._fprRef;
+  const real = data.n ? 100 * bajoUmbral / data.n : 0;
+  let comp = '';
+  if (ref != null && data.n) {
+    comp = ` En la calibración fue el ${coma(ref * 100, 2)} %`
+      + (real > 2 * ref * 100 && bajoUmbral >= 5 ? ': ahora hay más del doble.' : '.');
+  }
+  hint.textContent = `${data.n} ventanas puntuadas · ${bajoUmbral} (${coma(real, 1)} %) bajo el umbral.${comp} `
+    + `Rojo, anomalía; ámbar, la barra cruza el umbral; verde, normal.`;
 }
 
 async function loadActivity(range) {
   const data = await (await fetch('/api/activity?range=' + range)).json();
   renderSparkline(data.activity);
-  document.getElementById('sparkRangeLabel').textContent = range === '24h'
-    ? '← hace 24h    ahora →'
-    : '← hace 60 min    ahora →';
+  document.getElementById('sparkRangeLabel').textContent = range === '24h' ? 'por hora' : 'por minuto';
 }
 
 on('rangeToggle', 'click', (e) => {
@@ -1426,6 +1538,81 @@ function tourQuizasAuto(modo) {
 }
 on('tourBtn', 'click', tourStart);
 
+// ---- Pulso: lo que entra y lo que se acumula, con su edad -----------------
+// Las tasas salen de la diferencia entre dos lecturas del mismo contador. Con
+// una sola lectura no hay tasa y se dice «—»: un cero afirmaria que no entra nada.
+const pulsoPrev = {};
+const pulsoHist = { pk: [], ev: [], dec: [] };
+let pulsoFilas0 = null;
+function pulsoTasa(clave, valor, t) {
+  const a = pulsoPrev[clave];
+  if (valor == null || t == null || isNaN(t)) return null;
+  if (a && a.t === t) return a.tasa;
+  let tasa = null;
+  if (a && t > a.t && valor >= a.v) tasa = (valor - a.v) / (t - a.t);
+  pulsoPrev[clave] = { v: valor, t: t, tasa: tasa };
+  return tasa;
+}
+function pulsoSpark(h, color) {
+  if (h.length < 2) return '<svg class="pulso-spark" viewBox="0 0 120 26"></svg>';
+  const max = Math.max.apply(null, h) || 1;
+  const pts = h.map((v, i) => (i * 120 / (h.length - 1)).toFixed(1) + ',' + (24 - v / max * 21).toFixed(1)).join(' ');
+  return `<svg class="pulso-spark" viewBox="0 0 120 26" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
+}
+function pulsoHace(seg) {
+  if (seg == null || isNaN(seg)) return 'sin dato';
+  seg = Math.max(0, Math.round(seg));
+  if (seg < 90) return 'hace ' + seg + ' s';
+  if (seg < 5400) return 'hace ' + Math.round(seg / 60) + ' min';
+  return 'hace ' + Math.round(seg / 3600) + ' h';
+}
+function pulsoNum(v) {
+  if (v == null) return '—';
+  return v >= 100 ? Math.round(v).toLocaleString('es') : v.toFixed(1).split('.').join(',');
+}
+function renderPulso(status) {
+  const el = document.getElementById('pulso');
+  const p = status.pulso;
+  if (!el || !p) return;
+  const cm = status.capture_metrics;
+  // Suricata escribe la zona como +0000; Date.parse la quiere como +00:00.
+  let marca = cm && cm.medido_en ? String(cm.medido_en) : null;
+  if (marca) {
+    const z = marca.charAt(marca.length - 5);
+    if (z === '+' || z === '-') marca = marca.slice(0, -2) + ':' + marca.slice(-2);
+  }
+  const tPk = marca ? Date.parse(marca) / 1000 : null;
+  const pk = cm ? pulsoTasa('pk', cm.kernel_packets, tPk) : null;
+  const ev = p.eve ? pulsoTasa('ev', p.eve.bytes, p.ahora) : null;
+  const guardar = (k, v) => { const h = pulsoHist[k]; h.push(v == null ? 0 : v); if (h.length > 60) h.shift(); };
+  guardar('pk', pk); guardar('ev', ev); guardar('dec', p.decisiones_60s);
+  const filas = p.dataset ? p.dataset.filas : null;
+  if (filas != null && pulsoFilas0 == null) pulsoFilas0 = filas;
+  const edad = (t) => t == null ? null : p.ahora - t;
+  const ficha = (tit, val, uni, sub, e, limite, spark) => {
+    const est = e == null || isNaN(e) ? '' : (e > limite ? 'warn' : 'ok');
+    return `<div class="pulso-t ${est}"><div class="pulso-l"><span class="pulso-dot"></span>${tit}</div>`
+      + `<div class="pulso-v">${val}<small>${uni}</small></div><div class="pulso-s">${sub}</div>${spark || ''}</div>`;
+  };
+  el.innerHTML =
+    ficha('Paquetes', pulsoNum(pk), '/s', cm ? 'medido ' + pulsoHace(edad(tPk)) : 'sin medir',
+          edad(tPk), 30, pulsoSpark(pulsoHist.pk, 'var(--accent)'))
+    + ficha('Eventos de Suricata', ev == null ? '—' : pulsoNum(ev / 1024), 'KB/s',
+            p.eve ? 'último ' + pulsoHace(edad(p.eve.mtime)) : 'sin dato',
+            p.eve ? edad(p.eve.mtime) : null, 30, pulsoSpark(pulsoHist.ev, 'var(--accent)'))
+    + ficha('Decisiones', String(p.decisiones_60s), '/min',
+            'última ' + pulsoHace(edad(p.ultima_decision)), edad(p.ultima_decision), 60,
+            pulsoSpark(pulsoHist.dec, 'var(--ok)'))
+    + ficha('Dataset acumulado', filas == null ? '—' : filas.toLocaleString('es'), 'filas',
+            p.dataset ? 'escrito ' + pulsoHace(edad(p.dataset.mtime))
+              + (filas != null && filas > pulsoFilas0 ? ' · +' + (filas - pulsoFilas0).toLocaleString('es') + ' en esta sesión' : '')
+              : 'sin dato',
+            p.dataset ? edad(p.dataset.mtime) : null, 1200, '')
+    + ficha('Feed publicado', p.feed ? String(p.feed.entradas) : '—', p.feed && p.feed.entradas === 1 ? 'entrada' : 'entradas',
+            p.feed ? 'firmado ' + pulsoHace(edad(p.feed.generado)) : 'sin dato',
+            p.feed ? edad(p.feed.generado) : null, 150, '');
+}
+
 async function refresh() {
   try {
     // El histograma se pide junto al estado para que la tarjeta "Cerca del
@@ -1436,9 +1623,11 @@ async function refresh() {
     const histogramData = await histRes.json();
     stamp.textContent = 'Actualizado ' + new Date().toLocaleTimeString();
 
+    window._fprRef = status.model ? status.model.test_fpr : null;
     renderHistogram(histogramData);
     renderKpis(status);
     renderHealthbar(status.services, status.counters, status.capture_metrics, status.calibracion, status.modo);
+    renderPulso(status);
     tourQuizasAuto(status.modo);
     renderSidebar(status);
     // Las tres secciones de desarrollo -topologia, modelo y alcance- no estan
@@ -1643,16 +1832,148 @@ function filasFiltradas() {
   const query = document.getElementById('ipFilter').value.trim();
   let rows = lastDecisions;
   if (decVista === 'accion') rows = rows.filter(d => accionDeDecision(d) !== 'PERMIT');
+  if (decVista === 'limit') rows = rows.filter(d => accionDeDecision(d) === 'LIMIT');
+  if (decVista === 'block') rows = rows.filter(d => accionDeDecision(d) === 'BLOCK');
   if (query) rows = rows.filter(d => d.entity_ip.includes(query));
   return { rows, query };
 }
 
+// Score de cada decision en el tiempo, con el umbral. Las ventanas sin score
+// (sin paquetes: el modelo no puntua) van en un carril aparte abajo, no en cero.
+// El lienzo usa los pixeles reales del elemento, asi los puntos son redondos.
+let decPuntos = [];
+function renderDecChart() {
+  const svg = document.getElementById('decChart');
+  if (!svg) return;
+  const query = document.getElementById('ipFilter').value.trim();
+  const datos = (query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions)
+    .filter(d => d.logged_at);
+  const W = Math.max(320, svg.clientWidth || 900), H = 170;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const X0 = 64, X1 = W - 10, Y0 = 10, Y1 = H - 46, YS = H - 30;
+  decPuntos = [];
+  if (!datos.length) {
+    svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">Sin decisiones que graficar.</text>`;
+    return;
+  }
+  const ahora = Date.now() / 1000;
+  const t0 = Math.min(...datos.map(d => d.logged_at)), t1 = Math.max(ahora, t0 + 60);
+  const conScore = datos.filter(d => d.score != null);
+  const umbral = conScore.length ? conScore[0].threshold : (window._escalaScore ? window._escalaScore.umbral : null);
+  let lo = Math.min(...conScore.map(d => d.score)), hi = Math.max(...conScore.map(d => d.score));
+  if (umbral != null) { lo = Math.min(lo, umbral); hi = Math.max(hi, umbral); }
+  if (!conScore.length) { lo = 0; hi = 1; }
+  const margen = (hi - lo) * 0.08 || 0.05;
+  lo -= margen; hi += margen;
+  const px = t => X0 + (t - t0) / (t1 - t0) * (X1 - X0);
+  const py = v => Y1 - (v - lo) / (hi - lo) * (Y1 - Y0);
+  const coma = v => v.toFixed(3).split('.').join(',');
+  let s = '';
+  if (umbral != null && conScore.length) {
+    const yu = py(umbral);
+    s += `<rect x="${X0}" y="${yu.toFixed(1)}" width="${X1 - X0}" height="${(Y1 - yu).toFixed(1)}" fill="var(--danger)" fill-opacity="0.07"/>`;
+    s += `<line x1="${X0}" y1="${yu.toFixed(1)}" x2="${X1}" y2="${yu.toFixed(1)}" stroke="var(--text)" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+    s += `<text x="${X1}" y="${(yu - 4).toFixed(1)}" text-anchor="end" style="fill:var(--text)">umbral ${coma(umbral)}</text>`;
+    s += `<text x="${X0 - 6}" y="${(yu + 3).toFixed(1)}" text-anchor="end" style="fill:var(--text)">${coma(umbral)}</text>`;
+  }
+  s += `<line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1}" stroke="var(--border)"/><line x1="${X0}" y1="${Y1}" x2="${X1}" y2="${Y1}" stroke="var(--border)"/>`;
+  if (conScore.length) {
+    s += `<text x="${X0 - 6}" y="${Y0 + 8}" text-anchor="end">${coma(hi)}</text><text x="${X0 - 6}" y="${Y1}" text-anchor="end">${coma(lo)}</text>`;
+  }
+  s += `<text x="${X0 - 6}" y="${YS + 3}" text-anchor="end">sin score</text>`;
+  s += `<line x1="${X0}" y1="${YS}" x2="${X1}" y2="${YS}" stroke="var(--border)" stroke-dasharray="2 4"/>`;
+  for (let i = 0; i <= 4; i++) {
+    const t = t0 + (t1 - t0) * i / 4, x = px(t);
+    s += `<line x1="${x.toFixed(1)}" y1="${Y1}" x2="${x.toFixed(1)}" y2="${Y1 + 3}" stroke="var(--border)"/>`;
+    s += `<text x="${x.toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${i === 4 ? 'ahora' : fmtTime(t)}</text>`;
+  }
+  const estilo = { PERMIT: ['var(--accent)', 2, 0.4], LIMIT: ['var(--amber)', 3.8, 0.95], BLOCK: ['var(--danger)', 4.4, 1] };
+  // Los PERMIT primero: las acciones se dibujan encima y no quedan tapadas.
+  ['PERMIT', 'LIMIT', 'BLOCK'].forEach(tipo => {
+    datos.forEach(d => {
+      if (accionDeDecision(d) !== tipo) return;
+      const x = px(d.logged_at), y = d.score != null ? py(d.score) : YS;
+      const e = estilo[tipo];
+      s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${e[1]}" fill="${e[0]}" fill-opacity="${e[2]}"/>`;
+      decPuntos.push({ x: x, y: y, d: d, accion: tipo });
+    });
+  });
+  s += '<circle id="decFoco" r="7" fill="none" stroke="var(--text)" stroke-width="1.4" visibility="hidden"/>';
+  svg.innerHTML = s;
+}
+
+function decPuntoCercano(ev) {
+  const svg = document.getElementById('decChart');
+  const r = svg.getBoundingClientRect();
+  const x = ev.clientX - r.left, y = ev.clientY - r.top;
+  let mejor = null, dist = 18 * 18;
+  for (const p of decPuntos) {
+    // Una accion gana a un PERMIT que este a la misma distancia.
+    const dd = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y) - (p.accion === 'PERMIT' ? 0 : 40);
+    if (dd < dist) { dist = dd; mejor = p; }
+  }
+  return mejor;
+}
+on('decChart', 'mousemove', (ev) => {
+  const tip = document.getElementById('decTip'), foco = document.getElementById('decFoco');
+  const p = decPuntoCercano(ev);
+  if (!p || !foco) { tip.style.visibility = 'hidden'; if (foco) foco.setAttribute('visibility', 'hidden'); return; }
+  foco.setAttribute('cx', p.x.toFixed(1)); foco.setAttribute('cy', p.y.toFixed(1)); foco.setAttribute('visibility', 'visible');
+  const m = motivoDeDecision(p.d);
+  tip.innerHTML = `<div class="t-when">${fmtTime(p.d.logged_at)} · ${varEsc(p.d.entity_ip)}</div>`
+    + `<div><b>${p.accion}</b> ${p.d.score != null ? '· score ' + p.d.score.toFixed(3) : '· sin score'}</div>`
+    + (m.texto ? `<div>${varEsc(m.texto)}</div>` : '');
+  const ancho = tip.offsetParent.getBoundingClientRect().width, media = tip.offsetWidth / 2;
+  tip.style.left = Math.max(media + 2, Math.min(ancho - media - 2, p.x + 16)).toFixed(0) + 'px';
+  tip.style.visibility = 'visible';
+});
+on('decChart', 'mouseleave', () => {
+  document.getElementById('decTip').style.visibility = 'hidden';
+  const foco = document.getElementById('decFoco');
+  if (foco) foco.setAttribute('visibility', 'hidden');
+});
+on('decChart', 'click', (ev) => {
+  const p = decPuntoCercano(ev);
+  if (!p) return;
+  document.getElementById('ipFilter').value = p.d.entity_ip;
+  decVista = 'todas'; pintarDecVista(); renderDecisionsTable();
+});
+
+// Filas abiertas: el detalle sobrevive al refresco de 5 s.
+const decAbiertas = new Set();
+function decDetalleHTML(d, accion) {
+  const h = d.heuristico;
+  const margen = d.score != null && d.threshold != null ? d.score - d.threshold : null;
+  const caduca = accion === 'LIMIT' ? '300 s' : (accion === 'BLOCK' ? '300, 1800 o 3600 s según reincidencia' : 'no aplica');
+  const fila = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
+  return '<dl>'
+    + fila('Ventana (UTC)', varEsc(String(d.window_end_utc || '—')))
+    + fila('Detector', varEsc(String(d.detector_name || '—')))
+    + fila('Score y umbral', d.score != null ? d.score.toFixed(4) + ' frente a ' + (d.threshold != null ? d.threshold.toFixed(4) : '—') : 'sin puntuar: ventana sin paquetes')
+    + fila('Margen al umbral', margen == null ? '—' : (margen >= 0 ? '+' : '') + margen.toFixed(4) + (margen < 0 ? ' · anomalía' : ' · normal'))
+    + fila('Regla', h && h.heuristico ? varEsc(h.heuristico) + ' → ' + varEsc(h.accion || '') : 'ninguna')
+    + fila('Qué midió la regla', h && h.motivo ? varEsc(h.motivo) : '—')
+    + fila('Paquetes en 10 s', d.packet_count_10s ?? '—')
+    + fila('Historia cubierta', d.history_coverage_s != null ? d.history_coverage_s + ' s' : '—')
+    + fila('Acción y caducidad', accion + ' · ' + caduca)
+    + '</dl>';
+}
+on('decisions', 'click', (ev) => {
+  const tr = ev.target.closest('tr.dec-fila');
+  if (!tr) return;
+  const k = tr.dataset.key;
+  if (decAbiertas.has(k)) decAbiertas.delete(k); else decAbiertas.add(k);
+  renderDecisionsTable();
+});
+
 function renderDecisionsTable() {
   const { rows, query } = filasFiltradas();
   const nAcc = lastDecisions.filter(d => accionDeDecision(d) !== 'PERMIT').length;
+  const quees = { accion: 'con acción', limit: 'con LIMIT', block: 'con BLOCK' }[decVista];
   document.getElementById('filterHint').textContent =
-    (decVista === 'accion' ? nAcc + ' con acción de ' + lastDecisions.length + ' decisiones recientes' : lastDecisions.length + ' decisiones recientes')
+    (quees ? (decVista === 'accion' ? nAcc : rows.length) + ' ' + quees + ' de ' + lastDecisions.length + ' decisiones recientes' : lastDecisions.length + ' decisiones recientes')
     + (query ? ' · ' + rows.length + ' coinciden con «' + query + '»' : '');
+  renderDecChart();
   document.getElementById('decisions').innerHTML = rows.length ? rows.map(d => {
     const accion = accionDeDecision(d);
     const accBadge = `<span class="badge acc-${accion.toLowerCase()}">${accion}</span>`;
@@ -1666,10 +1987,11 @@ function renderDecisionsTable() {
       ? `<span class="badge heur" title="regla determinista, sin firma">${varEsc(m.regla)}</span> ${varEsc(m.texto)}`
       : (m.regla === 'modelo' ? varEsc(m.texto) : varEsc(DETECTOR_LABEL[d.detector_name] || d.detector_name || ''));
     const key = d.entity_ip + '|' + d.window_end_utc;
-    const cls = (accion !== 'PERMIT' ? 'row-' + accion.toLowerCase() : '') + (nuevasClaves.has(key) ? ' row-nueva' : '');
-    return `<tr class="${cls}"><td class="num">${fmtTime(d.logged_at)}<span class="hace">${haceTexto(d.logged_at)}</span></td>`
+    const cls = 'dec-fila ' + (accion !== 'PERMIT' ? 'row-' + accion.toLowerCase() : '') + (nuevasClaves.has(key) ? ' row-nueva' : '');
+    return `<tr class="${cls}" data-key="${varEsc(key)}" title="Pulsa para ver el detalle"><td class="num">${fmtTime(d.logged_at)}<span class="hace">${haceTexto(d.logged_at)}</span></td>`
       + `<td class="ip">${varEsc(d.entity_ip)}</td><td>${accBadge}</td><td class="why">${motivoTxt}</td>`
-      + `<td>${modelo}</td><td class="num">${d.packet_count_10s ?? '—'}</td></tr>`;
+      + `<td>${modelo}</td><td class="num">${d.packet_count_10s ?? '—'}</td></tr>`
+      + (decAbiertas.has(key) ? `<tr class="dec-det"><td colspan="6">${decDetalleHTML(d, accion)}</td></tr>` : '');
   }).join('') : `<tr class="empty-row"><td colspan="6">${query ? 'Ninguna decisión coincide con el filtro.'
       : (decVista === 'accion' ? 'Ninguna acción reciente: todo el tráfico se permitió.' : 'Sin decisiones recientes.')}</td></tr>`;
 }
@@ -3215,6 +3537,40 @@ function varFmt(v) {
   return v.toPrecision(2);
 }
 
+// Serie reciente de una variable: el maximo entre entidades en cada una de las
+// ultimas ventanas del dataset. Con rango del oro, lo que lo supera va en ambar.
+function varFuera(v) {
+  const m = v.muestra;
+  if (!m || !m.ultimo || !v.rango) return false;
+  return m.ultimo.valor > v.rango[1] || m.ultimo.valor < v.rango[0];
+}
+function varSerieSVG(v, w, h, clase) {
+  const m = v.muestra;
+  if (!m || !m.serie || m.serie.length < 2) return '';
+  const s = m.serie;
+  let lo = Math.min(...s), hi = Math.max(...s);
+  if (v.rango && clase) { lo = Math.min(lo, v.rango[0]); hi = Math.max(hi, v.rango[1]); }
+  if (hi === lo) { hi = lo + 1; }
+  const y = val => (h - 3 - (val - lo) / (hi - lo) * (h - 6)).toFixed(1);
+  const pts = s.map((val, i) => (i * w / (s.length - 1)).toFixed(1) + ',' + y(val)).join(' ');
+  let g = '';
+  if (v.rango && clase) {
+    const y1 = parseFloat(y(v.rango[1])), y0 = parseFloat(y(v.rango[0]));
+    g += `<rect x="0" y="${y1}" width="${w}" height="${Math.max(1, y0 - y1).toFixed(1)}" fill="var(--ok)" fill-opacity="0.09"/>`;
+    g += `<line x1="0" y1="${y1}" x2="${w}" y2="${y1}" stroke="var(--ok)" stroke-opacity="0.55" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>`;
+  }
+  const color = varFuera(v) ? 'var(--amber)' : capaColor(v.layer);
+  g += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  return `<svg${clase ? ' class="' + clase + '"' : ''} viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Serie reciente de ${varEsc(v.name)}">${g}</svg>`;
+}
+function varAhoraHTML(v) {
+  const m = v.muestra;
+  if (!m || !m.ultimo) return '<span class="vs"><span class="sin">sin dato</span></span>';
+  const fuera = varFuera(v);
+  return `<span class="vs${fuera ? ' fuera' : ''}" title="${fuera ? 'Fuera del rango normal del conjunto de oro' : 'Máximo entre entidades en la última ventana del dataset'}">`
+    + varSerieSVG(v, 96, 22, '') + varFmt(m.ultimo.valor) + '</span>';
+}
+
 function varDetalleHTML(v) {
   const m = v.muestra;
   let html = '<div class="var-det">';
@@ -3223,6 +3579,17 @@ function varDetalleHTML(v) {
   if (!m) {
     html += '<p class="var-vacio" style="padding:0">Sin muestra: el dataset todavía no existe o no contiene esta variable. No se inventa ningún ejemplo.</p>';
     return html + '</div>';
+  }
+
+  if (m.serie && m.serie.length > 1) {
+    html += varSerieSVG(v, 600, 76, 'var-serie');
+    html += '<div class="stats">'
+      + `<span>última ventana <b>${m.ultimo ? varEsc(String(m.ultimo.ventana).slice(11, 19)) : '—'}</b></span>`
+      + `<span>máximo ahora <b>${m.ultimo ? varFmt(m.ultimo.valor) : '—'}</b>${m.ultimo ? ' en ' + varEsc(m.ultimo.entidad) : ''}</span>`
+      + (v.rango ? `<span>rango normal (oro) <b>${varFmt(v.rango[0])} a ${varFmt(v.rango[1])}</b></span>` : '<span>sin rango del oro</span>')
+      + (varFuera(v) ? '<span style="color:var(--amber)"><b style="color:var(--amber)">fuera del rango</b></span>' : '')
+      + `<span>${m.serie.length} ventanas en la serie</span>`
+      + '</div>';
   }
 
   html += '<div class="stats">'
@@ -3276,6 +3643,7 @@ function renderVariables() {
     const badge = v.en_motor ? '' : '<span class="var-badge">EN ACUMULACIÓN</span>';
     html += `<button class="var-fila" data-var="${varEsc(v.name)}" aria-expanded="${abierta}">`
       + `<span><span class="vn">${varEsc(v.name)}</span>${badge}<span class="vq">${varEsc(v.que)}</span></span>`
+      + varAhoraHTML(v)
       + `<span class="vw">${v.window_seconds}s · ${varEsc(v.unit)}</span>`
       + '<svg class="var-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,5 16,12 9,19"/></svg>'
       + '</button>';
@@ -3291,6 +3659,10 @@ function renderVariables() {
   txt += d
     ? ` · muestra: ${d.filas} filas de ${d.entidades} entidades, ${d.desde} → ${d.hasta}`
     : ' · sin dataset: la tabla se pinta sin valores de ejemplo';
+  if (d && varDatos.variables.some(v => v.rango)) {
+    const nf = varDatos.variables.filter(varFuera).length;
+    txt += nf ? ` · ${nf} variable${nf === 1 ? '' : 's'} fuera del rango normal del oro` : ' · todas dentro del rango normal del oro';
+  }
   pie.textContent = txt;
 }
 
@@ -3792,6 +4164,58 @@ function aprTarjeta(titulo, valor, cls, sub) {
     '<div class="value">' + valor + '</div><div class="sub">' + sub + '</div></div>';
 }
 
+// Serie diaria con el limite de la politica. Un punto por noche; lo que falta
+// (null) no se une con una linea que afirmaria un valor intermedio.
+function graficoDias(svg, dias, series, limites, fmt) {
+  if (!svg) return;
+  const W = Math.max(280, svg.clientWidth || 420), H = 170;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  if (!dias.length) {
+    svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">Sin mediciones todavía</text>`;
+    return;
+  }
+  const X0 = 52, X1 = W - 14, Y0 = 22, Y1 = H - 26;
+  let hi = 0;
+  series.forEach(s => s.valores.forEach(v => { if (v != null && v > hi) hi = v; }));
+  limites.forEach(l => { if (l.valor != null && l.valor > hi) hi = l.valor; });
+  hi = hi * 1.18 || 1;
+  const px = i => dias.length === 1 ? (X0 + X1) / 2 : X0 + i / (dias.length - 1) * (X1 - X0);
+  const py = v => Y1 - v / hi * (Y1 - Y0);
+  let g = `<line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1}" stroke="var(--border)"/><line x1="${X0}" y1="${Y1}" x2="${X1}" y2="${Y1}" stroke="var(--border)"/>`;
+  [0, hi / 2, hi].forEach(v => {
+    g += `<text x="${X0 - 6}" y="${(py(v) + 3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`;
+    if (v) g += `<line x1="${X0}" y1="${py(v).toFixed(1)}" x2="${X1}" y2="${py(v).toFixed(1)}" stroke="var(--border)" stroke-dasharray="2 4"/>`;
+  });
+  limites.forEach(l => {
+    if (l.valor == null) return;
+    const y = py(l.valor).toFixed(1);
+    g += `<line x1="${X0}" y1="${y}" x2="${X1}" y2="${y}" stroke="var(--danger)" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+    g += `<text x="${X1}" y="${(py(l.valor) - 4).toFixed(1)}" text-anchor="end" style="fill:var(--danger)">${l.etq}</text>`;
+  });
+  series.forEach((s, k) => {
+    let tramo = [];
+    const cerrar = () => {
+      if (tramo.length > 1) g += `<polyline points="${tramo.join(' ')}" fill="none" stroke="${s.color}" stroke-width="1.6" stroke-linejoin="round"/>`;
+      tramo = [];
+    };
+    s.valores.forEach((v, i) => {
+      if (v == null) { cerrar(); return; }
+      tramo.push(px(i).toFixed(1) + ',' + py(v).toFixed(1));
+    });
+    cerrar();
+    s.valores.forEach((v, i) => {
+      if (v == null) return;
+      g += `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="3.2" fill="${s.colores ? s.colores[i] : s.color}"><title>${dias[i]} · ${s.nombre} ${fmt(v)}</title></circle>`;
+    });
+    g += `<circle cx="${X0 + 6 + k * 100}" cy="9" r="3.2" fill="${s.color}"/><text x="${X0 + 14 + k * 100}" y="12">${s.nombre}</text>`;
+  });
+  const marcas = dias.length > 2 ? [0, Math.floor((dias.length - 1) / 2), dias.length - 1] : dias.map((d, i) => i);
+  marcas.forEach((i, n) => {
+    g += `<text x="${px(i).toFixed(1)}" y="${H - 8}" text-anchor="${n === 0 ? 'start' : (n === marcas.length - 1 && marcas.length > 1 ? 'end' : 'middle')}">${String(dias[i]).slice(5)}</text>`;
+  });
+  svg.innerHTML = g;
+}
+
 function renderAprendizaje(e) {
   aprEstado = e;                     // lo leen tambien los nodos de la topologia
   const pie = document.getElementById('aprPie');
@@ -3873,6 +4297,19 @@ function renderAprendizaje(e) {
       : '<tr class="empty-row"><td colspan="7">Sin lotes todavía</td></tr>') + '</table>';
 
   const medidas = der.filter(d => d.fpr_oro !== undefined);
+  const ult = lotes.slice(-30), med = medidas.slice(-30);
+  graficoDias(document.getElementById('aprGLote'), ult.map(l => l.dia),
+    [{ nombre: 'PSI máx', color: 'var(--accent)', valores: ult.map(l => l.psi_max),
+       colores: ult.map(l => l.estado === 'rechazado' ? 'var(--danger)' : 'var(--accent)') }],
+    [{ valor: p.psi_rechazo_lote, etq: 'rechazo ' + p.psi_rechazo_lote }], v => v.toFixed(2).split('.').join(','));
+  graficoDias(document.getElementById('aprGPsi'), med.map(d => d.dia),
+    [{ nombre: 'PSI', color: 'var(--accent)', valores: med.map(d => d.psi_puntuaciones),
+       colores: med.map(d => d.senal ? 'var(--amber)' : 'var(--accent)') }],
+    [{ valor: p.psi_alerta, etq: 'alerta ' + p.psi_alerta }], v => v.toFixed(2).split('.').join(','));
+  graficoDias(document.getElementById('aprGTasa'), med.map(d => d.dia),
+    [{ nombre: 'FPR en oro', color: 'var(--ok)', valores: med.map(d => d.fpr_oro) },
+     { nombre: 'anómalo', color: 'var(--accent)', valores: med.map(d => d.tasa_anomala_lote) }],
+    [{ valor: p.tasa_anomala_max, etq: 'máx. ' + aprPct(p.tasa_anomala_max) }], v => (v * 100).toFixed(1).split('.').join(',') + ' %');
   document.getElementById('aprDeriva').innerHTML = '<table><tr><th>Día</th><th>FPR en oro</th>' +
     '<th>PSI de scores</th><th>Anómalo en el lote</th><th>ALERT del motor</th><th>Señal</th></tr>' +
     (medidas.length ? medidas.slice(-10).reverse().map(d => '<tr><td class="num">' + d.dia + '</td>' +
@@ -4069,7 +4506,8 @@ def bucket_activity(decisions: list[dict], bucket_seconds: int, count: int) -> l
     una linea de tiempo continua, no solo los intervalos con actividad.
     """
     now = time.time()
-    buckets = [{"offset": i, "alert": 0, "permit": 0} for i in range(count, -1, -1)]
+    buckets = [{"offset": i, "alert": 0, "permit": 0, "limit": 0, "block": 0}
+               for i in range(count, -1, -1)]
     index_by_offset = {b["offset"]: b for b in buckets}
     for item in decisions:
         age_seconds = now - item.get("logged_at", 0)
@@ -4083,6 +4521,11 @@ def bucket_activity(decisions: list[dict], bucket_seconds: int, count: int) -> l
             bucket["alert"] += 1
         else:
             bucket["permit"] += 1
+        # La accion (LIMIT/BLOCK) no coincide con ALERT: una regla puede pedir
+        # BLOCK con el modelo en PERMIT. El grafico cuenta acciones.
+        accion = accion_de(item)
+        if accion is not None:
+            bucket[accion[0].lower()] += 1
     return buckets
 
 
@@ -4262,6 +4705,79 @@ def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | Non
 
 
 COMPARACION_POR_OMISION = Path(__file__).resolve().parents[2] / "docs" / "evaluacion" / "comparacion-suricata.json"
+
+
+_CACHE_FILAS: dict[str, object] = {}
+
+
+def contar_filas(path: Path) -> int | None:
+    """Filas de datos de un CSV que crece, sin releerlo entero cada vez.
+
+    El panel refresca cada 5 s y el dataset pasa de 70 MB: se recuerda hasta
+    donde se conto y solo se leen los bytes nuevos. Si el fichero encoge o
+    cambia de ruta (rotacion), se cuenta desde cero.
+    """
+    try:
+        tam = path.stat().st_size
+    except OSError:
+        return None
+    c = _CACHE_FILAS
+    if c.get("ruta") != str(path) or tam < int(c.get("pos", 0)):
+        c.clear()
+        c.update(ruta=str(path), pos=0, n=0)
+    if tam > int(c["pos"]):
+        try:
+            with path.open("rb") as fh:
+                fh.seek(int(c["pos"]))
+                n = int(c["n"])
+                while True:
+                    bloque = fh.read(1 << 20)
+                    if not bloque:
+                        break
+                    n += bloque.count(b"\n")
+                c["n"], c["pos"] = n, fh.tell()
+        except OSError:
+            return None
+    return max(0, int(c["n"]) - 1)          # menos la cabecera
+
+
+def pulso_ingesta(decisions: list[dict], eve_path: Path | None, dataset: Path | None,
+                  feed_path: Path | None, ahora: float) -> dict:
+    """Lo que entra y lo que se acumula, con la hora de cada cosa.
+
+    Devuelve contadores y marcas de tiempo, no tasas: la tasa la saca el
+    navegador de dos lecturas seguidas. Lo que no se puede leer va como None,
+    nunca como cero.
+    """
+    def ficha(p: Path | None) -> dict | None:
+        if p is None:
+            return None
+        try:
+            st = p.stat()
+        except OSError:
+            return None
+        return {"bytes": st.st_size, "mtime": st.st_mtime}
+
+    horas = [d["logged_at"] for d in decisions
+             if isinstance(d.get("logged_at"), (int, float))]
+    feed = None
+    if feed_path is not None:
+        try:
+            f = json.loads(feed_path.read_text(encoding="utf-8"))
+            feed = {"generado": f.get("generado"), "entradas": len(f.get("entradas") or [])}
+        except (OSError, ValueError, AttributeError):
+            feed = None
+    ds = ficha(dataset)
+    if ds is not None and dataset is not None:
+        ds["filas"] = contar_filas(dataset)
+    return {
+        "ahora": ahora,
+        "ultima_decision": max(horas) if horas else None,
+        "decisiones_60s": sum(1 for t in horas if t >= ahora - 60),
+        "eve": ficha(eve_path),
+        "dataset": ds,
+        "feed": feed,
+    }
 
 
 def estado_comparacion(ruta: Path | None) -> dict:
@@ -4681,8 +5197,61 @@ def _cola_de_fichero(path: Path, max_bytes: int) -> list[str]:
     return crudo.splitlines()[1:]
 
 
+_CACHE_ORO: dict[str, object] = {}
+
+
+def rango_oro(config_toml: Path | None, nombres: list[str],
+              respaldo: Path | None = None) -> dict:
+    """Rango normal de cada variable segun el conjunto de oro: {nombre: [lo, hi]}.
+
+    Son los mismos cuantiles con los que el saneamiento decide que una fila es
+    atipica (cuantil_referencia de la politica), asi el panel y el aprendizaje
+    no usan dos definiciones de «normal». El oro no cambia: se calcula una vez
+    y se guarda mientras el fichero sea el mismo. Sin oro, vacio.
+    """
+    if respaldo is None:
+        respaldo = TOML_LOCAL
+    if config_toml is None and respaldo is not None and Path(respaldo).is_file():
+        config_toml = respaldo
+    if config_toml is None:
+        return {}
+    try:
+        modulo = Path(__file__).resolve().parents[1] / "modeling"
+        if str(modulo) not in sys.path:
+            sys.path.insert(0, str(modulo))
+        import cyberflow_aprendizaje as ap
+        cfg = ap.cargar_config(config_toml)
+        ruta = ap.ruta_politica(cfg, "oro")
+        if ruta is None or not ruta.is_file():
+            return {}
+        st = ruta.stat()
+        sello = (str(ruta), st.st_mtime_ns, st.st_size)
+        if _CACHE_ORO.get("sello") == sello:
+            return _CACHE_ORO["rangos"]          # type: ignore[return-value]
+        q = float(cfg["politica"]["cuantil_referencia"])
+        columnas: dict[str, list[float]] = {}
+        with ruta.open(newline="", encoding="utf-8") as fh:
+            import csv
+            lector = csv.reader(fh)
+            cabecera = next(lector, [])
+            idx = [(n, cabecera.index(n)) for n in nombres if n in cabecera]
+            for n, _ in idx:
+                columnas[n] = []
+            for fila in lector:
+                for n, i in idx:
+                    try:
+                        columnas[n].append(float(fila[i]))
+                    except (ValueError, IndexError):
+                        pass
+        rangos = {n: [ap.cuantil(v, 1 - q), ap.cuantil(v, q)] for n, v in columnas.items() if v}
+        _CACHE_ORO.update(sello=sello, rangos=rangos)
+        return rangos
+    except (OSError, ValueError, KeyError, SystemExit):
+        return {}
+
+
 def muestra_del_dataset(dataset: Path, nombres: list[str],
-                        max_bytes: int = 262_144) -> dict:
+                        max_bytes: int = 524_288) -> dict:
     """Valores reales por variable, tomados del CSV que se esta acumulando.
 
     Es lo que convierte la tabla del panel en una medicion y no en un folleto:
@@ -4704,6 +5273,14 @@ def muestra_del_dataset(dataset: Path, nombres: list[str],
         idx = {n: i for i, n in enumerate(cabecera)}
         i_ent = idx.get("entity_ip")
         i_ven = idx.get("window_end_utc")
+
+        # Las ultimas ventanas, en orden: de cada una se toma el maximo entre
+        # entidades, que es lo que un analista mira primero en una variable.
+        por_ventana: dict[str, list[list[str]]] = {}
+        if i_ven is not None:
+            for c in filas:
+                por_ventana.setdefault(c[i_ven], []).append(c)
+        ultimas = sorted(por_ventana)[-60:]
 
         salida: dict[str, object] = {}
         for nombre in nombres:
@@ -4741,7 +5318,23 @@ def muestra_del_dataset(dataset: Path, nombres: list[str],
             no_cero = [(c, v) for c, v in recientes if v != 0.0]
             elegidos = (no_cero or recientes)[:3]
             ejemplos = [fila_ejemplo(c, v) for c, v in elegidos]
+            serie: list[float] = []
+            ultimo = None
+            for ven in ultimas:
+                mejor = None
+                for c in por_ventana[ven]:
+                    try:
+                        v = float(c[i])
+                    except ValueError:
+                        continue
+                    if mejor is None or v > mejor[0]:
+                        mejor = (v, c)
+                if mejor is not None:
+                    serie.append(mejor[0])
+                    ultimo = fila_ejemplo(mejor[1], mejor[0])
             salida[nombre] = {
+                "serie": serie,
+                "ultimo": ultimo,
                 "n": len(ordenados),
                 "min": ordenados[0],
                 "p50": ordenados[len(ordenados) // 2],
@@ -4767,7 +5360,8 @@ def muestra_del_dataset(dataset: Path, nombres: list[str],
 
 
 def resumen_variables(schema_path: Path, extra_path: Path | None,
-                      descripciones_path: Path, dataset: Path | None) -> dict:
+                      descripciones_path: Path, dataset: Path | None,
+                      rangos: dict | None = None) -> dict:
     """Esquema + texto editorial + muestra real, listo para pintar la tabla.
 
     La tabla se GENERA desde el esquema; no se escribe a mano. El texto que
@@ -4808,6 +5402,7 @@ def resumen_variables(schema_path: Path, extra_path: Path | None,
             "que": t.get("que", ""),
             "senal": t.get("senal", ""),
             "muestra": por_variable.get(f["name"]),
+            "rango": (rangos or {}).get(f["name"]),
         })
 
     capas = []
@@ -5198,6 +5793,16 @@ def main() -> int:
           file=sys.stderr, flush=True)
     service_names = [name.strip() for name in args.services.split(",") if name.strip()]
     model_summary = load_model_summary(args.manifest_path, args.detector_name)
+    # Sin --dataset, el que declara el .toml en [rutas]: asi el pulso puede decir
+    # cuantas filas se llevan acumuladas sin tocar la unidad del servicio.
+    if args.dataset is None and args.config_toml and not args.demo:
+        try:
+            rutas = tomllib.loads(Path(args.config_toml).read_text(encoding="utf-8")).get("rutas", {})
+            candidato = Path(rutas.get("raiz", ".")) / rutas["dataset"]
+            if candidato.is_file():
+                args.dataset = candidato
+        except (OSError, KeyError, ValueError, TypeError):
+            pass
 
     # Sin autenticacion solo si se pide EXPRESAMENTE. Si faltan los ficheros y
     # nadie lo pidio, el panel no arranca: servir sin login porque un fichero no
@@ -5392,6 +5997,10 @@ def main() -> int:
                             or suricata_metrics(args.suricata_metrics_command)
                         ),
                         "alcance": leer_alcance(args.log_path),
+                        "pulso": pulso_ingesta(
+                            decisions, None if args.demo else args.eve_path,
+                            args.dataset, None if args.demo else args.feed_path,
+                            time.time()),
                         "calibracion": {
                             "calibrado_en_esta_red": args.calibrado_en_esta_red,
                         },
@@ -5410,6 +6019,13 @@ def main() -> int:
                     _CACHE_VARIABLES["datos"] = resumen_variables(
                         args.schema, args.schema_extra, args.descripciones,
                         args.dataset)
+                    # El rango del oro, una vez leido el esquema: no depende
+                    # del dataset y se calcula una sola vez por fichero de oro.
+                    rangos = rango_oro(
+                        args.config_toml,
+                        [v["name"] for v in _CACHE_VARIABLES["datos"]["variables"]])
+                    for v in _CACHE_VARIABLES["datos"]["variables"]:
+                        v["rango"] = rangos.get(v["name"])
                 self._send_json(_CACHE_VARIABLES["datos"])
                 return
             if path == "/api/artefactos":
@@ -5499,7 +6115,8 @@ def main() -> int:
                 return
             if path == "/api/score-histogram":
                 decisions = read_decisions(args.log_path, limit=500)
-                self._send_json(histogram_scores(decisions, model_summary["threshold"]))
+                self._send_json(histogram_scores(decisions, model_summary["threshold"],
+                                                 num_buckets=24))
                 return
             if path == "/api/archivo":
                 # Modo desarrollador: muestra el CONTENIDO de un script del
