@@ -245,6 +245,29 @@ HTML = """<!doctype html>
   .dec-det dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.45rem 1.2rem; margin: 0; }
   .dec-det dt { font: 600 0.66rem var(--mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-dim); }
   .dec-det dd { margin: 0.1rem 0 0; font: 600 0.82rem var(--mono); color: var(--text); overflow-wrap: anywhere; }
+  /* Alertas: el feed de lo que el sistema detecto (modelo o regla). */
+  .alertas-resumen { display: flex; align-items: center; gap: 0.7rem; margin: 0.4rem 0 0.2rem; }
+  .al-num { font: 800 2.1rem var(--sans); color: var(--text-dim); line-height: 1; }
+  .al-num.hay { color: var(--amber); }
+  .al-num-t { font-size: 0.86rem; color: var(--text); line-height: 1.3; }
+  .al-num-t small { display: block; color: var(--text-dim); font-size: 0.76rem; font-family: var(--mono); }
+  .alertas-lista { display: grid; gap: 0.5rem; margin-top: 0.9rem; }
+  .al-card { display: grid; grid-template-columns: 70px 1fr auto; align-items: center; gap: 0.8rem;
+    background: var(--surface); border: 1px solid var(--border); border-left-width: 3px; border-radius: 10px;
+    padding: 0.55rem 0.85rem; }
+  .al-card.al-block { border-left-color: var(--danger); }
+  .al-card.al-limit { border-left-color: var(--amber); }
+  .al-top { display: flex; align-items: baseline; gap: 0.6rem; }
+  .al-ip { font: 700 0.92rem var(--mono); color: var(--text); }
+  .al-hace { font-size: 0.74rem; color: var(--text-dim); }
+  .al-tags { margin: 0.22rem 0; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .al-tag { font: 600 0.64rem var(--mono); letter-spacing: 0.03em; text-transform: uppercase;
+    padding: 0.08rem 0.45rem; border-radius: 999px; }
+  .al-tag.regla { background: var(--danger-soft); color: var(--danger); }
+  .al-tag.modelo { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+  .al-motivo { font-size: 0.82rem; color: var(--text-dim); overflow-wrap: anywhere; }
+  .al-mini { flex: none; }
+  @media (max-width: 640px) { .al-card { grid-template-columns: 58px 1fr; } .al-mini { display: none; } }
   /* Pulso: lo que entra y lo que se acumula, con su edad. */
   .pulso { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.7rem; margin: 0.2rem 0 1.3rem; }
   .pulso-t { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.65rem 0.8rem 0.45rem; min-width: 0; }
@@ -819,7 +842,8 @@ HTML = """<!doctype html>
   <nav id="nav">
     <div class="nav-grupo">Vigilancia</div>
     <a href="#s-salud" data-sec="s-salud"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>Salud</a>
-    <a href="#s-actividad" data-sec="s-actividad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg>Actividad<span class="pill" id="navAlertPill" hidden></span></a>
+    <a href="#s-actividad" data-sec="s-actividad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg>Actividad</a>
+    <a href="#s-alertas" data-sec="s-alertas"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>Alertas<span class="pill" id="navAlertPill" hidden></span></a>
     <a href="#s-decisiones" data-sec="s-decisiones"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>Decisiones</a>
     <a href="#s-bloqueos" data-sec="s-bloqueos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Bloqueos</a>
     <a href="#s-scores" data-sec="s-scores"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg>Scores</a>
@@ -1095,6 +1119,18 @@ HTML = """<!doctype html>
         </div>
       </div>
     </div>
+  </section>
+
+  <section id="s-alertas">
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg><h2>Alertas</h2></div>
+    <p class="sec-sub">Cada ventana en la que el sistema detectó algo: una <b>anomalía del modelo</b> (score por debajo del umbral) o una <b>regla disparada</b> (escaneo, fuerza bruta, abuso HTTP, DNS). A la derecha, la acción que provoca.</p>
+    <div class="alertas-resumen" id="alertasResumen"></div>
+    <div class="range-toggle" id="alertasFiltro">
+      <button data-af="todas" class="active">Todas</button>
+      <button data-af="modelo">Anomalía del modelo</button>
+      <button data-af="regla">Reglas</button>
+    </div>
+    <div class="alertas-lista" id="alertasLista"></div>
   </section>
 
   <section id="s-bloqueos">
@@ -1899,6 +1935,7 @@ async function refresh() {
     lastDecisions = await (await fetch('/api/decisions?limit=600')).json();
     markSeenAndCountNewAlerts(lastDecisions);
     renderDecisionsTable();
+    renderAlertas();
     renderTopIps();
   } catch (e) {
     stamp.textContent = 'Error al actualizar: ' + e;
@@ -1942,6 +1979,66 @@ function accionDeDecision(d) {
   if (d.heuristico && sev[d.heuristico.accion] > sev[acc]) acc = d.heuristico.accion;
   return acc;
 }
+
+// --- Alertas: las ventanas en que el sistema DETECTO algo (modelo o regla) ---
+// Una alerta = una decision que provoca una accion (LIMIT/BLOCK): anomalia del
+// modelo (score < umbral) o una regla disparada. Es la lista que un operador
+// mira primero; el detalle completo esta en Decisiones.
+let alertasFiltro = 'todas';
+function alertaTipos(d) {
+  const det = String(d.detector_name || '');
+  const esHeur = det.endsWith('_heuristic');
+  const modelo = d.decision === 'ALERT' && !esHeur;
+  let regla = (d.heuristico && d.heuristico.heuristico) ? String(d.heuristico.heuristico) : null;
+  // Heuristico heredado (motor antiguo): la regla viene en el nombre del detector.
+  if (!regla && d.decision === 'ALERT' && esHeur) regla = det.replace(/_heuristic$/, '');
+  return { modelo, regla };
+}
+function renderAlertas() {
+  const lista = document.getElementById('alertasLista');
+  const resumen = document.getElementById('alertasResumen');
+  if (!lista || !resumen) return;
+  const coma3 = v => (v == null ? '—' : Number(v).toFixed(3).split('.').join(','));
+  const todas = (lastDecisions || []).filter(d => accionDeDecision(d) !== 'PERMIT');
+  const ahora = Date.now() / 1000;
+  const h = todas.filter(d => ahora - (d.logged_at || 0) <= 3600);
+  const nMod = h.filter(d => alertaTipos(d).modelo).length;
+  const nReg = h.filter(d => alertaTipos(d).regla).length;
+  resumen.innerHTML = `<div class="al-num ${h.length ? 'hay' : ''}">${h.length}</div>`
+    + `<div class="al-num-t">alerta(s) en la última hora`
+    + `<small>${nReg} por reglas · ${nMod} anomalía(s) del modelo</small></div>`;
+  let rows = todas;
+  if (alertasFiltro === 'modelo') rows = rows.filter(d => alertaTipos(d).modelo);
+  if (alertasFiltro === 'regla') rows = rows.filter(d => alertaTipos(d).regla);
+  rows = rows.slice(0, 80);
+  if (!rows.length) {
+    lista.innerHTML = '<p class="dim" style="padding:0.7rem 0">Sin alertas en el periodo cargado — el sistema está en PERMIT.</p>';
+    return;
+  }
+  lista.innerHTML = rows.map(d => {
+    const acc = accionDeDecision(d);
+    const t = alertaTipos(d);
+    const tags = [];
+    if (t.regla) tags.push('<span class="al-tag regla">Regla: ' + varEsc(t.regla) + '</span>');
+    if (t.modelo) tags.push('<span class="al-tag modelo">Anomalía del modelo</span>');
+    const motivo = (d.heuristico && d.heuristico.motivo) ? varEsc(d.heuristico.motivo)
+      : (d.score != null ? 'score ' + coma3(d.score) + ' por debajo del umbral ' + coma3(d.threshold) : '');
+    return `<div class="al-card al-${acc.toLowerCase()}">`
+      + `<div class="al-sev"><span class="badge acc-${acc.toLowerCase()}">${acc}</span></div>`
+      + `<div class="al-main"><div class="al-top"><span class="al-ip">${varEsc(d.entity_ip)}</span>`
+      + `<span class="al-hace">${haceTexto(d.logged_at)}</span></div>`
+      + `<div class="al-tags">${tags.join(' ')}</div>`
+      + `<div class="al-motivo">${motivo}</div></div>`
+      + `<div class="al-mini">${miniBarraScore(d.score)}</div></div>`;
+  }).join('');
+}
+on('alertasFiltro', 'click', (ev) => {
+  const b = ev.target.closest('button[data-af]');
+  if (!b) return;
+  alertasFiltro = b.dataset.af;
+  document.querySelectorAll('#alertasFiltro button').forEach(x => x.classList.toggle('active', x === b));
+  renderAlertas();
+});
 
 function haceTexto(t) {
   const s = Math.max(0, Math.round(Date.now() / 1000 - t));
@@ -4279,11 +4376,12 @@ const SEC_TITULO = new Map([...seccionesPag.entries()].map(([id, s]) => {
 // Pensado para que desde cualquier vista se salte a la que uno suele querer ver
 // despues. Solo se muestran las que existen y no estan ocultas por el modo.
 const RELACIONES = {
-  's-salud':       ['s-actividad', 's-decisiones', 's-despliegue'],
-  's-actividad':   ['s-decisiones', 's-bloqueos', 's-scores'],
-  's-decisiones':  ['s-scores', 's-bloqueos', 's-variables'],
-  's-bloqueos':    ['s-decisiones', 's-despliegue', 's-actividad'],
-  's-scores':      ['s-decisiones', 's-modelo', 's-aprendizaje'],
+  's-salud':       ['s-alertas', 's-actividad', 's-decisiones'],
+  's-actividad':   ['s-alertas', 's-decisiones', 's-bloqueos'],
+  's-alertas':     ['s-decisiones', 's-bloqueos', 's-scores'],
+  's-decisiones':  ['s-alertas', 's-scores', 's-bloqueos'],
+  's-bloqueos':    ['s-alertas', 's-decisiones', 's-despliegue'],
+  's-scores':      ['s-alertas', 's-decisiones', 's-modelo'],
   's-topologia':   ['s-despliegue', 's-variables', 's-vivo'],
   's-despliegue':  ['s-topologia', 's-bloqueos', 's-salud'],
   's-alcance':     ['s-topologia', 's-modelo', 's-variables'],
