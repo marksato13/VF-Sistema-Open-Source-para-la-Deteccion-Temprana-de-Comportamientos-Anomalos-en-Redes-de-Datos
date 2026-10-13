@@ -1055,7 +1055,7 @@ HTML = """<!doctype html>
   </section>
 
   <section id="s-aprendizaje">
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><polyline points="20,4 20,9 15,9"/></svg><h2>Aprendizaje supervisado</h2></div>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><polyline points="20,4 20,9 15,9"/></svg><h2>Reentrenamiento con aprobación humana</h2></div>
     <p class="lede-small">Cada noche el sistema sanea un lote del día, mide la deriva y, cuando toca, entrena y evalúa un modelo candidato. <strong>El modelo en uso solo cambia cuando una persona lo promueve</strong>. Aquí se ve cada defensa con su cifra. La política se cambia en el .toml (sección [reentrenamiento]), no desde aquí.</p>
     <div class="apr-def" id="aprDefensas"></div>
     <div class="apr-cols">
@@ -1135,7 +1135,7 @@ HTML = """<!doctype html>
 
   <section id="s-bloqueos">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><h2>IPs bloqueadas ahora</h2></div>
-    <p class="sec-sub" id="vigentesSub">LIMIT y BLOCK en vigor, con su caducidad. Los aplica el agente en el host protegido.</p>
+    <p class="sec-sub" id="vigentesSub">LIMIT y BLOCK que el agente aplica en el host. <b>Reconstruido del registro del motor y del feed publicado</b>, no leído del nftables remoto: es el estado que el sensor <i>sabe</i> que publicó, no una verificación directa en el host. Por eso puede diferir del feed instantáneo (0 entradas entre ciclos) o del historial (un episodio ya caducado).</p>
     <div class="tbl-wrap">
       <table><thead><tr><th>IP</th><th>Acción</th><th>Motivo</th><th>Desde</th><th>Expira en</th><th>Reincidencia</th></tr></thead><tbody id="blocked"></tbody></table>
     </div>
@@ -1427,8 +1427,8 @@ function renderKpis(status) {
     tile('Ventanas/h', (c.total != null ? c.total : 0).toLocaleString('es'), 'analizadas', '') +
     tile('Cerca del umbral', hr ? hr.pct + '<small>%</small>' : '—',
          hr ? hr.bajoUmbral + ' de ' + hr.n + ' scores' : 'sin scores', hr && hr.pct > 20 ? 'warn' : '') +
-    tile('Alertas reales (1h)', alertas,
-         cal ? 'modelo calibrado' : 'modelo sin calibrar: ruido',
+    tile('Anomalías del modelo (1h)', alertas,
+         cal ? 'no equivalen a ataques confirmados' : 'modelo sin calibrar: ruido',
          !cal ? 'warn' : (alertas > 0 ? 'bad' : 'ok'));
 }
 
@@ -2837,7 +2837,7 @@ const VALIDACION = [
   ['Captura y extracción', 'PCAP + EVE → 28 variables', 'Espejo sin descartes · notas B y D', 'c', ''],
   ['Decisión híbrida', 'Score, regla y motivo por ventana', 'Registro de decisiones · nota 31', 'c', ''],
   ['Respuesta distribuida', 'Feed firmado → nftables', 'Escaneo bloqueado en vivo 12-oct (srv-dmz) · notas O y 26', 'p', 'fuerza bruta en vivo: campaña C3'],
-  ['Acceso por roles', 'admin y lector', '401 sin sesión, sin HTTP en claro · nota R', 'p', 'falta el ingreso por navegador'],
+  ['Acceso por roles', 'admin y lector', 'admin por navegador comprobado · 401 sin sesión, sin HTTP en claro · nota R', 'p', 'falta la prueba del rol lector'],
   ['Reentrenamiento', 'Lote → candidato → evaluación', 'Oro, linaje y lote rechazado · nota S', 'p', 'sin candidato real'],
   ['Reversión', 'Caducidad y retirada manual', 'Escalera en pruebas unitarias', 'p', 'falta registro en vivo'],
   ['Comparación con Suricata', 'Mismo PCAP, cuatro condiciones', 'Batería N=3 · notas 26, 28 y 31', 'p', 'C3 propuesta · nota 33'],
@@ -3000,7 +3000,7 @@ const TOPO_TEXTO = {
       ],
       editar: 'no se edita a mano: se reentrena y una persona lo promueve (ver Aprendizaje)',
     },
-    nota: 'Ya calibrado en esta red: la recalibración bajó el FPR del 92,4 % (umbral de otra red) al 4,45 %. Score bajo el umbral = anomalía → LIMIT.',
+    nota: 'Calibrado en esta red: el FPR pasó del 92,4 % (modelo y umbral de otra red) al 4,45 %. No es solo recalibrar el umbral: cambiaron también el modelo (OCSVM→IsolationForest), los datos (red propia) y el alcance; el efecto de cada factor no se aisló. Score bajo el umbral = anomalía → LIMIT.',
   },
   heuristicos: {
     que: 'Reglas deterministas sobre las mismas variables de la ventana, complemento del modelo: fuerza bruta, escaneo de puertos, abuso HTTP y DNS de alta entropía.',
@@ -3313,8 +3313,8 @@ const TOPO_TEXTO = {
   },
   // ---- Vista METODOLOGICA (como se construyo) ----
   m_datos: {
-    que: 'F1. La línea base se genera y captura en la propia red por espejo SPAN: no es un dataset público. La recalibración sobre tráfico propio bajó el FPR del 92,4 % al 4,45 %.',
-    nota: 'Datos reales, no simulados: cierra el salto simulación→realidad que casi ningún trabajo del estado del arte aborda.',
+    que: 'F1. La línea base se genera y captura en la propia red por espejo SPAN: no es un dataset público. Al pasar a esta red el FPR bajó del 92,4 % al 4,45 %, con el modelo, los datos y el alcance cambiados a la vez (no se aisló el efecto de cada uno).',
+    nota: 'Datos reales, no simulados: aborda el salto simulación→realidad, poco frecuente en los trabajos que revisamos.',
   },
   m_feat: {
     que: 'F2. El extractor congelado convierte los paquetes y las señales de Suricata en 28 variables multicapa (L3/L4/L7) por IP iniciadora, en ventanas de 10/30/60 s. Sin imputación: las ausencias son ceros estructurales.',
@@ -3330,7 +3330,7 @@ const TOPO_TEXTO = {
   },
   m_resp: {
     que: 'F5 (aporte). La decisión se convierte en acción: PERMIT/LIMIT/BLOCK con feed firmado (ed25519), caducidad escalada, aplicada por agentes en los hosts (nftables).',
-    nota: 'Actuar, no solo detectar: es lo que casi ningún artículo del estado del arte alcanza.',
+    nota: 'Actuar, no solo detectar: una respuesta automática poco frecuente en los trabajos que revisamos.',
   },
   m_desp: {
     que: 'F6 (aporte). Desplegado sobre el sensor con systemd, instalación turnkey offline, verificado en un segundo sensor. 58 corridas sin caídas.',
@@ -3349,7 +3349,7 @@ const TOPO_TEXTO = {
     flujo: [
       {paso: 'Captura', fichero: 'ppi-motor-capture + suricata', garantia: 'misma interfaz ens37, sin IP'},
       {paso: 'Acumulación', fichero: 'acumular_v3.py', garantia: 'filas multilayer-v3 (28 del modelo + 3 de capa 2)'},
-      {paso: 'Solo normal', fichero: 'Kali apagada', garantia: 'un detector de una clase aprende lo normal; un ataque en la base lo volvería normal'},
+      {paso: 'Solo normal (con exclusiones)', fichero: 'Kali apagada en la base', garantia: 'la intención es solo tráfico normal; la contaminación de la Kali que sí quedó documentada (nota S) se excluye por excluir_ventanas y el saneamiento del lote'},
     ],
     nota: 'Total usado para el IF vigente: 335 202 ventanas normales (204 148 + 65 633 + 65 421). Sin ataques: los de la Kali se reservaron para medir detección después.',
   },
@@ -4346,10 +4346,17 @@ function renderSidebar(status) {
   const nombres = Object.keys(sv);
   const caidos = nombres.filter(k => !sv[k]);
   const cal = status.calibracion && status.calibracion.calibrado_en_esta_red;
+  // Captura degradada: drops subiendo ahora o algun PCAP ilegible desde el
+  // arranque del motor. No es un servicio caido, pero tampoco "todo en marcha".
+  const al = status.alcance || {};
+  const cm = status.capture_metrics;
+  const dropsSube = !!(cm && cm.drops_estado && cm.drops_estado.subiendo);
+  const captDegradada = dropsSube || (al.pcaps_ilegibles || 0) > 0;
   const el = document.getElementById('sideState');
   let clase = 'ok', texto = 'todo en marcha';
   if (caidos.length) { clase = 'bad'; texto = caidos.length + ' servicio(s) caído(s)'; }
   else if (!cal) { clase = 'warn'; texto = 'sin calibrar'; }
+  else if (captDegradada) { clase = 'warn'; texto = 'captura degradada · ver Alcance'; }
   el.className = 'side-state ' + clase;
   document.getElementById('sideStateText').textContent = texto;
 
@@ -4417,6 +4424,11 @@ function mostrarSeccion(id, subir) {
   pintarRelaciones(id);
   try { history.replaceState(null, '', '#' + id); } catch (e) { /* sin hash */ }
   if (subir !== false) window.scrollTo({ top: 0, behavior: 'auto' });
+  // El Mapa se dibuja tambien mientras su seccion esta oculta (display:none ->
+  // ancho 0 -> encaje al minimo). Al abrirlo, reajustar al ancho real.
+  if (id === 's-topologia' && typeof aplicarZoom === 'function' && topoZoom == null) {
+    setTimeout(aplicarZoom, 60);
+  }
 }
 // Un solo delegado cubre el menu y los enlaces de contenido (p.ej. "Ver en
 // vivo" del diagrama), todos con href="#s-...".
@@ -5173,7 +5185,7 @@ function renderAprendizaje(e) {
             ' de IPs marcadas · ' + f.atipicas + ' atípicas · PSI máx ' + aprNum(ul.psi_max, 2))
          : (p.activo ? 'el primer lote se cierra a las 00:30 UTC' : 'desactivado: no se cierran lotes')) +
     aprTarjeta('2 · Linaje', e.registro_integro ? 'íntegro' : 'ROTO', e.registro_integro ? 'ok' : 'bad',
-      lotes.length + ' lotes registrados con sha256 encadenado · ' + e.lotes_disponibles + ' aún sin usar') +
+      lotes.length + ' lotes registrados con sha256 encadenado · ' + e.lotes_disponibles + ' disponibles para entrenar (un lote rechazado no cuenta)') +
     aprTarjeta('3 · Límite de influencia', Math.round(p.max_fraccion_nueva * 100) + ' % / ' +
       Math.round(p.max_fraccion_ip * 100) + ' %', 'accent',
       'datos nuevos como máximo del entrenamiento / de lo nuevo por IP' +
@@ -5184,7 +5196,7 @@ function renderAprendizaje(e) {
         aprNum(ud.psi_puntuaciones, 2) + ' · anómalo en el lote ' + aprPct(ud.tasa_anomala_lote))
         : (e.oro ? 'se mide cada noche' : 'falta el conjunto de oro'));
 
-  let c = '<p class="var-vacio">Aún no hay candidatos. ' + varEsc(e.proximo ? 'Toca: ' + e.proximo : 'Se entrena por cadencia (' + p.cadencia_dias + ' días) o por deriva sostenida.') + '</p>';
+  let c = '<p class="var-vacio">Aún no hay candidatos. ' + varEsc(e.proximo ? 'Reentrenamiento pendiente por ' + e.proximo + ', pero no se genera un candidato sin lotes aceptados suficientes (un lote rechazado no cuenta).' : 'Se entrena por cadencia (' + p.cadencia_dias + ' días) o por deriva sostenida.') + '</p>';
   if (!p.activo) {
     c = '<div class="note"><span><strong>Desactivado</strong> (reentrenamiento.activo = false). El modelo en uso no cambia y no se cierran lotes. ' +
       'Para activarlo: crear el conjunto de oro con <code>cyberflow_aprendizaje.py oro --desde &lt;particionado&gt;</code>, poner ' +
