@@ -21,6 +21,10 @@ respuesta se instala aparte (sección 9).
 | **4. Enforcement distribuido** *(el vigente)* | observar sin riesgo **y** cortar en los hosts | sensor en observación **+ agente** en cada host protegido + relay en el bastión | sí, en los hosts |
 | **5. Replicación** | varios sensores / varios segmentos | un 2.º sensor desde cero | según el modo de cada uno |
 
+![Figura 0.1. Los cinco modos de instalación de CyberFlow, con su topología y su flujo](img/instalacion/00-modos-instalacion.png)
+
+*Figura 0.1. Los cinco modos de instalación: de la demo a la respuesta distribuida. La pregunta que los separa es si solo se detecta o también se corta, y si se corta, dónde.*
+
 - **Modo 1 (demo):** sin red, sin capturas. `python3 scripts/engine/dashboard.py --demo`
   (o la unidad en modo demo). Útil para presentar; no detecta nada real.
 - **Modos 2 y 3:** son el mismo sensor; cambian solo `motor.modo` y el cableado
