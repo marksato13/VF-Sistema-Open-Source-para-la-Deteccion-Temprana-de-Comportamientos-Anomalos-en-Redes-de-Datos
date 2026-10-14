@@ -48,7 +48,10 @@ HTML = """<!doctype html>
     --surface-2: #1a2338;
     --border: #253150;
     --text: #dbe4f2;
-    --text-dim: #7c8bad;
+    /* 13-oct: subido de #7c8bad a #8d9cbd. El anterior daba 4,59:1 sobre las
+       tarjetas (AA justo, sin margen) y se perdia proyectado; este da 5,68:1
+       y sigue 2,3x mas tenue que --text, asi que la jerarquia se mantiene. */
+    --text-dim: #8d9cbd;
     --accent: #5eead4;
     --ok: #4ade80; --ok-soft: #12271c;
     --amber: #f0b429; --amber-soft: #332508;
@@ -123,7 +126,7 @@ HTML = """<!doctype html>
     margin-left: auto; font-family: var(--mono); font-size: 0.68rem;
     background: var(--danger-soft); color: var(--danger); padding: 0.05rem 0.4rem; border-radius: 999px;
   }
-  .side .foot { margin-top: auto; padding: 0 0.45rem; font-size: 0.7rem; color: var(--text-dim); font-family: var(--mono); }
+  .side .foot { margin-top: auto; padding: 0 0.45rem; font-size: 0.74rem; color: var(--text-dim); font-family: var(--mono); }
 
   .wrap { max-width: 1080px; margin: 0 auto; padding: 1.6rem 1.4rem 4rem; }
   section { scroll-margin-top: 1rem; }
@@ -214,14 +217,14 @@ HTML = """<!doctype html>
   .desp-rol { font: 600 0.66rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
   .desp-h { font-size: 1.02rem; font-weight: 700; color: var(--text); margin: 0.1rem 0 0.15rem; }
   .desp-host { font: 600 0.8rem var(--mono); color: var(--accent); }
-  .desp-meta { font-size: 0.74rem; color: var(--text-dim); margin: 0.1rem 0 0.6rem; }
+  .desp-meta { font-size: 0.82rem; color: var(--text-dim); margin: 0.1rem 0 0.6rem; }
   .desp-comp { display: flex; align-items: center; gap: 0.5rem; padding: 0.28rem 0; border-top: 1px solid var(--border); font-size: 0.82rem; }
   .desp-comp .c-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex: none; }
   .desp-comp.ok .c-dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
   .desp-comp.bad .c-dot { background: var(--danger); }
   .desp-comp .c-n { color: var(--text); }
   .desp-comp .c-u { margin-left: auto; font: 0.7rem var(--mono); color: var(--text-dim); }
-  .desp-nota { font-size: 0.74rem; color: var(--text-dim); margin-top: 0.6rem; font-style: italic; }
+  .desp-nota { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.6rem; font-style: italic; }
   .desp-flecha { display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 1.4rem; }
   @media (max-width: 860px) { .desp-flecha { transform: rotate(90deg); } }
   .apr-graf { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.8rem; margin-bottom: 1.1rem; }
@@ -250,7 +253,7 @@ HTML = """<!doctype html>
   .al-num { font: 800 2.1rem var(--sans); color: var(--text-dim); line-height: 1; }
   .al-num.hay { color: var(--amber); }
   .al-num-t { font-size: 0.86rem; color: var(--text); line-height: 1.3; }
-  .al-num-t small { display: block; color: var(--text-dim); font-size: 0.76rem; font-family: var(--mono); }
+  .al-num-t small { display: block; color: var(--text-dim); font-size: 0.8rem; font-family: var(--mono); }
   .alertas-lista { display: grid; gap: 0.5rem; margin-top: 0.9rem; }
   .al-card { display: grid; grid-template-columns: 70px 1fr auto; align-items: center; gap: 0.8rem;
     background: var(--surface); border: 1px solid var(--border); border-left-width: 3px; border-radius: 10px;
@@ -259,7 +262,7 @@ HTML = """<!doctype html>
   .al-card.al-limit { border-left-color: var(--amber); }
   .al-top { display: flex; align-items: baseline; gap: 0.6rem; }
   .al-ip { font: 700 0.92rem var(--mono); color: var(--text); }
-  .al-hace { font-size: 0.74rem; color: var(--text-dim); }
+  .al-hace { font-size: 0.8rem; color: var(--text-dim); }
   .al-tags { margin: 0.22rem 0; display: flex; flex-wrap: wrap; gap: 0.35rem; }
   .al-tag { font: 600 0.64rem var(--mono); letter-spacing: 0.03em; text-transform: uppercase;
     padding: 0.08rem 0.45rem; border-radius: 999px; }
@@ -278,7 +281,7 @@ HTML = """<!doctype html>
   .pulso-t.warn { border-color: color-mix(in srgb, var(--amber) 55%, var(--border)); }
   .pulso-v { font: 700 1.35rem var(--mono); color: var(--text); margin-top: 0.2rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .pulso-v small { font: 600 0.72rem var(--mono); color: var(--text-dim); margin-left: 0.3rem; }
-  .pulso-s { font-size: 0.74rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pulso-s { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pulso-spark { width: 100%; height: 26px; display: block; margin-top: 0.25rem; }
   /* Vista "Validacion": una tabla, no un diagrama. */
   .topo-tabla { display: none; padding: 0.4rem 0.2rem 0.8rem; }
@@ -287,7 +290,7 @@ HTML = """<!doctype html>
     text-transform: uppercase; color: var(--text-dim); padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--border); }
   .topo-tabla td { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--border); vertical-align: top; }
   .topo-tabla td:first-child { font-weight: 700; color: var(--text); }
-  .topo-tabla .falta { display: block; color: var(--text-dim); font-size: 0.78rem; }
+  .topo-tabla .falta { display: block; color: var(--text-dim); font-size: 0.82rem; }
   .val-est { display: inline-block; font: 700 0.74rem var(--mono); padding: 0.16rem 0.55rem;
     border-radius: 999px; border: 1px solid var(--border); }
   .val-est.c { color: var(--ok); border-color: var(--ok); }
@@ -426,7 +429,7 @@ HTML = """<!doctype html>
   .topo-flujo .tit code { font: 10.5px var(--mono); color: var(--accent);
     background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
     padding: 0.05rem 0.3rem; }
-  .topo-flujo .gar { font-size: 0.76rem; color: var(--text-dim); margin-top: 0.1rem; }
+  .topo-flujo .gar { font-size: 0.82rem; color: var(--text-dim); margin-top: 0.1rem; }
   .topo-flujo .flecha { color: var(--text-dim); margin: 0.1rem 0 0.1rem 0.5rem; font-size: 0.9rem; }
 
   /* Regla de decision del modelo: recta de score con el umbral y los scores
@@ -434,7 +437,7 @@ HTML = """<!doctype html>
   .modelo-dec { margin: 0.8rem 0 0.2rem; }
   .modelo-dec h4 { font: 600 0.72rem var(--sans); letter-spacing: 0.05em;
     text-transform: uppercase; color: var(--text-dim); margin: 0 0 0.35rem; }
-  .modelo-dec .cap { font-size: 0.78rem; color: var(--text-dim); margin-top: 0.35rem; }
+  .modelo-dec .cap { font-size: 0.82rem; color: var(--text-dim); margin-top: 0.35rem; }
   .modelo-dec .cap b.a { color: var(--danger); } .modelo-dec .cap b.p { color: var(--ok); }
   /* Escenarios de simulacion. */
   .sim-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0.9rem; margin-top: 0.9rem; }
@@ -475,7 +478,7 @@ HTML = """<!doctype html>
   header { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1.4rem; }
   h1 { font-size: 1.35rem; margin: 0; letter-spacing: -0.01em; }
   h1 small { display: block; font-family: var(--mono); font-size: 0.72rem; color: var(--text-dim); font-weight: 400; margin-top: 0.15rem; letter-spacing: 0.04em; text-transform: uppercase; }
-  .stamp { font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); }
+  .stamp { font-family: var(--mono); font-size: 0.82rem; color: var(--text-dim); }
 
   .healthbar {
     display: flex; align-items: center; gap: 0.7rem;
@@ -517,13 +520,13 @@ HTML = """<!doctype html>
     padding: 0.4rem 0.8rem; cursor: pointer;
   }
   .export-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .toolbar-hint { font-size: 0.78rem; color: var(--text-dim); margin: 0.4rem 0 0; min-height: 1em; }
+  .toolbar-hint { font-size: 0.82rem; color: var(--text-dim); margin: 0.4rem 0 0; min-height: 1em; }
   .lede-small { font-size: 0.86rem; color: var(--text-dim); margin: -0.3rem 0 0.8rem; }
 
   /* Cabecera de sesion: quien eres, en que modo y como salir. */
   .sesion { display: flex; align-items: center; gap: 0.6rem; margin-left: auto; }
   .sesion form { margin: 0; }
-  .quien { font-size: 0.78rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .quien { font-size: 0.82rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
   .btn-modo, .btn-salir {
     font: inherit; font-size: 0.78rem; cursor: pointer; padding: 0.3rem 0.7rem;
     border-radius: 7px; border: 1px solid var(--border);
@@ -544,7 +547,7 @@ HTML = """<!doctype html>
   .kpi .k-val { font: 700 1.9rem var(--sans); color: var(--text); font-variant-numeric: tabular-nums;
     line-height: 1.15; margin-top: 0.15rem; }
   .kpi .k-val small { font-size: 0.9rem; font-weight: 600; color: var(--text-dim); }
-  .kpi .k-sub { font: 0.74rem var(--sans); color: var(--text-dim); margin-top: 0.1rem; }
+  .kpi .k-sub { font: 0.8rem var(--sans); color: var(--text-dim); margin-top: 0.1rem; }
   .kpi .k-dot { position: absolute; top: 0.9rem; right: 0.9rem; width: 9px; height: 9px; border-radius: 50%; }
   .kpi.ok .k-dot { background: var(--ok); }
   .kpi.warn .k-dot { background: var(--amber); }
@@ -686,10 +689,15 @@ HTML = """<!doctype html>
   .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; overflow-x: auto; }
   th { text-align: left; padding: 0.6rem 0.9rem; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); border-bottom: 1px solid var(--border); }
   th .th-sub { text-transform: none; letter-spacing: 0; font-weight: 400; opacity: 0.75; }
-  td { padding: 0.5rem 0.9rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  td { padding: 0.5rem 0.9rem; border-bottom: 1px solid var(--border); vertical-align: middle; font-variant-numeric: tabular-nums; }
   tr:last-child td { border-bottom: none; }
   tr.row-alert td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
   .ip, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  /* Cifras de recuento puro (Paquetes, Ventanas, Acciones, comparacion) a la
+     derecha, con su cabecera, para que los numeros se lean alineados por
+     unidades. Las columnas de tiempo (Hora, Inicio, Desde) siguen a la
+     izquierda: comparten clase .num solo por la tipografia tabular. */
+  td.num.r, th.r { text-align: right; }
   .empty-row td { color: var(--text-dim); text-align: center; padding: 1.1rem; }
 
   .badge { display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--mono); font-size: 0.76rem; padding: 0.18rem 0.55rem; border-radius: 999px; font-weight: 600; }
@@ -708,7 +716,7 @@ HTML = """<!doctype html>
   tr.row-nueva td { animation: fila-nueva 6s ease-out; }
   @keyframes fila-nueva { from { background: rgba(94,234,212,0.16); } to { background: transparent; } }
   .badge.acc-block, .badge.acc-limit { font-size: 0.8rem; padding: 0.22rem 0.65rem; letter-spacing: 0.03em; }
-  .hace { display: block; font-size: 0.72rem; color: var(--text-dim); }
+  .hace { display: block; font-size: 0.78rem; color: var(--text-dim); }
   .modelo-celda { display: inline-flex; align-items: center; gap: 0.45rem; font-family: var(--mono); font-size: 0.78rem; }
   .modelo-celda .m-alert { color: var(--danger); font-weight: 600; }
   .modelo-celda .m-permit { color: var(--text-dim); }
@@ -716,7 +724,7 @@ HTML = """<!doctype html>
   /* Acciones vigentes: cuenta atras visible y barra de lo que queda. */
   .vig-barra { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: 0.3rem; min-width: 90px; }
   .vig-barra i { display: block; height: 100%; }
-  .vig-fuente { font-size: 0.7rem; color: var(--text-dim); font-family: var(--mono); }
+  .vig-fuente { font-size: 0.74rem; color: var(--text-dim); font-family: var(--mono); }
   .sec-sub { color: var(--text-dim); font-size: 0.82rem; margin: -0.3rem 0 0.7rem; }
   .cmp-fig { background: #0f1722; border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; margin-bottom: 0.9rem; }
   .cmp-fig svg { width: 100%; height: auto; display: block; }
@@ -758,7 +766,7 @@ HTML = """<!doctype html>
   .vivo-tabla { max-height: 560px; }
   .vivo-tabla td { vertical-align: top; }
   .vivo-tabla td.m { font-family: var(--mono); font-size: 0.76rem; white-space: nowrap; }
-  .vivo-tabla .sub { color: var(--text-dim); font-size: 0.72rem; }
+  .vivo-tabla .sub { color: var(--text-dim); font-size: 0.78rem; }
   .vf { display: inline-block; margin: 0 0.25rem 0.25rem 0; padding: 0.1rem 0.4rem; border-radius: 6px;
     background: var(--surface-2); border: 1px solid var(--border); font-family: var(--mono); font-size: 0.72rem; white-space: nowrap; }
   .vf b { color: var(--accent); font-weight: 600; }
@@ -1031,7 +1039,7 @@ HTML = """<!doctype html>
         <path d="M105,222 L105,242 L765,242 L765,194" stroke="#b5741b" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#cmpFl)"/>
       </svg>
     </div>
-    <div class="tbl-wrap"><table><thead><tr><th>Familia</th><th>Suricata</th><th>Solo modelo</th><th>Solo heurísticos</th><th>CyberFlow</th></tr></thead><tbody id="cmpTabla"></tbody></table></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Familia</th><th class="r">Suricata</th><th class="r">Solo modelo</th><th class="r">Solo heurísticos</th><th class="r">CyberFlow</th></tr></thead><tbody id="cmpTabla"></tbody></table></div>
     <p class="toolbar-hint">Celda: episodios detectados / medidos · latencia mediana [mín–máx]. CyberFlow lee eventos de EVE, no alertas de Suricata. En SPAN, Suricata es IDS: se compara detección, no bloqueo.</p>
     <p class="toolbar-hint"><span class="badge heur">ejecutada</span> Batería N=3 por familia, con el mismo PCAP y la configuración fija. <span class="badge">propuesta</span> Campaña C3: N=5 por familia, fuerza bruta, tráfico legítimo intenso y 2 h de tráfico normal con los falsos positivos de Suricata medidos.</p>
     <ul class="cmp-notas" id="cmpNotas"></ul>
@@ -1115,7 +1123,7 @@ HTML = """<!doctype html>
       <div>
         <p class="act-h">IPs con más acciones</p>
         <div class="tbl-wrap">
-          <table><thead><tr><th>IP</th><th>Acciones</th><th>Última</th></tr></thead><tbody id="topIps"></tbody></table>
+          <table><thead><tr><th>IP</th><th class="r">Acciones</th><th>Última</th></tr></thead><tbody id="topIps"></tbody></table>
         </div>
       </div>
     </div>
@@ -1149,7 +1157,7 @@ HTML = """<!doctype html>
       </div>
     </div>
     <div class="tbl-wrap tbl-scroll" style="max-height:280px">
-      <table><thead><tr><th>Inicio</th><th>IP</th><th>Acción</th><th>Motivo</th><th>Duración</th><th>Ventanas</th><th>Estado</th></tr></thead><tbody id="histTabla"></tbody></table>
+      <table><thead><tr><th>Inicio</th><th>IP</th><th>Acción</th><th>Motivo</th><th>Duración</th><th class="r">Ventanas</th><th>Estado</th></tr></thead><tbody id="histTabla"></tbody></table>
     </div>
   </section>
 
@@ -1183,7 +1191,7 @@ HTML = """<!doctype html>
     <p class="toolbar-hint" id="filterHint"></p>
     <div class="tbl-wrap tbl-scroll">
       <table>
-        <thead><tr><th>Hora</th><th>IP</th><th>Acción</th><th>Motivo</th><th>Modelo <span class="th-sub">score frente al umbral</span></th><th>Paquetes</th></tr></thead>
+        <thead><tr><th>Hora</th><th>IP</th><th>Acción</th><th>Motivo</th><th>Modelo <span class="th-sub">score frente al umbral</span></th><th class="r">Paquetes</th></tr></thead>
         <tbody id="decisions"></tbody>
       </table>
     </div>
@@ -2130,7 +2138,7 @@ function renderHistorial(d) {
       + `<td class="num">${fmtTime(e.inicio)}<span class="hace">${haceTexto(e.inicio)}</span></td>`
       + `<td class="ip">${varEsc(e.ip)}</td><td><span class="badge acc-${e.accion.toLowerCase()}">${e.accion}</span></td>`
       + `<td class="why">${e.origen && e.origen !== 'modelo' ? '<span class="badge heur">' + varEsc(e.origen) + '</span> ' : ''}${varEsc(e.motivo || '')}</td>`
-      + `<td class="num">${dur > 0 ? duracionTexto(dur) : 'una ventana'}</td><td class="num">${e.ventanas}</td>`
+      + `<td class="num">${dur > 0 ? duracionTexto(dur) : 'una ventana'}</td><td class="num r">${e.ventanas}</td>`
       + `<td>${e.vigente ? '<span class="badge acc-' + e.accion.toLowerCase() + '">en vigor</span>' : '<span class="hace" style="display:inline">caducada</span>'}</td></tr>`;
   }).join('') : '<tr class="empty-row"><td colspan="7">Ninguna IP limitada ni bloqueada en este tramo.</td></tr>';
 }
@@ -2208,7 +2216,7 @@ function renderTopIps() {
   const lista = Array.from(por.values()).sort((a, b) => b.block - a.block || b.n - a.n).slice(0, 6);
   el.innerHTML = lista.length ? lista.map(p =>
     `<tr class="row-${p.acc.toLowerCase()}" data-ip="${varEsc(p.ip)}" style="cursor:pointer"><td class="ip">${varEsc(p.ip)}</td>`
-    + `<td class="num">${p.n}</td><td><span class="badge acc-${p.acc.toLowerCase()}">${p.acc}</span><span class="hace">${haceTexto(p.ult)}</span></td></tr>`).join('')
+    + `<td class="num r">${p.n}</td><td><span class="badge acc-${p.acc.toLowerCase()}">${p.acc}</span><span class="hace">${haceTexto(p.ult)}</span></td></tr>`).join('')
     : '<tr class="empty-row"><td colspan="3">Ninguna IP con acciones en la última hora.</td></tr>';
 }
 
@@ -2399,7 +2407,7 @@ function renderDecisionsTable() {
     const cls = 'dec-fila ' + (accion !== 'PERMIT' ? 'row-' + accion.toLowerCase() : '') + (nuevasClaves.has(key) ? ' row-nueva' : '');
     return `<tr class="${cls}" data-key="${varEsc(key)}" title="Pulsa para ver el detalle"><td class="num">${fmtTime(d.logged_at)}<span class="hace">${haceTexto(d.logged_at)}</span></td>`
       + `<td class="ip">${varEsc(d.entity_ip)}</td><td>${accBadge}</td><td class="why">${motivoTxt}</td>`
-      + `<td>${modelo}</td><td class="num">${d.packet_count_10s ?? '—'}</td></tr>`
+      + `<td>${modelo}</td><td class="num r">${d.packet_count_10s ?? '—'}</td></tr>`
       + (decAbiertas.has(key) ? `<tr class="dec-det"><td colspan="6">${decDetalleHTML(d, accion)}</td></tr>` : '');
   }).join('') : `<tr class="empty-row"><td colspan="6">${query ? 'Ninguna decisión coincide con el filtro.'
       : (decVista === 'accion' ? 'Ninguna acción reciente: todo el tráfico se permitió.' : 'Sin decisiones recientes.')}</td></tr>`;
@@ -4658,7 +4666,7 @@ function cmpCelda(c) {
       : ' · ' + coma(c.latencia_mediana_s) + ' s [' + coma(c.latencia_min_s) + '–' + coma(c.latencia_max_s) + ']';
   }
   const cls = c.detectados === c.n ? 'cmp-bien' : (c.detectados === 0 ? 'cmp-mal' : '');
-  return '<td class="num ' + cls + '">' + t + '</td>';
+  return '<td class="num r ' + cls + '">' + t + '</td>';
 }
 
 async function cargarComparacion() {
