@@ -3212,8 +3212,15 @@ const TOPO_TEXTO = {
   },
   // ---- Vista RED Y CAPTURA ----
   r_bastion: {
-    que: 'La máquina de gestión. Desde aquí se administra el sensor y aquí corre el relay del feed.',
-    nota: 'Está en la lista «nunca bloquear».',
+    que: 'La VM de gestión (10.10.10.30, VLAN 10). Es el BASTIÓN del laboratorio: el único punto de entrada por SSH a todas las máquinas (sensor, servidor, Kali, clientes); guarda las claves SSH de cada host, así que toda la administración pasa por aquí. Además, aquí corre el RELAY del feed de enforcement.',
+    flujoTit: 'Qué es el «relay del feed»',
+    flujo: [
+      {paso: 'Qué es el feed', fichero: 'feed.json + feed.sig', garantia: 'la lista FIRMADA (ed25519) de acciones por IP —PERMIT/LIMIT/BLOCK con caducidad— que publica el sensor'},
+      {paso: 'Qué hace el relay', fichero: 'ppi-relay-feed.timer · cada 60 s', garantia: 'relay-feed.sh TRAE (pull) el feed del sensor y lo EMPUJA (push) al host protegido'},
+      {paso: 'Por qué hace falta', fichero: 'red segmentada por VLAN', garantia: 'el host de la DMZ no habla con el sensor directamente; el bastión alcanza a los dos y hace de puente'},
+      {paso: 'Por qué es seguro', fichero: 'relay TONTO', garantia: 'solo copia bytes: la firma la pone el sensor y la verifica el host, así que el bastión no puede forjar ni alterar un bloqueo'},
+    ],
+    nota: 'Modelo «un feed / N agentes (pull)»: el sensor NO tiene credenciales de los hosts; publica una lista firmada y cada host la trae y la verifica. Por eso el bastión, aunque administre, no es un camino hacia el cortafuegos. Está en la lista «nunca bloquear» (como los gateways y el DNS) para que un falso positivo no corte la propia vía de gestión. La VM también expone el panel al exterior por Tailscale (vm-gestion.tail83bf9c.ts.net).',
   },
   r_dns: {
     que: 'El DNS y directorio de la red. Las consultas DNS de las pruebas van contra esta máquina.',
