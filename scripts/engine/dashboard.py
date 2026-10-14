@@ -3058,7 +3058,7 @@ const TOPO_TEXTO = {
       ],
       editar: 'no se edita a mano: se reentrena y una persona lo promueve (ver Aprendizaje)',
     },
-    nota: 'Calibrado en esta red: el FPR pasó del 92,4 % (modelo y umbral de otra red) al 4,45 %. No es solo recalibrar el umbral: cambiaron también el modelo (OCSVM→IsolationForest), los datos (red propia) y el alcance; el efecto de cada factor no se aisló. Score bajo el umbral = anomalía → LIMIT.',
+    nota: 'Calibrado en ESTA red. El modelo que venía del laboratorio, con su umbral, marcaba como anómalo casi todo el tráfico normal de aquí —inservible—; recalibrado con datos propios cumple el objetivo de falsos positivos. No fue solo mover el umbral: cambiaron a la vez el modelo (OCSVM→Isolation Forest), los datos (red propia) y el alcance, y el efecto de cada factor no se aisló. Score por debajo del umbral = anomalía → LIMIT.',
   },
   heuristicos: {
     que: 'Reglas deterministas sobre las mismas variables de la ventana, complemento del modelo: fuerza bruta, escaneo de puertos, abuso HTTP y DNS de alta entropía.',
@@ -3100,7 +3100,7 @@ const TOPO_TEXTO = {
       ],
       editar: 'nano ~/cyberflow/scripts/engine/publicar_feed.py',
     },
-    nota: 'LIMIT existe para el coste de un falso positivo (con 4,45 % de FPR, degradar es mejor que cortar). El sensor DECIDE pero no ejecuta: solo observa por espejo. La acción la aplica el agente en el host, con el feed firmado de por medio.',
+    nota: 'LIMIT existe por el coste de un falso positivo: ante una anomalía del modelo (que puede equivocarse) es más prudente degradar la tasa que cortar; el BLOCK se reserva para los heurísticos de alta confianza. El sensor DECIDE pero no ejecuta: solo observa por espejo. La acción la aplica el agente en el host, con el feed firmado de por medio.',
   },
   feed: {
     que: 'La lista FIRMADA (ed25519) de acciones que el sensor publica. Cada entrada: IP, acción, caducidad y motivo.',
@@ -3371,31 +3371,31 @@ const TOPO_TEXTO = {
   },
   // ---- Vista METODOLOGICA (como se construyo) ----
   m_datos: {
-    que: 'F1. La línea base se genera y captura en la propia red por espejo SPAN: no es un dataset público. Al pasar a esta red el FPR bajó del 92,4 % al 4,45 %, con el modelo, los datos y el alcance cambiados a la vez (no se aisló el efecto de cada uno).',
-    nota: 'Datos reales, no simulados: aborda el salto simulación→realidad, poco frecuente en los trabajos que revisamos.',
+    que: 'F1 · Línea base propia. Se capturó el tráfico REAL de esta red por espejo SPAN del troncal —no un dataset público ni simulado—, de dos fuentes de la misma copia: PCAP de capas 3/4 (tcpdump) y eventos de capa 7 de Suricata (eve.json). De ahí salen las 335 202 ventanas normales que definen «lo normal» de ESTA red. El modelo que venía del laboratorio marcaba como anómalo casi todo el tráfico normal de aquí, así que la línea base y la calibración se rehacen con datos propios.',
+    nota: 'Datos reales, no simulados: aborda el salto simulación→realidad, poco frecuente en los trabajos revisados. El dataset y su hoja de datos se publican.',
   },
   m_feat: {
-    que: 'F2. El extractor congelado convierte los paquetes y las señales de Suricata en 28 variables multicapa (L3/L4/L7) por IP iniciadora, en ventanas de 10/30/60 s. Sin imputación: las ausencias son ceros estructurales.',
-    nota: 'Limpieza = deduplicación del espejo + validación fail-closed. 27 de 28 variables con variación observable.',
+    que: 'F2 · 28 variables multicapa. Un extractor CONGELADO convierte cada ventana (10/30/60 s) en 28 variables por IP iniciadora: de red (L3), de transporte (L4) y de aplicación (L7, derivadas de Suricata). Atribuye cada paquete a quien inició el flujo, deduplica la copia del espejo y NO imputa: una ausencia es un cero estructural (no hubo DNS en esa ventana), no un dato inventado. Sus fórmulas no se tocan, para que la misma ventana dé siempre el mismo vector.',
+    nota: 'La limpieza acota la ENTRADA (deduplicar el espejo, quitar plano de control), nunca las fórmulas. 27 de 28 variables muestran variación observable.',
   },
   m_modelo: {
-    que: 'F3. Detector híbrido: Isolation Forest recalibrado (umbral −0,568892) + heurísticos deterministas. La ablación lo justifica: modelo solo 6/9, heurísticos 7/9, combinado 9/9.',
-    nota: 'El modelo se elige comparando 7 candidatos (no a ciegas); el umbral se calibra en validación y se congela antes del test.',
+    que: 'F3 · Detector híbrido. Dos señales sobre las mismas variables. (1) Un modelo NO supervisado —Isolation Forest, recalibrado en esta red, con el umbral congelado θ=−0,568892— marca lo que se desvía de lo normal aprendido. (2) Cuatro heurísticos deterministas cubren los patrones donde el modelo mide flojo (fuerza bruta, escaneo de puertos, abuso HTTP, DNS de alta entropía). La ablación lo justifica: solo el modelo detecta 6 de 9 familias, solo los heurísticos 7 de 9, y combinados 9 de 9.',
+    nota: 'El modelo se elige comparando 7 candidatos, no a ciegas; el umbral se calibra en validación con objetivo de falsos positivos y se CONGELA antes de mirar el test.',
   },
   m_eval: {
-    que: 'F4. Evaluación justa por replay del MISMO PCAP a CyberFlow y a Suricata, anclando al reloj del paquete. Resultado sin firma: 9/9 vs 0/9.',
-    nota: 'Complementario a Suricata: él bloquea lo que tiene firma; CyberFlow detecta lo que no la tiene.',
+    que: 'F4 · Evaluación justa (replay). Se reproduce el MISMO PCAP contra CyberFlow y contra Suricata, anclando cada decisión al reloj del paquete (no al de proceso), para que la comparación sea honesta. Sobre tráfico sin firma CyberFlow detecta 9 de 9 familias y Suricata 0 de 9. Hecho con N=3 corridas por familia; queda pendiente la campaña C3 (N=5, con fuerza bruta y tráfico legítimo intenso, midiendo también los falsos positivos de Suricata).',
+    nota: 'Complementario a Suricata, no su reemplazo: él bloquea lo que tiene firma; CyberFlow detecta lo que no la tiene. El «parcial» es por C3, no por un resultado dudoso.',
   },
   m_resp: {
-    que: 'F5 (aporte). La decisión se convierte en acción: PERMIT/LIMIT/BLOCK con feed firmado (ed25519), caducidad escalada, aplicada por agentes en los hosts (nftables).',
-    nota: 'Actuar, no solo detectar: una respuesta automática poco frecuente en los trabajos que revisamos.',
+    que: 'F5 (aporte) · Respuesta graduada. La decisión se convierte en ACCIÓN, no solo en alerta: PERMIT, LIMIT (degradar la tasa, reversible) o BLOCK (cortar). El sensor publica un feed FIRMADO (ed25519); cada host lo trae, verifica la firma y aplica nftables en su propio kernel. La caducidad escala por reincidencia (300→1800→3600 s) y nunca es permanente de forma automática.',
+    nota: 'Actuar, no solo detectar: una respuesta automática poco frecuente en los trabajos revisados. El sensor DECIDE pero no ejecuta: observa por espejo y la acción la aplica el agente en el host.',
   },
   m_desp: {
-    que: 'F6 (aporte). Desplegado sobre el sensor con systemd, instalación turnkey offline, verificado en un segundo sensor. 58 corridas sin caídas.',
-    nota: 'Nadie de los 15 artículos despliega su sistema en operación real.',
+    que: 'F6 (aporte) · Desplegado de verdad. Corre sobre el sensor con systemd (servicios y temporizadores), con instalación reproducible y SIN salida a Internet (ruedas locales), y se verificó levantando un segundo sensor. 58 corridas sin caídas.',
+    nota: 'Ninguno de los 15 artículos revisados despliega su sistema en operación real. La instalación y la replicación están documentadas (INSTALACION.md, REPLICACION.md).',
   },
   m_valid: {
-    que: 'F7 (aporte). Validación interna (demo técnica en vivo) + externa (TAM + juicio de expertos, Cronbach/Aiken).',
+    que: 'F7 (aporte) · Validación en dos planos. INTERNA: demo técnica en vivo, grabada (ataque → detección → respuesta → panel), sin instrumento. EXTERNA: aceptación con el modelo TAM y juicio de expertos (fiabilidad con alfa de Cronbach, validez de contenido con V de Aiken). En curso: por eso la fase está «en curso», no cerrada.',
     nota: 'Se demuestra y se acredita; no son solo palabras.',
   },
   // ---- Vista CONSTRUCCION Y ENTRENAMIENTO ----
@@ -3453,7 +3453,7 @@ const TOPO_TEXTO = {
     nota: 'El criterio se fija ANTES de mirar la prueba: umbral desde validación con objetivo de FPR 5 %. El 4,45 % es del modelo sobre tráfico normal, no del sistema completo con heurísticos.',
   },
   c_sel: {
-    que: 'Por qué ganó: el OCSVM del laboratorio, llevado a esta red con su umbral, marcaba como anómalo el 92,4 % del tráfico normal. El IF recalibrado aquí cumple el objetivo (4,45 % de FPR en prueba) y detecta 54/84 ventanas de ataque (64,3 %). Se elige el que funciona en la red donde opera.',
+    que: 'Por qué ganó: el OCSVM traído del laboratorio, con su umbral, marcaba como anómalo casi todo el tráfico normal de esta red —inservible aquí—. El IF recalibrado en ESTA red cumple el objetivo de falsos positivos en prueba (4,45 % sobre 65 421 ventanas normales) y detecta 54 de 84 ventanas de ataque (64,3 %). Se elige el que funciona en la red donde opera, no el que ganó en otra.',
     nota: 'La detección no la hace el modelo solo: la ablación da modelo 6/9, heurísticos 7/9 y combinado 9/9. El modelo es una de dos señales.',
     enlace: { href: '#s-modelo', txt: 'Ver «Pruebas previas» y la ablación' },
   },
@@ -3693,15 +3693,18 @@ function topoEstado(id, s) {
     case 'reentrenamiento':
     case 'a_oro': case 'a_san': case 'a_lin': case 'a_der': case 'a_inf': case 'a_ver': case 'a_hum': {
       const e = aprEstado;
-      if (!e || !e.disponible) return { estado: '', valor: 'sin estado', datos: { 'Estado': 'abre «Aprendizaje» o revisa --config-toml' } };
+      if (!e || !e.disponible) return { estado: '', valor: 'aún sin datos', datos: {
+        'Qué significa': 'el aprendizaje nocturno (00:30 UTC) todavía no ha dejado registro; es lo esperado hasta su primera corrida, NO un fallo',
+        'Para verlo': 'abre la vista «Aprendizaje» o define la sección [reentrenamiento] del .toml' } };
       const p = e.politica, lotes = e.lotes || [], der = (e.deriva || []).filter(d => d.fpr_oro !== undefined);
       const ul = lotes.length ? lotes[lotes.length - 1] : null, ud = der.length ? der[der.length - 1] : null;
       const uc = e.candidatos.length ? e.candidatos[e.candidatos.length - 1] : null;
       const act = p.activo ? 'activo' : 'desactivado';
       const pct = (v) => (v === null || v === undefined) ? '—' : (v * 100).toFixed(2) + ' %';
-      if (id === 'reentrenamiento') return { estado: p.activo ? 'ok' : 'warn', valor: act, datos: {
+      if (id === 'reentrenamiento') return { estado: p.activo ? 'ok' : 'warn', valor: act, datos: Object.assign({
         'Modo': p.modo, 'Cadencia': p.cadencia_dias + ' días o deriva ' + p.dias_deriva + ' días',
-        'Lotes sin usar': String(e.lotes_disponibles), 'Último candidato': uc ? uc.id + ' · ' + uc.veredicto : 'ninguno' } };
+        'Lotes sin usar': String(e.lotes_disponibles), 'Último candidato': uc ? uc.id + ' · ' + uc.veredicto : 'ninguno' },
+        p.activo ? {} : { 'Por qué en ámbar': 'está desactivado a propósito; aun así el modelo vigente sigue decidiendo igual. Se activa en [reentrenamiento] del .toml' }) };
       if (id === 'a_oro') return e.oro
         ? { estado: 'ok', valor: e.oro.filas + ' ventanas', datos: { 'sha256': e.oro.sha256.slice(0, 16) + '…', 'Creado': String(e.oro.generado).slice(0, 10) } }
         : { estado: 'warn', valor: 'no creado', datos: { 'Crear': 'cyberflow_aprendizaje.py oro --desde <particionado>' } };
@@ -4306,6 +4309,132 @@ const GUIA_CODIGO = {
       { t: 'Puntuar con el modelo', ancla: 'def puntuar' },
     ],
   },
+  'extract_multilayer_v3.py': {
+    explica: 'Variante v3 del extractor: las 28 variables de v2 más 3 de capa 2 (ARP, VLAN, MAC). Aquí vive la deduplicación de la copia del espejo, que evita contar dos veces cada trama.',
+    editar: 'nano ~/cyberflow/scripts/features/extract_multilayer_v3.py',
+    pseudo: [
+      { t: 'Decodificar Ethernet (capa 2)', ancla: 'def parse_ethernet_l2' },
+      { t: 'Trama con su contexto (VLAN, puerto)', ancla: 'def parse_con_contexto' },
+      { t: 'Deduplicar la copia del espejo', ancla: 'def deduplicar_espejo' },
+      { t: 'MACs que reenvían (gateways)', ancla: 'def forwarding_macs' },
+      { t: 'VLAN nativa por puerto', ancla: 'def native_vlans' },
+      { t: 'Cambios de vínculo IP↔MAC', ancla: 'def binding_changes' },
+      { t: 'Una fila de 31 variables', ancla: 'def build_rows' },
+    ],
+  },
+  'acumular_v3.py': {
+    explica: 'El temporizador de la línea base: cada 10 min toma los PCAP ya cerrados y el tramo de eve.json, los pasa por el MISMO extractor que el motor y añade filas nuevas al dataset, sin duplicar.',
+    editar: 'nano ~/cyberflow/scripts/features/acumular_v3.py',
+    pseudo: [
+      { t: 'PCAP ya cerrados del anillo', ancla: 'def pcaps_cerrados' },
+      { t: 'Rebanada de eve.json del mismo tramo', ancla: 'def rebanada_eve' },
+      { t: 'Claves (IP, ventana) ya escritas (no duplicar)', ancla: 'def claves_ya_escritas' },
+      { t: 'Extraer y anexar (bucle)', ancla: 'def main' },
+    ],
+  },
+  'particionar_linea_base.py': {
+    explica: 'Parte la línea base en entrenamiento / validación / prueba SIN fuga temporal: por bloques horarios (cubren todo el ciclo diario) y con una banda de guarda para que ninguna ventana comparta paquetes entre grupos.',
+    editar: 'python3 scripts/dataset/particionar_linea_base.py --help',
+    pseudo: [
+      { t: 'Partir por bloques horarios + banda de guarda', ancla: 'def particionar' },
+      { t: 'Comprobar que no hay solape entre grupos', ancla: 'def comprobar' },
+      { t: 'sha256 de cada salida', ancla: 'def sha256' },
+      { t: 'Escribir las tres particiones', ancla: 'def main' },
+    ],
+  },
+  'entrenar_preliminar.py': {
+    explica: 'Entrena el modelo con tráfico normal limpio y CONGELA el umbral como el percentil α de validación. Guarda un paquete (modelo + escalador + umbral) que luego se promueve. No decide nada en vivo.',
+    editar: 'python3 scripts/modeling/entrenar_preliminar.py --help',
+    pseudo: [
+      { t: 'Cargar filas (solo elegibles)', ancla: 'def cargar' },
+      { t: 'Matriz de variables en el orden del esquema', ancla: 'def matriz' },
+      { t: 'Entrenar y fijar el umbral en validación', ancla: 'def main' },
+      { t: 'sha256 del paquete', ancla: 'def sha256' },
+    ],
+  },
+  'promover_preliminar.py': {
+    explica: 'Convierte el paquete de entrenamiento en el artefacto que el motor carga: un Pipeline + un manifiesto con el umbral, el orden de variables y los hashes. Se NIEGA a sobrescribir un artefacto existente (rollback seguro).',
+    editar: 'python3 scripts/modeling/promover_preliminar.py --help',
+    pseudo: [
+      { t: 'Orden de variables del esquema', ancla: 'def orden_del_esquema' },
+      { t: 'Comprobar que el paquete respeta ese orden', ancla: 'def comprobar_orden' },
+      { t: 'Promover: Pipeline + manifiesto (no sobrescribe)', ancla: 'def promover' },
+      { t: 'sha256 del artefacto', ancla: 'def sha256' },
+    ],
+  },
+  'verificar_equivalencia_umbral.py': {
+    explica: 'Comprueba que el umbral del modelo desplegado significa lo mismo en las dos escalas (score_samples y decision_function) y que el artefacto coincide con su manifiesto: hash, orden de variables y 0 decisiones distintas sobre filas reales.',
+    editar: 'python3 scripts/modeling/verificar_equivalencia_umbral.py --help',
+    pseudo: [
+      { t: 'Umbral declarado en el manifiesto', ancla: 'def umbral_del_manifiesto' },
+      { t: 'Estimador final del Pipeline', ancla: 'def estimador_final' },
+      { t: 'Filas de muestra para comparar', ancla: 'def filas' },
+      { t: 'Verificar equivalencia (hash + orden + umbral)', ancla: 'def verificar' },
+    ],
+  },
+  'comparar_reentrenamiento.py': {
+    explica: 'Ensayo en seco: compara el modelo ANTES y DESPUÉS de un reentrenamiento sobre los mismos conjuntos, y muestra el delta de cada métrica (FPR, detección) para decidir si el candidato mejora.',
+    editar: 'python3 scripts/modeling/comparar_reentrenamiento.py --help',
+    pseudo: [
+      { t: 'Leer los dos informes (antes / después)', ancla: 'def leer' },
+      { t: 'Delta por métrica (mejor = menor o mayor)', ancla: 'def delta' },
+      { t: 'Formatear porcentajes', ancla: 'def pct' },
+      { t: 'Imprimir la comparación', ancla: 'def main' },
+    ],
+  },
+  'cyberflow_config.py': {
+    explica: 'El generador de la instalación: lee cyberflow.local.toml y ESCRIBE las unidades de systemd (captura, motor, panel, temporizadores) y el alcance. El .toml manda; de aquí no sale nada que no esté declarado.',
+    editar: 'python3 scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml --mostrar',
+    pseudo: [
+      { t: 'Cargar el .toml', ancla: 'def cargar' },
+      { t: 'Comprobar la configuración (fail-closed)', ancla: 'def comprobar' },
+      { t: '¿El panel queda expuesto? (regla nftables)', ancla: 'def panel_expuesto' },
+      { t: 'Exclusiones de alcance', ancla: 'def exclusiones' },
+      { t: 'Render de las unidades systemd', ancla: 'def render' },
+    ],
+  },
+  'responder_iptables.py': {
+    explica: 'La respuesta INLINE alternativa (sensor que también es router): bloquea con iptables/nftables las IP en alerta sostenida. Nunca toca la infraestructura (gateways, DNS). En el despliegue vigente la respuesta la hace el agente del host con el feed firmado; este es el camino directo.',
+    editar: 'nano ~/cyberflow/scripts/engine/responder_iptables.py',
+    pseudo: [
+      { t: '¿La IP es infraestructura? (nunca bloquear)', ancla: 'def es_infraestructura' },
+      { t: 'Leer el registro del motor', ancla: 'def parse_registro' },
+      { t: 'Candidatos: alerta sostenida ≥ mínimo', ancla: 'def candidatos' },
+      { t: 'Reglas iptables ya activas', ancla: 'def iptables_activas' },
+      { t: 'Aplicar la regla', ancla: 'def aplicar_regla' },
+    ],
+  },
+  'vista_vivo.py': {
+    explica: 'La trazabilidad de «Datos en vivo»: toma las tramas del PCAP reciente y los eventos de eve.json y muestra, para cada uno, a QUÉ variable aporta. Es la misma cadena del motor, pero sobre el tramo reciente y para explicarse.',
+    editar: 'nano ~/cyberflow/scripts/engine/vista_vivo.py',
+    pseudo: [
+      { t: 'Matriz variable ↔ trama/evento', ancla: 'def matriz_trazabilidad' },
+      { t: 'Aportes de un paquete', ancla: 'def aportes_paquete' },
+      { t: 'Aportes de un evento L7', ancla: 'def aportes_evento' },
+      { t: 'Calcular el tramo reciente', ancla: 'def calcular' },
+      { t: 'Flujo PCAP + eve para el panel', ancla: 'def flujo' },
+    ],
+  },
+  'compare_frozen_models_metrics.py': {
+    explica: 'Reproduce las métricas de los 7 modelos candidatos (binarias y de ranking) sobre los mismos datos congelados, con intervalos de Wilson. Es el soporte de la tabla de comparación del informe.',
+    editar: 'python3 scripts/analysis/compare_frozen_models_metrics.py --help',
+    pseudo: [
+      { t: 'Leer las filas del dataset', ancla: 'def read_rows' },
+      { t: 'Intervalo de confianza (Wilson)', ancla: 'def wilson' },
+      { t: 'Construir el informe de los 7', ancla: 'def build_report' },
+      { t: 'sha256 de los datos', ancla: 'def sha256' },
+    ],
+  },
+  'significancia_modelos.py': {
+    explica: 'Las pruebas de significancia entre los 7 candidatos: McNemar por pares y corrección de Holm, para no afirmar que un modelo es mejor por azar. Soporta la elección con rigor estadístico.',
+    editar: 'python3 scripts/modeling/experiments/significancia_modelos.py --help',
+    pseudo: [
+      { t: 'McNemar entre dos modelos', ancla: 'def mcnemar' },
+      { t: 'Vector a episodios', ancla: 'def a_episodio' },
+      { t: 'Corrección de Holm (múltiples pares)', ancla: 'def holm' },
+      { t: 'Informe', ancla: 'def informe' },
+    ],
+  },
 };
 
 // Diagrama de flujo POR ARCHIVO: las DECISIONES reales del codigo (rombos con
@@ -4406,6 +4535,94 @@ const GUIA_FLUJO = {
       { k: 'dec', t: 'Firma ed25519 válida', cond: 'con la clave pública', si: 'sigue', no: 'no toca nada (fail-safe)' },
       { k: 'proc', t: 'Sincronizar nftables: LIMIT = rate-limit · BLOCK = drop + timeout' },
       { k: 'fin', t: 'El set caduca solo (timeout nativo de nftables)' },
+    ],
+  },
+  'extract_multilayer_v3.py': {
+    titulo: 'Trama → 31 variables (28 v2 + 3 de capa 2)',
+    pasos: [
+      { k: 'inicio', t: 'Trama del PCAP + su timestamp' },
+      { k: 'proc', t: 'Decodificar Ethernet (MAC, VLAN, ethertype)', ancla: 'def parse_ethernet_l2' },
+      { k: 'proc', t: 'Trama con contexto (VLAN nativa, puerto)', ancla: 'def parse_con_contexto' },
+      { k: 'dec', t: 'Copia del espejo', cond: 'misma trama, TTL−1 entre VLAN', si: 'se descarta (no contar dos veces)', no: 'se conserva', ancla: 'def deduplicar_espejo' },
+      { k: 'proc', t: 'Señales L2: MACs que reenvían · VLAN nativa · cambios IP↔MAC', ancla: 'def forwarding_macs' },
+      { k: 'io', t: 'Una fila de 31 variables por IP y ventana', ancla: 'def build_rows' },
+      { k: 'archivo', t: 'El motor usa las 28 del modelo', ir: 'motor_decision.py' },
+    ],
+  },
+  'acumular_v3.py': {
+    titulo: 'Línea base: acumular cada 10 min',
+    pasos: [
+      { k: 'inicio', t: 'Temporizador (cada 10 min)' },
+      { k: 'proc', t: 'PCAP ya cerrados del anillo', ancla: 'def pcaps_cerrados' },
+      { k: 'proc', t: 'Rebanada de eve.json del mismo tramo', ancla: 'def rebanada_eve' },
+      { k: 'dec', t: '¿(IP, ventana) ya escrita?', cond: 'clave ya en el CSV', si: 'se omite (no duplicar)', no: 'se extrae', ancla: 'def claves_ya_escritas' },
+      { k: 'io', t: 'Anexar filas nuevas al dataset', ancla: 'def main' },
+      { k: 'archivo', t: 'El aprendizaje sanea este lote', ir: 'cyberflow_aprendizaje.py' },
+    ],
+  },
+  'particionar_linea_base.py': {
+    titulo: 'Partir sin fuga temporal',
+    pasos: [
+      { k: 'inicio', t: 'Línea base completa (una fila por ventana)' },
+      { k: 'proc', t: 'Repartir por bloques horarios (cubren el ciclo diario)', ancla: 'def particionar' },
+      { k: 'proc', t: 'Banda de guarda: ninguna ventana compartida entre grupos', ancla: 'def particionar' },
+      { k: 'dec', t: 'Solape entre train/val/test', cond: 'ventanas que comparten paquetes', si: 'ERROR, no se escribe', no: 'sigue', ancla: 'def comprobar' },
+      { k: 'io', t: 'Tres particiones + su sha256 (≈ 61/20/20)', ancla: 'def sha256' },
+      { k: 'archivo', t: 'El test se congela como «oro»', ir: 'cyberflow_aprendizaje.py' },
+    ],
+  },
+  'entrenar_preliminar.py': {
+    titulo: 'Entrenar y CONGELAR el umbral',
+    pasos: [
+      { k: 'inicio', t: 'Partición de entrenamiento (solo normal, limpio)' },
+      { k: 'proc', t: 'Cargar filas elegibles', ancla: 'def cargar' },
+      { k: 'proc', t: 'Matriz en el orden del esquema', ancla: 'def matriz' },
+      { k: 'proc', t: 'Entrenar el detector', ancla: 'def main' },
+      { k: 'proc', t: 'Fijar el umbral = percentil α de VALIDACIÓN', ancla: 'def main' },
+      { k: 'io', t: 'Paquete (modelo + escalador + umbral) + sha256', ancla: 'def sha256' },
+      { k: 'archivo', t: 'Se promueve al artefacto del motor', ir: 'promover_preliminar.py' },
+    ],
+  },
+  'promover_preliminar.py': {
+    titulo: 'Paquete → artefacto del motor',
+    pasos: [
+      { k: 'inicio', t: 'Paquete de entrenar_preliminar.py', ancla: 'def promover' },
+      { k: 'proc', t: 'Orden de variables del esquema', ancla: 'def orden_del_esquema' },
+      { k: 'dec', t: '¿El paquete respeta ese orden?', cond: 'mismas variables, mismo orden', si: 'sigue', no: 'ERROR (el motor lo rechazaría)', ancla: 'def comprobar_orden' },
+      { k: 'dec', t: '¿Ya existe el artefacto?', cond: 'no pisar un modelo en uso', si: 'se niega (rollback seguro)', no: 'escribe', ancla: 'def promover' },
+      { k: 'io', t: 'Pipeline + manifiesto (umbral, orden, hash)', ancla: 'def promover' },
+      { k: 'archivo', t: 'Se verifica la equivalencia', ir: 'verificar_equivalencia_umbral.py' },
+    ],
+  },
+  'verificar_equivalencia_umbral.py': {
+    titulo: 'Verificar artefacto ↔ manifiesto',
+    pasos: [
+      { k: 'inicio', t: 'Artefacto desplegado + su manifiesto', ancla: 'def verificar' },
+      { k: 'proc', t: 'Umbral declarado (dos escalas)', ancla: 'def umbral_del_manifiesto' },
+      { k: 'proc', t: 'Puntuar filas reales de muestra', ancla: 'def filas' },
+      { k: 'dec', t: '¿Equivalente?', cond: 'hash + orden + 0 decisiones distintas', si: 'OK (reproducible)', no: 'FALLA (no se despliega)', ancla: 'def verificar' },
+      { k: 'fin', t: 'Sale 0 solo si todo coincide' },
+    ],
+  },
+  'cyberflow_config.py': {
+    titulo: 'De .toml a unidades systemd',
+    pasos: [
+      { k: 'inicio', t: 'configs/cyberflow.local.toml', ancla: 'def cargar' },
+      { k: 'dec', t: '¿Configuración válida?', cond: 'comprobar (fail-closed)', si: 'sigue', no: 'ERROR, no escribe nada', ancla: 'def comprobar' },
+      { k: 'dec', t: '¿El panel queda expuesto?', cond: 'host/puerto accesibles', si: 'regla nftables «permitir solo bastión»', no: '—', ancla: 'def panel_expuesto' },
+      { k: 'proc', t: 'Exclusiones de alcance (sensor, bastión, gateways)', ancla: 'def exclusiones' },
+      { k: 'io', t: 'Render de las unidades (captura · motor · panel · timers)', ancla: 'def render' },
+    ],
+  },
+  'responder_iptables.py': {
+    titulo: 'Respuesta inline (sensor-router)',
+    pasos: [
+      { k: 'inicio', t: 'Registro del motor (decisiones)', ancla: 'def parse_registro' },
+      { k: 'proc', t: 'Candidatos: alerta sostenida ≥ mínimo', ancla: 'def candidatos' },
+      { k: 'dec', t: '¿La IP es infraestructura?', cond: 'gateway · DNS · sensor · bastión', si: 'NUNCA se bloquea', no: 'sigue', ancla: 'def es_infraestructura' },
+      { k: 'dec', t: '¿Ya hay regla activa?', cond: 'iptables_activas', si: 'no se repite', no: 'aplica', ancla: 'def iptables_activas' },
+      { k: 'proc', t: 'Aplicar la regla (drop / limit)', ancla: 'def aplicar_regla' },
+      { k: 'fin', t: 'En el despliegue vigente esto lo hace el AGENTE del host con el feed firmado' },
     ],
   },
 };
