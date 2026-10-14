@@ -1007,7 +1007,7 @@ HTML = """<!doctype html>
 
   <section id="s-comparacion">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg><h2>Comparación con Suricata</h2></div>
-    <p class="lede-small">Mismo PCAP para todos; qué es un ataque lo dice la referencia, no las alertas. Se cuenta por episodio.</p>
+    <p class="lede-small"><b>Por qué Suricata:</b> es el IDS de firmas de referencia, el estándar con el que contrastar. <b>Cómo se comparó:</b> el MISMO PCAP de cada episodio se reprodujo a los dos con el reloj del paquete y la configuración congelada (Suricata con ET Open, 53 013 reglas); qué es un ataque lo fija la REFERENCIA —el orquestador que lanzó el ataque—, no las alertas de ninguno. <b>Qué se mide:</b> detección por episodio, no bloqueo, porque en el espejo SPAN Suricata es IDS (ve una copia, no está en línea). <b>Resultado:</b> Suricata detecta lo que tiene firma (Nikto); CyberFlow detecta además lo que NO la tiene (escaneo, flood, DNS: 0 para Suricata) y encima BLOQUEA, que Suricata en SPAN no puede. No lo reemplaza: lo complementa.</p>
     <div class="cmp-fig">
       <svg viewBox="0 0 900 250" role="img" aria-label="Protocolo: entrada común y referencia independiente, cuatro condiciones, evaluación por episodio">
         <defs><marker id="cmpFl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8aa0b4"/></marker></defs>
@@ -2943,8 +2943,16 @@ const TOPO_TEXTO = {
     cmd: 'monitor session 1 source interface Gi1/0/23 , Gi2/0/23 both\\nmonitor session 1 destination interface Gi2/0/19 encapsulation replicate\\n! Gi1/0/23 y Gi2/0/23: troncales del Firewall A/B\\n! Gi2/0/19: hacia el hipervisor del sensor (172.17.25.2)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
   },
   atacante: {
-    que: 'La VM Kali (10.10.20.30). Genera los ataques del ensayo: escaneo, nikto, flood HTTP y ARP spoofing.',
-    nota: 'Fuera de la fase de ataque debe estar apagada: si emite durante la línea base, el modelo aprendería el ataque como normal.',
+    que: 'La VM Kali (10.10.20.30, VLAN 20). Lanza los ataques del ensayo con herramientas estándar de pentesting; cada familia mueve variables distintas que el sensor ve por el espejo. El panel solo MUESTRA estos comandos (sección Simulación); nunca los ejecuta.',
+    flujoTit: 'Herramientas · qué familia lanza cada una',
+    flujo: [
+      {paso: 'Escaneo de puertos', fichero: 'nmap -sT -sV -T4 -p- --open', garantia: 'barrido TCP a muchos puertos; mueve flow_attempt y unique_dst_port → BLOCK'},
+      {paso: 'Fuerza bruta / flood HTTP', fichero: 'curl en 20 hilos a /login (~16 000 POST/2 min)', garantia: 'http_request_rate alto y fallo de auth → BLOCK; sin fallo de auth → LIMIT'},
+      {paso: 'Vulnerabilidades web', fichero: 'nikto -h http://10.10.30.10 (tiene firma)', garantia: 'cientos de rutas y 404 en ráfaga; http_request_rate y http_error_ratio'},
+      {paso: 'DNS de alta entropía', fichero: 'consultas tipo DGA / NXDOMAIN', garantia: 'nombres únicos y NXDOMAIN altos → LIMIT (hueco donde el modelo saca 0 %)'},
+      {paso: 'ARP spoofing (capa 2)', fichero: 'arpspoof -t cliente gateway', garantia: 'unique_src_mac sube; NO lo detecta el modelo global: declarado como trabajo futuro'},
+    ],
+    nota: 'Fuera de la fase de ataque debe estar APAGADA: si emite durante la línea base, el modelo aprendería el ataque como normal. Por eso sus ventanas se excluyen con excluir_ventanas y el saneamiento del lote.',
   },
   clientes: {
     que: 'Una VM con seis alias .21-.26, cada uno un perfil de tráfico legítimo contra el servidor. Así la línea base tiene variedad realista, no un único patrón.',
@@ -2959,12 +2967,27 @@ const TOPO_TEXTO = {
     nota: 'Seis IP sobre una sola MAC, a propósito: el motor puntúa por IP, así que son seis entidades distintas para el modelo.',
   },
   servidor: {
-    que: 'El objetivo del laboratorio (10.10.30.10), servidor HTTP/HTTPS. Recibe el tráfico legítimo y los ataques.',
-    nota: 'Aparece con pocos paquetes propios porque el motor atribuye cada flujo a quien lo inicia -el cliente-, no al destino.',
+    que: 'El host protegido (srv-dmz, 10.10.30.10, VLAN 30 DMZ): servidor HTTP/HTTPS objetivo del ensayo y donde se APLICA la respuesta. Escucha 80 y 443 (web) y 22 (SSH). Corre el agente que trae el feed firmado y sincroniza nftables en su propio kernel.',
+    flujoTit: 'Qué corre en el host y cómo bloquea',
+    flujo: [
+      {paso: 'Servicio web', fichero: 'HTTP 80 · HTTPS 443', garantia: 'objetivo del tráfico legítimo y de los ataques'},
+      {paso: 'Agente de enforcement', fichero: 'ppi-enforce-agent.timer (pull 60 s)', garantia: 'trae el feed del relay, verifica la firma ed25519 y aplica nftables'},
+      {paso: 'BLOCK = drop', fichero: 'set cyberflow_bloqueados (con timeout)', garantia: 'ip saddr @bloqueados → drop; caduca solo'},
+      {paso: 'LIMIT = rate-limit', fichero: 'set cyberflow_limitados (con timeout)', garantia: 'limit rate over 100/s burst 5 → drop el exceso'},
+    ],
+    cmd: 'table inet cyberflow {\\n  set cyberflow_bloqueados { type ipv4_addr; flags timeout }\\n  set cyberflow_limitados  { type ipv4_addr; flags timeout }\\n  chain entrada {\\n    type filter hook input priority filter - 10; policy accept;\\n    ip saddr @cyberflow_bloqueados drop\\n    ip saddr @cyberflow_limitados limit rate over 100/second burst 5 packets drop\\n  }\\n}',
+    nota: 'Tabla AISLADA (policy accept): solo cae lo que trae el feed; nunca gateways ni DNS. El sudoers del agente solo permite «nft» sin contraseña, nada más. Fail-safe: si la firma no verifica, no toca la tabla. Aparece con pocos paquetes PROPIOS porque el motor atribuye cada flujo a quien lo inicia, no al destino.',
   },
   gateway: {
-    que: 'La puerta de enlace de la VLAN 20 (10.10.20.1, VIP CARP del Firewall). Enruta entre VLAN.',
-    nota: 'En el ARP spoofing su IP pasó a verse con dos MAC: esa es la anomalía de capa 2 que dispara unique_src_mac_30s.',
+    que: 'La segmentación del laboratorio: un cortafuegos pfSense en alta disponibilidad (par A/B con VIP CARP) que enruta entre VLAN y es la puerta de enlace de cada una (VLAN 20 clientes/Kali · 30 DMZ · 60 sensor · 10 gestión). Todo el tráfico entre VLAN cruza el troncal, que es el que se espeja (SPAN) hacia el sensor.',
+    flujoTit: 'Reglas implementadas (lo que el ensayo comprobó)',
+    flujo: [
+      {paso: 'Atacante → DMZ: solo 443', fichero: 'VLAN 20 → VLAN 30', garantia: 'HTTPS permitido; puerto 80 FILTERED; ICMP bloqueado'},
+      {paso: 'Clientes → DMZ', fichero: 'VLAN 20 → VLAN 30', garantia: 'tráfico legítimo a 80/443 para la línea base'},
+      {paso: 'Sensor sin salida a Internet', fichero: 'VLAN 60 · egress denegado', garantia: 'propiedad de seguridad: nada de bots externos'},
+      {paso: 'Troncal espejado', fichero: 'SPAN del trunk → sensor', garantia: 'el sensor ve una COPIA, no está en línea: observa, no corta'},
+    ],
+    nota: 'Por esta segmentación los ataques HTTP en claro (nikto, flood sobre 80) no llegan de extremo a extremo desde la Kali; sobre 443 Suricata solo ve TLS cifrado. El escaneo de puertos SÍ se valida E2E porque opera a nivel TCP/flujo. El cortafuegos es de SOLO LECTURA para CyberFlow: la respuesta la aplica el agente en el host, no aquí. En el ARP spoofing la IP de la puerta de enlace pasó a verse con dos MAC: esa es la anomalía de capa 2 que mueve unique_src_mac_30s.',
   },
   reentrenamiento: {
     que: 'El modelo envejece: la normalidad cambia con el tiempo. Cada noche el sistema sanea un lote, mide la deriva y, cuando toca, entrena y evalúa un candidato. Desplegarlo lo decide una persona: un modelo que se cambia solo podría aprender un ataque lento como normal.',
