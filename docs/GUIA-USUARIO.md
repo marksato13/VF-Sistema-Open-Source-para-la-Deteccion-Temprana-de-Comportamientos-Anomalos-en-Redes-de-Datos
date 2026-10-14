@@ -94,9 +94,9 @@ ssh -L 8788:127.0.0.1:8788 usuario@sensor
 # y abra https://127.0.0.1:8788 (o http:// si no hay login configurado)
 ```
 
-![Figura G.2. Panel, cuenta admin en modo operativo: salud, actividad, bloqueos, decisiones y scores](img/guia/G-02-panel-operativo.png)
+![Figura G.2. Panel, cuenta admin en modo operativo: salud, actividad, alertas, bloqueos, decisiones y scores](img/guia/G-02-panel-operativo.png)
 
-*Figura G.2. Panel, cuenta `admin` en modo operativo: salud, actividad, bloqueos, decisiones y scores*
+*Figura G.2. Panel, cuenta `admin` en modo operativo: salud, actividad, alertas, bloqueos, decisiones y scores*
 
 ![Figura G.3. Panel en modo desarrollador: topología, variables, alcance y modelo](img/guia/G-03-panel-desarrollador.png)
 
@@ -108,6 +108,36 @@ las secciones de desarrollador (el servidor responde 403).
 ![Figura G.4. Cuenta lector: sin secciones de desarrollador](img/guia/G-04-panel-lector.png)
 
 *Figura G.4. Cuenta `lector`: sin secciones de desarrollador*
+
+#### Cómo se recorre el panel
+
+El menú está agrupado por tarea y **se navega por páginas**: al pulsar una entrada
+se muestra solo esa sección, así el menú siempre coincide con lo que se ve. Al pie
+de cada vista hay enlaces a las vistas relacionadas.
+
+- **Vigilancia** (también para el `lector`): Salud · Actividad · **Alertas** · Decisiones · Bloqueos · Scores.
+- **Sistema**: **Mapa del sistema** · Despliegue · Alcance.
+- **Datos**: Variables · Datos en vivo.  **Modelo**: Modelo · Reentrenamiento.  **Evaluación**: Suricata · Simulación.
+
+Tres cosas que conviene conocer:
+
+- **Alertas** — el feed de lo que el sistema detectó: cada ventana con su tipo
+  (anomalía del modelo o regla disparada: escaneo, fuerza bruta, abuso HTTP, DNS),
+  el motivo, el score frente al umbral y la acción (LIMIT/BLOCK). Es lo que se mira
+  primero; el detalle completo está en Decisiones. *Una anomalía del modelo no
+  equivale a un ataque confirmado.*
+- **Mapa del sistema** — ocho vistas del mismo sistema (Fases del método,
+  Operacional, Red y captura, Construcción, Decisión, Respuesta, **Carpetas** y
+  Validación). En modo desarrollador, **«Ver archivos»** abre un **visor de código
+  a dos paneles**: a la izquierda el código real con su ruta, a la derecha el
+  pseudocódigo; al pulsar un paso del pseudocódigo el código salta a esa parte.
+- **Carpetas** — la arquitectura del repositorio y, por carpeta, los archivos del
+  sistema con el **host** donde corre cada uno (Sensor, Servidor o Bastión).
+
+> **Bloqueos** muestra el estado **reconstruido del registro y del feed**, no leído
+> del `nftables` remoto del host; por eso puede diferir del feed instantáneo o del
+> historial. La barra lateral avisa de **«captura degradada»** si hay un PCAP
+> ilegible o se pierden paquetes.
 
 **Verlo desde la red.** El login **no sustituye** a la lista de orígenes: exponerlo exige
 además decir quién puede llegar:
