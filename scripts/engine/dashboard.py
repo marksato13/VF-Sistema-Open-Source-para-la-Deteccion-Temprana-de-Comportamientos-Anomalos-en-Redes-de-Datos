@@ -376,6 +376,7 @@ HTML = """<!doctype html>
   .perfil-n { color: var(--text); font-weight: 600; white-space: nowrap; }
   .perfil-n small { color: var(--text-dim); font-weight: 400; font-family: var(--mono); margin-left: 0.3rem; }
   .perfil-d { color: var(--text-dim); }
+  .perfil-ej { grid-column: 3; color: var(--text-dim); font-family: var(--mono); font-size: 0.72rem; opacity: 0.92; margin-top: 0.05rem; overflow-wrap: anywhere; }
   /* Archivos del sistema con el host donde corre cada uno (vista Carpetas). */
   .archivos { display: grid; gap: 0.35rem; margin: 0.4rem 0 0.2rem; }
   .arch { display: grid; grid-template-columns: 22px auto auto 1fr; align-items: center; gap: 0.5rem; font-size: 0.82rem; }
@@ -2957,12 +2958,18 @@ const TOPO_TEXTO = {
   clientes: {
     que: 'Una VM con seis alias .21-.26, cada uno un perfil de tráfico legítimo contra el servidor. Así la línea base tiene variedad realista, no un único patrón.',
     perfiles: [
-      { icono: 'ofimatica',  n: 'Ofimática',  ip: '.21', d: 'ráfagas cortas de peticiones pequeñas' },
-      { icono: 'navegacion', n: 'Navegación', ip: '.22', d: 'muchas conexiones a destinos variados' },
-      { icono: 'descargas',  n: 'Descargas',  ip: '.23', d: 'flujos largos, volumen sostenido' },
-      { icono: 'aplicacion', n: 'Aplicación', ip: '.24', d: 'API/HTTP regular, tamaños homogéneos' },
-      { icono: 'ligero',     n: 'Ligero',     ip: '.25', d: 'poco tráfico, intervalos amplios' },
-      { icono: 'erratico',   n: 'Errático',   ip: '.26', d: 'irregular, sin patrón fijo' },
+      { icono: 'ofimatica',  n: 'Ofimática',  ip: '.21', d: 'ráfagas cortas de peticiones pequeñas',
+        ej: 'cada ~3 s: GET / o /estatico/8k, DNS de intranet.francos-sac.com y algún /api/ok' },
+      { icono: 'navegacion', n: 'Navegación', ip: '.22', d: 'muchas conexiones a destinos variados',
+        ej: 'cada ~1,5 s: GET /estatico/256k por HTTP y HTTPS, DNS a wiki/erp/correo, a veces abandona una descarga' },
+      { icono: 'descargas',  n: 'Descargas',  ip: '.23', d: 'flujos largos, volumen sostenido',
+        ej: 'cada ~8 s baja GET /estatico/1M: pocas conexiones, flujos largos' },
+      { icono: 'aplicacion', n: 'Aplicación', ip: '.24', d: 'API/HTTP regular, tamaños homogéneos',
+        ej: 'cada ~2 s: GET /api/ok y POST /api/enviar; de vez en cuando /api/lento o un 500' },
+      { icono: 'ligero',     n: 'Ligero',     ip: '.25', d: 'poco tráfico, intervalos amplios',
+        ej: 'cada ~12 s: una consulta DNS, un /api/ok pequeño o un ping' },
+      { icono: 'erratico',   n: 'Errático',   ip: '.26', d: 'irregular, sin patrón fijo',
+        ej: 'ráfagas y silencios: mezcla peticiones pequeñas y grandes, pings, abandona conexiones y a veces toca un puerto cerrado' },
     ],
     nota: 'Seis IP sobre una sola MAC, a propósito: el motor puntúa por IP, así que son seis entidades distintas para el modelo.',
   },
@@ -4005,7 +4012,8 @@ function perfilesHTML(perfiles) {
   if (!perfiles || !perfiles.length) return '';
   const fila = p => `<div class="perfil"><span class="perfil-ico"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[p.icono] || ''}</svg></span>`
     + `<span class="perfil-n">${p.n}${p.ip ? '<small>' + p.ip + '</small>' : ''}</span>`
-    + `<span class="perfil-d">${p.d || ''}</span></div>`;
+    + `<span class="perfil-d">${p.d || ''}</span>`
+    + (p.ej ? `<span class="perfil-ej">p. ej. ${p.ej}</span>` : '') + `</div>`;
   return '<div class="cod-sub">Perfiles de tráfico legítimo</div>'
     + '<div class="perfiles">' + perfiles.map(fila).join('') + '</div>';
 }
