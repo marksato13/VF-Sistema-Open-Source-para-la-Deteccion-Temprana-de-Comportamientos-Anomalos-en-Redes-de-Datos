@@ -613,6 +613,10 @@ Tres roles, uno por host:
 
 Las unidades de ejemplo están en `deploy/enforcement/`.
 
+![Figura 9.1. La cadena de enforcement distribuido: sensor, bastión y host, con las unidades systemd y el feed firmado](img/instalacion/09-modo4-detalle.png)
+
+*Figura 9.1. La cadena en detalle: el sensor decide y firma (priv.pem), el bastión relaya, el agente verifica (pub.pem) y corta en nftables. Cada caja indica su unidad systemd y su ruta.*
+
 ### 9.1 · Claves de firma (ed25519), solo una vez, en el sensor
 
 ```bash
