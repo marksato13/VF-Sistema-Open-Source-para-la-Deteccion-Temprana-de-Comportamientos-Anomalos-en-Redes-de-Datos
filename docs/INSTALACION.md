@@ -7,6 +7,34 @@ aparece aquí ocurrió de verdad y tiene su comprobación al lado.
 
 ---
 
+## Modos de instalación: elija su topología
+
+Antes de los pasos, elija **cómo va a desplegar**. Hay cinco formas, de la más
+simple a la más completa. Las secciones 1–8 instalan el **sensor**; el agente de
+respuesta se instala aparte (sección 9).
+
+| Modo | Para qué | Qué se instala | Actúa sobre la red |
+|---|---|---|---|
+| **1. Demo** | ver el producto funcionando, sin red real | solo el panel con datos de ejemplo (`--demo`) | no |
+| **2. Observación (IDS), un sensor** | detectar y registrar en producción, sin riesgo | sensor en espejo SPAN (`motor.modo = "observacion"`) | no |
+| **3. Bloqueo inline (IPS), una máquina** | detectar **y cortar** en una sola máquina | el sensor es el router, corta su propio `nftables` (`motor.modo = "bloqueo"`) | sí, local |
+| **4. Enforcement distribuido** *(el vigente)* | observar sin riesgo **y** cortar en los hosts | sensor en observación **+ agente** en cada host protegido + relay en el bastión | sí, en los hosts |
+| **5. Replicación** | varios sensores / varios segmentos | un 2.º sensor desde cero | según el modo de cada uno |
+
+- **Modo 1 (demo):** sin red, sin capturas. `python3 scripts/engine/dashboard.py --demo`
+  (o la unidad en modo demo). Útil para presentar; no detecta nada real.
+- **Modos 2 y 3:** son el mismo sensor; cambian solo `motor.modo` y el cableado
+  (espejo vs. en el camino). Ver «los dos modos» justo abajo.
+- **Modo 4 (recomendado y el que corre hoy):** el sensor **solo observa** (cero
+  riesgo sobre el tráfico) y la respuesta la aplica un **agente** en el host
+  protegido, a partir de un feed firmado. Un-feed / N-agentes: añadir un host es
+  instalar otro agente, sin reentrenar. **Sensor en secciones 1–8; agente en la
+  sección 9.**
+- **Modo 5 (replicación):** levantar un segundo sensor que recibe la misma copia
+  del espejo. Guía aparte: [REPLICACION.md](../REPLICACION.md).
+
+---
+
 ## Antes de empezar: los dos modos
 
 CyberFlow puede instalarse de dos formas, y **hay que elegir antes**, porque
@@ -557,6 +585,137 @@ sudo systemctl daemon-reload && sudo systemctl enable --now cyberflow-aprendizaj
 ```
 
 Las cuatro defensas, la política y cómo promover o revertir: [APRENDIZAJE.md](APRENDIZAJE.md).
+
+---
+
+## 9 · Enforcement distribuido: el agente en el host protegido
+
+Este es el **modo 4**. El sensor **solo observa** (cero riesgo sobre el tráfico);
+la respuesta la aplica un **agente** en cada host protegido, a partir de un feed
+**firmado** que publica el sensor. El sensor no tiene credenciales de los hosts:
+el modelo es **pull** (un-feed / N-agentes). Añadir un host es instalar otro
+agente; no hace falta reentrenar.
+
+Tres roles, uno por host:
+
+| Host | Unidad | Qué hace |
+|---|---|---|
+| **Sensor** | `ppi-publicar-feed` | arma la lista de acciones por IP desde el registro del motor y la **firma** (ed25519) |
+| **Bastión** (relay) | `ppi-relay-feed` | hace *pull* del feed del sensor y *push* al host; relay tonto, no puede forjar |
+| **Host protegido** | `ppi-enforce-agent` | verifica la firma y **sincroniza su `nftables`** (LIMIT = tasa, BLOCK = drop con caducidad) |
+
+> Los tres `timer` corren **cada minuto**. La clave privada de firma vive **solo
+> en el sensor**. Instalarlos necesita **sudo** en cada host.
+
+Las unidades de ejemplo están en `deploy/enforcement/`.
+
+### 9.1 · Claves de firma (ed25519), solo una vez, en el sensor
+
+```bash
+mkdir -p artifacts/feed-keys
+openssl genpkey -algorithm ed25519 -out artifacts/feed-keys/priv.pem   # NO sale del sensor
+openssl pkey -in artifacts/feed-keys/priv.pem -pubout -out artifacts/feed-keys/pub.pem
+chmod 600 artifacts/feed-keys/priv.pem
+```
+
+La **privada** (`priv.pem`) se queda en el sensor. La **pública** (`pub.pem`) se
+copia a cada host protegido (paso 9.4). Quien tenga solo la pública puede
+*verificar* el feed, nunca *forjarlo*.
+
+### 9.2 · Publicador, en el sensor
+
+```bash
+sudo cp deploy/enforcement/ppi-publicar-feed.service \
+        deploy/enforcement/ppi-publicar-feed.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ppi-publicar-feed.timer
+```
+
+Publica y firma en `~/feed/feed.json` + `feed.sig` cada minuto, desde
+`logs/motor_decision.log`. Ajuste rutas/usuario en el `.service` si su despliegue
+difiere del de referencia (`/home/m4rk/cyberflow`).
+
+### 9.3 · Relay, en el bastión
+
+El bastión trae el feed del sensor (clave `cyberflow-to-sensor`) y lo empuja al
+host protegido (clave `cyberflow-to-srv`). El script `relay-feed.sh` hace ese
+pull→push; cópielo a `/home/gadmin/` y ajuste IPs y claves.
+
+```bash
+sudo cp deploy/enforcement/ppi-relay-feed.service \
+        deploy/enforcement/ppi-relay-feed.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ppi-relay-feed.timer
+```
+
+> Si el host alcanza al sensor directamente, el relay es opcional: el agente
+> puede traer el feed del sensor con `--feed https://sensor:.../feed.json`. El
+> relay existe para redes donde el host **no** habla con el sensor.
+
+### 9.4 · Agente, en cada host protegido
+
+**a) Copie las piezas** (el agente, el módulo de firma y la clave pública):
+
+```bash
+mkdir -p ~/enforce
+# desde el sensor/bastión, transfiera:
+#   scripts/enforce/agente_enforce.py  ->  ~/enforce/agente_enforce.py
+#   scripts/engine/feed.py             ->  ~/enforce/feed.py
+#   artifacts/feed-keys/pub.pem        ->  ~/enforce/pub.pem
+sudo apt-get install -y nftables python3
+```
+
+**b) Permita elevar *solo* `nft`** (mínimo privilegio, sin contraseña):
+
+```bash
+echo 'adminsrvdmz ALL=(root) NOPASSWD: /usr/sbin/nft' | \
+  sudo tee /etc/sudoers.d/cyberflow-enforce
+sudo chmod 440 /etc/sudoers.d/cyberflow-enforce
+```
+
+**c) Pruebe en seco** (dry-run, no toca nada) antes de aplicar:
+
+```bash
+python3 ~/enforce/agente_enforce.py \
+  --feed ~/enforce/feed.json --firma ~/enforce/feed.sig \
+  --clave-publica ~/enforce/pub.pem        # sin --aplicar: solo dice qué haría
+```
+
+**d) Instale la unidad** (ya con `--aplicar --sudo`):
+
+```bash
+sudo cp deploy/enforcement/ppi-enforce-agent.service \
+        deploy/enforcement/ppi-enforce-agent.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ppi-enforce-agent.timer
+```
+
+> **No** añada `NoNewPrivileges=yes` al `.service`: rompería el `sudo -n nft`.
+> El agente crea y sincroniza la tabla `inet cyberflow` con los sets
+> `cyberflow_bloqueados` y `cyberflow_limitados`; la caducidad la pone el
+> `timeout` nativo del set, así que una regla **se quita sola aunque el agente
+> muera**.
+
+### 9.5 · Comprobar la cadena
+
+```bash
+systemctl list-timers | grep ppi                       # los 3 timers con su próximo disparo
+journalctl -u ppi-enforce-agent -n 10 --no-pager       # "aplicado", "errores":0
+sudo nft list table inet cyberflow                     # en el host: sets y reglas
+```
+
+Prueba de extremo a extremo: lance un ataque desde una IP de prueba y verifique
+que aparece en `cyberflow_bloqueados` del host, con su `timeout`, y que caduca
+sola. (Recorrido completo en la guía de validación del repositorio de metodología.)
+
+### 9.6 · Modo sombra y fail-safe
+
+- **Modo sombra** (medir sin aplicar): quite `--aplicar` del `ppi-enforce-agent.service`
+  y recargue. El agente dice qué cortaría, sin tocar `nftables`.
+- **Fail-safe:** si la firma no verifica o el feed no se puede leer, **no aplica
+  nada nuevo** (conserva lo ya puesto). Ni abre ni cierra de golpe.
+- **Nunca-bloquear:** gateways, DNS, sensor y bastión quedan **siempre** fuera,
+  pase lo que pase en el motor.
 
 ---
 
