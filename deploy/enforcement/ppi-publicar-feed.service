@@ -1,0 +1,21 @@
+[Unit]
+Description=CyberFlow - publica el feed firmado de acciones (desde las decisiones del motor)
+After=ppi-motor.service
+Documentation=https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos
+
+[Service]
+Type=oneshot
+User=m4rk
+Group=m4rk
+WorkingDirectory=/home/m4rk/cyberflow
+# Lee las decisiones del motor, arma la lista de acciones por IP (modelo->LIMIT,
+# heuristico confirmado->BLOCK, escalera de reincidencia) y la firma (ed25519).
+ExecStart=/home/m4rk/cyberflow/.venv/bin/python scripts/engine/publicar_feed.py \
+    --log logs/motor_decision.log \
+    --estado /home/m4rk/feed/estado.json \
+    --clave-privada artifacts/feed-keys/priv.pem \
+    --salida-feed /home/m4rk/feed/feed.json \
+    --salida-firma /home/m4rk/feed/feed.sig \
+    --ventana-segundos 120 \
+    --umbrales 2026-10-06.1
+# La salida va al journal (journalctl -u ppi-publicar-feed), no a un fichero.

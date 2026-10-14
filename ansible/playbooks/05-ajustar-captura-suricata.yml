@@ -1,0 +1,60 @@
+---
+- name: Ajustar captura AF_PACKET de VM02 Sensor
+  hosts: ppi-sensor
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Instalar servicio persistente de interfaz
+      ansible.builtin.copy:
+        src: ../../configs/suricata/ppi-disable-offload.service
+        dest: /etc/systemd/system/ppi-disable-offload.service
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Retirar bloque AF_PACKET de una ejecución previa
+      ansible.builtin.blockinfile:
+        path: /etc/suricata/suricata.yaml
+        marker: '    # {mark} PPI LAB AF_PACKET TUNING'
+        state: absent
+
+    - name: Declarar parámetros AF_PACKET medidos para el laboratorio
+      ansible.builtin.lineinfile:
+        path: /etc/suricata/suricata.yaml
+        insertafter: '^  - interface: ens35$'
+        regexp: "^    {{ item.key }}:"
+        line: "    {{ item.key }}: {{ item.value }}"
+      loop:
+        - { key: buffer-size, value: '1048576' }
+        - { key: block-size, value: '1048576' }
+        - { key: ring-size, value: '32768' }
+        - { key: tpacket-v3, value: 'yes' }
+        - { key: threads, value: '4' }
+
+    - name: Validar configuración Suricata antes del reinicio
+      ansible.builtin.command: suricata -T -c /etc/suricata/suricata.yaml
+      changed_when: false
+
+    - name: Recargar unidades systemd
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+    - name: Aplicar tamaño máximo de ring y offloading
+      ansible.builtin.systemd_service:
+        name: ppi-disable-offload
+        enabled: true
+        state: restarted
+
+    - name: Reiniciar Suricata con contadores limpios
+      ansible.builtin.systemd_service:
+        name: suricata
+        enabled: true
+        state: restarted
+
+    - name: Confirmar servicios activos
+      ansible.builtin.command: "systemctl is-active {{ item }}"
+      changed_when: false
+      loop:
+        - ppi-disable-offload
+        - suricata

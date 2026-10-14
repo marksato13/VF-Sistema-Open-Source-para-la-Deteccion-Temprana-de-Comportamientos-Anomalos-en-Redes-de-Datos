@@ -1,0 +1,44 @@
+---
+- name: Validar el controlador Ansible y el inventario del laboratorio
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  tasks:
+    - name: Verificar que el controlador utiliza una versión compatible de Ansible
+      ansible.builtin.assert:
+        that:
+          - ansible_version.full is version('2.21', '>=')
+          - ansible_version.full is version('2.22', '<')
+        fail_msg: >-
+          Se requiere ansible-core 2.21.x; versión detectada:
+          {{ ansible_version.full }}.
+        success_msg: "Versión compatible: {{ ansible_version.full }}"
+
+    - name: Verificar las redes planificadas
+      ansible.builtin.assert:
+        that:
+          - ppi_networks.management.cidr == '10.10.10.0/24'
+          - ppi_networks.lan.gateway == '10.20.0.1'
+          - ppi_networks.dmz.gateway == '10.30.0.1'
+        fail_msg: Las redes del inventario no coinciden con la arquitectura aprobada.
+        success_msg: Las redes del inventario coinciden con la documentación.
+
+    - name: Verificar que las cuatro VMs administradas están declaradas
+      ansible.builtin.assert:
+        that:
+          - ppi_expected_hosts | length == 4
+          - groups['sensor'] | length == 1
+          - groups['servidores'] | length == 1
+          - groups['atacantes'] | length == 1
+          - groups['clientes_linux'] | length == 1
+        fail_msg: El inventario no contiene todos los roles planificados.
+        success_msg: El inventario contiene sensor, servidor, Kali y cliente.
+
+    - name: Mostrar el resumen del controlador
+      ansible.builtin.debug:
+        msg:
+          - "Controlador: {{ ansible_facts['hostname'] }}"
+          - "Python: {{ ansible_facts['python_version'] }}"
+          - "Entorno: {{ ppi_environment }}"
+          - "Hosts administrados: {{ groups['ppi_lab'] | join(', ') }}"
+

@@ -647,9 +647,13 @@ difiere del de referencia (`/home/m4rk/cyberflow`).
 
 El bastión trae el feed del sensor (clave `cyberflow-to-sensor`) y lo empuja al
 host protegido (clave `cyberflow-to-srv`). El script `relay-feed.sh` hace ese
-pull→push; cópielo a `/home/gadmin/` y ajuste IPs y claves.
+pull→push; el `.service` lo espera en `/home/gadmin/relay-feed.sh`.
 
 ```bash
+# El script del relay: cópielo y ajuste IPs, usuarios, claves y rutas en su cabecera.
+cp deploy/enforcement/relay-feed.sh /home/gadmin/relay-feed.sh
+chmod +x /home/gadmin/relay-feed.sh
+# La unidad y su temporizador (cada 60 s):
 sudo cp deploy/enforcement/ppi-relay-feed.service \
         deploy/enforcement/ppi-relay-feed.timer /etc/systemd/system/
 sudo systemctl daemon-reload

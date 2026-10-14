@@ -1,0 +1,259 @@
+---
+- name: Configurar servicios experimentales de VM03 Servidor
+  hosts: ppi-server
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Instalar IP virtuales persistentes de servicios DMZ
+      ansible.builtin.copy:
+        src: ../../configs/server/99-ppi-service-vips.yaml
+        dest: /etc/netplan/99-ppi-service-vips.yaml
+        owner: root
+        group: root
+        mode: "0600"
+      register: ppi_service_vips
+
+    - name: Validar la configuración Netplan combinada
+      ansible.builtin.command: netplan generate
+      changed_when: false
+
+    - name: Aplicar IP virtuales sin modificar la interfaz de gestión
+      ansible.builtin.command: netplan apply
+      when: ppi_service_vips.changed
+      changed_when: true
+
+    - name: Consultar direcciones efectivas de la DMZ
+      ansible.builtin.command: ip -j address show dev ens38
+      register: ppi_dmz_addresses
+      changed_when: false
+
+    - name: Exigir las tres direcciones de servicio
+      ansible.builtin.assert:
+        that:
+          - >-
+            ['10.30.0.10', '10.30.0.11', '10.30.0.12']
+            | difference(
+                (ppi_dmz_addresses.stdout | from_json | first).addr_info
+                | selectattr('family', 'equalto', 'inet')
+                | map(attribute='local') | list
+              ) | length == 0
+        fail_msg: La interfaz ens38 no posee las tres direcciones DMZ requeridas
+
+    - name: Crear directorio de configuración de dnsmasq antes de instalar
+      ansible.builtin.file:
+        path: /etc/dnsmasq.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Instalar configuración DNS limitada a la DMZ
+      ansible.builtin.copy:
+        src: ../../configs/server/dnsmasq-ppi.conf
+        dest: /etc/dnsmasq.d/ppi-lab.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Instalar servicios mínimos
+      ansible.builtin.apt:
+        name:
+          - nginx
+          - iperf3
+          - dnsmasq
+          - curl
+          - openssl
+        state: present
+        update_cache: "{{ ppi_update_cache | default(false) | bool }}"
+
+    - name: Crear directorios del contenido de prueba
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0755"
+      loop:
+        - /srv/ppi
+        - /srv/ppi/files
+
+    - name: Crear directorios de la API local y su log
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: "/usr/local/lib/ppi-api", mode: "0755" }
+        - { path: "/var/log/ppi-api", mode: "0750", owner: "www-data", group: "www-data" }
+
+    - name: Instalar API local para escenarios L7
+      ansible.builtin.copy:
+        src: ../../configs/server/ppi-api.py
+        dest: /usr/local/lib/ppi-api/ppi-api.py
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Instalar unidad systemd de API local
+      ansible.builtin.copy:
+        src: ../../configs/server/ppi-api.service
+        dest: /etc/systemd/system/ppi-api.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reiniciar API local
+
+    - name: Crear página de identificación del laboratorio
+      ansible.builtin.copy:
+        dest: /srv/ppi/index.html
+        owner: www-data
+        group: www-data
+        mode: "0644"
+        content: |
+          <!doctype html>
+          <html lang="es"><head><meta charset="utf-8"><title>PPI Lab</title></head>
+          <body><h1>Servidor de pruebas PPI</h1><p>Tráfico legítimo controlado.</p></body></html>
+
+    - name: Crear archivos binarios de tamaños controlados
+      ansible.builtin.command:
+        cmd: "fallocate -l {{ item.size }} /srv/ppi/files/{{ item.name }}"
+        creates: "/srv/ppi/files/{{ item.name }}"
+      loop:
+        - { name: "10MB.bin", size: "10M" }
+        - { name: "100MB.bin", size: "100M" }
+        - { name: "500MB.bin", size: "500M" }
+        - { name: "1GB.bin", size: "1G" }
+
+    - name: Ajustar propiedad de archivos de prueba
+      ansible.builtin.file:
+        path: /srv/ppi/files
+        state: directory
+        recurse: true
+        owner: www-data
+        group: www-data
+
+    - name: Crear certificado TLS exclusivo del laboratorio
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:3072 -nodes -days 365
+          -subj /CN=server.ppi.lab
+          -addext subjectAltName=DNS:server.ppi.lab,DNS:web.ppi.lab,IP:10.30.0.10
+          -keyout /etc/ssl/private/ppi-lab.key
+          -out /etc/ssl/certs/ppi-lab.crt
+        creates: /etc/ssl/certs/ppi-lab.crt
+
+    - name: Proteger clave TLS
+      ansible.builtin.file:
+        path: /etc/ssl/private/ppi-lab.key
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Instalar sitio NGINX del laboratorio
+      ansible.builtin.copy:
+        src: ../../configs/server/nginx-ppi.conf
+        dest: /etc/nginx/conf.d/ppi-lab.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Deshabilitar sitio NGINX predeterminado
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Instalar servicio iperf3 controlado
+      ansible.builtin.copy:
+        src: ../../configs/server/ppi-iperf3.service
+        dest: /etc/systemd/system/ppi-iperf3.service
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Instalar política nftables de la fase F1
+      ansible.builtin.copy:
+        src: ../../configs/server/ppi-server.nft
+        dest: /etc/ppi-server.nft
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Instalar servicio de firewall del Servidor
+      ansible.builtin.copy:
+        src: ../../configs/server/ppi-server-firewall.service
+        dest: /etc/systemd/system/ppi-server-firewall.service
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Validar configuración NGINX
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Habilitar y arrancar API local
+      ansible.builtin.systemd:
+        name: ppi-api
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    - name: Validar configuración dnsmasq
+      ansible.builtin.command: dnsmasq --test
+      changed_when: false
+
+    - name: Validar política nftables del Servidor
+      ansible.builtin.command: nft -c -f /etc/ppi-server.nft
+      changed_when: false
+
+    - name: Recargar systemd
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+    - name: Habilitar y arrancar servicios
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        enabled: true
+        state: restarted
+      loop:
+        - nginx
+        - dnsmasq
+        - ppi-server-firewall
+        - ppi-iperf3
+        - ppi-api
+
+    - name: Verificar HTTP en cada dirección de servicio
+      ansible.builtin.uri:
+        url: "http://{{ item }}/health"
+        status_code: 200
+        return_content: true
+      loop:
+        - 10.30.0.10
+        - 10.30.0.11
+        - 10.30.0.12
+
+    - name: Verificar la ruta de retorno desde cada dirección de servicio
+      ansible.builtin.command: "ip -j route get 10.20.0.20 from {{ item }}"
+      loop:
+        - 10.30.0.10
+        - 10.30.0.11
+        - 10.30.0.12
+      register: ppi_return_routes
+      changed_when: false
+
+    - name: Exigir siguiente salto y salida DMZ correctos para cada origen
+      ansible.builtin.assert:
+        that:
+          - (item.stdout | from_json | first).gateway == '10.30.0.1'
+          - (item.stdout | from_json | first).dev == 'ens38'
+      loop: "{{ ppi_return_routes.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+  handlers:
+    - name: Reiniciar API local
+      ansible.builtin.systemd:
+        name: ppi-api
+        state: restarted

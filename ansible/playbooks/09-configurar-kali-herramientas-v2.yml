@@ -1,0 +1,31 @@
+---
+- name: Preparar herramientas controladas de evaluación en VM04 Kali
+  hosts: ppi-kali
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Instalar herramientas de evaluación aislada
+      ansible.builtin.apt:
+        name:
+          - nmap
+          - nmap-common
+          - hping3
+          - curl
+          - dnsutils
+          - jq
+          - python3
+          - openssl
+        state: present
+        update_cache: false
+    - name: Verificar herramientas requeridas
+      ansible.builtin.command: "{{ item }}"
+      changed_when: false
+      loop:
+        - nmap --version
+        - nping --version
+        - hping3 --version
+        - curl --version
+        - dig -v
+        - jq --version
+        - python3 --version
+        - openssl version

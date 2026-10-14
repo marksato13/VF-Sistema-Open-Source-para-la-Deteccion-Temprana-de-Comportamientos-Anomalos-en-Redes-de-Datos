@@ -1,0 +1,20 @@
+[Unit]
+Description=CyberFlow - agente de enforcement en el host protegido (verifica feed, aplica nftables)
+Documentation=https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos
+
+[Service]
+Type=oneshot
+User=adminsrvdmz
+Group=adminsrvdmz
+# Trae el feed, verifica la firma ed25519 y sincroniza nftables (LIMIT=rate,
+# BLOCK=drop, con timeout). --sudo: el nft se eleva con 'sudo -n' (NOPASSWD solo
+# para nft en este host); minimo privilegio. Fail-safe: si la firma no verifica,
+# no toca nada.
+# IMPORTANTE: no poner NoNewPrivileges=yes, rompe el 'sudo -n nft'.
+ExecStart=/usr/bin/python3 /home/adminsrvdmz/enforce/agente_enforce.py \
+    --feed /home/adminsrvdmz/enforce/feed.json \
+    --firma /home/adminsrvdmz/enforce/feed.sig \
+    --clave-publica /home/adminsrvdmz/enforce/pub.pem \
+    --aplicar --sudo
+# Salida al journal (journalctl -u ppi-enforce-agent). Para modo sombra (dry-run)
+# quitar '--aplicar'.

@@ -1,0 +1,13 @@
+[Unit]
+Description=CyberFlow - relay del feed firmado (sensor -> host protegido), via bastion
+Documentation=https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos
+
+[Service]
+Type=oneshot
+User=gadmin
+Group=gadmin
+# Pull del feed del sensor (clave cyberflow-to-sensor) y push al host DMZ
+# (clave cyberflow-to-srv). El bastion es un relay tonto: no puede forjar, la
+# clave privada de firma vive solo en el sensor.
+ExecStart=/home/gadmin/relay-feed.sh
+# Salida al journal (journalctl -u ppi-relay-feed).
