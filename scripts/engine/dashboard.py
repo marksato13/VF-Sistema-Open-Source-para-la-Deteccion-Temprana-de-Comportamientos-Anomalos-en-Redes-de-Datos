@@ -1227,8 +1227,48 @@ HTML = """<!doctype html>
 .code-pseudo li.nolink::before{background:#2b3a4a;color:#7d93a6}
 .code-pseudo li:not(.nolink):hover{border-color:#2b3a4a;background:#13202c}
 .code-pseudo li.sel{border-color:#5ee6c3;background:#122a28}
-.code-pseudo li small{display:block;color:#7d93a6;font-family:ui-monospace,monospace;font-size:10px;margin-top:2px}
+.code-pseudo li small{grid-column:2;display:block;color:#7d93a6;font-family:ui-monospace,monospace;font-size:10px;margin-top:2px;overflow-wrap:anywhere}
 @media (max-width:820px){.code-panes{grid-template-columns:1fr;grid-template-rows:1.4fr 1fr}.code-left{border-right:none;border-bottom:1px solid #1b2530}}
+/* Resaltado de sintaxis del panel izquierdo: colores que separan funciones de
+   palabras clave, cadenas, comentarios y numeros. Pensados sobre el fondo del
+   codigo (#0a1118); el nombre de una funcion (definida o llamada) resalta en
+   turquesa para seguir el hilo de un fichero a otro. */
+.t-kw{color:#c792ea}
+.t-def{color:#5eead4;font-weight:600}
+.t-call{color:#8fd3ff}
+.t-str{color:#e0be87}
+.t-com{color:#6f8296;font-style:italic}
+.t-num{color:#f0996a}
+.t-dec{color:#e0af68}
+/* Pestañas del panel derecho: pseudocodigo vs diagrama de flujo. */
+.code-tabs{display:flex;gap:5px;margin:2px 0 11px}
+.code-tabs button{flex:1;font:600 .74rem var(--sans);padding:6px 8px;border:1px solid #27333f;background:#0f1a24;color:#8aa0b2;border-radius:7px;cursor:pointer}
+.code-tabs button.active{background:#13302b;border-color:#2f6d5f;color:#8ff0d8}
+/* "Como llegar": la ruta exacta y el comando para abrir/editar el fichero. */
+.code-llegar{background:#0d1922;border:1px solid #1f2d3a;border-radius:8px;padding:8px 10px;margin-bottom:11px;font-size:.8rem;color:#aebfce}
+.code-llegar b{color:#d6e2ee}
+.code-llegar code{font-family:ui-monospace,monospace;color:#9fd0ff;font-size:.76rem;word-break:break-all}
+.code-llegar .cmd{display:block;margin-top:6px;background:#07131b;border:1px solid #16222d;border-radius:6px;padding:5px 7px;color:#bfe3c9;font-family:ui-monospace,monospace;font-size:.74rem;overflow-x:auto;white-space:pre}
+/* Diagrama de flujo del codigo: procesos, DECISIONES (rombo ambar con sus
+   ramas si/no) y saltos a OTRO fichero (chip punteado, pulsable). */
+.flj-tit{font-weight:600;color:#cdd9e5;margin:2px 0 9px;font-size:.86rem}
+.flj{display:flex;flex-direction:column;gap:0}
+.flj-n{border:1px solid #27333f;background:#0f1a24;border-radius:9px;padding:8px 11px;font-size:.81rem;color:#d6e2ee;line-height:1.4}
+.flj-n .ln{float:right;color:#7d93a6;font:10px ui-monospace,monospace;margin-left:8px}
+.flj-n.dec{border-color:#7f6523;background:#1b1507}
+.flj-n.io{border-color:#2f5d6d;background:#0b1c22}
+.flj-n.inicio,.flj-n.fin{border-color:#2f6d5f;background:#0e2420;font-weight:600;text-align:center}
+.flj-n.archivo{border-style:dashed;border-color:#3a5169;background:#10202c;color:#9fd0ff;cursor:pointer}
+.flj-n.archivo:hover{background:#172d3b;border-color:#4a6684}
+.flj-n[data-ancla]{cursor:pointer}
+.flj-n[data-ancla]:hover{border-color:#5ee6c3}
+.flj-n .cond{color:#e3c879;font-family:ui-monospace,monospace;font-size:.72rem;margin-top:3px;white-space:normal}
+.flj-n.archivo .cond{color:#9fd0ff}
+.flj-ram{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.flj-ram span{font-size:.72rem;padding:1px 8px;border-radius:999px}
+.flj-ram .si{background:#12271c;color:#7ee0a0;border:1px solid #1f6d3f}
+.flj-ram .no{background:#211014;color:#e58a8a;border:1px solid #6d2f2f}
+.flj-arrow{align-self:center;color:#45586b;font-size:15px;line-height:1.15;margin:2px 0}
 </style>
 <div class="code-modal" id="codeModal" hidden>
   <div class="code-box">
@@ -1239,9 +1279,19 @@ HTML = """<!doctype html>
         <div class="code-pre" id="codeBody"></div>
       </div>
       <div class="code-right">
-        <div class="code-rtit">Pseudocódigo y explicación</div>
-        <div class="code-explica" id="codeExplica"></div>
-        <ol class="code-pseudo" id="codePseudo"></ol>
+        <div class="code-llegar" id="codeLlegar"></div>
+        <div class="code-tabs" id="codeTabs">
+          <button type="button" data-ct="pseudo" class="active">Pseudocódigo</button>
+          <button type="button" data-ct="flujo">Diagrama de flujo</button>
+        </div>
+        <div id="ctPseudo">
+          <div class="code-rtit">Pseudocódigo y explicación</div>
+          <div class="code-explica" id="codeExplica"></div>
+          <ol class="code-pseudo" id="codePseudo"></ol>
+        </div>
+        <div id="ctFlujo" hidden>
+          <div class="code-flujo" id="codeFlujo"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -4178,6 +4228,7 @@ on('topoDetail', 'click', async (ev) => {
 const GUIA_CODIGO = {
   'motor_decision.py': {
     explica: 'El bucle del motor: cada 10 s lee los PCAP ya cerrados del anillo, atribuye cada paquete a quien inició el flujo, extrae las variables por ventana y escribe la decisión.',
+    editar: 'nano ~/cyberflow/scripts/engine/motor_decision.py && sudo systemctl restart ppi-motor',
     pseudo: [
       { t: 'Argumentos y configuración de arranque', ancla: 'def parse_args' },
       { t: 'Umbral del modelo (del manifiesto)', ancla: 'def load_threshold' },
@@ -4191,6 +4242,7 @@ const GUIA_CODIGO = {
   },
   'heuristicos.py': {
     explica: 'Las cuatro reglas deterministas sobre las variables de la ventana. Cada una devuelve una acción (BLOCK/LIMIT) o nada; evaluar() se queda con la más severa.',
+    editar: 'nano ~/cyberflow/scripts/engine/heuristicos.py && sudo systemctl restart ppi-motor',
     pseudo: [
       { t: 'Versión de los umbrales', ancla: 'VERSION_UMBRALES' },
       { t: 'Fuerza bruta → BLOCK', ancla: 'def _brute_force' },
@@ -4202,6 +4254,7 @@ const GUIA_CODIGO = {
   },
   'extract_multilayer_v2.py': {
     explica: 'El extractor congelado: de tramas PCAP y eventos eve.json a las 28 variables por IP y ventana. Sus fórmulas no se tocan.',
+    editar: 'nano ~/cyberflow/scripts/features/extract_multilayer_v2.py && sudo systemctl restart ppi-motor',
     pseudo: [
       { t: 'Recorrer las tramas del PCAP', ancla: 'def iter_pcap_frames' },
       { t: 'Decodificar Ethernet / IPv4', ancla: 'def parse_ethernet_ipv4' },
@@ -4213,6 +4266,7 @@ const GUIA_CODIGO = {
   },
   'publicar_feed.py': {
     explica: 'Cada 60 s combina las decisiones del motor por IP, aplica la escalera de reincidencia y publica el feed.',
+    editar: 'nano ~/cyberflow/scripts/engine/publicar_feed.py',
     pseudo: [
       { t: 'Veredicto de una decisión', ancla: 'def _verdicto_de' },
       { t: 'De decisiones a entradas del feed', ancla: 'def decisiones_a_entradas' },
@@ -4223,6 +4277,7 @@ const GUIA_CODIGO = {
   },
   'feed.py': {
     explica: 'Construye, serializa y FIRMA el feed con ed25519. El host verifica la firma antes de aplicar nada.',
+    editar: 'nano ~/cyberflow/scripts/engine/feed.py',
     pseudo: [
       { t: 'Construir el feed', ancla: 'def construir' },
       { t: 'Serializar a bytes', ancla: 'def serializar' },
@@ -4233,6 +4288,7 @@ const GUIA_CODIGO = {
   },
   'escalada.py': {
     explica: 'La escalera de caducidad por reincidencia: 300 → 1800 → 3600 s dentro de 24 h.',
+    editar: 'nano ~/cyberflow/scripts/engine/escalada.py',
     pseudo: [
       { t: 'Procesar una ofensa (sube el nivel)', ancla: 'def procesar' },
       { t: 'Podar lo viejo (decaimiento)', ancla: 'def podar' },
@@ -4240,6 +4296,7 @@ const GUIA_CODIGO = {
   },
   'cyberflow_aprendizaje.py': {
     explica: 'El aprendizaje supervisado nocturno: sanea el lote, mide la deriva contra el oro, entrena un candidato y lo deja listo para que una persona lo promueva.',
+    editar: 'nano ~/cyberflow/scripts/modeling/cyberflow_aprendizaje.py',
     pseudo: [
       { t: 'PSI (índice de deriva)', ancla: 'def psi' },
       { t: 'Comprobar la política del .toml', ancla: 'def comprobar_politica' },
@@ -4247,6 +4304,108 @@ const GUIA_CODIGO = {
       { t: 'Cerrar el lote del día (saneo)', ancla: 'def cerrar_lote' },
       { t: 'Medir la deriva', ancla: 'def medir_deriva' },
       { t: 'Puntuar con el modelo', ancla: 'def puntuar' },
+    ],
+  },
+};
+
+// Diagrama de flujo POR ARCHIVO: las DECISIONES reales del codigo (rombos con
+// sus ramas si/no) y los saltos a OTRO archivo (nodos 'archivo', pulsables).
+// Cada 'ancla' es texto literal del codigo: al pulsar, el panel izquierdo salta
+// a esa linea. Fiel a lo leido en cada fichero; auditado contra el codigo real.
+const GUIA_FLUJO = {
+  'extract_multilayer_v2.py': {
+    titulo: 'De PCAP + eve.json a 28 variables',
+    pasos: [
+      { k: 'inicio', t: 'Ventana de 10/30/60 s por IP iniciadora' },
+      { k: 'proc', t: 'Recorrer las tramas del PCAP', ancla: 'def iter_pcap_frames' },
+      { k: 'proc', t: 'Decodificar Ethernet / IPv4', ancla: 'def parse_ethernet_ipv4' },
+      { k: 'proc', t: 'Atribuir cada paquete a quien inició el flujo', ancla: 'def attribute_packets' },
+      { k: 'proc', t: 'Observaciones L7 (http · dns · tls) de eve.json', ancla: 'def load_app_observations' },
+      { k: 'dec', t: 'DNS: entropía de nombres', cond: 'si hay consultas DNS', si: 'bits de Shannon', no: 'se omite', ancla: 'def shannon_entropy_bits' },
+      { k: 'io', t: 'Una fila de 28 variables por IP y ventana', ancla: 'def build_rows' },
+      { k: 'archivo', t: 'El motor la puntúa', ir: 'motor_decision.py' },
+    ],
+  },
+  'motor_decision.py': {
+    titulo: 'Bucle del motor · cada 10 s, por ventana',
+    pasos: [
+      { k: 'inicio', t: 'PCAP ya cerrados del anillo', ancla: 'def list_closed_pcap_files' },
+      { k: 'archivo', t: 'Extraer las 28 variables', ir: 'extract_multilayer_v2.py' },
+      { k: 'dec', t: 'IP fuera de alcance', cond: 'entidad_excluida(ip)', si: 'no se puntúa', no: 'sigue', ancla: 'def entidad_excluida' },
+      { k: 'dec', t: 'Ventana sin paquetes L3/L4', cond: 'packet_count_10s == 0', si: 'score=None · PERMIT (solo L7)', no: 'puntuar el modelo', ancla: 'no_live_packets' },
+      { k: 'proc', t: 'Puntuar con el modelo (OCSVM)', ancla: 'score_samples' },
+      { k: 'dec', t: 'Anomalía del modelo', cond: 'score < umbral', si: 'ALERT', no: 'PERMIT', ancla: '"ALERT" if score < threshold' },
+      { k: 'dec', t: 'Ráfaga de 401 sobre un PERMIT', cond: 'http60 ≥ 5  y  fallo_auth ≥ 80%', si: 'ALERT (heurístico L7)', no: 'queda igual', ancla: 'auth_failure_heuristic' },
+      { k: 'proc', t: 'Adjuntar el veredicto de los 4 heurísticos', ancla: 'heuristicos.evaluar' },
+      { k: 'io', t: 'Escribir la decisión en motor_decision.log', ancla: 'args.log_path.open' },
+      { k: 'dec', t: 'Aplicar la acción', cond: '--enforce  y  decisión == ALERT', si: 'bloquea / relay', no: 'solo observa', ancla: 'def apply_enforcement' },
+      { k: 'archivo', t: 'publicar_feed.py lee el log cada 60 s', ir: 'publicar_feed.py' },
+    ],
+  },
+  'heuristicos.py': {
+    titulo: 'evaluar(row): la MÁS severa de 4 reglas',
+    pasos: [
+      { k: 'inicio', t: 'Variables L3/L4/L7 de la ventana', ancla: 'def evaluar' },
+      { k: 'dec', t: 'Fuerza bruta', cond: 'req_http ≥ 5  y  fallo_auth ≥ 80%', si: 'BLOCK', no: '—', ancla: 'def _brute_force' },
+      { k: 'dec', t: 'Escaneo de puertos', cond: '(intentos ≥ 20 · únicos ≥ 0,45 · compl ≤ 0,3)   Ó   (ráfaga ≥ 200 · compl ≤ 0,1)', si: 'BLOCK', no: '—', ancla: 'def _port_scan' },
+      { k: 'dec', t: 'Abuso HTTP', cond: 'req ≥ 100  y  fallo_auth < 80%', si: 'LIMIT', no: '—', ancla: 'def _http_abuse' },
+      { k: 'dec', t: 'DNS de alta entropía', cond: 'consultas ≥ 20  y  (NXDOMAIN ≥ 0,5  o  únicos ≥ 0,45)', si: 'LIMIT', no: '—', ancla: 'def _dns_entropy' },
+      { k: 'proc', t: 'Se queda con la más severa (BLOCK > LIMIT)', ancla: '_SEVERIDAD' },
+      { k: 'archivo', t: 'El motor lo adjunta a la decisión', ir: 'motor_decision.py' },
+    ],
+  },
+  'publicar_feed.py': {
+    titulo: 'Publicar el feed firmado · cada 60 s',
+    pasos: [
+      { k: 'proc', t: 'Leer las decisiones recientes del log', ancla: 'def _leer_decisiones' },
+      { k: 'dec', t: 'Veredicto por decisión', cond: 'ALERT modelo → LIMIT · heurístico → su acción', si: 'la más severa', no: 'None', ancla: 'def _verdicto_de' },
+      { k: 'proc', t: 'Agregar por IP el veredicto más severo', ancla: 'def decisiones_a_entradas' },
+      { k: 'dec', t: 'IP en nunca-bloquear', cond: 'gateways · DNS · sensor · bastión', si: 'se omite', no: 'sigue', ancla: 'NUNCA_BLOQUEAR' },
+      { k: 'archivo', t: 'Escalera de caducidad por reincidencia', ir: 'escalada.py' },
+      { k: 'archivo', t: 'Construir y firmar el feed (ed25519)', ir: 'feed.py' },
+      { k: 'archivo', t: 'El host lo trae y lo verifica', ir: 'agente_enforce.py' },
+    ],
+  },
+  'escalada.py': {
+    titulo: 'procesar(ip, acción): la caducidad',
+    pasos: [
+      { k: 'inicio', t: 'Estado por IP {bloqueos, último_visto}', ancla: 'def procesar' },
+      { k: 'dec', t: 'Decaimiento', cond: '> 24 h sin reincidir', si: 'reinicia el contador', no: 'mantiene', ancla: 'VENTANA_DECAIMIENTO_S' },
+      { k: 'dec', t: '¿Qué acción?', cond: 'BLOCK  vs  LIMIT', si: 'BLOCK: sube de nivel', no: 'LIMIT: 300 s plano', ancla: 'TIMEOUT_LIMIT_S' },
+      { k: 'proc', t: '1º → 300 · 2º → 1800 · 3º+ → 3600 s (tope)', ancla: 'ESCALERA_BLOCK_S' },
+      { k: 'dec', t: 'Reincidencia alta', cond: 'bloqueos ≥ 3', si: 'marca revisión humana', no: '—', ancla: 'REVISION_HUMANA_DESDE' },
+      { k: 'fin', t: '∞ NUNCA automático: lo decide una persona' },
+    ],
+  },
+  'feed.py': {
+    titulo: 'Firmar en el sensor · verificar en el host',
+    pasos: [
+      { k: 'proc', t: 'Construir el feed (version · generado · entradas)', ancla: 'def construir' },
+      { k: 'proc', t: 'Serializar a bytes (JSON canónico, sort_keys)', ancla: 'def serializar' },
+      { k: 'proc', t: 'Firmar con ed25519 (clave privada, solo en el sensor)', ancla: 'def firmar' },
+      { k: 'archivo', t: 'El relay lo copia al host', ir: 'agente_enforce.py' },
+      { k: 'dec', t: '[en el host] firma válida', cond: 'con la clave pública', si: 'aplica nftables', no: 'no toca nada (fail-safe)', ancla: 'def verificar' },
+    ],
+  },
+  'cyberflow_aprendizaje.py': {
+    titulo: 'Aprendizaje nocturno · 00:30 UTC',
+    pasos: [
+      { k: 'inicio', t: 'Conjunto de oro fijo (NUNCA entrena)', ancla: 'def crear_oro' },
+      { k: 'proc', t: 'Cerrar el lote del día (saneo)', ancla: 'def cerrar_lote' },
+      { k: 'proc', t: 'Medir la deriva (PSI contra el oro)', ancla: 'def medir_deriva' },
+      { k: 'dec', t: 'Política del .toml', cond: 'sección [reentrenamiento]', si: 'entrena candidato', no: 'se detiene', ancla: 'def comprobar_politica' },
+      { k: 'proc', t: 'Entrenar candidato y puntuar vs oro', ancla: 'def puntuar' },
+      { k: 'dec', t: 'Mejora sin fuga', cond: 'umbral congelado', si: 'deja candidato listo', no: 'descarta', ancla: 'def psi' },
+      { k: 'fin', t: 'Una PERSONA lo promueve (vista Aprendizaje)' },
+    ],
+  },
+  'agente_enforce.py': {
+    titulo: 'Agente en el host protegido · cada 60 s',
+    pasos: [
+      { k: 'inicio', t: 'Traer el feed del relay (bastión)' },
+      { k: 'dec', t: 'Firma ed25519 válida', cond: 'con la clave pública', si: 'sigue', no: 'no toca nada (fail-safe)' },
+      { k: 'proc', t: 'Sincronizar nftables: LIMIT = rate-limit · BLOCK = drop + timeout' },
+      { k: 'fin', t: 'El set caduca solo (timeout nativo de nftables)' },
     ],
   },
 };
@@ -4269,6 +4428,160 @@ function cerrarModal() {
   if (m.parentElement !== document.body) document.body.appendChild(m);
 }
 
+// --- Resaltado de sintaxis (sin dependencias; Python y generico) -----------
+// Colores que SEPARAN funciones de palabras clave, cadenas, comentarios y
+// numeros. El nombre de una funcion (definida o llamada) resalta en turquesa,
+// para seguir el hilo del codigo y de un fichero a otro.
+const PY_KW = new Set(('False None True and as assert async await break class '
+  + 'continue def del elif else except finally for from global if import in is '
+  + 'lambda nonlocal not or pass raise return try while with yield match case').split(' '));
+const PY_BI = new Set(('self cls print len range int float str dict list set tuple '
+  + 'bool bytes open super isinstance issubclass Path json time sys os min max sum '
+  + 'abs enumerate zip sorted map filter any all next iter round type format').split(' '));
+const BS = String.fromCharCode(92);  // la barra invertida, sin escribirla literal
+function escH(s) {
+  return String(s).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;');
+}
+function esAlfa(c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_'; }
+function esAlfaNum(c) { return esAlfa(c) || (c >= '0' && c <= '9'); }
+
+// Resalta UNA linea de Python. st.tq lleva el estado de cadena triple entre
+// lineas (los docstrings ocupan varias). Devuelve HTML.
+function resaltarPy(linea, st) {
+  let out = '', i = 0; const n = linea.length;
+  if (st.tq) {
+    const c = linea.indexOf(st.tq);
+    if (c === -1) return '<span class="t-str">' + escH(linea) + '</span>';
+    out += '<span class="t-str">' + escH(linea.slice(0, c + 3)) + '</span>';
+    i = c + 3; st.tq = null;
+  }
+  let prevKw = '';
+  while (i < n) {
+    const c = linea[i];
+    if (c === '#') { out += '<span class="t-com">' + escH(linea.slice(i)) + '</span>'; return out; }
+    if ((c === '"' || c === "'") && linea.slice(i, i + 3) === c + c + c) {
+      const d = c + c + c, cl = linea.indexOf(d, i + 3);
+      if (cl === -1) { out += '<span class="t-str">' + escH(linea.slice(i)) + '</span>'; st.tq = d; return out; }
+      out += '<span class="t-str">' + escH(linea.slice(i, cl + 3)) + '</span>'; i = cl + 3; continue;
+    }
+    if (c === '"' || c === "'") {
+      let j = i + 1;
+      while (j < n) { if (linea[j] === BS) { j += 2; continue; } if (linea[j] === c) { j++; break; } j++; }
+      out += '<span class="t-str">' + escH(linea.slice(i, j)) + '</span>'; i = j; continue;
+    }
+    if (c === '@' && (i === 0 || linea[i - 1] === ' ')) {
+      let j = i + 1; while (j < n && (esAlfaNum(linea[j]) || linea[j] === '.')) j++;
+      out += '<span class="t-dec">' + escH(linea.slice(i, j)) + '</span>'; i = j; continue;
+    }
+    if (c >= '0' && c <= '9') {
+      let j = i + 1; while (j < n && (esAlfaNum(linea[j]) || linea[j] === '.')) j++;
+      out += '<span class="t-num">' + escH(linea.slice(i, j)) + '</span>'; i = j; continue;
+    }
+    if (esAlfa(c)) {
+      let j = i + 1; while (j < n && esAlfaNum(linea[j])) j++;
+      const w = linea.slice(i, j);
+      let k = j; while (k < n && linea[k] === ' ') k++;
+      const llamada = linea[k] === '(';
+      let clase = '';
+      if (PY_KW.has(w)) clase = 't-kw';
+      else if (prevKw === 'def' || prevKw === 'class') clase = 't-def';
+      else if (PY_BI.has(w) || llamada) clase = 't-call';
+      out += clase ? '<span class="' + clase + '">' + escH(w) + '</span>' : escH(w);
+      prevKw = (w === 'def' || w === 'class') ? w : '';
+      i = j; continue;
+    }
+    out += escH(c); i++;
+  }
+  return out;
+}
+
+// Resaltado generico (toml, sh, json, log): comentario #, cadenas, numeros y
+// los literales true/false/null.
+const GEN_KW = new Set(['true', 'false', 'null', 'True', 'False', 'None']);
+function resaltarGen(linea) {
+  let out = '', i = 0; const n = linea.length;
+  while (i < n) {
+    const c = linea[i];
+    if (c === '#') { out += '<span class="t-com">' + escH(linea.slice(i)) + '</span>'; return out; }
+    if (c === '"' || c === "'") {
+      let j = i + 1;
+      while (j < n) { if (linea[j] === BS) { j += 2; continue; } if (linea[j] === c) { j++; break; } j++; }
+      out += '<span class="t-str">' + escH(linea.slice(i, j)) + '</span>'; i = j; continue;
+    }
+    if (c >= '0' && c <= '9') {
+      let j = i + 1; while (j < n && (esAlfaNum(linea[j]) || linea[j] === '.' || linea[j] === ':' || linea[j] === '-')) j++;
+      out += '<span class="t-num">' + escH(linea.slice(i, j)) + '</span>'; i = j; continue;
+    }
+    if (esAlfa(c)) {
+      let j = i + 1; while (j < n && esAlfaNum(linea[j])) j++;
+      const w = linea.slice(i, j);
+      out += GEN_KW.has(w) ? '<span class="t-kw">' + escH(w) + '</span>' : escH(w);
+      i = j; continue;
+    }
+    out += escH(c); i++;
+  }
+  return out;
+}
+
+// Linea (0-based) donde aparece por primera vez un ancla en el codigo cargado.
+let _codeLineas = [];
+function lineaDeAncla(a) {
+  if (!a) return -1;
+  for (let i = 0; i < _codeLineas.length; i++) if (_codeLineas[i].indexOf(a) !== -1) return i;
+  return -1;
+}
+// Salta el panel izquierdo a la primera linea que contiene el ancla.
+function saltarAAncla(ancla) {
+  if (!ancla) return;
+  const filas = [...document.querySelectorAll('#codeBody .cl')];
+  filas.forEach(cl => cl.classList.remove('hl'));
+  const obj = filas.find(cl => { const tx = cl.querySelector('.tx'); return tx && tx.textContent.indexOf(ancla) !== -1; });
+  if (obj) { obj.classList.add('hl'); obj.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+}
+// Ruta (de la whitelist) de un fichero por su nombre, en los artefactos ya
+// cargados. Hace posible el salto "ir a otro codigo" del diagrama de flujo.
+function rutaPorNombre(nombre) {
+  if (!artefactos) return null;
+  for (const k in artefactos) for (const f of (artefactos[k] || []))
+    if (f.ruta && nombreFichero(f.ruta) === nombre && f.existe !== false) return f.ruta;
+  return null;
+}
+function cambiarTabCodigo(ct) {
+  document.querySelectorAll('#codeTabs button').forEach(b => b.classList.toggle('active', b.dataset.ct === ct));
+  document.getElementById('ctPseudo').hidden = ct !== 'pseudo';
+  document.getElementById('ctFlujo').hidden = ct !== 'flujo';
+}
+// Un nodo del diagrama de flujo: proceso, DECISION (rombo con ramas si/no),
+// entrada/salida, o salto a OTRO fichero (chip pulsable).
+function flujoNodoHTML(p) {
+  const cls = 'flj-n ' + (p.k || 'proc');
+  const attr = (p.ancla ? ' data-ancla="' + escSimple(p.ancla) + '"' : '')
+    + (p.ir ? ' data-ir="' + escSimple(p.ir) + '"' : '');
+  const ln = p.ancla ? lineaDeAncla(p.ancla) : -1;
+  const numln = ln >= 0 ? '<span class="ln">línea ' + (ln + 1) + '</span>' : '';
+  let cuerpo;
+  if (p.k === 'dec') {
+    const ramas = (p.si ? '<span class="si">sí · ' + escSimple(p.si) + '</span>' : '')
+      + (p.no && p.no !== '—' ? '<span class="no">no · ' + escSimple(p.no) + '</span>' : '');
+    cuerpo = numln + '◆ ' + escSimple(p.t)
+      + (p.cond ? '<div class="cond">' + escSimple(p.cond) + '</div>' : '')
+      + (ramas ? '<div class="flj-ram">' + ramas + '</div>' : '');
+  } else if (p.k === 'archivo') {
+    cuerpo = escSimple(p.t) + '<div class="cond">&rarr; ' + escSimple(p.ir || '') + '</div>';
+  } else {
+    cuerpo = numln + escSimple(p.t) + (p.cond ? '<div class="cond">' + escSimple(p.cond) + '</div>' : '');
+  }
+  return '<div class="' + cls + '"' + attr + '>' + cuerpo + '</div>';
+}
+function renderFlujo(nombre) {
+  const cont = document.getElementById('codeFlujo');
+  const f = GUIA_FLUJO[nombre];
+  if (!f) { cont.innerHTML = '<p class="dim" style="font-size:.8rem">Este archivo no tiene diagrama de flujo; su recorrido está en el pseudocódigo.</p>'; return; }
+  let h = '<div class="flj-tit">' + escSimple(f.titulo || nombre) + '</div><div class="flj">';
+  f.pasos.forEach((p, i) => { if (i) h += '<div class="flj-arrow">&darr;</div>'; h += flujoNodoHTML(p); });
+  cont.innerHTML = h + '</div>';
+}
+
 async function verCodigo(ruta, que) {
   const modal = modalAlFrente();
   const nombre = nombreFichero(ruta);
@@ -4279,51 +4592,78 @@ async function verCodigo(ruta, que) {
   const guia = GUIA_CODIGO[nombre] || null;
   document.getElementById('codeExplica').textContent =
     (guia && guia.explica) || que || 'Archivo del sistema (solo lectura).';
-  const ol = document.getElementById('codePseudo');
-  ol.innerHTML = (guia && guia.pseudo)
-    ? guia.pseudo.map(p =>
-        `<li data-ancla="${(p.ancla || '').replace(/"/g, '&quot;')}">${p.t}`
-        + (p.ancla ? '<small>' + p.ancla + '</small>' : '') + '</li>').join('')
-    : '<li class="nolink">Este archivo no tiene pseudocódigo enlazado; se muestra tal cual a la izquierda.</li>';
+  cambiarTabCodigo('pseudo');
+  document.getElementById('codePseudo').innerHTML = '';
+  document.getElementById('codeFlujo').innerHTML = '';
+  document.getElementById('codeLlegar').innerHTML = '';
+  _codeLineas = [];
   modal.hidden = false;
+  // La pestaña de flujo solo se ofrece si este archivo tiene diagrama.
+  document.querySelector('#codeTabs button[data-ct="flujo"]').style.display =
+    GUIA_FLUJO[nombre] ? '' : 'none';
   try {
     const r = await fetch('/api/archivo?ruta=' + encodeURIComponent(ruta));
     const d = await r.json();
     if (!d || d.contenido == null) {
       body.textContent = (d && d.nota) || 'no disponible';
+      document.getElementById('codeLlegar').innerHTML = '<b>Cómo llegar:</b> <code>' + escSimple(ruta) + '</code>';
       return;
     }
     const nl = String.fromCharCode(10);
-    const esc = s => s.split('&').join('&amp;').split('<').join('&lt;');
-    const lineas = String(d.contenido).split(nl);
-    body.innerHTML = lineas.map((l, i) =>
-      `<div class="cl" data-i="${i}"><span class="ln">${i + 1}</span><span class="tx">${esc(l) || ' '}</span></div>`).join('');
+    _codeLineas = String(d.contenido).split(nl);
+    const esPy = nombre.slice(-3) === '.py';
+    const st = { tq: null };
+    body.innerHTML = _codeLineas.map((l, i) => {
+      const tx = esPy ? resaltarPy(l, st) : resaltarGen(l);
+      return '<div class="cl" data-i="' + i + '"><span class="ln">' + (i + 1) + '</span><span class="tx">' + (tx || ' ') + '</span></div>';
+    }).join('');
     document.getElementById('codeSub').textContent =
       ruta + '  ·  ' + (d.bytes || 0) + ' bytes' + (d.truncado ? ' · truncado a 512 KB' : '');
+    // Pseudocodigo con el numero de linea real de cada paso.
+    const ol = document.getElementById('codePseudo');
+    if (guia && guia.pseudo) {
+      ol.innerHTML = guia.pseudo.map(p => {
+        const ln = lineaDeAncla(p.ancla);
+        const sub = p.ancla
+          ? '<small>' + escSimple(p.ancla) + (ln >= 0 ? ' · línea ' + (ln + 1) : '') + '</small>' : '';
+        return '<li data-ancla="' + escSimple(p.ancla || '') + '">' + escSimple(p.t) + sub + '</li>';
+      }).join('');
+    } else {
+      ol.innerHTML = '<li class="nolink">Este archivo se muestra tal cual a la izquierda; su recorrido está en el diagrama de flujo.</li>';
+    }
+    // Como llegar: la ruta exacta y el comando para abrir/editar el fichero.
+    const editar = (guia && guia.editar) || '';
+    document.getElementById('codeLlegar').innerHTML =
+      '<b>Cómo llegar:</b> <code>' + escSimple(ruta) + '</code>'
+      + (editar ? '<span class="cmd">' + escSimple(editar) + '</span>' : '');
+    renderFlujo(nombre);
   } catch (e) {
     body.textContent = 'error al cargar el archivo';
   }
 }
 
-// Al pulsar un paso del pseudocodigo: buscar su ancla en el codigo, resaltar la
-// linea y desplazar el panel izquierdo hasta ella.
+// Pestañas del panel derecho: pseudocodigo vs diagrama de flujo.
+on('codeTabs', 'click', (ev) => {
+  const b = ev.target.closest('button[data-ct]');
+  if (b) cambiarTabCodigo(b.dataset.ct);
+});
+// Al pulsar un paso del pseudocodigo: resaltar y saltar a su linea.
 on('codePseudo', 'click', (ev) => {
   const li = ev.target.closest('li[data-ancla]');
   if (!li) return;
   document.querySelectorAll('#codePseudo li').forEach(x => x.classList.remove('sel'));
   li.classList.add('sel');
-  const ancla = li.getAttribute('data-ancla');
-  if (!ancla) return;
-  const filas = [...document.querySelectorAll('#codeBody .cl')];
-  filas.forEach(cl => cl.classList.remove('hl'));
-  const obj = filas.find(cl => {
-    const tx = cl.querySelector('.tx');
-    return tx && tx.textContent.indexOf(ancla) !== -1;
-  });
-  if (obj) {
-    obj.classList.add('hl');
-    obj.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  saltarAAncla(li.getAttribute('data-ancla'));
+});
+// Nodos del diagrama de flujo: 'archivo' carga otro fichero; con ancla, salta.
+on('codeFlujo', 'click', async (ev) => {
+  const n = ev.target.closest('.flj-n');
+  if (!n) return;
+  if (n.dataset.ir) {
+    const otra = rutaPorNombre(n.dataset.ir);
+    if (otra) { await verCodigo(otra, ''); return; }
   }
+  if (n.dataset.ancla) { cambiarTabCodigo('pseudo'); saltarAAncla(n.dataset.ancla); }
 });
 on('codeClose', 'click', cerrarModal);
 on('codeModal', 'click', (ev) => { if (ev.target.id === 'codeModal') cerrarModal(); });
@@ -6820,7 +7160,22 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
         "heuristicos": [rel("scripts/engine/heuristicos.py", "py",
                             "las cuatro reglas y sus umbrales")],
         "control": [rel("scripts/engine/responder_iptables.py", "py",
-                        "bloqueo con interlock de calibracion")],
+                        "bloqueo con interlock de calibracion"),
+                    rel("scripts/engine/publicar_feed.py", "py",
+                        "fusiona por IP la accion mas severa y aplica nunca-bloquear"),
+                    rel("scripts/engine/escalada.py", "py",
+                        "escalera de caducidad por reincidencia (300/1800/3600 s)")],
+        # El tramo de respuesta distribuida (feed firmado + agente en el host).
+        # Se declara aqui para que el visor pueda MOSTRAR su codigo: antes estos
+        # ficheros se citaban en los diagramas pero /api/archivo los rechazaba.
+        "feed": [rel("scripts/engine/publicar_feed.py", "py",
+                     "publica el feed firmado desde las decisiones del motor"),
+                 rel("scripts/engine/feed.py", "py",
+                     "construye y FIRMA el feed (ed25519 via openssl)"),
+                 rel("scripts/engine/escalada.py", "py",
+                     "caducidad por reincidencia; nunca bloqueo permanente automatico")],
+        "agente": [rel("scripts/enforce/agente_enforce.py", "py",
+                       "trae el feed, verifica la firma y aplica nftables (corre en el host)")],
         "registro": [_stat_fichero(log_path, "log", "una linea JSON por decision")],
         "panel": [rel("scripts/engine/dashboard.py", "py", "este panel, solo lectura")],
     }
