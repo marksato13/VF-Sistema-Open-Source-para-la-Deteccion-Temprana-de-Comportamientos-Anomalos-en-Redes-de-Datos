@@ -911,8 +911,8 @@ HTML = """<!doctype html>
         <div class="topo-bar">
           <div class="range-toggle" id="topoVista">
             <button data-vista="metodologica" class="active">1 · Fases del método</button>
-            <button data-vista="completa">2 · Operacional</button>
-            <button data-vista="red">3 · Red y captura</button>
+            <button data-vista="red">2 · Red y captura</button>
+            <button data-vista="completa">3 · Operacional</button>
             <button data-vista="construccion">4 · Construcción y entrenamiento</button>
             <button data-vista="decision">5 · Decisión</button>
             <button data-vista="respuesta">6 · Respuesta</button>
