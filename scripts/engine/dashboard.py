@@ -572,6 +572,13 @@ HTML = """<!doctype html>
   .var-capa .cc { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.15rem; }
 
   .var-tabla { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .umb-box { margin-top: 1.5rem; }
+  .umb-h { font-size: 1rem; margin: 0 0 0.45rem; }
+  .umb-tabla { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 0.65rem 0; }
+  .umb-tabla table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .umb-tabla th { text-align: left; font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); background: var(--surface-2); padding: 0.5rem 0.7rem; }
+  .umb-tabla td { padding: 0.55rem 0.7rem; border-top: 1px solid var(--border); vertical-align: top; }
+  .umb-tabla td.umb-r { font-family: var(--mono); white-space: nowrap; font-weight: 700; }
   .var-grupo { font-size: 0.72rem; letter-spacing: .07em; text-transform: uppercase;
     color: var(--text-dim); background: var(--surface-2); padding: 0.4rem 0.8rem;
     border-bottom: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--cc-color, var(--border)); }
@@ -961,6 +968,23 @@ HTML = """<!doctype html>
     <div class="var-capas" id="varCapas"></div>
     <div class="var-tabla" id="varTabla"></div>
     <p class="toolbar-hint" id="varPie"></p>
+
+    <div class="umb-box">
+      <h3 class="umb-h">Umbrales y régimen de decisión</h3>
+      <p class="lede-small">Las 28 variables entran <strong>juntas</strong> a un modelo multivariante (IsolationForest): una ventana es anómala si su <strong>score combinado &lt; &minus;0,5689</strong> &mdash; un único umbral, calibrado estadísticamente (percentil &alpha;&nbsp;=&nbsp;0,05 sobre el conjunto de oro). <strong>No hay un corte por variable</strong>: el valor de una sola solo cobra sentido combinado con el resto. Solo una parte de las variables lleva, además, un <strong>umbral heurístico explícito</strong> &mdash; criterio razonado y versionado, no calibrado como el del modelo:</p>
+      <div class="umb-tabla">
+        <table>
+          <thead><tr><th>Regla</th><th>Variables y umbral</th><th>Acción</th><th>Por qué ese valor</th></tr></thead>
+          <tbody>
+            <tr><td class="umb-r">port_scan</td><td>intentos de flujo &ge;20/30s &middot; puertos únicos &ge;0,45 &middot; SYN completados &le;0,30 &mdash; <b>ó</b> ráfaga &ge;200/30s con &le;10&nbsp;%</td><td><span class="badge acc-block">BLOCK</span></td><td>El escaneo prueba muchos puertos y casi ninguno completa. La rama de ráfaga se añadió porque el espejo SPAN topa el ratio de unicidad en ~0,5. FPR validado: +5 en 712&nbsp;450 ventanas (0,012&nbsp;%).</td></tr>
+            <tr><td class="umb-r">brute_force</td><td>&ge;5 req HTTP/60s <b>y</b> &ge;80&nbsp;% de fallo de auth (401/403)</td><td><span class="badge acc-block">BLOCK</span></td><td>Ráfaga de logins casi todos fallidos: señal inequívoca. El modelo mide flojo justo en este patrón.</td></tr>
+            <tr><td class="umb-r">http_abuse</td><td>&ge;100 req HTTP/60s sin patrón de fuerza bruta</td><td><span class="badge acc-limit">LIMIT</span></td><td>Volumen alto <b>ambiguo</b> (puede ser uso pesado legítimo): se degrada la tasa, no se corta.</td></tr>
+            <tr><td class="umb-r">dns_entropy</td><td>&ge;20 consultas DNS/60s <b>y</b> (&ge;50&nbsp;% NXDOMAIN <b>ó</b> &ge;45&nbsp;% nombres únicos)</td><td><span class="badge acc-limit">LIMIT</span></td><td>El hueco donde el modelo sacó 0&nbsp;% (DNS de alta entropía). Los ratios se bajaron a 0,45 porque el SPAN duplica tramas y topa en ~0,5. FPR 0/527 sobre la línea base.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="toolbar-hint">Los umbrales heurísticos son <b>criterio razonado, versionado (2026-10-06.2) y configurable</b> &mdash; no calibrados estadísticamente como el umbral del modelo. Las otras 20 variables no tienen corte fijo: su valor lo pondera el modelo junto con el resto.</p>
+    </div>
   </section>
 
   <section id="s-vivo">
