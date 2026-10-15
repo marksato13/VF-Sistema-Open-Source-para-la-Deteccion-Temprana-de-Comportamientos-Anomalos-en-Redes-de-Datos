@@ -591,6 +591,13 @@ HTML = """<!doctype html>
   .pipe-ar { align-self: center; color: var(--text-dim); font-size: 1.1rem; flex: 0 0 auto; }
   .esc-code { background: #0B1220; color: #C7D4E5; border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 0.95rem; font-family: var(--mono); font-size: 0.76rem; line-height: 1.55; overflow-x: auto; white-space: pre; margin: 0.5rem 0; }
   .esc-code .c { color: #7C8BAD; }
+  .anat { border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.8rem; margin: 0.55rem 0; }
+  .anat .ac { font-family: var(--mono); font-size: 0.78rem; display: block; margin-bottom: 0.4rem; word-break: break-all; }
+  .anat ul { margin: 0.15rem 0 0.4rem; padding-left: 1.15rem; font-size: 0.8rem; line-height: 1.45; }
+  .anat li { margin: 0.12rem 0; }
+  .anat .vd { font-size: 0.82rem; line-height: 1.4; }
+  .anat .bad { color: var(--danger); font-weight: 700; }
+  .anat .good { color: var(--ok); font-weight: 700; }
   .var-grupo { font-size: 0.72rem; letter-spacing: .07em; text-transform: uppercase;
     color: var(--text-dim); background: var(--surface-2); padding: 0.4rem 0.8rem;
     border-bottom: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--cc-color, var(--border)); }
@@ -1186,6 +1193,53 @@ for i in $(seq 1 50); do curl -s -o /dev/null -u admin:wrong$i http://10.10.30.1
 <span class="c"># verificar el corte: open &rarr; filtered</span>
 nmap -Pn -p80,443 10.10.30.10</div>
       <p class="toolbar-hint">El panel <strong>no ejecuta</strong> nada: estos comandos se copian y se lanzan en la terminal SSH correspondiente. La respuesta se ve luego en Actividad, Decisiones y Bloqueos.</p>
+
+      <h3 class="umb-h" style="margin-top:1.1rem">Anatomía: por qué cada rango es normal o anómalo</h3>
+      <p class="lede-small">Qué significa cada parte del comando y por qué ese valor cae dentro o fuera de lo normal.</p>
+
+      <p class="toolbar-hint" style="margin-top:0.55rem"><strong>ANÓMALO</strong> &mdash; desde la Kali</p>
+      <div class="anat">
+        <code class="ac">nmap -sT -T4 --max-retries 1 -p 1-3000 --open 10.10.30.10</code>
+        <ul>
+          <li><code class="esc-cmd">-sT</code> conexión TCP completa &middot; <code class="esc-cmd">-T4</code> rápido &middot; <code class="esc-cmd">--max-retries 1</code> casi sin reintentos (agresivo)</li>
+          <li><code class="esc-cmd">-p 1-3000</code> &rarr; <strong>3000 puertos</strong> probados en ~20&nbsp;s</li>
+        </ul>
+        <div class="vd"><span class="bad">ANÓMALO:</span> un cliente habla con 2&ndash;3 puertos; 3000 en segundos dispara <code class="esc-cmd">flow_attempt &ge;20/30s</code>, <code class="esc-cmd">unique_dst_port_ratio &ge;0,45</code> y <code class="esc-cmd">syn_completion &le;0,30</code> (casi ninguno abre). &nbsp;<span class="good">Normal:</span> pocos intentos a 1&ndash;2 puertos conocidos.</div>
+      </div>
+      <div class="anat">
+        <code class="ac">for i in $(seq 1 80); do dig +short $r.francos-sac.com @10.10.10.20; sleep 0.5; done</code>
+        <ul>
+          <li><code class="esc-cmd">$r</code> = 6 bytes aleatorios &rarr; nombre <strong>inexistente y distinto</strong> cada vez</li>
+          <li><code class="esc-cmd">sleep 0.5</code> &rarr; ~2 consultas/s &middot; <code class="esc-cmd">seq 1 80</code> &rarr; <strong>80 consultas</strong> en ~40&nbsp;s</li>
+        </ul>
+        <div class="vd"><span class="bad">ANÓMALO:</span> <code class="esc-cmd">dns_query &ge;20/60s</code> con <code class="esc-cmd">unique_dns_name_ratio &ge;0,45</code> (nombres casi todos distintos). &nbsp;<span class="good">Normal:</span> se repiten pocos dominios conocidos (<code class="esc-cmd">*.francos-sac.com</code>).</div>
+      </div>
+      <div class="anat">
+        <code class="ac">seq 1 250 | xargs -P10 -I{} curl -s http://10.10.30.10/</code>
+        <ul>
+          <li><code class="esc-cmd">seq 1 250</code> &rarr; <strong>250 peticiones</strong> &middot; <code class="esc-cmd">-P10</code> &rarr; 10 en paralelo (ráfaga de segundos)</li>
+        </ul>
+        <div class="vd"><span class="bad">ANÓMALO:</span> <code class="esc-cmd">http_request &ge;100/60s</code>. &nbsp;<span class="good">Normal:</span> el perfil más intenso hace decenas por minuto, no cientos en segundos.</div>
+      </div>
+      <div class="anat">
+        <code class="ac">for i in $(seq 1 50); do curl -u admin:wrong$i http://10.10.30.10:8081/; done</code>
+        <ul>
+          <li><code class="esc-cmd">-u admin:wrong$i</code> &rarr; credenciales <strong>siempre erróneas</strong> (wrong1, wrong2…) &rarr; el servidor responde <strong>401</strong> a todas</li>
+          <li><code class="esc-cmd">seq 1 50</code> &rarr; <strong>50 intentos</strong> seguidos</li>
+        </ul>
+        <div class="vd"><span class="bad">ANÓMALO:</span> <code class="esc-cmd">http_request &ge;5/60s</code> con <code class="esc-cmd">http_auth_failure_ratio &ge;0,80</code> (100&nbsp;% fallo). &nbsp;<span class="good">Normal:</span> un usuario falla 1&ndash;2 veces, no el 100&nbsp;%.</div>
+      </div>
+
+      <p class="toolbar-hint" style="margin-top:0.65rem"><strong>NORMAL</strong> &mdash; cada perfil es un <code class="esc-cmd">--perfil</code> ligado a una IP, porque el motor puntúa por IP</p>
+      <div class="anat">
+        <code class="ac">python3 clientes_lab.py --perfil &lt;perfil&gt; --origen 10.10.20.2X</code>
+        <ul>
+          <li><code class="esc-cmd">--perfil</code> &rarr; qué mezcla de acciones (web, DNS, API, ping…)</li>
+          <li><code class="esc-cmd">--origen</code> &rarr; la IP <code class="esc-cmd">.21&ndash;.26</code> a la que se liga ese perfil</li>
+          <li><strong>ritmo</strong> (de 3 a 12&nbsp;s entre acciones, según perfil) &rarr; tasa humana, no automática</li>
+        </ul>
+        <div class="vd"><span class="good">NORMAL:</span> variedad de acciones + tasa baja + dominios conocidos = la combinación que el modelo aprende como esperada. El detalle de cada perfil está en la tabla de los 6 perfiles (arriba).</div>
+      </div>
 
       <h3 class="umb-h" style="margin-top:1.1rem">En qué nos guiamos para justificar estos valores</h3>
       <ul class="esc-refs">
