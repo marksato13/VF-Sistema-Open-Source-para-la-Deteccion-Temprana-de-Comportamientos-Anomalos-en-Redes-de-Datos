@@ -579,6 +579,9 @@ HTML = """<!doctype html>
   .umb-tabla th { text-align: left; font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); background: var(--surface-2); padding: 0.5rem 0.7rem; }
   .umb-tabla td { padding: 0.55rem 0.7rem; border-top: 1px solid var(--border); vertical-align: top; }
   .umb-tabla td.umb-r { font-family: var(--mono); white-space: nowrap; font-weight: 700; }
+  .esc-cmd { font-family: var(--mono); font-size: 0.74rem; background: var(--surface-2); padding: 0.05rem 0.32rem; border-radius: 4px; }
+  .esc-refs { margin: 0.5rem 0 0; padding-left: 1.1rem; font-size: 0.84rem; line-height: 1.5; }
+  .esc-refs li { margin: 0.22rem 0; }
   .var-grupo { font-size: 0.72rem; letter-spacing: .07em; text-transform: uppercase;
     color: var(--text-dim); background: var(--surface-2); padding: 0.4rem 0.8rem;
     border-bottom: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--cc-color, var(--border)); }
@@ -1105,6 +1108,51 @@ HTML = """<!doctype html>
       <button data-sim="anomalo">Tráfico anómalo</button>
     </div>
     <div class="sim-grid" id="simGrid"></div>
+
+    <div class="umb-box">
+      <h3 class="umb-h">Cómo se genera la data: normal frente a anómalo</h3>
+      <p class="lede-small"><strong>Concepto de ventana:</strong> el motor no mira paquetes sueltos. Agrupa el tráfico de <em>cada IP</em> en <strong>ventanas de tiempo</strong> (10&nbsp;s para red y transporte, 30&nbsp;s y 60&nbsp;s para contexto y aplicación) y toma <strong>una decisión por ventana</strong>. Por eso "500 paquetes" no dice nada; "500 paquetes/s sostenidos en esta ventana, junto con las otras 27 variables" sí.</p>
+      <p class="lede-small"><strong>Desde dónde se ejecuta:</strong> el tráfico <strong>normal</strong> lo generan 6 perfiles, <strong>uno por IP</strong>, en las VM cliente <code class="esc-cmd">10.10.20.21&ndash;.26</code> (VLAN&nbsp;20), arrancados con <code class="esc-cmd">cyberflow-lab.target</code>. El tráfico <strong>anómalo</strong> sale de la Kali <code class="esc-cmd">10.10.20.30</code> por terminal SSH. El sensor observa todo por el <strong>espejo SPAN</strong>; nunca está en línea.</p>
+
+      <h3 class="umb-h" style="margin-top:1.1rem">Tráfico NORMAL &mdash; los 6 perfiles (línea base)</h3>
+      <div class="umb-tabla">
+        <table>
+          <thead><tr><th>Perfil · IP</th><th>Qué hace</th><th>Ritmo</th><th>Por qué es normal</th></tr></thead>
+          <tbody>
+            <tr><td class="umb-r">ofimatica ·21</td><td>web pequeña/media, DNS, API, HTTPS, algún ping</td><td>~3&nbsp;s</td><td>Oficina típica: mezcla de tamaños y protocolos, tasa baja y estable.</td></tr>
+            <tr><td class="umb-r">navegacion ·22</td><td>web pequeña/grande, HTTPS, mucho DNS, algún abandono</td><td>~1,5&nbsp;s</td><td>Navegación intensa pero humana: variedad de destinos, ritmo irregular.</td></tr>
+            <tr><td class="umb-r">descargas ·23</td><td>web grande/media, HTTPS, poco DNS</td><td>~8&nbsp;s</td><td>Transferencias grandes espaciadas: muchos bytes, pocos flujos.</td></tr>
+            <tr><td class="umb-r">aplicacion ·24</td><td>API ok/post/lenta, algún 500, HTTPS, DNS</td><td>~2&nbsp;s</td><td>Cliente de aplicación: patrón repetitivo pero con errores normales.</td></tr>
+            <tr><td class="umb-r">ligero ·25</td><td>DNS, API, web pequeña, ping</td><td>~12&nbsp;s</td><td>Uso esporádico: tasa muy baja, pocas acciones.</td></tr>
+            <tr><td class="umb-r">erratico ·26</td><td>mezcla + puerto cerrado + abandonos, en ráfagas</td><td>~5&nbsp;s</td><td>Ráfagas y silencios a propósito: ensancha la línea base para que el modelo no la aprenda demasiado estrecha.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="toolbar-hint">Comando por perfil: <code class="esc-cmd">python3 clientes_lab.py --perfil ofimatica --origen 10.10.20.21</code>. Dominios internos: <code class="esc-cmd">*.francos-sac.com</code>. <strong>Por qué es la referencia de "normal":</strong> tráfico realista, variado y sin intención maliciosa; de aquí el modelo aprende qué combinación es la esperada.</p>
+
+      <h3 class="umb-h" style="margin-top:1.1rem">Tráfico ANÓMALO &mdash; familias de ataque (desde la Kali)</h3>
+      <div class="umb-tabla">
+        <table>
+          <thead><tr><th>Ataque</th><th>Comando</th><th>Variables que mueve</th><th>Por qué es anómalo</th></tr></thead>
+          <tbody>
+            <tr><td class="umb-r">Escaneo de puertos<br><small>MITRE T1046</small></td><td><code class="esc-cmd">nmap -sT -T4 -p 1-3000 --open 10.10.30.10</code></td><td>flow_attempt&uarr; · unique_dst_port_ratio&uarr; · syn_completion_ratio&darr;</td><td>Prueba muchos puertos y casi ninguno completa: patrón que el tráfico humano nunca produce.</td></tr>
+            <tr><td class="umb-r">DGA / DNS<br><small>MITRE T1568.002</small></td><td><code class="esc-cmd">dig +short &lt;aleatorio&gt;.francos-sac.com @10.10.10.20</code> (en bucle)</td><td>dns_query_rate&uarr; · unique_dns_name_ratio&uarr; · nxdomain_ratio&uarr;</td><td>Decenas de nombres distintos e inexistentes por segundo: firma de generación de dominios o túnel DNS.</td></tr>
+            <tr><td class="umb-r">Flood HTTP<br><small>MITRE T1499</small></td><td><code class="esc-cmd">seq 1 250 | xargs -P10 curl -s http://10.10.30.10/</code></td><td>http_request_rate&uarr;&uarr;</td><td>Volumen de peticiones muy por encima de cualquier perfil: abuso (ambiguo &rarr; LIMIT).</td></tr>
+            <tr><td class="umb-r">Fuerza bruta<br><small>MITRE T1110</small></td><td><code class="esc-cmd">curl -u admin:malN http://10.10.30.10:8081/</code> (en bucle)</td><td>http_auth_failure_ratio&uarr; (&rarr;1,0)</td><td>Ráfaga de logins casi todos 401: nadie legítimo falla el 100&nbsp;% de los intentos.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="toolbar-hint"><strong>Por qué es la referencia de "anómalo":</strong> cada familia empuja una combinación de variables fuera del rango aprendido, o cruza un umbral heurístico declarado (ver la sección <strong>Variables &rarr; Umbrales y régimen</strong>).</p>
+
+      <h3 class="umb-h" style="margin-top:1.1rem">En qué nos guiamos para justificar estos valores</h3>
+      <ul class="esc-refs">
+        <li><strong>MITRE ATT&amp;CK</strong> &mdash; técnicas de ataque y su comportamiento observable (<code class="esc-cmd">attack.mitre.org</code>).</li>
+        <li><strong>OWASP</strong> &mdash; abuso de aplicaciones web (<code class="esc-cmd">owasp.org</code>).</li>
+        <li><strong>Informes de prevalencia</strong> &mdash; Verizon DBIR, Fortinet y ESET: qué ataques son frecuentes y relevantes.</li>
+        <li><strong>Entregable interno 11 · Justificación de ataques</strong> &mdash; la elección y el porqué de cada familia, con su mapeo a estos marcos.</li>
+      </ul>
+      <p class="toolbar-hint">La elección de los ataques y de los umbrales no es arbitraria: se apoya en estos marcos y se valida contra la propia línea base (FPR medido).</p>
+    </div>
   </section>
 
   <section id="s-aprendizaje">
