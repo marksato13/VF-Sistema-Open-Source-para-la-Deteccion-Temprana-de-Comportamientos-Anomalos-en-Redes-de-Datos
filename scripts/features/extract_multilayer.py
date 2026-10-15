@@ -405,7 +405,7 @@ def build_rows(
                     len({item.target_port for item in transport_attempts30}), len(transport_attempts30)
                 ),
                 "http_error_ratio_60s": safe_ratio(sum(item.error for item in http60), len(http60)),
-                "dns_nxdomain_ratio_60s": safe_ratio(len(dns_nxdomain60), len(dns_queries60)),
+                "dns_nxdomain_ratio_60s": min(1.0, safe_ratio(len(dns_nxdomain60), len(dns_queries60))),
                 "tls_session_rate_60s": tls_session_count / 60.0,
             }
             rows.append(row)

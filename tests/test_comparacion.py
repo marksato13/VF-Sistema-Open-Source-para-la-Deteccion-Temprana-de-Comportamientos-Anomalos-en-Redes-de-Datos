@@ -39,7 +39,8 @@ class CifrasPublicadas(unittest.TestCase):
         fp = self.r["falsos_positivos"]
         self.assertEqual(fp["combinado"]["unidad"], "ventanas normales con acción")
         self.assertEqual((fp["combinado"]["valor"], fp["combinado"]["de"]), (0, 527))
-        self.assertEqual(fp["suricata"]["valor"], "no medido")
+        # El FP de Suricata ya se midio (14-oct): 0 firmas ET sobre clientes.
+        self.assertIn("0 firmas ET", fp["suricata"]["valor"])
         self.assertNotIn("F1", json.dumps(self.r))
         self.assertNotIn("precision", json.dumps(self.r))
 
