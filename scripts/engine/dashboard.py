@@ -1979,6 +1979,7 @@ async function refresh() {
     renderVigentes(status.vigentes || [], status.blocked || []);
 
     const c = status.counters;
+    ultimosCounters = c;
     counters.innerHTML = [
       card('Ventanas analizadas', (c.total || 0).toLocaleString('es')),
       card('BLOCK', c.block || 0, c.block > 0 ? 'bad' : ''),
@@ -2024,6 +2025,10 @@ async function refresh() {
 // Seccion C: el filtro y la exportacion trabajan sobre lastDecisions (lo
 // que ya esta cargado en el navegador), sin pedir nada nuevo al backend.
 let lastDecisions = [];
+// Contadores del servidor (ventana real de 60 min). El buffer de 600
+// decisiones solo abarca unos minutos, asi que el recuento «de la ultima
+// hora» de Alertas se toma de aqui, no del buffer, para cuadrar con Actividad.
+let ultimosCounters = null;
 
 // Mini-barra del score: situa el valor en la misma escala del histograma, con
 // el umbral marcado. A la izquierda del umbral es zona ALERT (rojo); a la
@@ -2081,11 +2086,20 @@ function renderAlertas() {
   const todas = (lastDecisions || []).filter(d => accionDeDecision(d) !== 'PERMIT');
   const ahora = Date.now() / 1000;
   const h = todas.filter(d => ahora - (d.logged_at || 0) <= 3600);
-  const nMod = h.filter(d => alertaTipos(d).modelo).length;
-  const nReg = h.filter(d => alertaTipos(d).regla).length;
-  resumen.innerHTML = `<div class="al-num ${h.length ? 'hay' : ''}">${h.length}</div>`
+  // El recuento de la hora viene de los contadores del servidor (ventana real
+  // de 60 min); el buffer de 600 decisiones solo abarca unos minutos, asi que
+  // tomarlo de ahi daria menos alertas que Actividad y el indicador del menu.
+  const c = ultimosCounters || {};
+  const hayCont = (c.block != null) || (c.limit != null);
+  const totalHora = hayCont ? (c.block || 0) + (c.limit || 0) : h.length;
+  const nMod = (c.alert_model != null) ? c.alert_model : h.filter(d => alertaTipos(d).modelo).length;
+  const nReg = hayCont ? Math.max(0, totalHora - nMod) : h.filter(d => alertaTipos(d).regla).length;
+  const listadas = Math.min(h.length, totalHora);
+  resumen.innerHTML = `<div class="al-num ${totalHora ? 'hay' : ''}">${totalHora}</div>`
     + `<div class="al-num-t">alerta(s) en la última hora`
-    + `<small>${nReg} por reglas · ${nMod} anomalía(s) del modelo</small></div>`;
+    + `<small>${nReg} por reglas · ${nMod} anomalía(s) del modelo`
+    + (totalHora > listadas ? ` · se listan las ${listadas} más recientes` : '')
+    + `</small></div>`;
   let rows = todas;
   if (alertasFiltro === 'modelo') rows = rows.filter(d => alertaTipos(d).modelo);
   if (alertasFiltro === 'regla') rows = rows.filter(d => alertaTipos(d).regla);
