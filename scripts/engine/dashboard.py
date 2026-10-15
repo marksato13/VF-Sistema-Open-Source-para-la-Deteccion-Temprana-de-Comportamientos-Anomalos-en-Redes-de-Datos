@@ -1152,6 +1152,29 @@ HTML = """<!doctype html>
         <div class="pipe-box"><span class="pl">Dataset + modelo</span><b>Decisión</b><small>IsolationForest + heurísticos</small></div>
       </div>
 
+      <h3 class="umb-h" style="margin-top:1.1rem">Cómo se genera el tráfico normal (procedimiento)</h3>
+      <ol class="esc-refs">
+        <li><strong>Herramienta:</strong> scripts propios en Python (stdlib, sin dependencias externas) &mdash; <code class="esc-cmd">clientes_lab.py</code> (hace las peticiones) y <code class="esc-cmd">servidor_lab.py</code> (responde). No es JMeter ni Locust: es código propio.</li>
+        <li><strong>Orquestador:</strong> <strong>systemd</strong> &mdash; <code class="esc-cmd">cyberflow-lab.target</code> levanta <strong>6 servicios, uno por IP</strong> (.21&ndash;.26), con <code class="esc-cmd">Restart=always</code>. Se arrancan/paran todos con el target (<code class="esc-cmd">clientes_config.py</code> genera las unidades).</li>
+        <li><strong>Decisión por acción:</strong> cada perfil elige una acción <strong>al azar ponderada por su peso</strong> (los números del perfil) y espera un tiempo <strong>aleatorio</strong> (distribución exponencial) alrededor de su ritmo &rarr; parece humano, no periódico.</li>
+        <li><strong>Qué hace cada acción:</strong> peticiones reales HTTP/HTTPS/DNS/API/ping a endpoints que <em>alimentan variables concretas</em> (p. ej. <code class="esc-cmd">/api/auth</code>&rarr;401, <code class="esc-cmd">/api/fallo</code>&rarr;500, <code class="esc-cmd">/estatico/&lt;n&gt;k</code>&rarr;tamaño). Pulsa el <strong>ojito</strong> de cada perfil (tabla de abajo) para ver sus acciones y pesos.</li>
+      </ol>
+      <p class="toolbar-hint" style="margin-top:0.5rem"><strong>Horarios</strong> &mdash; curva diaria en <code class="esc-cmd">factor_horario()</code> de clientes_lab.py (las VMs corren en <strong>UTC</strong>):</p>
+      <div class="umb-tabla">
+        <table>
+          <thead><tr><th>Franja (hora local de la VM)</th><th>Factor</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="umb-r">08&ndash;13 h</td><td>1,0</td><td>mañana · plena carga</td></tr>
+            <tr><td class="umb-r">13&ndash;15 h</td><td>0,55</td><td>pausa de comida</td></tr>
+            <tr><td class="umb-r">15&ndash;19 h</td><td>0,9</td><td>tarde</td></tr>
+            <tr><td class="umb-r">19&ndash;23 h</td><td>0,35</td><td>noche</td></tr>
+            <tr><td class="umb-r">23&ndash;08 h</td><td>0,12</td><td>madrugada (poco, nunca cero)</td></tr>
+            <tr><td class="umb-r">Fin de semana</td><td>&times;0,3</td><td>multiplica sobre la franja</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="toolbar-hint">El factor multiplica la tasa: más factor &rarr; esperas más cortas &rarr; más tráfico. Los horarios y perfiles se definen en código (<code class="esc-cmd">clientes_lab.py</code>), no en un archivo de ajustes.</p>
+
       <h3 class="umb-h" style="margin-top:1.1rem">Tráfico NORMAL &mdash; los 6 perfiles (línea base)</h3>
       <div class="umb-tabla">
         <table>
@@ -3179,7 +3202,7 @@ const TOPO_TEXTO = {
     nota: 'Fuera de la fase de ataque debe estar APAGADA: si emite durante la línea base, el modelo aprendería el ataque como normal. Por eso sus ventanas se excluyen con excluir_ventanas y el saneamiento del lote.',
   },
   clientes: {
-    que: 'Una VM con seis alias .21-.26, cada uno un perfil de tráfico legítimo contra el servidor. Así la línea base tiene variedad realista, no un único patrón.',
+    que: 'Una VM con seis alias .21-.26, cada uno un perfil de tráfico legítimo contra el servidor. Así la línea base tiene variedad realista, no un único patrón. Lo genera un script propio (clientes_lab.py) orquestado por systemd; el servidor de pruebas (servidor_lab.py) responde con los endpoints que alimentan cada variable.',
     perfiles: [
       { icono: 'ofimatica',  n: 'Ofimática',  ip: '.21', d: 'ráfagas cortas de peticiones pequeñas',
         ej: 'cada ~3 s: GET / o /estatico/8k, DNS de intranet.francos-sac.com y algún /api/ok' },
@@ -3194,13 +3217,20 @@ const TOPO_TEXTO = {
       { icono: 'erratico',   n: 'Errático',   ip: '.26', d: 'irregular, sin patrón fijo',
         ej: 'ráfagas y silencios: mezcla peticiones pequeñas y grandes, pings, abandona conexiones y a veces toca un puerto cerrado' },
     ],
-    nota: 'Seis IP sobre una sola MAC, a propósito: el motor puntúa por IP, así que son seis entidades distintas para el modelo.',
+    flujoTit: 'Cómo se genera el tráfico',
+    flujo: [
+      {paso: 'Herramienta', fichero: 'clientes_lab.py + servidor_lab.py', garantia: 'scripts propios en Python (stdlib, sin dependencias): el cliente hace peticiones reales HTTP/HTTPS/DNS/API/ICMP y el servidor responde con endpoints que alimentan variables concretas (p. ej. /api/auth→401, /api/fallo→500, /estatico/<n>k→tamaño de paquete)'},
+      {paso: 'Orquestador', fichero: 'systemd · cyberflow-lab.target', garantia: '6 servicios, uno por IP .21-.26, con Restart=always; se arrancan y paran todos con el target. Las unidades las genera clientes_config.py'},
+      {paso: 'Decisión por acción', fichero: 'random.choices(acciones, pesos)', garantia: 'elige una acción al azar PONDERADA por su peso (los números de cada perfil) y espera un tiempo aleatorio (distribución exponencial) alrededor del ritmo → parece humano, no periódico'},
+      {paso: 'Horario', fichero: 'factor_horario()', garantia: 'curva diaria (las VMs corren en UTC): 08-13 h plena carga (1.0) · comida 0,55 · tarde 0,9 · noche 0,35 · madrugada 0,12 · fin de semana ×0,3'},
+    ],
+    nota: 'Seis IP sobre una sola MAC, a propósito: el motor puntúa por IP, así que son seis entidades distintas para el modelo. Código: scripts/laboratorio/clientes_lab.py (perfiles, acciones y horarios en factor_horario), servidor_lab.py (el servidor) y clientes_config.py (orquestador systemd).',
   },
   servidor: {
     que: 'El host protegido (srv-dmz, 10.10.30.10, VLAN 30 DMZ): servidor HTTP/HTTPS objetivo del ensayo y donde se APLICA la respuesta. Escucha 80 y 443 (web) y 22 (SSH). Corre el agente que trae el feed firmado y sincroniza nftables en su propio kernel.',
     flujoTit: 'Qué corre en el host y cómo bloquea',
     flujo: [
-      {paso: 'Servicio web', fichero: 'HTTP 80 · HTTPS 443', garantia: 'objetivo del tráfico legítimo y de los ataques'},
+      {paso: 'Servicio web (servidor_lab.py)', fichero: 'HTTP 80 · HTTPS 443', garantia: 'objetivo del tráfico legítimo y de los ataques. Sirve /estatico/<n>k (tamaños) y /api/* — ok, auth→401, perdido→404, fallo→500, lento: cada endpoint alimenta una variable concreta'},
       {paso: 'Agente de enforcement', fichero: 'ppi-enforce-agent.timer (pull 60 s)', garantia: 'trae el feed del relay, verifica la firma ed25519 y aplica nftables'},
       {paso: 'BLOCK = drop', fichero: 'set cyberflow_bloqueados (con timeout)', garantia: 'ip saddr @bloqueados → drop; caduca solo'},
       {paso: 'LIMIT = rate-limit', fichero: 'set cyberflow_limitados (con timeout)', garantia: 'limit rate over 100/s burst 5 → drop el exceso'},
@@ -3212,7 +3242,7 @@ const TOPO_TEXTO = {
     que: 'La segmentación del laboratorio: un cortafuegos pfSense en alta disponibilidad (par A/B con VIP CARP) que enruta entre VLAN y es la puerta de enlace de cada una (VLAN 20 clientes/Kali · 30 DMZ · 60 sensor · 10 gestión). Todo el tráfico entre VLAN cruza el troncal, que es el que se espeja (SPAN) hacia el sensor.',
     flujoTit: 'Reglas implementadas (lo que el ensayo comprobó)',
     flujo: [
-      {paso: 'Atacante → DMZ: solo 443', fichero: 'VLAN 20 → VLAN 30', garantia: 'HTTPS permitido; puerto 80 FILTERED; ICMP bloqueado'},
+      {paso: 'Atacante → DMZ', fichero: 'VLAN 20 → VLAN 30', garantia: 'HTTPS (443) permitido. En la validación del 14-oct el puerto 80 también estaba ABIERTO E2E (ver nota), lo que permitió validar los ataques HTTP; ICMP bloqueado'},
       {paso: 'Clientes → DMZ', fichero: 'VLAN 20 → VLAN 30', garantia: 'tráfico legítimo a 80/443 para la línea base'},
       {paso: 'Sensor sin salida a Internet', fichero: 'VLAN 60 · egress denegado', garantia: 'propiedad de seguridad: nada de bots externos'},
       {paso: 'Troncal espejado', fichero: 'SPAN del trunk → sensor', garantia: 'el sensor ve una COPIA, no está en línea: observa, no corta'},
