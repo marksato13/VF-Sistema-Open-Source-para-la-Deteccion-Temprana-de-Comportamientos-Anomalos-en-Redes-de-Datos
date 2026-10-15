@@ -582,6 +582,15 @@ HTML = """<!doctype html>
   .esc-cmd { font-family: var(--mono); font-size: 0.74rem; background: var(--surface-2); padding: 0.05rem 0.32rem; border-radius: 4px; }
   .esc-refs { margin: 0.5rem 0 0; padding-left: 1.1rem; font-size: 0.84rem; line-height: 1.5; }
   .esc-refs li { margin: 0.22rem 0; }
+  .pipe { display: flex; align-items: stretch; gap: 0.25rem; margin: 0.9rem 0; }
+  .pipe-box { flex: 1 1 0; min-width: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); padding: 0.5rem 0.6rem; }
+  .pipe-box.hl { background: var(--ok-soft); border-color: var(--ok); }
+  .pipe-box .pl { display: block; font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.04em; color: var(--text-dim); text-transform: uppercase; }
+  .pipe-box b { display: block; font-size: 0.86rem; margin: 0.1rem 0 0.12rem; }
+  .pipe-box small { color: var(--text-dim); font-size: 0.7rem; line-height: 1.25; }
+  .pipe-ar { align-self: center; color: var(--text-dim); font-size: 1.1rem; flex: 0 0 auto; }
+  .esc-code { background: #0B1220; color: #C7D4E5; border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 0.95rem; font-family: var(--mono); font-size: 0.76rem; line-height: 1.55; overflow-x: auto; white-space: pre; margin: 0.5rem 0; }
+  .esc-code .c { color: #7C8BAD; }
   .var-grupo { font-size: 0.72rem; letter-spacing: .07em; text-transform: uppercase;
     color: var(--text-dim); background: var(--surface-2); padding: 0.4rem 0.8rem;
     border-bottom: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--cc-color, var(--border)); }
@@ -1114,6 +1123,18 @@ HTML = """<!doctype html>
       <p class="lede-small"><strong>Concepto de ventana:</strong> el motor no mira paquetes sueltos. Agrupa el tráfico de <em>cada IP</em> en <strong>ventanas de tiempo</strong> (10&nbsp;s para red y transporte, 30&nbsp;s y 60&nbsp;s para contexto y aplicación) y toma <strong>una decisión por ventana</strong>. Por eso "500 paquetes" no dice nada; "500 paquetes/s sostenidos en esta ventana, junto con las otras 27 variables" sí.</p>
       <p class="lede-small"><strong>Desde dónde se ejecuta:</strong> el tráfico <strong>normal</strong> lo generan 6 perfiles, <strong>uno por IP</strong>, en las VM cliente <code class="esc-cmd">10.10.20.21&ndash;.26</code> (VLAN&nbsp;20), arrancados con <code class="esc-cmd">cyberflow-lab.target</code>. El tráfico <strong>anómalo</strong> sale de la Kali <code class="esc-cmd">10.10.20.30</code> por terminal SSH. El sensor observa todo por el <strong>espejo SPAN</strong>; nunca está en línea.</p>
 
+      <div class="pipe">
+        <div class="pipe-box"><span class="pl">Generación</span><b>Clientes + Kali</b><small>6 perfiles (normal) · ataques (anómalo)</small></div>
+        <div class="pipe-ar">&rarr;</div>
+        <div class="pipe-box"><span class="pl">Espejo SPAN</span><b>Copia del troncal</b><small>el sensor observa, no corta</small></div>
+        <div class="pipe-ar">&rarr;</div>
+        <div class="pipe-box hl"><span class="pl">Captura · ens37</span><b>Dos fuentes</b><small>tcpdump &rarr; PCAP · Suricata &rarr; eve.json</small></div>
+        <div class="pipe-ar">&rarr;</div>
+        <div class="pipe-box"><span class="pl">Ventanas</span><b>10 / 30 / 60 s</b><small>28 variables por IP</small></div>
+        <div class="pipe-ar">&rarr;</div>
+        <div class="pipe-box"><span class="pl">Dataset + modelo</span><b>Decisión</b><small>IsolationForest + heurísticos</small></div>
+      </div>
+
       <h3 class="umb-h" style="margin-top:1.1rem">Tráfico NORMAL &mdash; los 6 perfiles (línea base)</h3>
       <div class="umb-tabla">
         <table>
@@ -1143,6 +1164,28 @@ HTML = """<!doctype html>
         </table>
       </div>
       <p class="toolbar-hint"><strong>Por qué es la referencia de "anómalo":</strong> cada familia empuja una combinación de variables fuera del rango aprendido, o cruza un umbral heurístico declarado (ver la sección <strong>Variables &rarr; Umbrales y régimen</strong>).</p>
+
+      <h3 class="umb-h" style="margin-top:1.1rem">Comandos exactos</h3>
+      <div class="esc-code"><span class="c"># NORMAL &mdash; en la VM de clientes (10.10.20.20): arranca los 6 perfiles</span>
+sudo systemctl start cyberflow-lab.target
+<span class="c"># o un perfil concreto (uno por IP .21&ndash;.26):</span>
+python3 clientes_lab.py --perfil ofimatica --origen 10.10.20.21
+
+<span class="c"># ANÓMALO &mdash; desde la Kali (10.10.20.30), por SSH</span>
+<span class="c"># acceso:</span>
+ssh -t gadmin@10.10.10.30 "ssh -i ~/.ssh/cyberflow-to-atacante adminatacante@10.10.20.30"
+<span class="c"># 1) Escaneo de puertos &rarr; BLOCK</span>
+nmap -sT -T4 --max-retries 1 -p 1-3000 --open 10.10.30.10
+nmap -sT -T5 --min-rate 1500 -p- --open 10.10.30.10
+<span class="c"># 2) DGA / DNS de alta entropía &rarr; LIMIT</span>
+for i in $(seq 1 80); do r=$(head -c6 /dev/urandom|od -An -tx1|tr -d " "); dig +short $r.francos-sac.com @10.10.10.20; sleep 0.5; done
+<span class="c"># 3) Flood HTTP &rarr; LIMIT</span>
+seq 1 250 | xargs -P10 -I{} curl -s -o /dev/null http://10.10.30.10/
+<span class="c"># 4) Fuerza bruta HTTP &rarr; BLOCK (endpoint 401 en srv-dmz:8081)</span>
+for i in $(seq 1 50); do curl -s -o /dev/null -u admin:wrong$i http://10.10.30.10:8081/; sleep 0.4; done
+<span class="c"># verificar el corte: open &rarr; filtered</span>
+nmap -Pn -p80,443 10.10.30.10</div>
+      <p class="toolbar-hint">El panel <strong>no ejecuta</strong> nada: estos comandos se copian y se lanzan en la terminal SSH correspondiente. La respuesta se ve luego en Actividad, Decisiones y Bloqueos.</p>
 
       <h3 class="umb-h" style="margin-top:1.1rem">En qué nos guiamos para justificar estos valores</h3>
       <ul class="esc-refs">
