@@ -598,6 +598,16 @@ HTML = """<!doctype html>
   .anat .vd { font-size: 0.82rem; line-height: 1.4; }
   .anat .bad { color: var(--danger); font-weight: 700; }
   .anat .good { color: var(--ok); font-weight: 700; }
+  .ojo { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text-dim); cursor: pointer; padding: 0.08rem 0.28rem; margin-right: 0.4rem; vertical-align: middle; display: inline-flex; align-items: center; }
+  .ojo:hover { color: var(--ok); border-color: var(--ok); }
+  .pmodal { position: fixed; inset: 0; background: rgba(6,11,22,0.62); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 1rem; }
+  .pmodal.open { display: flex; }
+  .pmodal-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; max-width: 640px; width: 100%; max-height: 85vh; overflow: auto; padding: 1.2rem 1.4rem; box-shadow: 0 18px 50px rgba(0,0,0,0.35); }
+  .pmodal-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+  .pmodal-h h3 { margin: 0; font-size: 1.05rem; }
+  .pmodal-x { background: none; border: none; color: var(--text-dim); font-size: 1.4rem; cursor: pointer; line-height: 1; }
+  .pmodal dt { font-family: var(--mono); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); margin-top: 0.75rem; }
+  .pmodal dd { margin: 0.18rem 0 0; font-size: 0.86rem; }
   .var-grupo { font-size: 0.72rem; letter-spacing: .07em; text-transform: uppercase;
     color: var(--text-dim); background: var(--surface-2); padding: 0.4rem 0.8rem;
     border-bottom: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--cc-color, var(--border)); }
@@ -1147,12 +1157,12 @@ HTML = """<!doctype html>
         <table>
           <thead><tr><th>Perfil · IP</th><th>Qué hace</th><th>Ritmo</th><th>Por qué es normal</th></tr></thead>
           <tbody>
-            <tr><td class="umb-r">ofimatica ·21</td><td>web pequeña/media, DNS, API, HTTPS, algún ping</td><td>~3&nbsp;s</td><td>Oficina típica: mezcla de tamaños y protocolos, tasa baja y estable.</td></tr>
-            <tr><td class="umb-r">navegacion ·22</td><td>web pequeña/grande, HTTPS, mucho DNS, algún abandono</td><td>~1,5&nbsp;s</td><td>Navegación intensa pero humana: variedad de destinos, ritmo irregular.</td></tr>
-            <tr><td class="umb-r">descargas ·23</td><td>web grande/media, HTTPS, poco DNS</td><td>~8&nbsp;s</td><td>Transferencias grandes espaciadas: muchos bytes, pocos flujos.</td></tr>
-            <tr><td class="umb-r">aplicacion ·24</td><td>API ok/post/lenta, algún 500, HTTPS, DNS</td><td>~2&nbsp;s</td><td>Cliente de aplicación: patrón repetitivo pero con errores normales.</td></tr>
-            <tr><td class="umb-r">ligero ·25</td><td>DNS, API, web pequeña, ping</td><td>~12&nbsp;s</td><td>Uso esporádico: tasa muy baja, pocas acciones.</td></tr>
-            <tr><td class="umb-r">erratico ·26</td><td>mezcla + puerto cerrado + abandonos, en ráfagas</td><td>~5&nbsp;s</td><td>Ráfagas y silencios a propósito: ensancha la línea base para que el modelo no la aprenda demasiado estrecha.</td></tr>
+            <tr><td class="umb-r"><button class="ojo" data-perfil="ofimatica" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>ofimatica ·21</td><td>web pequeña/media, DNS, API, HTTPS, algún ping</td><td>~3&nbsp;s</td><td>Oficina típica: mezcla de tamaños y protocolos, tasa baja y estable.</td></tr>
+            <tr><td class="umb-r"><button class="ojo" data-perfil="navegacion" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>navegacion ·22</td><td>web pequeña/grande, HTTPS, mucho DNS, algún abandono</td><td>~1,5&nbsp;s</td><td>Navegación intensa pero humana: variedad de destinos, ritmo irregular.</td></tr>
+            <tr><td class="umb-r"><button class="ojo" data-perfil="descargas" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>descargas ·23</td><td>web grande/media, HTTPS, poco DNS</td><td>~8&nbsp;s</td><td>Transferencias grandes espaciadas: muchos bytes, pocos flujos.</td></tr>
+            <tr><td class="umb-r"><button class="ojo" data-perfil="aplicacion" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>aplicacion ·24</td><td>API ok/post/lenta, algún 500, HTTPS, DNS</td><td>~2&nbsp;s</td><td>Cliente de aplicación: patrón repetitivo pero con errores normales.</td></tr>
+            <tr><td class="umb-r"><button class="ojo" data-perfil="ligero" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>ligero ·25</td><td>DNS, API, web pequeña, ping</td><td>~12&nbsp;s</td><td>Uso esporádico: tasa muy baja, pocas acciones.</td></tr>
+            <tr><td class="umb-r"><button class="ojo" data-perfil="erratico" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>erratico ·26</td><td>mezcla + puerto cerrado + abandonos, en ráfagas</td><td>~5&nbsp;s</td><td>Ráfagas y silencios a propósito: ensancha la línea base para que el modelo no la aprenda demasiado estrecha.</td></tr>
           </tbody>
         </table>
       </div>
@@ -1249,6 +1259,13 @@ nmap -Pn -p80,443 10.10.30.10</div>
         <li><strong>Entregable interno 11 · Justificación de ataques</strong> &mdash; la elección y el porqué de cada familia, con su mapeo a estos marcos.</li>
       </ul>
       <p class="toolbar-hint">La elección de los ataques y de los umbrales no es arbitraria: se apoya en estos marcos y se valida contra la propia línea base (FPR medido).</p>
+    </div>
+
+    <div class="pmodal" id="pmodal">
+      <div class="pmodal-box">
+        <div class="pmodal-h"><h3 id="pmodalTit">Tráfico normal</h3><button class="pmodal-x" aria-label="Cerrar">&times;</button></div>
+        <div id="pmodalBody"></div>
+      </div>
     </div>
   </section>
 
@@ -5458,6 +5475,44 @@ if (document.getElementById('varTabla')) {
   // El esquema no cambia y la muestra se mueve despacio: cada minuto sobra. A
   // 5 s no aportaria nada y solo daria ocasiones de perder la fila desplegada.
   setInterval(cargarVariables, 60000);
+
+// Modal "ojito": cómo se genera el tráfico normal de cada perfil.
+(function(){
+  var M = document.getElementById('pmodal');
+  if (!M) return;
+  var DOM = 'ad · srv · intranet · erp · correo · wiki  (todos .francos-sac.com)';
+  var P = {
+    ofimatica:  { ip:'10.10.20.21', ritmo:'~3 s',  exp:'Oficina típica: mezcla de web, DNS, API y HTTPS a tasa baja y estable.', acc:'web_pequena·50, web_media·20, dns·25, api_ok·15, api_auth·3, api_404·4, https·20, ping·5' },
+    navegacion: { ip:'10.10.20.22', ritmo:'~1,5 s', exp:'Navegación intensa pero humana: variedad de destinos y algún abandono.', acc:'web_pequena·40, web_grande·25, https·35, dns·30, dns_inexistente·4, api_ok·10, abandono·6' },
+    descargas:  { ip:'10.10.20.23', ritmo:'~8 s',  exp:'Transferencias grandes espaciadas: muchos bytes, pocos flujos.', acc:'web_grande·60, web_media·25, https·10, dns·5' },
+    aplicacion: { ip:'10.10.20.24', ritmo:'~2 s',  exp:'Cliente de aplicación/API: patrón repetitivo con algún error 500 normal.', acc:'api_ok·45, api_post·25, api_500·6, api_lento·8, https·10, dns·10' },
+    ligero:     { ip:'10.10.20.25', ritmo:'~12 s', exp:'Uso esporádico: tasa muy baja, pocas acciones.', acc:'dns·40, api_ok·25, web_pequena·20, ping·15' },
+    erratico:   { ip:'10.10.20.26', ritmo:'~5 s',  exp:'Ráfagas y silencios a propósito: ensancha la línea base para que el modelo no la aprenda demasiado estrecha.', acc:'web_pequena·25, web_grande·15, dns·20, api_ok·15, puerto_cerrado·10, abandono·8, ping·7  (+ráfagas)' }
+  };
+  function esc(s){ return String(s).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;'); }
+  function abrir(id){
+    var p = P[id]; if (!p) return;
+    var cmd = 'python3 clientes_lab.py --perfil ' + id + ' --origen ' + p.ip;
+    document.getElementById('pmodalTit').textContent = 'Tráfico normal · ' + id;
+    document.getElementById('pmodalBody').innerHTML =
+      '<p class="lede-small">' + esc(p.exp) + '</p>'
+    + '<div class="esc-code">' + esc(cmd) + '</div>'
+    + '<dl>'
+    + '<dt>Acciones que genera (peso relativo)</dt><dd>' + esc(p.acc) + '</dd>'
+    + '<dt>Ritmo entre acciones</dt><dd>' + esc(p.ritmo) + ' (aleatorio alrededor de ese valor)</dd>'
+    + '<dt>Dominios internos</dt><dd>' + esc(DOM) + '</dd>'
+    + '</dl>'
+    + '<p class="toolbar-hint">Cómo se genera (clientes_lab.py): elige una acción al azar según su peso y espera un tiempo aleatorio (distribución exponencial) alrededor del ritmo — por eso parece humano. Cada perfil se liga a UNA IP porque el motor puntúa por IP.</p>';
+    M.classList.add('open');
+  }
+  function cerrar(){ M.classList.remove('open'); }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('.ojo') : null;
+    if (b) { abrir(b.getAttribute('data-perfil')); return; }
+    if (e.target === M || (e.target.closest && e.target.closest('.pmodal-x'))) cerrar();
+  });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') cerrar(); });
+})();
 }
 
 // Escenarios: catalogo estatico, se pide una vez (solo el admin tiene la seccion).
