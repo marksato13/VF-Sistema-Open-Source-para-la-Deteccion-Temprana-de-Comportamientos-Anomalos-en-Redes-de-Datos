@@ -2763,13 +2763,13 @@ const TOPO_VISTAS = {
   // suricata) para que el estado sea el real. El recorrido de prueba y la copia
   // SPAN llevan estilos distintos: el sensor no esta en el recorrido.
   red: {
-    w: 1480, h: 480,
+    w: 1480, h: 500,
     packet: 'M200,84 L330,240 L400,216 L400,118 L456,118 L456,216 L330,250 L200,240',
     grupos: [
       { x: 12,  y: 32,  w: 200, h: 146, txt: 'VLAN 20 · usuarios' },
       { x: 12,  y: 190, w: 200, h: 86,  txt: 'VLAN 30 · DMZ' },
       { x: 12,  y: 288, w: 200, h: 146, txt: 'VLAN 10 · gestión' },
-      { x: 740, y: 32,  w: 720, h: 430, txt: 'Host ESXi · 172.17.25.2' },
+      { x: 740, y: 32,  w: 720, h: 452, txt: 'Host ESXi · 172.17.25.2' },
     ],
     nodos: [
       { id: 'atacante',  x: 24,  y: 60,  w: 176, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',  host: true, ip: '10.10.20.30',     desc: '' },
@@ -2780,11 +2780,13 @@ const TOPO_VISTAS = {
       { id: 'gateway',   x: 330, y: 70,  w: 196, h: 48, icono: 'firewall', titulo: 'Firewall A/B',   host: true, ip: 'enruta entre VLAN', desc: '' },
       { id: 'span',      x: 330, y: 216, w: 196, h: 58, icono: 'switch', titulo: 'CORE-STACK',       tag: 'NO ENRUTA · ESPEJA' },
       { id: 'r_pg',      x: 760, y: 70,  w: 240, h: 58, icono: 'nic',    titulo: 'PG-CYBERFLOW-SPAN', tag: 'GRUPO DE PUERTOS', val: 'modo promiscuo' },
-      { id: 'nic',       x: 760, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor1 · ens37',  tag: 'SIN IP · 10.10.60.11' },
+      { id: 'nic',       x: 760, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor1 · ens37',  tag: 'CAPTURA · SIN IP', val: 'modo promiscuo' },
       { id: 'r_sensor2', x: 990, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor2 · ens37',  tag: 'RÉPLICA · 10.10.60.12', val: 'recibe la misma copia' },
       { id: 'r_cmp',     x: 1220, y: 200, w: 216, h: 58, icono: 'lupa',  titulo: 'VM-SURICATA',      tag: 'COMPARADOR · 10.10.60.13', val: 'recepción por comprobar', clase: 'artefacto' },
       { id: 'captura',   x: 760, y: 340, w: 176, h: 58, icono: 'captura', titulo: 'tcpdump',         tag: 'ANILLO PCAP' },
       { id: 'suricata',  x: 970, y: 340, w: 176, h: 58, icono: 'lupa',   titulo: 'Suricata',         tag: 'eve.json' },
+      { id: 'ens34',     x: 1192, y: 340, w: 208, h: 58, icono: 'nic',   titulo: 'Sensor1 · ens34',  tag: 'GESTIÓN · 10.10.60.11' },
+      { id: 'gestion',   x: 1192, y: 418, w: 208, h: 46, icono: 'ojo',   titulo: 'Plano de gestión', tag: 'SSH · PANEL · FEED' },
     ],
     aristas: [
       { d: 'M200,84 C270,84 270,232 330,232',     desde: 'atacante', hasta: 'span',     tipo: 'fijo', etiqueta: '1 · generado', ex: 262, ey: 76 },
@@ -2799,6 +2801,7 @@ const TOPO_VISTAS = {
       { d: 'M1000,99 C1328,99 1328,140 1328,200', desde: 'r_pg',     hasta: 'r_cmp',    tipo: 'previsto' },
       { d: 'M848,258 L848,340',                   desde: 'nic',      hasta: 'captura',  etiqueta: '4 · observado', ex: 800, ey: 304 },
       { d: 'M880,258 C880,300 1058,296 1058,340', desde: 'nic',      hasta: 'suricata' },
+      { d: 'M1296,398 L1296,418',                 desde: 'ens34',    hasta: 'gestion',  tipo: 'enlace' },
     ],
   },
   // --- Vista DECISION: dos niveles. El motor decide cada ventana; el publicador
@@ -3055,8 +3058,15 @@ const TOPO_TEXTO = {
     nota: 'Se entrena cada 30 días o antes si la deriva se sostiene 3 días, y es OBLIGATORIO al cambiar la red (nueva VLAN, Wazuh, AAA). La política vive en la sección [reentrenamiento] del .toml; el estado, en la sección Aprendizaje.',
   },
   nic: {
-    que: 'La interfaz que recibe el espejo, sin dirección IP y en modo promiscuo.',
-    nota: 'Sin dirección a propósito: con una, el sensor sería alcanzable desde el troncal espejado y su propio tráfico entraría en su propia captura.',
+    que: 'ens37, la NIC de CAPTURA: recibe el espejo SPAN, SIN dirección IP y en modo promiscuo. De AQUÍ salen las DOS fuentes de datos — PCAP (tcpdump) y eve.json (Suricata) — no de dos NIC distintas. La gestión va por otra NIC, ens34.',
+    nota: 'Sin dirección a propósito: con una, el sensor sería alcanzable desde el troncal espejado y su propio tráfico entraría en su propia captura. Comprobado en Sensor1: ens37 UP sin IP · tcpdump -i ens37 · Suricata af-packet interface: ens37.',
+  },
+  ens34: {
+    que: 'ens34, la NIC de GESTIÓN (10.10.60.11, VLAN 60): por aquí van el SSH del administrador, el acceso al panel y la publicación del feed firmado hacia el relay del bastión. NO recibe el espejo ni alimenta la captura.',
+    nota: 'Separar captura (ens37, sin IP) de gestión (ens34, con IP) evita que el tráfico administrativo del propio sensor entre en su línea base. Son dos NIC de la MISMA máquina con trabajos distintos.',
+  },
+  gestion: {
+    que: 'El plano de gestión del sensor, que sale por ens34: la sesión SSH del administrador, el panel HTTPS y el envío del feed al relay del bastión cada 60 s. Separado del plano de captura (ens37).',
   },
   captura: {
     que: 'tcpdump escribe un anillo de ficheros PCAP rotados por tiempo. De ahí salen las variables de red y transporte.',
