@@ -619,7 +619,9 @@ def build_rows(
                     len({item.target_port for item in transport_attempts30}), len(transport_attempts30)
                 ),
                 "http_error_ratio_60s": safe_ratio(sum(item.error for item in http_all60), len(http_all60)),
-                "dns_nxdomain_ratio_60s": safe_ratio(len(dns_nxdomain60), len(dns_query60)),
+                # Acotado a 1.0: el espejo SPAN duplica respuestas y puede dejar
+                # mas NXDOMAIN que consultas en la ventana (ratio >1, artefacto).
+                "dns_nxdomain_ratio_60s": min(1.0, safe_ratio(len(dns_nxdomain60), len(dns_query60))),
                 "tls_session_rate_60s": tls_session_count / 60.0,
                 "ttl_mean_10s": mean([float(item.ttl) for item in p10]),
                 "fragment_ratio_10s": safe_ratio(sum(item.fragmented for item in p10), packet_count),
@@ -635,9 +637,9 @@ def build_rows(
                     sum(item.status in (401, 403) for item in http_all60), len(http_all60)
                 ),
                 "dns_query_rate_60s": len(dns_query60) / 60.0,
-                "unique_dns_name_ratio_60s": safe_ratio(
+                "unique_dns_name_ratio_60s": min(1.0, safe_ratio(
                     len({item.dns_name for item in dns_query60 if item.dns_name}), len(dns_query60)
-                ),
+                )),
                 "tls_handshake_failure_ratio_60s": safe_ratio(
                     sum(item.tls_incomplete for item in tls60), len(tls60)
                 ),

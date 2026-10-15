@@ -127,10 +127,13 @@ def _dns_entropy(row: dict, u: dict) -> str | None:
     if _n(row, "dns_query_count_60s") >= u["min_dns_query_60s"] and (
             _n(row, "dns_nxdomain_ratio_60s") >= u["min_nxdomain_ratio_60s"]
             or _n(row, "unique_dns_name_ratio_60s") >= u["min_unique_dns_name_ratio_60s"]):
+        # Los ratios son por definicion <=1; el espejo SPAN puede duplicar
+        # respuestas y dejarlos rozando o pasando 1 (se vio "103% NXDOMAIN"),
+        # asi que se acotan a 100% para no mostrar un porcentaje incoherente.
         return "%.0f consultas DNS/60s, %.0f%% NXDOMAIN, %.0f%% nombres únicos" % (
             _n(row, "dns_query_count_60s"),
-            100 * _n(row, "dns_nxdomain_ratio_60s"),
-            100 * _n(row, "unique_dns_name_ratio_60s"))
+            100 * min(1.0, _n(row, "dns_nxdomain_ratio_60s")),
+            100 * min(1.0, _n(row, "unique_dns_name_ratio_60s")))
     return None
 
 
