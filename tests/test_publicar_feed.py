@@ -3,9 +3,9 @@ import unittest
 from scripts.engine import publicar_feed as pf
 
 
-def dec(ip, decision="ALERT", detector="ocsvm_scaled"):
+def dec(ip, decision="ALERT", detector="ocsvm_scaled", logged_at=1000.0):
     return {"event": "decision", "entity_ip": ip, "decision": decision,
-            "detector_name": detector, "logged_at": 1000.0}
+            "detector_name": detector, "logged_at": logged_at}
 
 
 class DecisionesAEntradas(unittest.TestCase):
@@ -63,10 +63,45 @@ class DecisionesAEntradas(unittest.TestCase):
         estado = {}
         e1 = pf.decisiones_a_entradas([dec("10.10.20.30", detector="x_heuristic")],
                                       estado, 1000.0, self.nunca)
-        e2 = pf.decisiones_a_entradas([dec("10.10.20.30", detector="x_heuristic")],
-                                      estado, 1100.0, self.nunca)
+        e2 = pf.decisiones_a_entradas(
+            [dec("10.10.20.30", detector="x_heuristic", logged_at=1301.0)],
+            estado, 1301.0, self.nunca)
         self.assertEqual(e1[0]["hasta"], 1000 + 300)
-        self.assertEqual(e2[0]["hasta"], 1100 + 1800)
+        self.assertEqual(e2[0]["hasta"], 1301 + 1800)
+
+    def test_republicar_mismo_episodio_no_inflaciona_reincidencia(self):
+        estado = {}
+        primera = dec("10.10.20.30", detector="x_heuristic", logged_at=1000.0)
+        pf.decisiones_a_entradas([primera], estado, 1000.0, self.nunca)
+        repetida = pf.decisiones_a_entradas([primera], estado, 1010.0, self.nunca)
+        continua = pf.decisiones_a_entradas(
+            [dec("10.10.20.30", detector="x_heuristic", logged_at=1020.0)],
+            estado, 1020.0, self.nunca)
+        self.assertEqual(repetida[0]["nivel"], 1)
+        self.assertEqual(continua[0]["nivel"], 1)
+        self.assertEqual(estado["10.10.20.30"]["bloqueos"], 1)
+
+    def test_nuevo_episodio_exige_mas_de_120_segundos(self):
+        estado = {}
+        pf.decisiones_a_entradas(
+            [dec("10.10.20.30", detector="x_heuristic", logged_at=1000.0)],
+            estado, 1000.0, self.nunca)
+        limite = pf.decisiones_a_entradas(
+            [dec("10.10.20.30", detector="x_heuristic", logged_at=1120.0)],
+            estado, 1120.0, self.nunca)
+        nuevo = pf.decisiones_a_entradas(
+            [dec("10.10.20.30", detector="x_heuristic", logged_at=1241.0)],
+            estado, 1241.0, self.nunca)
+        self.assertEqual(limite[0]["nivel"], 1)
+        self.assertEqual(nuevo[0]["nivel"], 2)
+
+    def test_estado_historico_inflado_se_acota_a_nivel_tres(self):
+        estado = {"10.10.20.30": {"bloqueos": 38, "ultimo_visto": 900.0}}
+        entrada = pf.decisiones_a_entradas(
+            [dec("10.10.20.30", detector="x_heuristic", logged_at=1000.0)],
+            estado, 1000.0, self.nunca)
+        self.assertEqual(entrada[0]["nivel"], 3)
+        self.assertEqual(estado["10.10.20.30"]["bloqueos"], 3)
 
 
 class VersionDeUmbrales(unittest.TestCase):

@@ -7,42 +7,38 @@ aparece aquí ocurrió de verdad y tiene su comprobación al lado.
 
 ---
 
-## Modos de instalación: elija su topología
+## Modalidades implementadas: elija su despliegue
 
-Antes de los pasos, elija **cómo va a desplegar**. Hay cinco formas, de la más
-simple a la más completa. Las secciones 1–8 instalan el **sensor**; el agente de
-respuesta se instala aparte (sección 9).
+Antes de los pasos, elija **qué quiere comprobar o desplegar**. El asistente muestra
+estas tres modalidades. Las secciones 1–8 instalan el **sensor**; los componentes de
+respuesta distribuida se instalan después (sección 9).
 
 | Modo | Para qué | Qué se instala | Actúa sobre la red |
 |---|---|---|---|
-| **1. Demo** | ver el producto funcionando, sin red real | solo el panel con datos de ejemplo (`--demo`) | no |
-| **2. Observación (IDS), un sensor** | detectar y registrar en producción, sin riesgo | sensor en espejo SPAN (`motor.modo = "observacion"`) | no |
-| **3. Bloqueo inline (IPS), una máquina** | detectar **y cortar** en una sola máquina | el sensor es el router, corta su propio `nftables` (`motor.modo = "bloqueo"`) | sí, local |
-| **4. Enforcement distribuido** *(el vigente)* | observar sin riesgo **y** cortar en los hosts | sensor en observación **+ agente** en cada host protegido + relay en el bastión | sí, en los hosts |
-| **5. Replicación** | varios sensores / varios segmentos | un 2.º sensor desde cero | según el modo de cada uno |
+| **1. Demo visual** | explorar el producto sin red real | panel con datos de ejemplo (`--demo`) | no |
+| **2. Observación IDS** | capturar, detectar y registrar sin riesgo | sensor en espejo SPAN (`motor.modo = "observacion"`); probado en Sensor2 | no |
+| **3. Observación con respuesta distribuida** *(vigente)* | observar sin riesgo y responder en los hosts | sensor en observación + feed firmado + relay + agentes; arquitectura de Sensor1 | sí, en los hosts |
 
-![Figura 0.1. Los cinco modos de instalación de CyberFlow, con su topología y su flujo](img/instalacion/00-modos-instalacion.png)
-
-*Figura 0.1. Los cinco modos de instalación: de la demo a la respuesta distribuida. La pregunta que los separa es si solo se detecta o también se corta, y si se corta, dónde.*
-
-- **Modo 1 (demo):** sin red, sin capturas. `python3 scripts/engine/dashboard.py --demo`
-  (o la unidad en modo demo). Útil para presentar; no detecta nada real.
-- **Modos 2 y 3:** son el mismo sensor; cambian solo `motor.modo` y el cableado
-  (espejo vs. en el camino). Ver «los dos modos» justo abajo.
-- **Modo 4 (recomendado y el que corre hoy):** el sensor **solo observa** (cero
+- **Demo:** no instala ni reconfigura el sensor. Ejecute `PUERTO=8790 bash scripts/demo.sh`
+  si el puerto 8788 ya está ocupado por un panel real.
+- **Observación IDS:** instala solo el sensor. Es la modalidad cuya instalación desde
+  cero se comprobó en Sensor2.
+- **Observación con respuesta distribuida:** el sensor **solo observa** (cero
   riesgo sobre el tráfico) y la respuesta la aplica un **agente** en el host
   protegido, a partir de un feed firmado. Un-feed / N-agentes: añadir un host es
   instalar otro agente, sin reentrenar. **Sensor en secciones 1–8; agente en la
   sección 9.**
-- **Modo 5 (replicación):** levantar un segundo sensor que recibe la misma copia
-  del espejo. Guía aparte: [REPLICACION.md](../REPLICACION.md).
+
+La instalación en un segundo sensor es evidencia de **replicabilidad del despliegue**,
+no una cuarta modalidad. Véase [REPLICACION.md](REPLICACION.md).
 
 ---
 
-## Antes de empezar: los dos modos
+## Antecedente: bloqueo inline
 
-CyberFlow puede instalarse de dos formas, y **hay que elegir antes**, porque
-cambian el cableado y lo que el sistema puede hacer.
+El bloqueo inline fue una modalidad histórica de laboratorio. Se conserva para
+trazabilidad y pruebas controladas, pero no aparece entre las tres modalidades
+vigentes del asistente.
 
 | | **Observación (IDS)** | **Bloqueo (IPS)** |
 |---|---|---|
@@ -332,9 +328,11 @@ frecuencia ni límite de tamaño**:
 ## 6 · Instalar CyberFlow
 
 > **La vía corta.** Si los pasos 1 a 5 están hechos, todo lo que sigue lo hacen
-> tres comandos: el asistente escribe la configuración, el instalador se
+> estos comandos: el asistente muestra las modalidades y escribe la configuración,
+> el instalador se
 > diagnostica solo y luego instala.
 > ```bash
+> bash scripts/setup/configurar.sh --mostrar-modos # muestra las modalidades; no toca nada
 > bash scripts/setup/configurar.sh                 # escribe configs/cyberflow.local.toml
 > sudo bash scripts/setup/instalar.sh --comprobar  # diagnostica, no toca nada
 > sudo bash scripts/setup/instalar.sh              # instala y arranca
@@ -608,7 +606,8 @@ Tres roles, uno por host:
 | **Bastión** (relay) | `ppi-relay-feed` | hace *pull* del feed del sensor y *push* al host; relay tonto, no puede forjar |
 | **Host protegido** | `ppi-enforce-agent` | verifica la firma y **sincroniza su `nftables`** (LIMIT = tasa, BLOCK = drop con caducidad) |
 
-> Los tres `timer` corren **cada minuto**. La clave privada de firma vive **solo
+> Los tres `timer` corren **cada 10 segundos**, escalonados en `:00/:03/:06`.
+> La clave privada de firma vive **solo
 > en el sensor**. Instalarlos necesita **sudo** en cada host.
 
 Las unidades de ejemplo están en `deploy/enforcement/`.
@@ -639,7 +638,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now ppi-publicar-feed.timer
 ```
 
-Publica y firma en `~/feed/feed.json` + `feed.sig` cada minuto, desde
+Publica y firma en `~/feed/feed.json` + `feed.sig` cada 10 segundos, desde
 `logs/motor_decision.log`. Ajuste rutas/usuario en el `.service` si su despliegue
 difiere del de referencia (`/home/m4rk/cyberflow`).
 
@@ -653,7 +652,7 @@ pull→push; el `.service` lo espera en `/home/gadmin/relay-feed.sh`.
 # El script del relay: cópielo y ajuste IPs, usuarios, claves y rutas en su cabecera.
 cp deploy/enforcement/relay-feed.sh /home/gadmin/relay-feed.sh
 chmod +x /home/gadmin/relay-feed.sh
-# La unidad y su temporizador (cada 60 s):
+# La unidad y su temporizador (cada 10 s, escalonado tras el publicador):
 sudo cp deploy/enforcement/ppi-relay-feed.service \
         deploy/enforcement/ppi-relay-feed.timer /etc/systemd/system/
 sudo systemctl daemon-reload

@@ -10,7 +10,12 @@ journal, y quedan versionados y reproducibles. Un rol por host.
 | Bastión `gadmin@10.10.10.30` | `ppi-relay-feed` | pull del feed (sensor) → push al host DMZ |
 | Host DMZ `adminsrvdmz@10.10.30.10` | `ppi-enforce-agent` | verifica el feed y aplica nftables (`--aplicar --sudo`) |
 
-Cada timer corre **cada minuto** (`OnCalendar=minutely`). La instalación necesita
+Los timers corren **cada 10 segundos**, escalonados para respetar el orden de la
+cadena: publicador en `:00/10`, relay en `:03/10` y agente en `:06/10`. Se usa
+`OnCalendar` y `AccuracySec=1s`; `OnUnitActiveSec` no debe usarse porque en este
+despliegue llegó a quedar sin próximo disparo. El orden nominal entre hosts exige
+relojes sincronizados por NTP; sin sincronización cada tramo sigue sondeando cada
+10 s, pero las fases relativas pueden desplazarse. La instalación necesita
 **sudo con contraseña** en cada host (no automatizable sin la clave de Mark).
 
 ## Instalar (por host; copiar los .service/.timer a /etc/systemd/system)
@@ -59,5 +64,7 @@ sudo systemctl disable --now ppi-<rol>.timer
   para ese binario en el host DMZ.
 - Para **modo sombra** (medir sin aplicar), quitar `--aplicar` del
   `ppi-enforce-agent.service` y recargar.
+- El agente no vacía los sets en cada ciclo. Las entradas sobreviven a un feed
+  posterior vacío y las retira el timeout nativo de `nftables`.
 - `--umbrales 2026-10-06.1` en `ppi-publicar-feed` refleja los umbrales corregidos
   (port_scan/dns_entropy a 0,45 por el doblado del espejo).

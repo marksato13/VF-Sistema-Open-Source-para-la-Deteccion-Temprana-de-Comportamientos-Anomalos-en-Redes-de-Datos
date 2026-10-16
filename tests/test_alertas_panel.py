@@ -67,7 +67,7 @@ class AccionesVigentes(unittest.TestCase):
         ], ahora)
         self.assertEqual([x["ip"] for x in v], ["10.10.20.30"])
         self.assertEqual(v[0]["accion"], "BLOCK")
-        self.assertEqual(v[0]["expira_s"], 300 + 60 - 20)
+        self.assertEqual(v[0]["expira_s"], 300 + db.CADENCIA_FEED_S - 20)
         self.assertEqual(v[0]["ofensas"], 2)
         self.assertEqual(v[0]["fuente"], "registro")
 
@@ -88,7 +88,10 @@ class AccionesVigentes(unittest.TestCase):
                 1100, feed, estado)
         por = {x["ip"]: x for x in v}
         self.assertEqual(por["10.10.20.30"]["nivel"], 2)
-        self.assertEqual(por["10.10.20.30"]["expira_s"], 1000 + 1800 + 60 - 1100)
+        self.assertEqual(
+            por["10.10.20.30"]["expira_s"],
+            1000 + 1800 + db.CADENCIA_FEED_S - 1100,
+        )
         self.assertEqual(por["10.10.20.99"]["fuente"], "feed")
         self.assertEqual(por["10.10.20.99"]["expira_s"], 400)
 

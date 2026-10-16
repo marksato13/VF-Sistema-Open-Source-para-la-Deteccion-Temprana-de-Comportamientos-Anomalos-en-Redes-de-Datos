@@ -4,7 +4,8 @@
 # Modelo "un feed / N agentes (pull)": el sensor NO tiene credenciales de los
 # hosts. El bastion es un relay TONTO -solo copia bytes-; no puede forjar nada,
 # porque la firma ed25519 la pone el sensor y la verifica el agente del host.
-# Lo ejecuta ppi-relay-feed.timer (cada 60 s). Ver INSTALACION.md Seccion 9.3.
+# Lo ejecuta ppi-relay-feed.timer (cada 10 s, escalonado tras el publicador).
+# Ver INSTALACION.md Seccion 9.3.
 #
 # AJUSTE A SU DESPLIEGUE (estos son los valores del laboratorio de referencia):
 #   - usuario/IP del sensor:  m4rk@10.10.60.11   (origen del feed)

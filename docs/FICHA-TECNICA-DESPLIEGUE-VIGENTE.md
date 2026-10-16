@@ -171,7 +171,8 @@ configuración por despliegue (mejora abierta).
 
 - Sensor: `ppi-motor` (IF recalibrado), `ppi-dashboard`, captura,
   `ppi-publicar-feed.timer`. Bastión: `ppi-relay-feed.timer`. Host DMZ:
-  `ppi-enforce-agent.timer`. `OnCalendar=minutely`, sin cron.
+  `ppi-enforce-agent.timer`. `OnCalendar` cada 10 s, escalonados en `:00/:03/:06`,
+  `AccuracySec=1s`, sin cron.
 - **Versión de heurísticos:** `VERSION_UMBRALES = "2026-10-06.2"` (rama OR de
   `port_scan` y ratios de unicidad 0,45 por el espejo). Desde esta versión del
   repositorio, el publicador **etiqueta el feed con la versión del código**

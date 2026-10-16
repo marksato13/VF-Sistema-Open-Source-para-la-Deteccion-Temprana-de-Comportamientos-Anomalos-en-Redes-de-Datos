@@ -69,13 +69,15 @@ pensado para responder, en vivo, los diez puntos técnicos del profesor.
 3. **Los tres tiempos** (diferenciar detección, publicación/decisión y respuesta;
    mostrar la evidencia fechada del ensayo y su alcance):
    - **detección** ≈ **2–40 s** (acotada por la ventana de 30 s del conteo de flujos),
-   - **decisión**: el feed firmado emite la acción en el siguiente tick (minutely),
-   - **respuesta total hasta el BLOCK** ≈ **1–2,5 min** (medido: hasta 141 s).
-   Diferenciarlos explícitamente: el **cómputo** es rápido (detecta en decenas de
-   segundos); la **respuesta** tarda 1–2,5 min porque está **desacoplada y firmada**
-   (publicación/relay/agente cada minuto), y es **configurable**, aunque no se
-   cambió la cadencia como parte de esta validación.
-   **No prometer "bloqueo en segundos".** Truco: lanzar el escaneo al principio y
+   - **decisión**: el feed firmado emite la acción en el siguiente ciclo de 10 s,
+   - **respuesta medida desde la decisión hasta `nftables`**: **15,3 s** en la prueba
+     del 2026-10-15; el máximo teórico depende de las fases y de la sincronización.
+   La medición histórica de **1–2,5 min** (hasta 141 s) corresponde a la cadencia
+   anterior de un minuto y se conserva en la evidencia fechada. La detección mantiene
+   su propia ventana de 10/30/60 s y no debe confundirse con el transporte de la acción.
+   Sensor1 tenía 35,990 s de desfase NTP; el valor anterior fue corregido contra el
+   reloj sincronizado de bastión/DMZ. **No prometer una fase exacta entre hosts hasta
+   corregir NTP.** Truco: lanzar el escaneo al principio y
    mostrar el corte cuando aterrice, mientras se explica el resto.
 4. **Corte real en el host** (no es teatro del panel):
    ```

@@ -7,18 +7,20 @@
 #
 #      bash scripts/setup/configurar.sh
 #
-#  Auto-detecta la interfaz de captura (la que no tiene IP y recibe el
-#  espejo) y su MAC, propone la red a vigilar desde la subred de gestion,
-#  y pregunta el modo. En una terminal pregunta con valores por omision;
-#  sin terminal (tuberia/automatizacion) toma los detectados.
+#  Primero presenta las tres modalidades implementadas. Si se elige un
+#  sensor, auto-detecta la interfaz de captura y su MAC, propone la red a
+#  vigilar y escribe la configuracion. En una terminal pregunta con valores
+#  por omision; sin terminal toma los detectados.
 # =====================================================================
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 EJEMPLO="$RAIZ/configs/cyberflow.toml"
 DESTINO="$RAIZ/configs/cyberflow.local.toml"
-FORZAR=0
-[[ "${1:-}" == "--forzar" ]] && FORZAR=1
+SOLO_MODOS=0
+for arg in "$@"; do
+    [[ "$arg" == "--mostrar-modos" ]] && SOLO_MODOS=1
+done
 
 c_ok() { printf '  \033[32m%s\033[0m\n' "$*"; }
 c_tit(){ printf '\n\033[1m%s\033[0m\n' "$*"; }
@@ -36,6 +38,39 @@ preguntar() {  # preguntar NOMBREVAR "texto" "def"
     fi
     printf -v "$__v" '%s' "${resp:-$def}"
 }
+
+mostrar_modalidades() {
+    c_tit "Modalidades implementadas de CyberFlow"
+    echo "  1) Demo visual"
+    echo "       Explora el panel con datos de ejemplo; no captura trafico real."
+    echo "  2) Observacion IDS   [recomendado para un sensor por SPAN]"
+    echo "       Captura, detecta y registra sin intervenir en el trafico."
+    echo "       Modalidad instalada y comprobada en Sensor2."
+    echo "  3) Observacion con respuesta distribuida"
+    echo "       Sensor por SPAN + feed firmado + relay + agentes en los hosts."
+    echo "       Arquitectura vigente de Sensor1."
+}
+
+mostrar_modalidades
+[[ $SOLO_MODOS -eq 1 ]] && exit 0
+
+preguntar ESCENARIO "modalidad" "2"
+case "$ESCENARIO" in
+    1)
+        echo
+        echo "  El demo no instala ni reconfigura el sensor. Ejecuta:"
+        echo "    PUERTO=8790 bash scripts/demo.sh"
+        exit 0
+        ;;
+    3)
+        MODO="observacion"
+        RESPUESTA_DISTRIBUIDA=1
+        ;;
+    *)
+        MODO="observacion"
+        RESPUESTA_DISTRIBUIDA=0
+        ;;
+esac
 
 # --- Detectar interfaz de captura ------------------------------------
 c_tit "1. Interfaz de captura"
@@ -71,37 +106,6 @@ fi
 preguntar RED "rango de entidades a puntuar" "$DEFECTO_RED"
 c_ok "red $RED"
 
-# --- Escenario de despliegue -----------------------------------------
-c_tit "3. Escenario de despliegue"
-echo "  1) Observacion por espejo SPAN   [recomendado]"
-echo "       el sensor recibe un espejo, fuera del camino: puntua y registra."
-echo "       Cero riesgo sobre la red; nftables no se toca."
-echo "  2) En linea con bloqueo (IPS)"
-echo "       el sensor ENRUTA el trafico y ademas corta con nftables."
-echo "       Solo si esta maquina esta en el camino del trafico."
-echo "  3) Personalizado (elegir el modo a mano)"
-preguntar ESC "escenario" "1"
-case "$ESC" in
-    2)
-        MODO="bloqueo"
-        echo "  AVISO: bloqueo solo tiene sentido si esta maquina ENRUTA el trafico."
-        echo "         Con un espejo SPAN observa pero no corta nada (y no avisa)."
-        if [[ "$(cat /proc/sys/net/ipv4/ip_forward 2>/dev/null)" == "1" ]]; then
-            c_ok "ip_forward=1: la maquina enruta"
-        else
-            echo "  AVISO: ip_forward=0: esta maquina NO enruta ahora mismo. Revisa el modo."
-        fi
-        ;;
-    3)
-        preguntar MODO "modo (observacion/bloqueo)" "observacion"
-        [[ "$MODO" == "bloqueo" || "$MODO" == "observacion" ]] || MODO="observacion"
-        ;;
-    *)
-        MODO="observacion"
-        ;;
-esac
-c_ok "modo $MODO"
-
 # --- Usuario y raiz --------------------------------------------------
 preguntar USUARIO "usuario del servicio" "${SUDO_USER:-$(whoami)}"
 preguntar RAIZ_CFG "raiz del repositorio" "$RAIZ"
@@ -113,6 +117,7 @@ cat <<RES
   mac_esperada  = $MAC
   red_entidades = $RED
   modo          = $MODO
+  modalidad     = $([[ $RESPUESTA_DISTRIBUIDA -eq 1 ]] && echo "observacion con respuesta distribuida" || echo "observacion IDS")
   usuario       = $USUARIO
   raiz          = $RAIZ_CFG
   panel         = 127.0.0.1 (solo local; se abre por tunel SSH)
@@ -146,3 +151,8 @@ else
 fi
 echo
 echo "  Siguiente:  sudo bash scripts/setup/instalar.sh --comprobar"
+if [[ $RESPUESTA_DISTRIBUIDA -eq 1 ]]; then
+    echo "  Despues de instalar el sensor, despliega por separado:"
+    echo "    publicador (sensor) -> relay (bastion) -> agente (host protegido)"
+    echo "  Procedimiento: docs/INSTALACION.md, seccion 9"
+fi

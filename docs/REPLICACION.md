@@ -53,10 +53,11 @@ diferencia entre reproducir y no reproducir.
 
 ---
 
-## 2 · Replicar el entorno (Modo 5: un segundo sensor)
+## 2 · Replicar el entorno: un segundo sensor
 
-«Replicación» en el sentido del Modo 5 de instalación: **un segundo sensor que
-recibe la misma copia del espejo** (SPAN) que el primero. Sirve para A/B, para
+La replicación del despliegue consiste en instalar **un segundo sensor que recibe
+la misma copia del espejo** (SPAN) que el primero. No es una modalidad operativa
+adicional. Sirve para A/B, para
 alta disponibilidad de observación, o para validar en otra ventana de tráfico.
 
 Pasos:
@@ -124,6 +125,6 @@ tonto y la única autoridad es la clave de firma, que vive solo en el sensor.
 | Quiero… | Voy a… |
 |---|---|
 | los mismos números del informe | usar `artifacts/model/` + `verificar_reproduccion.py`, con Python 3.14 |
-| un segundo sensor igual | Modo 5: duplicar el SPAN + INSTALACION §§2–7 |
+| un segundo sensor igual | duplicar el SPAN + INSTALACION §§2–7 |
 | levantar el lab entero | `ansible/` (sustituyendo el inventario) |
 | la respuesta distribuida en otra red | `deploy/enforcement/` + INSTALACION §9 |

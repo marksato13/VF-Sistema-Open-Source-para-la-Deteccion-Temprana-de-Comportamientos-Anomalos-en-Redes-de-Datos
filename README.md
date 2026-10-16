@@ -115,17 +115,19 @@ usar el motor sobre una máquina que ya enrute tráfico.
 
 ## Puesta en marcha
 
-Desde un clon recién hecho, cuatro comandos:
+Desde un clon recién hecho:
 
 ```bash
 git clone https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos.git cyberflow
 cd cyberflow
-bash scripts/setup/configurar.sh          # asistente: escribe tu configuración
+bash scripts/setup/configurar.sh --mostrar-modos  # muestra las modalidades; no toca nada
+bash scripts/setup/configurar.sh                  # elige y configura
 ```
 
-El **asistente** auto-detecta la interfaz de captura (la que no tiene IP y recibe
-el espejo) y su MAC, propone la **red a vigilar** desde tu subred, y pregunta el
-**modo** (`observacion` o `bloqueo`), el **usuario** y la **raíz**. Escribe
+El **asistente** presenta primero las tres modalidades implementadas: demo,
+observación IDS y observación con respuesta distribuida. Para las dos modalidades
+de sensor, auto-detecta la interfaz de captura (la que no tiene IP y recibe el
+espejo) y su MAC, propone la **red a vigilar**, el **usuario** y la **raíz**. Escribe
 `configs/cyberflow.local.toml` por ti; en una terminal pregunta con valores por
 omisión, y sin terminal toma los detectados. (También puedes copiar y editar
 `configs/cyberflow.toml` a mano si prefieres.)
@@ -151,14 +153,13 @@ está decidiendo.
 > ```
 > Desde la raíz del repositorio. **Si un solo hash no cuadra, pare.**
 
-> **Elija el modo antes de instalar.** `bloqueo` (modalidad A) solo tiene sentido si
-> esta máquina está **en el camino** del tráfico. Con un espejo SPAN observa pero no
-> enruta: `nftables` ahí solo afecta a la propia máquina, y no daría ningún error. El
-> instalador lo comprueba mirando `ip_forward`. Con SPAN (modalidad B) el sensor va en
-> `observacion` y la respuesta la aplica el **agente del host**
+> **Elija la modalidad antes de instalar.** Con SPAN el sensor siempre va en
+> `observacion`. Si se elige respuesta distribuida, la respuesta la aplica el **agente del host**
 > (`scripts/enforce/agente_enforce.py`) a partir del feed que firma
 > `scripts/engine/publicar_feed.py`; diseño en
 > [`DISENO-ENFORCEMENT.md`](https://github.com/marksato13/VF-PPI-TESIS-ORQUESTACION/blob/bb6e91d784622aab52f8b9f579186e50484dfdf6/01-arquitectura/DISENO-ENFORCEMENT.md).
+> El bloqueo inline se conserva como antecedente histórico de laboratorio y se configura
+> manualmente; no forma parte de las tres modalidades vigentes del asistente.
 
 Para redes sin salida a Internet, o si el espejo aún no llega al sensor, la
 guía larga está en [`docs/INSTALACION.md`](docs/INSTALACION.md).

@@ -36,12 +36,13 @@ class Vigentes(unittest.TestCase):
 
 
 class PlanNftables(unittest.TestCase):
-    def test_crea_sets_y_flush(self):
+    def test_crea_sets_sin_vaciarlos(self):
         cmds = ag.plan_nftables({}, ahora=1000.0)
         texto = " ".join(" ".join(c) for c in cmds)
         self.assertIn("add table inet cyberflow", texto)
         self.assertIn(ag.SET_BLOCK, texto)
-        self.assertIn("flush set inet cyberflow " + ag.SET_BLOCK, texto)
+        self.assertNotIn("flush set inet cyberflow " + ag.SET_BLOCK, texto)
+        self.assertNotIn("flush set inet cyberflow " + ag.SET_LIMIT, texto)
 
     def test_hay_cadena_hook_input_y_reglas_de_drop(self):
         texto = " ".join(" ".join(c) for c in ag.plan_nftables({}, ahora=1000.0))
@@ -64,6 +65,33 @@ class PlanNftables(unittest.TestCase):
         texto = " ".join(" ".join(c) for c in cmds)
         self.assertIn("element inet cyberflow " + ag.SET_LIMIT, texto)
         self.assertIn("10.10.20.9 timeout 200s", texto)
+
+    def test_reincidencia_amplia_timeout_existente(self):
+        vig = {"10.10.20.30": {"accion": "BLOCK", "hasta": 2900}}
+        actuales = {ag.SET_BLOCK: {"10.10.20.30": 1300}, ag.SET_LIMIT: {}}
+        texto = " ".join(" ".join(c) for c in ag.plan_nftables(
+            vig, ahora=1100, actuales=actuales))
+        self.assertIn("delete element inet cyberflow " + ag.SET_BLOCK, texto)
+        self.assertIn("10.10.20.30 timeout 1800s", texto)
+
+    def test_republicacion_no_acorta_timeout_existente(self):
+        vig = {"10.10.20.30": {"accion": "BLOCK", "hasta": 1300}}
+        actuales = {ag.SET_BLOCK: {"10.10.20.30": 1600}, ag.SET_LIMIT: {}}
+        texto = " ".join(" ".join(c) for c in ag.plan_nftables(
+            vig, ahora=1100, actuales=actuales))
+        self.assertNotIn("element inet cyberflow " + ag.SET_BLOCK + " { 10.10.20.30", texto)
+
+    def test_limit_no_revoca_block_vigente(self):
+        vig = {"10.10.20.30": {"accion": "LIMIT", "hasta": 1500}}
+        actuales = {ag.SET_BLOCK: {"10.10.20.30": 2900}, ag.SET_LIMIT: {}}
+        texto = " ".join(" ".join(c) for c in ag.plan_nftables(
+            vig, ahora=1100, actuales=actuales))
+        self.assertNotIn("10.10.20.30", texto)
+
+    def test_lote_es_una_transaccion_sin_comandos_shell(self):
+        lote = ag._lote_nft(ag.plan_nftables({}, ahora=1000.0))
+        self.assertIn("flush chain inet cyberflow entrada\n", lote)
+        self.assertNotIn("sudo", lote)
 
 
 @unittest.skipUnless(TIENE_OPENSSL, "requiere openssl")

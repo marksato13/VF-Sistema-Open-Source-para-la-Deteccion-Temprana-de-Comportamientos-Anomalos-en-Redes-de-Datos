@@ -158,7 +158,7 @@ La evaluación de F6 se hizo con el sensor **en el camino del tráfico**. El des
 
 ### 8.1 · Dónde se ejerce el control
 
-Con un espejo, el sensor **no está en el camino**: recibe una copia y **no bloquea el tráfico copiado**. Lo que hace es **decidir y publicar**: un feed firmado (ed25519) que un relay en el bastión lleva al host, donde un **agente** lo verifica y sincroniza una tabla `nftables` propia y aislada (`inet cyberflow`, sets `cyberflow_bloqueados` y `cyberflow_limitados`, con caducidad nativa). Cadena: **captura SPAN → motor → publicador → feed firmado → relay → agente → nftables**. Publicador, relay y agente corren con timers systemd (`OnCalendar=minutely`).
+Con un espejo, el sensor **no está en el camino**: recibe una copia y **no bloquea el tráfico copiado**. Lo que hace es **decidir y publicar**: un feed firmado (ed25519) que un relay en el bastión lleva al host, donde un **agente** lo verifica y sincroniza una tabla `nftables` propia y aislada (`inet cyberflow`, sets `cyberflow_bloqueados` y `cyberflow_limitados`, con caducidad nativa). Cadena: **captura SPAN → motor → publicador → feed firmado → relay → agente → nftables**. Publicador, relay y agente corren cada 10 s, escalonados en `:00/:03/:06` (`OnCalendar`, `AccuracySec=1s`).
 
 | Afirmación | Estado |
 |---|---|

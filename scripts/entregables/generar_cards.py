@@ -411,7 +411,8 @@ def system_card(limpio: list[dict], pase1: list[dict]) -> str:
       "y sincroniza una tabla `nftables` propia y aislada (`inet cyberflow`, sets "
       "`cyberflow_bloqueados` y `cyberflow_limitados`, con caducidad nativa). Cadena: "
       "**captura SPAN → motor → publicador → feed firmado → relay → agente → nftables**. "
-      "Publicador, relay y agente corren con timers systemd (`OnCalendar=minutely`).\n\n")
+      "Publicador, relay y agente corren cada 10 s, escalonados en `:00/:03/:06` "
+      "(`OnCalendar`, `AccuracySec=1s`).\n\n")
     a("| Afirmación | Estado |\n|---|---|\n")
     a("| LIMIT automático de punta a punta, originado por el modelo | **Validado en vivo** "
       "(campaña del 1-oct, nota `O` de orquestación) |\n")

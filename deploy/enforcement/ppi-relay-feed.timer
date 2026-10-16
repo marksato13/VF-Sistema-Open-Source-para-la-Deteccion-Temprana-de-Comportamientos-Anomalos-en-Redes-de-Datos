@@ -1,9 +1,10 @@
 [Unit]
-Description=CyberFlow - relay del feed cada minuto
+Description=CyberFlow - relay del feed cada 10 segundos
 
 [Timer]
-OnCalendar=minutely
-AccuracySec=5s
+# Segundo paso, tres segundos despues del publicador.
+OnCalendar=*-*-* *:*:03/10
+AccuracySec=1s
 Persistent=false
 
 [Install]
