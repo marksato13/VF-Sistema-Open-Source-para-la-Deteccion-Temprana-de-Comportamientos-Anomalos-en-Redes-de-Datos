@@ -1121,6 +1121,10 @@ HTML = """<!doctype html>
 
   <section id="s-alcance">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg><h2>Alcance del análisis</h2></div>
+    <div class="umb-box">
+      <h3 class="umb-h">Alcance declarado</h3>
+      <p class="lede-small">CyberFlow analiza las capas de <strong>red (L3)</strong>, <strong>transporte (L4)</strong> y <strong>aplicación (L7)</strong> sobre <strong>IPv4</strong>. Observa el tráfico de la <strong>LAN</strong> y el que va <strong>hacia Internet</strong> mediante un <strong>puerto espejo (SPAN)</strong>; no inspecciona la capa&nbsp;2 ni IPv6. El sensor observa <strong>en paralelo, no en línea</strong>, y la respuesta (LIMIT/BLOCK) se aplica <strong>en el host protegido</strong>. IPv6 queda declarado como trabajo futuro.</p>
+    </div>
     <p class="lede-small">Lo que se captura pero NO se puntúa, y por qué. Declararlo con su cifra es parte del método: sin número, «se excluyó» no es una medición.</p>
     <div class="grid" id="alcance"></div>
     <p class="toolbar-hint" id="alcanceDetalle"></p>
@@ -2834,7 +2838,7 @@ const TOPO_VISTAS = {
       { id: 'variables', x: 806, y: 220, w: 176, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s',   tag: 'POR IP Y VENTANA' },
       { id: 'parser_eve', x: 806, y: 330, w: 176, h: 58, icono: 'reglas', titulo: 'Parser de eventos', tag: 'JSON → L7 · HTTP·DNS·TLS', val: 'http · dns · tls' },
       { id: 'descartes', x: 806, y: 420, w: 176, h: 48, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO', clase: 'sumidero' },
-      { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Aprendizaje', tag: 'SUPERVISADO · CADA NOCHE' },
+      { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Aprendizaje', tag: 'APROBACIÓN HUMANA · CADA NOCHE' },
       { id: 'modelo',    x: 1060, y: 158, w: 176, h: 58, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
       { id: 'heuristicos', x: 1060, y: 276, w: 176, h: 58, icono: 'reglas', titulo: 'Heurísticos',     tag: 'DETERMINISTAS' },
       { id: 'control',   x: 1336, y: 158, w: 176, h: 58, icono: 'decision', titulo: 'Decisión', forma: 'rombo', rsub: 'PERMIT / acción' },
@@ -2923,7 +2927,7 @@ const TOPO_VISTAS = {
     grupos: [
       { x: 20, y: 36,  w: 1520, h: 130, txt: 'Construcción: una vez, en seco, con datos de esta red', n: 1 },
       { x: 20, y: 216, w: 1520, h: 130, txt: 'Operación', n: 2 },
-      { x: 20, y: 396, w: 1520, h: 150, txt: 'Aprendizaje supervisado: cada noche, lo promueve una persona', n: 3 },
+      { x: 20, y: 396, w: 1520, h: 150, txt: 'Reentrenamiento con aprobación humana: cada noche, lo promueve una persona', n: 3 },
     ],
     nodos: [
       { id: 'c_datos',   x: 40,   y: 72,  w: 200, h: 64, icono: 'disco',    titulo: 'Datos de la red',      tag: 'SPAN → PCAP + eve.json', val: '335 202 ventanas' },
@@ -3251,7 +3255,7 @@ const TOPO_TEXTO = {
   },
   reentrenamiento: {
     que: 'El modelo envejece: la normalidad cambia con el tiempo. Cada noche el sistema sanea un lote, mide la deriva y, cuando toca, entrena y evalúa un candidato. Desplegarlo lo decide una persona: un modelo que se cambia solo podría aprender un ataque lento como normal.',
-    flujoTit: 'Reentrenamiento supervisado (cyberflow_aprendizaje.py)',
+    flujoTit: 'Reentrenamiento con aprobación humana (cyberflow_aprendizaje.py)',
     flujo: [
       {paso: '1 · Saneamiento', fichero: 'lotes/lote-AAAAMMDD.csv', garantia: 'fuera las IPs marcadas y lo atípico; lote rechazado si su PSI se dispara'},
       {paso: '2 · Linaje', fichero: 'registro.jsonl', garantia: 'sha256 de cada lote en una cadena: retocar uno la rompe'},
@@ -3546,7 +3550,7 @@ const TOPO_TEXTO = {
     },
   },
   cf_modeling: {
-    que: 'El entrenamiento del modelo y el aprendizaje supervisado nocturno (saneo, deriva, candidato, promoción). Corre en el Sensor.',
+    que: 'El entrenamiento del modelo y el reentrenamiento nocturno con aprobación humana (saneo, deriva, candidato, promoción). Corre en el Sensor.',
     archivos: [
       { n: 'cyberflow_aprendizaje.py', host: 'sensor', d: 'aprendizaje nocturno' },
       { n: 'entrenar_preliminar.py',   host: 'sensor', d: 'entrena y fija el umbral' },
@@ -4596,7 +4600,7 @@ const GUIA_CODIGO = {
     ],
   },
   'cyberflow_aprendizaje.py': {
-    explica: 'El aprendizaje supervisado nocturno: sanea el lote, mide la deriva contra el oro, entrena un candidato y lo deja listo para que una persona lo promueva.',
+    explica: 'El reentrenamiento nocturno con aprobación humana: sanea el lote, mide la deriva contra el oro, entrena un candidato y lo deja listo para que una persona lo promueva.',
     editar: 'nano ~/cyberflow/scripts/modeling/cyberflow_aprendizaje.py',
     pseudo: [
       { t: 'PSI (índice de deriva)', ancla: 'def psi' },
@@ -7705,7 +7709,7 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
                                   "artefacto del detector activo; umbral en el manifiesto"),
                    _stat_fichero(manifest_path, "json", "hashes y evaluacion")],
         "reentrenamiento": [rel("scripts/modeling/cyberflow_aprendizaje.py", "py",
-                                "reentrenamiento supervisado: lote, deriva, candidato"),
+                                "reentrenamiento con aprobación humana: lote, deriva, candidato"),
                             rel("artifacts/aprendizaje/registro.jsonl", "jsonl",
                                 "linaje: un registro encadenado por lote"),
                             _stat_fichero(config_usada, "toml", "politica: seccion [reentrenamiento]")],

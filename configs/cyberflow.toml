@@ -70,10 +70,20 @@ paso_segundos = 10
 historia_segundos = 230
 # PERFIL GENERICO (historico): umbral, modelo y manifiesto de este fichero son
 # los del OCSVM de laboratorio, sin calibrar en ninguna red. NO describen el
-# despliegue vigente: Sensor1 usa configs/cyberflow.local.toml con el Isolation
-# Forest recalibrado (umbral score_samples -0.568892, calibrado = true). Ver
-# docs/FICHA-TECNICA-DESPLIEGUE-VIGENTE.md. No regenere las unidades de un
-# sensor ya calibrado con este perfil.
+# despliegue vigente.
+#
+# QUE CORRE DE VERDAD EN SENSOR1 (verificado 2026-10-16): el motor NO usa el
+# modelo de abajo. El servicio ppi-motor.service arranca motor_decision.py con
+# estos argumentos, que mandan sobre este .toml:
+#   --model-path    artifacts/preliminar/if_recalibrado_desplegable.joblib
+#   --manifest-path artifacts/preliminar/manifest-if-recalibrado.json
+#   --detector-name if_recalibrado_2026_09
+# El umbral vigente (score_samples -0.568892) vive en ESE manifiesto del detector
+# if_recalibrado_2026_09, no en el campo "umbral" de abajo. El overlay de ese
+# despliegue es configs/cyberflow.local.toml (modelo recalibrado, calibrado=true),
+# que vive solo en el sensor y no esta versionado aqui.
+# Ver docs/FICHA-TECNICA-DESPLIEGUE-VIGENTE.md. No regenere las unidades de un
+# sensor ya calibrado con este perfil generico.
 umbral = 1.8126087939765134
 
 # false = el umbral viene de otra red. El panel lo advierte y pide tratar las
