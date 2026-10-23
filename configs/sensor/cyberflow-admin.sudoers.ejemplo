@@ -1,0 +1,57 @@
+# =====================================================================
+#  Sudo sin contrasena para operar y diagnosticar CyberFlow
+# ---------------------------------------------------------------------
+#  Instalar con:
+#     sudo install -m 0440 -o root -g root \
+#         configs/sensor/cyberflow-admin.sudoers.ejemplo \
+#         /etc/sudoers.d/90-cyberflow
+#     sudo visudo -c
+#
+#  Sustituye a "NOPASSWD: ALL". El usuario sigue en el grupo sudo, asi que
+#  conserva root COMPLETO escribiendo su contrasena: esto solo decide que se
+#  puede hacer de forma desatendida.
+#
+#  Lo que NO esta aqui, a proposito:
+#    - tcpdump: su opcion -z ejecuta un programa arbitrario como root.
+#    - apt-get, tee, cp, sed, install: escriben donde quieran; son root.
+#    - el instalador y el generador de unidades: se ejecutan a mano, con
+#      contrasena, porque escriben en /etc.
+#
+#  Y por que cada forma lleva --no-pager: sin el, systemctl y journalctl
+#  abren "less", y desde "less" se obtiene una shell con "!sh".
+# =====================================================================
+
+User_Alias CF_ADMIN = m4rk
+
+# --- estado y diagnostico (solo lectura) -----------------------------
+Cmnd_Alias CF_ESTADO = /usr/bin/systemctl is-active *, \
+                       /usr/bin/systemctl is-enabled *, \
+                       /usr/bin/systemctl is-failed *, \
+                       /usr/bin/systemctl show *, \
+                       /usr/bin/systemctl list-timers --no-pager *, \
+                       /usr/bin/systemctl status --no-pager *, \
+                       /usr/bin/journalctl --no-pager *, \
+                       /usr/sbin/nft list *
+
+# --- gobierno de los servicios del propio producto -------------------
+Cmnd_Alias CF_SERVICIOS = /usr/bin/systemctl restart cyberflow-capture-nic ppi-motor-capture ppi-motor ppi-dashboard cyberflow-panel-acceso suricata, \
+                          /usr/bin/systemctl restart ppi-motor, \
+                          /usr/bin/systemctl restart ppi-motor-capture, \
+                          /usr/bin/systemctl restart ppi-dashboard, \
+                          /usr/bin/systemctl restart cyberflow-panel-acceso, \
+                          /usr/bin/systemctl restart cyberflow-capture-nic, \
+                          /usr/bin/systemctl restart suricata, \
+                          /usr/bin/systemctl start cyberflow-limpieza.service, \
+                          /usr/bin/systemctl reset-failed *
+
+# --- lectura de lo que escribe root ----------------------------------
+Cmnd_Alias CF_LECTURA = /usr/bin/wc -l /var/log/suricata/eve.json, \
+                        /usr/bin/tail /var/log/suricata/eve.json, \
+                        /usr/bin/tail -n [0-9]* /var/log/suricata/eve.json, \
+                        /usr/bin/grep * /var/log/suricata/eve.json, \
+                        /usr/bin/ls -la /var/lib/ppi-motor-capture/, \
+                        /usr/bin/ls -l /var/lib/ppi-motor-capture/, \
+                        /usr/bin/du -sh /var/lib/ppi-motor-capture/, \
+                        /usr/bin/find /var/lib/ppi-motor-capture -maxdepth 1 -name live-*.pcap*
+
+CF_ADMIN ALL=(root) NOPASSWD: CF_ESTADO, CF_SERVICIOS, CF_LECTURA

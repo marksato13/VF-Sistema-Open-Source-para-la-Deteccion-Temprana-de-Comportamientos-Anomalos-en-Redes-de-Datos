@@ -1,0 +1,1077 @@
+{
+  "alpha": 0.05,
+  "anomaly_csv_sha256": "d115ef987cbd845118038314b7c55a7ad4e359ff4ebfd486c0e664ed3d8078c3",
+  "audit_gates": {
+    "anomaly_labels_clean": true,
+    "no_episode_split": true,
+    "no_missing_values": true,
+    "normal_labels_clean": true,
+    "partition_values_valid": true,
+    "pass": true,
+    "schema_complete": true
+  },
+  "calibrator_sha256": "81836b625887bfc84376e93334b29796573b20d990e81684d9a7ba7e38897980",
+  "created_at": "2026-08-17T14:11:21.844507-05:00",
+  "detectors": {
+    "elliptic_envelope_scaled": {
+      "calibration": {
+        "alpha": 0.05,
+        "comparison": "score < threshold",
+        "k": 13,
+        "lower_prefix_episode_count": 11,
+        "n_windows": 273,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "strict_alert_indices": [
+          2,
+          5,
+          7,
+          9,
+          10,
+          13,
+          129,
+          239,
+          242,
+          243,
+          248,
+          262,
+          263
+        ],
+        "threshold": -4004950230.7757044,
+        "threshold_tie_count": 1,
+        "unit": "windows"
+      },
+      "role": "sensitivity_or_comparator",
+      "timing": {
+        "fit_seconds": 0.924844978,
+        "fit_warnings": [
+          "UserWarning: The covariance matrix associated to your dataset is not full rank"
+        ],
+        "score_batch_seconds": 0.001613113,
+        "score_seconds_per_window": 5.908838827838828e-06,
+        "timing_scope": "descriptive_single_batch_on_vm01_not_production_benchmark"
+      },
+      "train_rows": 824
+    },
+    "if_exact_collapsed": {
+      "calibration": {
+        "alpha": 0.05,
+        "comparison": "score < threshold",
+        "k": 13,
+        "lower_prefix_episode_count": 11,
+        "n_windows": 273,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "strict_alert_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          6,
+          8,
+          11,
+          123,
+          230,
+          231,
+          232,
+          233
+        ],
+        "threshold": -0.5543415531007138,
+        "threshold_tie_count": 1,
+        "unit": "windows"
+      },
+      "role": "sensitivity_or_comparator",
+      "timing": {
+        "fit_seconds": 1.15152803,
+        "fit_warnings": [],
+        "score_batch_seconds": 0.086338774,
+        "score_seconds_per_window": 0.0003162592454212454,
+        "timing_scope": "descriptive_single_batch_on_vm01_not_production_benchmark"
+      },
+      "train_rows": 824
+    },
+    "if_primary_weighted": {
+      "calibration": {
+        "alpha": 0.05,
+        "comparison": "score < threshold",
+        "k": 13,
+        "lower_prefix_episode_count": 9,
+        "n_windows": 273,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 9,
+        "strict_alert_indices": [
+          0,
+          3,
+          6,
+          11,
+          123,
+          131,
+          132,
+          133,
+          152,
+          154,
+          204,
+          205,
+          231
+        ],
+        "threshold": -0.5060656354947982,
+        "threshold_tie_count": 1,
+        "unit": "windows"
+      },
+      "role": "primary",
+      "timing": {
+        "fit_seconds": 1.499098098,
+        "fit_warnings": [],
+        "score_batch_seconds": 0.081462748,
+        "score_seconds_per_window": 0.0002983983443223443,
+        "timing_scope": "descriptive_single_batch_on_vm01_not_production_benchmark"
+      },
+      "train_rows": 824
+    },
+    "if_scaled_weighted": {
+      "calibration": {
+        "alpha": 0.05,
+        "comparison": "score < threshold",
+        "k": 13,
+        "lower_prefix_episode_count": 9,
+        "n_windows": 273,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 9,
+        "strict_alert_indices": [
+          0,
+          3,
+          6,
+          11,
+          123,
+          131,
+          132,
+          133,
+          152,
+          154,
+          204,
+          205,
+          231
+        ],
+        "threshold": -0.5041873448075626,
+        "threshold_tie_count": 1,
+        "unit": "windows"
+      },
+      "role": "sensitivity_or_comparator",
+      "timing": {
+        "fit_seconds": 1.49461174,
+        "fit_warnings": [],
+        "score_batch_seconds": 0.082039371,
+        "score_seconds_per_window": 0.00030051051648351647,
+        "timing_scope": "descriptive_single_batch_on_vm01_not_production_benchmark"
+      },
+      "train_rows": 824
+    },
+    "if_uniform": {
+      "calibration": {
+        "alpha": 0.05,
+        "comparison": "score < threshold",
+        "k": 13,
+        "lower_prefix_episode_count": 11,
+        "n_windows": 273,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "strict_alert_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          6,
+          8,
+          11,
+          123,
+          230,
+          231,
+          232,
+          233
+        ],
+        "threshold": -0.5543415531007138,
+        "threshold_tie_count": 1,
+        "unit": "windows"
+      },
+      "role": "sensitivity_or_comparator",
+      "timing": {
+        "fit_seconds": 1.178601752,
+        "fit_warnings": [],
+        "score_batch_seconds": 0.084855941,
+        "score_seconds_per_window": 0.0003108276227106227,
+        "timing_scope": "descriptive_single_batch_on_vm01_not_production_benchmark"
+      },
+      "train_rows": 824
+    },
+    "lof_scaled": {
+      "calibration": {
+        "alpha": 0.05,
+        "comparison": "score < threshold",
+        "k": 13,
+        "lower_prefix_episode_count": 10,
+        "n_windows": 273,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 10,
+        "strict_alert_indices": [
+          11,
+          15,
+          17,
+          119,
+          120,
+          128,
+          151,
+          230,
+          232,
+          237,
+          238,
+          262,
+          263
+        ],
+        "threshold": -2.940529252089549,
+        "threshold_tie_count": 1,
+        "unit": "windows"
+      },
+      "role": "sensitivity_or_comparator",
+      "timing": {
+        "fit_seconds": 0.065025733,
+        "fit_warnings": [],
+        "score_batch_seconds": 0.031514665,
+        "score_seconds_per_window": 0.00011543833333333332,
+        "timing_scope": "descriptive_single_batch_on_vm01_not_production_benchmark"
+      },
+      "train_rows": 824
+    },
+    "ocsvm_scaled": {
+      "calibration": {
+        "alpha": 0.05,
+        "comparison": "score < threshold",
+        "k": 13,
+        "lower_prefix_episode_count": 10,
+        "n_windows": 273,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 10,
+        "strict_alert_indices": [
+          11,
+          121,
+          123,
+          205,
+          230,
+          231,
+          232,
+          234,
+          242,
+          257,
+          262,
+          263,
+          266
+        ],
+        "threshold": 1.8126087939765134,
+        "threshold_tie_count": 1,
+        "unit": "windows"
+      },
+      "role": "sensitivity_or_comparator",
+      "timing": {
+        "fit_seconds": 0.01005944,
+        "fit_warnings": [],
+        "score_batch_seconds": 0.002720628,
+        "score_seconds_per_window": 9.96567032967033e-06,
+        "timing_scope": "descriptive_single_batch_on_vm01_not_production_benchmark"
+      },
+      "train_rows": 824
+    }
+  },
+  "deviation_from_pm_f1_v1": {
+    "primary_model_changed_to": "if_primary_weighted (antes if_window sin ponderar)",
+    "reason": "expansion exacta por MCM es inviable (episodios 1-53 filas, MCM=15,915,900); verificado antes de fijar este protocolo que sample_weight=1/filas_por_episodio SI cambia los scores en este dataset (delta maximo absoluto 0.1194, seed 20260817), a diferencia del dataset anterior donde no cambiaba nada. 5/132 episodios (3.8%) concentran 261/824 filas train (31.7%)."
+  },
+  "evaluation": {
+    "elliptic_envelope_scaled": {
+      "anomalies": {
+        "by_profile": {
+          "ANOM-AUTH-FAIL-50": {
+            "detected": 0,
+            "windows": 6
+          },
+          "ANOM-DNS-NX-200": {
+            "detected": 0,
+            "windows": 6
+          },
+          "ANOM-KALI-DNS": {
+            "detected": 1,
+            "windows": 21
+          },
+          "ANOM-KALI-PASSWORD-SPRAY-50": {
+            "detected": 0,
+            "windows": 29
+          },
+          "ANOM-KALI-PORT-SCAN": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-PORT-SCAN-WIDE": {
+            "detected": 0,
+            "windows": 20
+          },
+          "ANOM-KALI-SYN-RATE-50": {
+            "detected": 2,
+            "windows": 31
+          },
+          "ANOM-KALI-UDP-PROBE-50": {
+            "detected": 20,
+            "windows": 40
+          },
+          "ANOM-SYN-RATE-10": {
+            "detected": 6,
+            "windows": 6
+          }
+        },
+        "detected_episode_count": 47,
+        "detected_strict": 49,
+        "detection_rate": 0.2737430167597765,
+        "kali_real_detected": 43,
+        "kali_real_detection_rate": 0.2670807453416149,
+        "kali_real_windows": 161,
+        "legacy_detected": 6,
+        "legacy_detection_rate": 0.3333333333333333,
+        "legacy_windows": 18,
+        "n_windows": 179,
+        "total_episode_count": 132
+      },
+      "test": {
+        "alerts_strict": 14,
+        "fpr": 0.050724637681159424,
+        "n_windows": 276
+      },
+      "threshold_used": -4004950230.7757044
+    },
+    "if_exact_collapsed": {
+      "anomalies": {
+        "by_profile": {
+          "ANOM-AUTH-FAIL-50": {
+            "detected": 6,
+            "windows": 6
+          },
+          "ANOM-DNS-NX-200": {
+            "detected": 6,
+            "windows": 6
+          },
+          "ANOM-KALI-DNS": {
+            "detected": 21,
+            "windows": 21
+          },
+          "ANOM-KALI-PASSWORD-SPRAY-50": {
+            "detected": 29,
+            "windows": 29
+          },
+          "ANOM-KALI-PORT-SCAN": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-PORT-SCAN-WIDE": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-SYN-RATE-50": {
+            "detected": 0,
+            "windows": 31
+          },
+          "ANOM-KALI-UDP-PROBE-50": {
+            "detected": 0,
+            "windows": 40
+          },
+          "ANOM-SYN-RATE-10": {
+            "detected": 1,
+            "windows": 6
+          }
+        },
+        "detected_episode_count": 89,
+        "detected_strict": 103,
+        "detection_rate": 0.5754189944134078,
+        "kali_real_detected": 90,
+        "kali_real_detection_rate": 0.5590062111801242,
+        "kali_real_windows": 161,
+        "legacy_detected": 13,
+        "legacy_detection_rate": 0.7222222222222222,
+        "legacy_windows": 18,
+        "n_windows": 179,
+        "total_episode_count": 132
+      },
+      "test": {
+        "alerts_strict": 14,
+        "fpr": 0.050724637681159424,
+        "n_windows": 276
+      },
+      "threshold_used": -0.5543415531007138
+    },
+    "if_primary_weighted": {
+      "anomalies": {
+        "by_profile": {
+          "ANOM-AUTH-FAIL-50": {
+            "detected": 5,
+            "windows": 6
+          },
+          "ANOM-DNS-NX-200": {
+            "detected": 6,
+            "windows": 6
+          },
+          "ANOM-KALI-DNS": {
+            "detected": 21,
+            "windows": 21
+          },
+          "ANOM-KALI-PASSWORD-SPRAY-50": {
+            "detected": 24,
+            "windows": 29
+          },
+          "ANOM-KALI-PORT-SCAN": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-PORT-SCAN-WIDE": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-SYN-RATE-50": {
+            "detected": 0,
+            "windows": 31
+          },
+          "ANOM-KALI-UDP-PROBE-50": {
+            "detected": 0,
+            "windows": 40
+          },
+          "ANOM-SYN-RATE-10": {
+            "detected": 1,
+            "windows": 6
+          }
+        },
+        "detected_episode_count": 89,
+        "detected_strict": 97,
+        "detection_rate": 0.5418994413407822,
+        "kali_real_detected": 85,
+        "kali_real_detection_rate": 0.5279503105590062,
+        "kali_real_windows": 161,
+        "legacy_detected": 12,
+        "legacy_detection_rate": 0.6666666666666666,
+        "legacy_windows": 18,
+        "n_windows": 179,
+        "total_episode_count": 132
+      },
+      "test": {
+        "alerts_strict": 12,
+        "fpr": 0.043478260869565216,
+        "n_windows": 276
+      },
+      "threshold_used": -0.5060656354947982
+    },
+    "if_scaled_weighted": {
+      "anomalies": {
+        "by_profile": {
+          "ANOM-AUTH-FAIL-50": {
+            "detected": 5,
+            "windows": 6
+          },
+          "ANOM-DNS-NX-200": {
+            "detected": 6,
+            "windows": 6
+          },
+          "ANOM-KALI-DNS": {
+            "detected": 21,
+            "windows": 21
+          },
+          "ANOM-KALI-PASSWORD-SPRAY-50": {
+            "detected": 24,
+            "windows": 29
+          },
+          "ANOM-KALI-PORT-SCAN": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-PORT-SCAN-WIDE": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-SYN-RATE-50": {
+            "detected": 0,
+            "windows": 31
+          },
+          "ANOM-KALI-UDP-PROBE-50": {
+            "detected": 0,
+            "windows": 40
+          },
+          "ANOM-SYN-RATE-10": {
+            "detected": 1,
+            "windows": 6
+          }
+        },
+        "detected_episode_count": 89,
+        "detected_strict": 97,
+        "detection_rate": 0.5418994413407822,
+        "kali_real_detected": 85,
+        "kali_real_detection_rate": 0.5279503105590062,
+        "kali_real_windows": 161,
+        "legacy_detected": 12,
+        "legacy_detection_rate": 0.6666666666666666,
+        "legacy_windows": 18,
+        "n_windows": 179,
+        "total_episode_count": 132
+      },
+      "test": {
+        "alerts_strict": 12,
+        "fpr": 0.043478260869565216,
+        "n_windows": 276
+      },
+      "threshold_used": -0.5041873448075626
+    },
+    "if_uniform": {
+      "anomalies": {
+        "by_profile": {
+          "ANOM-AUTH-FAIL-50": {
+            "detected": 6,
+            "windows": 6
+          },
+          "ANOM-DNS-NX-200": {
+            "detected": 6,
+            "windows": 6
+          },
+          "ANOM-KALI-DNS": {
+            "detected": 21,
+            "windows": 21
+          },
+          "ANOM-KALI-PASSWORD-SPRAY-50": {
+            "detected": 29,
+            "windows": 29
+          },
+          "ANOM-KALI-PORT-SCAN": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-PORT-SCAN-WIDE": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-SYN-RATE-50": {
+            "detected": 0,
+            "windows": 31
+          },
+          "ANOM-KALI-UDP-PROBE-50": {
+            "detected": 0,
+            "windows": 40
+          },
+          "ANOM-SYN-RATE-10": {
+            "detected": 1,
+            "windows": 6
+          }
+        },
+        "detected_episode_count": 89,
+        "detected_strict": 103,
+        "detection_rate": 0.5754189944134078,
+        "kali_real_detected": 90,
+        "kali_real_detection_rate": 0.5590062111801242,
+        "kali_real_windows": 161,
+        "legacy_detected": 13,
+        "legacy_detection_rate": 0.7222222222222222,
+        "legacy_windows": 18,
+        "n_windows": 179,
+        "total_episode_count": 132
+      },
+      "test": {
+        "alerts_strict": 14,
+        "fpr": 0.050724637681159424,
+        "n_windows": 276
+      },
+      "threshold_used": -0.5543415531007138
+    },
+    "lof_scaled": {
+      "anomalies": {
+        "by_profile": {
+          "ANOM-AUTH-FAIL-50": {
+            "detected": 0,
+            "windows": 6
+          },
+          "ANOM-DNS-NX-200": {
+            "detected": 6,
+            "windows": 6
+          },
+          "ANOM-KALI-DNS": {
+            "detected": 21,
+            "windows": 21
+          },
+          "ANOM-KALI-PASSWORD-SPRAY-50": {
+            "detected": 0,
+            "windows": 29
+          },
+          "ANOM-KALI-PORT-SCAN": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-PORT-SCAN-WIDE": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-SYN-RATE-50": {
+            "detected": 0,
+            "windows": 31
+          },
+          "ANOM-KALI-UDP-PROBE-50": {
+            "detected": 4,
+            "windows": 40
+          },
+          "ANOM-SYN-RATE-10": {
+            "detected": 6,
+            "windows": 6
+          }
+        },
+        "detected_episode_count": 72,
+        "detected_strict": 77,
+        "detection_rate": 0.4301675977653631,
+        "kali_real_detected": 65,
+        "kali_real_detection_rate": 0.40372670807453415,
+        "kali_real_windows": 161,
+        "legacy_detected": 12,
+        "legacy_detection_rate": 0.6666666666666666,
+        "legacy_windows": 18,
+        "n_windows": 179,
+        "total_episode_count": 132
+      },
+      "test": {
+        "alerts_strict": 10,
+        "fpr": 0.036231884057971016,
+        "n_windows": 276
+      },
+      "threshold_used": -2.940529252089549
+    },
+    "ocsvm_scaled": {
+      "anomalies": {
+        "by_profile": {
+          "ANOM-AUTH-FAIL-50": {
+            "detected": 3,
+            "windows": 6
+          },
+          "ANOM-DNS-NX-200": {
+            "detected": 6,
+            "windows": 6
+          },
+          "ANOM-KALI-DNS": {
+            "detected": 21,
+            "windows": 21
+          },
+          "ANOM-KALI-PASSWORD-SPRAY-50": {
+            "detected": 16,
+            "windows": 29
+          },
+          "ANOM-KALI-PORT-SCAN": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-PORT-SCAN-WIDE": {
+            "detected": 20,
+            "windows": 20
+          },
+          "ANOM-KALI-SYN-RATE-50": {
+            "detected": 26,
+            "windows": 31
+          },
+          "ANOM-KALI-UDP-PROBE-50": {
+            "detected": 40,
+            "windows": 40
+          },
+          "ANOM-SYN-RATE-10": {
+            "detected": 6,
+            "windows": 6
+          }
+        },
+        "detected_episode_count": 119,
+        "detected_strict": 158,
+        "detection_rate": 0.88268156424581,
+        "kali_real_detected": 143,
+        "kali_real_detection_rate": 0.8881987577639752,
+        "kali_real_windows": 161,
+        "legacy_detected": 15,
+        "legacy_detection_rate": 0.8333333333333334,
+        "legacy_windows": 18,
+        "n_windows": 179,
+        "total_episode_count": 132
+      },
+      "test": {
+        "alerts_strict": 13,
+        "fpr": 0.04710144927536232,
+        "n_windows": 276
+      },
+      "threshold_used": 1.8126087939765134
+    }
+  },
+  "feature_names": [
+    "packet_rate_10s",
+    "byte_rate_10s",
+    "mean_ip_len_10s",
+    "large_ip_ratio_10s",
+    "unique_dst_ip_ratio_30s",
+    "icmp_ratio_10s",
+    "flow_attempt_rate_10s",
+    "syn_rate_10s",
+    "syn_completion_ratio_10s",
+    "rst_ratio_10s",
+    "unique_dst_port_ratio_30s",
+    "http_error_ratio_60s",
+    "dns_nxdomain_ratio_60s",
+    "tls_session_rate_60s",
+    "ttl_mean_10s",
+    "fragment_ratio_10s",
+    "protocol_diversity_30s",
+    "tcp_retransmission_ratio_10s",
+    "flow_duration_mean_30s",
+    "tx_rx_byte_ratio_30s",
+    "http_request_rate_60s",
+    "http_method_entropy_60s",
+    "http_auth_failure_ratio_60s",
+    "dns_query_rate_60s",
+    "unique_dns_name_ratio_60s",
+    "tls_handshake_failure_ratio_60s",
+    "tls_version_ratio_60s",
+    "http_status_5xx_ratio_60s"
+  ],
+  "git_commit": "9467066a8d85fda8e176a6629e5f70c94c04eff0",
+  "git_dirty_before_and_after": false,
+  "if_parameters": {
+    "bootstrap": false,
+    "contamination": "auto",
+    "max_features": 1.0,
+    "max_samples": "auto",
+    "n_estimators": 500,
+    "n_jobs": 1,
+    "random_state": 20260817,
+    "warm_start": false
+  },
+  "model_hashes": {
+    "models/elliptic_envelope_scaled.joblib": "7641e965f78f8f19446b066f604958e3cf108eec39a32d6569418efb648c131b",
+    "models/if_exact_collapsed.joblib": "5c9a877d1bbfd599f60e7bb6cb10075d599da6f4d2187c57cc300e36f84fac09",
+    "models/if_primary_weighted.joblib": "56989fdf01c5d8976708008288ae7ea961443963033640baf20cd8017d6186ba",
+    "models/if_scaled_weighted.joblib": "37020dc7c7e7e1dfe9f89c0763452093ed00fce0be2553fbe7ea6a7575846144",
+    "models/if_uniform.joblib": "5c9a877d1bbfd599f60e7bb6cb10075d599da6f4d2187c57cc300e36f84fac09",
+    "models/lof_scaled.joblib": "55e9d582cb23ed40c3999f4f6632ab5ec12632a09083d8a2da43a0f157d93a3b",
+    "models/ocsvm_scaled.joblib": "af9b50c29f839037b2bda380fc197e017dea482d403c61fa7ae3df79cbff7236"
+  },
+  "model_selection_policy": "if_primary_weighted es la conclusion principal; LOF/OCSVM y las demas ramas IF son comparadores/sensibilidad y no lo reemplazan por ganar una metrica posterior en test o evaluation_only.",
+  "normal_csv_sha256": "3846d44c0fe32ac4b4c98f022adac7c459c6add2c6b95062e6bb3237fe9b28ab",
+  "numpy": "2.5.1",
+  "protocol": "PM-multilayer-v2-v1",
+  "runtime": {
+    "packages": {
+      "joblib": "1.5.3",
+      "narwhals": "2.24.0",
+      "numpy": "2.5.1",
+      "scikit-learn": "1.9.0",
+      "scipy": "1.18.0",
+      "threadpoolctl": "3.6.0"
+    },
+    "platform": "Linux-7.0.0-28-generic-x86_64-desconocido-with-glibc2.43",
+    "python": "3.14.4",
+    "requirements_sha256": "3c40cb15c7a9023459246bedbfef55307dfec02c863efa581bc22514e51e6d03"
+  },
+  "schema_version": "pm-multilayer-v2-v1-calibration-manifest-v1",
+  "scikit_learn": "1.9.0",
+  "selection": {
+    "anomaly_episodes": 132,
+    "anomaly_rows": 179,
+    "collapsed_train_rows": 824,
+    "test_episodes": 44,
+    "test_rows": 276,
+    "train_episodes": 132,
+    "train_rows": 824,
+    "validation_episodes": 44,
+    "validation_rows": 273
+  },
+  "stability": {
+    "if_exact_collapsed": [
+      {
+        "seed": 20260817,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5543415531007138
+      },
+      {
+        "seed": 20260818,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 12,
+        "threshold": -0.5573620713458803
+      },
+      {
+        "seed": 20260819,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5503072151648932
+      },
+      {
+        "seed": 20260820,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 12,
+        "threshold": -0.5547557885935782
+      },
+      {
+        "seed": 20260821,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5582996897657575
+      },
+      {
+        "seed": 20260822,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5513420492831227
+      },
+      {
+        "seed": 20260823,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5566934972517075
+      },
+      {
+        "seed": 20260824,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5553535698690846
+      },
+      {
+        "seed": 20260825,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5541054384431873
+      },
+      {
+        "seed": 20260826,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 12,
+        "threshold": -0.5519398046704674
+      }
+    ],
+    "if_primary_weighted": [
+      {
+        "seed": 20260817,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 9,
+        "threshold": -0.5060656354947982
+      },
+      {
+        "seed": 20260818,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 8,
+        "threshold": -0.5118355452816422
+      },
+      {
+        "seed": 20260819,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 9,
+        "threshold": -0.501801658524948
+      },
+      {
+        "seed": 20260820,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 8,
+        "threshold": -0.5101644852224911
+      },
+      {
+        "seed": 20260821,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 9,
+        "threshold": -0.5096221623394488
+      },
+      {
+        "seed": 20260822,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 8,
+        "threshold": -0.509143146590467
+      },
+      {
+        "seed": 20260823,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 9,
+        "threshold": -0.5025196303728765
+      },
+      {
+        "seed": 20260824,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 7,
+        "threshold": -0.5061033137754982
+      },
+      {
+        "seed": 20260825,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 8,
+        "threshold": -0.5024379914244926
+      },
+      {
+        "seed": 20260826,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 8,
+        "threshold": -0.511003457569827
+      }
+    ],
+    "if_scaled_weighted": [
+      {
+        "seed": 20260817,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 9,
+        "threshold": -0.5041873448075626
+      },
+      {
+        "seed": 20260818,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 8,
+        "threshold": -0.5115349267998137
+      },
+      {
+        "seed": 20260819,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 9,
+        "threshold": -0.5035873863015347
+      },
+      {
+        "seed": 20260820,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 8,
+        "threshold": -0.5086770835123627
+      },
+      {
+        "seed": 20260821,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 9,
+        "threshold": -0.5090434057916315
+      },
+      {
+        "seed": 20260822,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 8,
+        "threshold": -0.5100540399426394
+      },
+      {
+        "seed": 20260823,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 9,
+        "threshold": -0.5026461311524132
+      },
+      {
+        "seed": 20260824,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 8,
+        "threshold": -0.5065515036951957
+      },
+      {
+        "seed": 20260825,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 8,
+        "threshold": -0.5028263229432306
+      },
+      {
+        "seed": 20260826,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 8,
+        "threshold": -0.5087966532074975
+      }
+    ],
+    "if_uniform": [
+      {
+        "seed": 20260817,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5543415531007138
+      },
+      {
+        "seed": 20260818,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 12,
+        "threshold": -0.5573620713458803
+      },
+      {
+        "seed": 20260819,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5503072151648932
+      },
+      {
+        "seed": 20260820,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 12,
+        "threshold": -0.5547557885935782
+      },
+      {
+        "seed": 20260821,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5582996897657575
+      },
+      {
+        "seed": 20260822,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5513420492831227
+      },
+      {
+        "seed": 20260823,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5566934972517075
+      },
+      {
+        "seed": 20260824,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5553535698690846
+      },
+      {
+        "seed": 20260825,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 11,
+        "threshold": -0.5541054384431873
+      },
+      {
+        "seed": 20260826,
+        "strict_alert_count": 13,
+        "strict_alert_episode_count": 12,
+        "threshold": -0.5519398046704674
+      }
+    ]
+  },
+  "stability_seeds": [
+    20260817,
+    20260818,
+    20260819,
+    20260820,
+    20260821,
+    20260822,
+    20260823,
+    20260824,
+    20260825,
+    20260826
+  ],
+  "threadpools": [
+    {
+      "architecture": "SkylakeX",
+      "filepath": "/home/m4rk/Documentos/pronteacomopepa/vf-sistema-final/.venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-017048f4.so",
+      "internal_api": "openblas",
+      "num_threads": 4,
+      "prefix": "libscipy_openblas",
+      "threading_layer": "pthreads",
+      "user_api": "blas",
+      "version": "0.3.33.112.0"
+    },
+    {
+      "architecture": "SkylakeX",
+      "filepath": "/home/m4rk/Documentos/pronteacomopepa/vf-sistema-final/.venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+      "internal_api": "openblas",
+      "num_threads": 4,
+      "prefix": "libscipy_openblas",
+      "threading_layer": "pthreads",
+      "user_api": "blas",
+      "version": "0.3.31.dev"
+    },
+    {
+      "filepath": "/home/m4rk/Documentos/pronteacomopepa/vf-sistema-final/.venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+      "internal_api": "openmp",
+      "num_threads": 4,
+      "prefix": "libgomp",
+      "user_api": "openmp",
+      "version": null
+    }
+  ]
+}

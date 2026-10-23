@@ -1,0 +1,96 @@
+{
+  "alpha": 0.05,
+  "b_bootstrap": 1000,
+  "estabilidad_umbral": {
+    "cumple_umbral": true,
+    "cv_maximo": 5.0,
+    "cv_pct": 4.098865092766514,
+    "desv": 0.07317588649535492,
+    "ic_percentil_95": [
+      1.6496005791416426,
+      1.8131889307930795
+    ],
+    "media": 1.7852718945176391,
+    "percentil_del_umbral_congelado": 52.2,
+    "umbral_congelado": 1.8126087939765134
+  },
+  "k_pliegues": 5,
+  "protocolo": "validacion-cruzada-estabilidad-v1",
+  "referencia_un_paso": {
+    "deteccion_pct": 88.26815642458101,
+    "fpr_ic_wilson": [
+      2.7729740423924483,
+      7.890772877293545
+    ],
+    "fpr_pct": 4.710144927536232,
+    "ic_wilson": [
+      82.73084674765673,
+      92.19739715307482
+    ]
+  },
+  "semilla": 20260826,
+  "validacion_cruzada": {
+    "cumple_umbral": true,
+    "deteccion_desv": 3.970019665796621,
+    "deteccion_media": 85.47486033519553,
+    "fpr_desv": 3.2342693023840665,
+    "fpr_media": 5.827711561963169,
+    "pliegues": [
+      {
+        "det": 154,
+        "det_pct": 86.03351955307262,
+        "episodios_prueba": 44,
+        "fp": 19,
+        "fpr": 4.896907216494846,
+        "kali_pct": 86.33540372670807,
+        "n_prueba": 388,
+        "pliegue": 1,
+        "umbral": 1.6252220195246723
+      },
+      {
+        "det": 155,
+        "det_pct": 86.59217877094973,
+        "episodios_prueba": 44,
+        "fp": 3,
+        "fpr": 1.282051282051282,
+        "kali_pct": 86.95652173913044,
+        "n_prueba": 234,
+        "pliegue": 2,
+        "umbral": 1.778302750430393
+      },
+      {
+        "det": 160,
+        "det_pct": 89.3854748603352,
+        "episodios_prueba": 44,
+        "fp": 26,
+        "fpr": 8.783783783783784,
+        "kali_pct": 90.06211180124224,
+        "n_prueba": 296,
+        "pliegue": 3,
+        "umbral": 1.8019973597916807
+      },
+      {
+        "det": 141,
+        "det_pct": 78.77094972067039,
+        "episodios_prueba": 44,
+        "fp": 13,
+        "fpr": 5.038759689922481,
+        "kali_pct": 78.88198757763976,
+        "n_prueba": 258,
+        "pliegue": 4,
+        "umbral": 1.6619644733810481
+      },
+      {
+        "det": 155,
+        "det_pct": 86.59217877094973,
+        "episodios_prueba": 44,
+        "fp": 18,
+        "fpr": 9.137055837563452,
+        "kali_pct": 86.95652173913044,
+        "n_prueba": 197,
+        "pliegue": 5,
+        "umbral": 1.8527699660726744
+      }
+    ]
+  }
+}

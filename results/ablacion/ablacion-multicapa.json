@@ -1,0 +1,616 @@
+{
+  "algoritmo": "Pipeline(StandardScaler, OneClassSVM(rbf, gamma=scale, nu=0.05))",
+  "alpha": 0.05,
+  "configuraciones": {
+    "base+L3": {
+      "descripcion": "Base más las 3 variables L3 nuevas",
+      "detectadas": 140,
+      "features": [
+        "packet_rate_10s",
+        "byte_rate_10s",
+        "mean_ip_len_10s",
+        "large_ip_ratio_10s",
+        "unique_dst_ip_ratio_30s",
+        "icmp_ratio_10s",
+        "flow_attempt_rate_10s",
+        "syn_rate_10s",
+        "syn_completion_ratio_10s",
+        "rst_ratio_10s",
+        "unique_dst_port_ratio_30s",
+        "http_error_ratio_60s",
+        "dns_nxdomain_ratio_60s",
+        "tls_session_rate_60s",
+        "ttl_mean_10s",
+        "fragment_ratio_10s",
+        "protocol_diversity_30s"
+      ],
+      "fp": 6,
+      "k": 13,
+      "kali_detectadas": 127,
+      "n_anom": 179,
+      "n_features": 17,
+      "n_kali": 161,
+      "n_test": 276,
+      "por_familia": {
+        "ANOM-AUTH-FAIL-50": {
+          "detectadas": 1,
+          "ventanas": 6
+        },
+        "ANOM-DNS-NX-200": {
+          "detectadas": 6,
+          "ventanas": 6
+        },
+        "ANOM-KALI-DNS-ENTROPY-50": {
+          "detectadas": 21,
+          "ventanas": 21
+        },
+        "ANOM-KALI-PASSWORD-SPRAY-50": {
+          "detectadas": 15,
+          "ventanas": 29
+        },
+        "ANOM-KALI-PORT-SCAN": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-PORT-SCAN-WIDE": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-SYN-RATE-50": {
+          "detectadas": 30,
+          "ventanas": 31
+        },
+        "ANOM-KALI-UDP-PROBE-50": {
+          "detectadas": 21,
+          "ventanas": 40
+        },
+        "ANOM-SYN-RATE-10": {
+          "detectadas": 6,
+          "ventanas": 6
+        }
+      },
+      "threshold": 2.2166604517548887
+    },
+    "base+L3+L4": {
+      "descripcion": "Base más L3 y L4 nuevas",
+      "detectadas": 157,
+      "features": [
+        "packet_rate_10s",
+        "byte_rate_10s",
+        "mean_ip_len_10s",
+        "large_ip_ratio_10s",
+        "unique_dst_ip_ratio_30s",
+        "icmp_ratio_10s",
+        "flow_attempt_rate_10s",
+        "syn_rate_10s",
+        "syn_completion_ratio_10s",
+        "rst_ratio_10s",
+        "unique_dst_port_ratio_30s",
+        "http_error_ratio_60s",
+        "dns_nxdomain_ratio_60s",
+        "tls_session_rate_60s",
+        "ttl_mean_10s",
+        "fragment_ratio_10s",
+        "protocol_diversity_30s",
+        "tcp_retransmission_ratio_10s",
+        "flow_duration_mean_30s",
+        "tx_rx_byte_ratio_30s"
+      ],
+      "fp": 8,
+      "k": 13,
+      "kali_detectadas": 144,
+      "n_anom": 179,
+      "n_features": 20,
+      "n_kali": 161,
+      "n_test": 276,
+      "por_familia": {
+        "ANOM-AUTH-FAIL-50": {
+          "detectadas": 1,
+          "ventanas": 6
+        },
+        "ANOM-DNS-NX-200": {
+          "detectadas": 6,
+          "ventanas": 6
+        },
+        "ANOM-KALI-DNS-ENTROPY-50": {
+          "detectadas": 21,
+          "ventanas": 21
+        },
+        "ANOM-KALI-PASSWORD-SPRAY-50": {
+          "detectadas": 12,
+          "ventanas": 29
+        },
+        "ANOM-KALI-PORT-SCAN": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-PORT-SCAN-WIDE": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-SYN-RATE-50": {
+          "detectadas": 31,
+          "ventanas": 31
+        },
+        "ANOM-KALI-UDP-PROBE-50": {
+          "detectadas": 40,
+          "ventanas": 40
+        },
+        "ANOM-SYN-RATE-10": {
+          "detectadas": 6,
+          "ventanas": 6
+        }
+      },
+      "threshold": 2.2136521085980787
+    },
+    "base-14": {
+      "descripcion": "Contrato anterior, sin variables nuevas",
+      "detectadas": 120,
+      "features": [
+        "packet_rate_10s",
+        "byte_rate_10s",
+        "mean_ip_len_10s",
+        "large_ip_ratio_10s",
+        "unique_dst_ip_ratio_30s",
+        "icmp_ratio_10s",
+        "flow_attempt_rate_10s",
+        "syn_rate_10s",
+        "syn_completion_ratio_10s",
+        "rst_ratio_10s",
+        "unique_dst_port_ratio_30s",
+        "http_error_ratio_60s",
+        "dns_nxdomain_ratio_60s",
+        "tls_session_rate_60s"
+      ],
+      "fp": 8,
+      "k": 13,
+      "kali_detectadas": 107,
+      "n_anom": 179,
+      "n_features": 14,
+      "n_kali": 161,
+      "n_test": 276,
+      "por_familia": {
+        "ANOM-AUTH-FAIL-50": {
+          "detectadas": 1,
+          "ventanas": 6
+        },
+        "ANOM-DNS-NX-200": {
+          "detectadas": 6,
+          "ventanas": 6
+        },
+        "ANOM-KALI-DNS-ENTROPY-50": {
+          "detectadas": 21,
+          "ventanas": 21
+        },
+        "ANOM-KALI-PASSWORD-SPRAY-50": {
+          "detectadas": 15,
+          "ventanas": 29
+        },
+        "ANOM-KALI-PORT-SCAN": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-PORT-SCAN-WIDE": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-SYN-RATE-50": {
+          "detectadas": 31,
+          "ventanas": 31
+        },
+        "ANOM-KALI-UDP-PROBE-50": {
+          "detectadas": 0,
+          "ventanas": 40
+        },
+        "ANOM-SYN-RATE-10": {
+          "detectadas": 6,
+          "ventanas": 6
+        }
+      },
+      "threshold": 2.370098665806214
+    },
+    "multicapa-28": {
+      "descripcion": "Contrato completo — el modelo congelado",
+      "detectadas": 158,
+      "features": [
+        "packet_rate_10s",
+        "byte_rate_10s",
+        "mean_ip_len_10s",
+        "large_ip_ratio_10s",
+        "unique_dst_ip_ratio_30s",
+        "icmp_ratio_10s",
+        "flow_attempt_rate_10s",
+        "syn_rate_10s",
+        "syn_completion_ratio_10s",
+        "rst_ratio_10s",
+        "unique_dst_port_ratio_30s",
+        "http_error_ratio_60s",
+        "dns_nxdomain_ratio_60s",
+        "tls_session_rate_60s",
+        "ttl_mean_10s",
+        "fragment_ratio_10s",
+        "protocol_diversity_30s",
+        "tcp_retransmission_ratio_10s",
+        "flow_duration_mean_30s",
+        "tx_rx_byte_ratio_30s",
+        "http_request_rate_60s",
+        "http_method_entropy_60s",
+        "http_auth_failure_ratio_60s",
+        "dns_query_rate_60s",
+        "unique_dns_name_ratio_60s",
+        "tls_handshake_failure_ratio_60s",
+        "tls_version_ratio_60s",
+        "http_status_5xx_ratio_60s"
+      ],
+      "fp": 13,
+      "k": 13,
+      "kali_detectadas": 143,
+      "n_anom": 179,
+      "n_features": 28,
+      "n_kali": 161,
+      "n_test": 276,
+      "por_familia": {
+        "ANOM-AUTH-FAIL-50": {
+          "detectadas": 3,
+          "ventanas": 6
+        },
+        "ANOM-DNS-NX-200": {
+          "detectadas": 6,
+          "ventanas": 6
+        },
+        "ANOM-KALI-DNS-ENTROPY-50": {
+          "detectadas": 21,
+          "ventanas": 21
+        },
+        "ANOM-KALI-PASSWORD-SPRAY-50": {
+          "detectadas": 16,
+          "ventanas": 29
+        },
+        "ANOM-KALI-PORT-SCAN": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-PORT-SCAN-WIDE": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-SYN-RATE-50": {
+          "detectadas": 26,
+          "ventanas": 31
+        },
+        "ANOM-KALI-UDP-PROBE-50": {
+          "detectadas": 40,
+          "ventanas": 40
+        },
+        "ANOM-SYN-RATE-10": {
+          "detectadas": 6,
+          "ventanas": 6
+        }
+      },
+      "threshold": 1.8126087939765134
+    },
+    "sin-L3": {
+      "descripcion": "Multicapa retirando el grupo L3 completo",
+      "detectadas": 143,
+      "features": [
+        "flow_attempt_rate_10s",
+        "syn_rate_10s",
+        "syn_completion_ratio_10s",
+        "rst_ratio_10s",
+        "unique_dst_port_ratio_30s",
+        "http_error_ratio_60s",
+        "dns_nxdomain_ratio_60s",
+        "tls_session_rate_60s",
+        "tcp_retransmission_ratio_10s",
+        "flow_duration_mean_30s",
+        "tx_rx_byte_ratio_30s",
+        "http_request_rate_60s",
+        "http_method_entropy_60s",
+        "http_auth_failure_ratio_60s",
+        "dns_query_rate_60s",
+        "unique_dns_name_ratio_60s",
+        "tls_handshake_failure_ratio_60s",
+        "tls_version_ratio_60s",
+        "http_status_5xx_ratio_60s"
+      ],
+      "fp": 8,
+      "k": 13,
+      "kali_detectadas": 128,
+      "n_anom": 179,
+      "n_features": 19,
+      "n_kali": 161,
+      "n_test": 276,
+      "por_familia": {
+        "ANOM-AUTH-FAIL-50": {
+          "detectadas": 3,
+          "ventanas": 6
+        },
+        "ANOM-DNS-NX-200": {
+          "detectadas": 6,
+          "ventanas": 6
+        },
+        "ANOM-KALI-DNS-ENTROPY-50": {
+          "detectadas": 21,
+          "ventanas": 21
+        },
+        "ANOM-KALI-PASSWORD-SPRAY-50": {
+          "detectadas": 17,
+          "ventanas": 29
+        },
+        "ANOM-KALI-PORT-SCAN": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-PORT-SCAN-WIDE": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-SYN-RATE-50": {
+          "detectadas": 27,
+          "ventanas": 31
+        },
+        "ANOM-KALI-UDP-PROBE-50": {
+          "detectadas": 23,
+          "ventanas": 40
+        },
+        "ANOM-SYN-RATE-10": {
+          "detectadas": 6,
+          "ventanas": 6
+        }
+      },
+      "threshold": 1.9426625111661293
+    },
+    "sin-L4": {
+      "descripcion": "Multicapa retirando el grupo L4 completo",
+      "detectadas": 77,
+      "features": [
+        "packet_rate_10s",
+        "byte_rate_10s",
+        "mean_ip_len_10s",
+        "large_ip_ratio_10s",
+        "unique_dst_ip_ratio_30s",
+        "icmp_ratio_10s",
+        "http_error_ratio_60s",
+        "dns_nxdomain_ratio_60s",
+        "tls_session_rate_60s",
+        "ttl_mean_10s",
+        "fragment_ratio_10s",
+        "protocol_diversity_30s",
+        "http_request_rate_60s",
+        "http_method_entropy_60s",
+        "http_auth_failure_ratio_60s",
+        "dns_query_rate_60s",
+        "unique_dns_name_ratio_60s",
+        "tls_handshake_failure_ratio_60s",
+        "tls_version_ratio_60s",
+        "http_status_5xx_ratio_60s"
+      ],
+      "fp": 16,
+      "k": 13,
+      "kali_detectadas": 68,
+      "n_anom": 179,
+      "n_features": 20,
+      "n_kali": 161,
+      "n_test": 276,
+      "por_familia": {
+        "ANOM-AUTH-FAIL-50": {
+          "detectadas": 1,
+          "ventanas": 6
+        },
+        "ANOM-DNS-NX-200": {
+          "detectadas": 6,
+          "ventanas": 6
+        },
+        "ANOM-KALI-DNS-ENTROPY-50": {
+          "detectadas": 21,
+          "ventanas": 21
+        },
+        "ANOM-KALI-PASSWORD-SPRAY-50": {
+          "detectadas": 7,
+          "ventanas": 29
+        },
+        "ANOM-KALI-PORT-SCAN": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-PORT-SCAN-WIDE": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-SYN-RATE-50": {
+          "detectadas": 0,
+          "ventanas": 31
+        },
+        "ANOM-KALI-UDP-PROBE-50": {
+          "detectadas": 0,
+          "ventanas": 40
+        },
+        "ANOM-SYN-RATE-10": {
+          "detectadas": 2,
+          "ventanas": 6
+        }
+      },
+      "threshold": 2.134511904602621
+    },
+    "sin-L7": {
+      "descripcion": "Multicapa retirando el grupo L7 completo",
+      "detectadas": 141,
+      "features": [
+        "packet_rate_10s",
+        "byte_rate_10s",
+        "mean_ip_len_10s",
+        "large_ip_ratio_10s",
+        "unique_dst_ip_ratio_30s",
+        "icmp_ratio_10s",
+        "flow_attempt_rate_10s",
+        "syn_rate_10s",
+        "syn_completion_ratio_10s",
+        "rst_ratio_10s",
+        "unique_dst_port_ratio_30s",
+        "ttl_mean_10s",
+        "fragment_ratio_10s",
+        "protocol_diversity_30s",
+        "tcp_retransmission_ratio_10s",
+        "flow_duration_mean_30s",
+        "tx_rx_byte_ratio_30s"
+      ],
+      "fp": 10,
+      "k": 13,
+      "kali_detectadas": 129,
+      "n_anom": 179,
+      "n_features": 17,
+      "n_kali": 161,
+      "n_test": 276,
+      "por_familia": {
+        "ANOM-AUTH-FAIL-50": {
+          "detectadas": 2,
+          "ventanas": 6
+        },
+        "ANOM-DNS-NX-200": {
+          "detectadas": 4,
+          "ventanas": 6
+        },
+        "ANOM-KALI-DNS-ENTROPY-50": {
+          "detectadas": 1,
+          "ventanas": 21
+        },
+        "ANOM-KALI-PASSWORD-SPRAY-50": {
+          "detectadas": 17,
+          "ventanas": 29
+        },
+        "ANOM-KALI-PORT-SCAN": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-PORT-SCAN-WIDE": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-SYN-RATE-50": {
+          "detectadas": 31,
+          "ventanas": 31
+        },
+        "ANOM-KALI-UDP-PROBE-50": {
+          "detectadas": 40,
+          "ventanas": 40
+        },
+        "ANOM-SYN-RATE-10": {
+          "detectadas": 6,
+          "ventanas": 6
+        }
+      },
+      "threshold": 2.973265345826152
+    },
+    "sin-constante": {
+      "descripcion": "Multicapa sin `tls_handshake_failure_ratio_60s`, la variable no observable",
+      "detectadas": 158,
+      "features": [
+        "packet_rate_10s",
+        "byte_rate_10s",
+        "mean_ip_len_10s",
+        "large_ip_ratio_10s",
+        "unique_dst_ip_ratio_30s",
+        "icmp_ratio_10s",
+        "flow_attempt_rate_10s",
+        "syn_rate_10s",
+        "syn_completion_ratio_10s",
+        "rst_ratio_10s",
+        "unique_dst_port_ratio_30s",
+        "http_error_ratio_60s",
+        "dns_nxdomain_ratio_60s",
+        "tls_session_rate_60s",
+        "ttl_mean_10s",
+        "fragment_ratio_10s",
+        "protocol_diversity_30s",
+        "tcp_retransmission_ratio_10s",
+        "flow_duration_mean_30s",
+        "tx_rx_byte_ratio_30s",
+        "http_request_rate_60s",
+        "http_method_entropy_60s",
+        "http_auth_failure_ratio_60s",
+        "dns_query_rate_60s",
+        "unique_dns_name_ratio_60s",
+        "tls_version_ratio_60s",
+        "http_status_5xx_ratio_60s"
+      ],
+      "fp": 13,
+      "k": 13,
+      "kali_detectadas": 143,
+      "n_anom": 179,
+      "n_features": 27,
+      "n_kali": 161,
+      "n_test": 276,
+      "por_familia": {
+        "ANOM-AUTH-FAIL-50": {
+          "detectadas": 3,
+          "ventanas": 6
+        },
+        "ANOM-DNS-NX-200": {
+          "detectadas": 6,
+          "ventanas": 6
+        },
+        "ANOM-KALI-DNS-ENTROPY-50": {
+          "detectadas": 21,
+          "ventanas": 21
+        },
+        "ANOM-KALI-PASSWORD-SPRAY-50": {
+          "detectadas": 16,
+          "ventanas": 29
+        },
+        "ANOM-KALI-PORT-SCAN": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-PORT-SCAN-WIDE": {
+          "detectadas": 20,
+          "ventanas": 20
+        },
+        "ANOM-KALI-SYN-RATE-50": {
+          "detectadas": 26,
+          "ventanas": 31
+        },
+        "ANOM-KALI-UDP-PROBE-50": {
+          "detectadas": 40,
+          "ventanas": 40
+        },
+        "ANOM-SYN-RATE-10": {
+          "detectadas": 6,
+          "ventanas": 6
+        }
+      },
+      "threshold": 1.8126087939765134
+    }
+  },
+  "protocolo": "ablacion-multicapa-v1",
+  "pruebas_pareadas": {
+    "base+L3+L4 vs multicapa-28": {
+      "discordantes": 11,
+      "p": 1.0,
+      "pregunta": "¿Aportan las 8 variables L7 nuevas?",
+      "solo_A": 5,
+      "solo_B": 6
+    },
+    "base-14 vs base+L3+L4": {
+      "discordantes": 45,
+      "p": 9.334883088740753e-09,
+      "pregunta": "¿Aportan las 6 variables L3+L4 nuevas?",
+      "solo_A": 4,
+      "solo_B": 41
+    },
+    "base-14 vs multicapa-28": {
+      "discordantes": 48,
+      "p": 1.3680484300948594e-08,
+      "pregunta": "¿Aporta la expansión multicapa completa?",
+      "solo_A": 5,
+      "solo_B": 43
+    },
+    "sin-L4 vs multicapa-28": {
+      "discordantes": 81,
+      "p": 8.271806125530277e-25,
+      "pregunta": "¿Cuánto sostiene el grupo L4?",
+      "solo_A": 0,
+      "solo_B": 81
+    }
+  },
+  "reproduce_modelo_congelado": true
+}
