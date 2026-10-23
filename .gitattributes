@@ -1,6 +1,12 @@
 # Normalización de saltos de línea.
 # Por defecto: detecta texto y guárdalo con LF en el repo.
-* text=auto
+* text=auto eol=lf
+
+# Estos bytes son parte de los hashes publicados, incluidos sus CRLF originales.
+artifacts/dataset/*.csv -text
+artifacts/dataset/*.json -text
+artifacts/model/*.json -text
+docs/dataset/SHA256SUMS -text
 
 # Los scripts de shell SIEMPRE con LF, pase lo que pase con core.autocrlf en
 # Windows: con CRLF, bash en Linux falla con "syntax error near unexpected
