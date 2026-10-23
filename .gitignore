@@ -63,3 +63,5 @@ docs/07-mejoras-futuras/
 docs/requisitos-jurado/
 docs/agent-context/
 CLAUDE.md
+testsprite_tests/tmp/
+testsprite_tests/tmp/config.json

@@ -1,0 +1,101 @@
+[
+  {
+    "id": "DEMO-01",
+    "title": "Demo loads without login and identifies sample data",
+    "description": "Target is http://localhost:8799/ in --demo mode; do not attempt /login or use credentials.",
+    "category": "Operational dashboard",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "Open / and wait for initial content"},
+      {"type": "assertion", "description": "Page renders health, KPIs, activity, scores, decisions and MODO DEMO banner; it must not claim to show live Sensor1 data"}
+    ]
+  },
+  {
+    "id": "DEMO-02",
+    "title": "Polling keeps operational dashboard responsive",
+    "description": "Exercise one 5-second refresh; zero sample traffic is expected and must not be invented.",
+    "category": "Health and refresh",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "Open / and wait at least 6 seconds"},
+      {"type": "assertion", "description": "No browser JavaScript error or failed /api/status, /api/score-histogram requests; health and KPI cards remain rendered"}
+    ]
+  },
+  {
+    "id": "DEMO-03",
+    "title": "All seven system views render in development mode",
+    "description": "Demo has an admin-like UI; this does not verify live admin authorization.",
+    "category": "Topology views",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "Open /, click Modo operativo to switch to Modo desarrollo, then visit each of the seven tabs under Mapa del sistema"},
+      {"type": "assertion", "description": "Each view changes the map or validation table, and shows a relevant detail panel without a blank diagram or JS error"}
+    ]
+  },
+  {
+    "id": "DEMO-04",
+    "title": "Declared source code opens in read-only modal",
+    "description": "Follow the actual interaction path: Ver archivos, component, file, Ver contenido.",
+    "category": "Source viewer",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "In Modo desarrollo choose Operacional, click Ver archivos, choose Motor, open a declared Python file, then click Ver contenido"},
+      {"type": "assertion", "description": "Modal displays text content, not an editable control; close it via Escape and continue navigating"}
+    ]
+  },
+  {
+    "id": "DEMO-05",
+    "title": "Unknown file path is denied by the API",
+    "description": "Do not use passwords or request private files; a nonexistent test path suffices.",
+    "category": "Source viewer",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "Request /api/archivo?ruta=/ruta-que-no-esta-en-la-lista.txt"},
+      {"type": "assertion", "description": "Response status is 403 and no file content is returned"}
+    ]
+  },
+  {
+    "id": "DEMO-06",
+    "title": "Guided tour opens and can be dismissed",
+    "description": "The tour should not prevent subsequent navigation.",
+    "category": "Guided tour",
+    "priority": "Medium",
+    "steps": [
+      {"type": "action", "description": "Open /, click Guía, advance once and close the tour"},
+      {"type": "assertion", "description": "Tour overlay disappears and dashboard controls remain usable"}
+    ]
+  },
+  {
+    "id": "DEMO-07",
+    "title": "Activity range selectors handle empty demo traffic",
+    "description": "Demo is not expected to have real events.",
+    "category": "Activity",
+    "priority": "Medium",
+    "steps": [
+      {"type": "action", "description": "Open /, select Última hora and Últimas 24h in Actividad"},
+      {"type": "assertion", "description": "Axes/range update without errors; no fabricated live events appear"}
+    ]
+  },
+  {
+    "id": "DEMO-08",
+    "title": "Model and Suricata comparison state their scope",
+    "description": "Check labels and limitations rather than trying to reproduce attacks from the demo.",
+    "category": "Model and comparison",
+    "priority": "Medium",
+    "steps": [
+      {"type": "action", "description": "Switch to Modo desarrollo and visit Modelo and Suricata sections"},
+      {"type": "assertion", "description": "Active model is IsolationForest, not OCSVM; comparison scope and limitations are visible"}
+    ]
+  },
+  {
+    "id": "DEMO-09",
+    "title": "Mobile viewport does not scale the entire document",
+    "description": "Known candidate defect: at 390px visual width, document measured 574px in local Chromium; report accurately if reproduced.",
+    "category": "Responsive layout",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "Open / with a 390x844 mobile viewport"},
+      {"type": "assertion", "description": "Document width does not exceed visual viewport; menu may scroll in its own region while KPI text stays legible"}
+    ]
+  }
+]

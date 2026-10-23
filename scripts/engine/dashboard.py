@@ -1121,6 +1121,10 @@ HTML = """<!doctype html>
 
   <section id="s-alcance">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg><h2>Alcance del análisis</h2></div>
+    <div class="umb-box">
+      <h3 class="umb-h">Alcance declarado</h3>
+      <p class="lede-small">CyberFlow analiza las capas de <strong>red (L3)</strong>, <strong>transporte (L4)</strong> y <strong>aplicación (L7)</strong> sobre <strong>IPv4</strong>. Observa el tráfico de la <strong>LAN</strong> y el que va <strong>hacia Internet</strong> mediante un <strong>puerto espejo (SPAN)</strong>; no inspecciona la capa&nbsp;2 ni IPv6. El sensor observa <strong>en paralelo, no en línea</strong>, y la respuesta (LIMIT/BLOCK) se aplica <strong>en el host protegido</strong>. IPv6 queda declarado como trabajo futuro.</p>
+    </div>
     <p class="lede-small">Lo que se captura pero NO se puntúa, y por qué. Declararlo con su cifra es parte del método: sin número, «se excluyó» no es una medición.</p>
     <div class="grid" id="alcance"></div>
     <p class="toolbar-hint" id="alcanceDetalle"></p>
@@ -2834,13 +2838,13 @@ const TOPO_VISTAS = {
       { id: 'variables', x: 806, y: 220, w: 176, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s',   tag: 'POR IP Y VENTANA' },
       { id: 'parser_eve', x: 806, y: 330, w: 176, h: 58, icono: 'reglas', titulo: 'Parser de eventos', tag: 'JSON → L7 · HTTP·DNS·TLS', val: 'http · dns · tls' },
       { id: 'descartes', x: 806, y: 420, w: 176, h: 48, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO', clase: 'sumidero' },
-      { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Aprendizaje', tag: 'SUPERVISADO · CADA NOCHE' },
+      { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Aprendizaje', tag: 'APROBACIÓN HUMANA · CADA NOCHE' },
       { id: 'modelo',    x: 1060, y: 158, w: 176, h: 58, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
       { id: 'heuristicos', x: 1060, y: 276, w: 176, h: 58, icono: 'reglas', titulo: 'Heurísticos',     tag: 'DETERMINISTAS' },
       { id: 'control',   x: 1336, y: 158, w: 176, h: 58, icono: 'decision', titulo: 'Decisión', forma: 'rombo', rsub: 'PERMIT / acción' },
-      { id: 'feed',      x: 1336, y: 246, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',     tag: 'ed25519 · CADA 60 s' },
-      { id: 'relay',     x: 1336, y: 334, w: 176, h: 52, icono: 'espejo', titulo: 'Relay (bastión)',   val: 'réplica · cada 60 s' },
-      { id: 'agente',    x: 1336, y: 416, w: 176, h: 58, icono: 'escudo', titulo: 'Agente en host',   tag: 'PULL 60 s · nftables' },
+      { id: 'feed',      x: 1336, y: 246, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',     tag: 'ed25519 · CICLO 10 s' },
+      { id: 'relay',     x: 1336, y: 334, w: 176, h: 52, icono: 'espejo', titulo: 'Relay (bastión)',   val: 'réplica · ciclo 10 s' },
+      { id: 'agente',    x: 1336, y: 416, w: 176, h: 58, icono: 'escudo', titulo: 'Agente en host',   tag: 'CICLO 10 s · nftables' },
       { id: 'registro',  x: 1592, y: 160, w: 176, h: 46, icono: 'fichero', titulo: 'motor_decision.log', tag: 'ARTEFACTO', clase: 'artefacto' },
       { id: 'panel',     x: 1592, y: 256, w: 176, h: 52, icono: 'ojo',    titulo: 'Este panel',        tag: 'SOLO LECTURA' },
       { id: 'wazuh',     x: 1592, y: 352, w: 176, h: 52, icono: 'ojo',    titulo: 'Wazuh (SIEM)',      tag: 'PREVISTO', clase: 'artefacto' },
@@ -2923,7 +2927,7 @@ const TOPO_VISTAS = {
     grupos: [
       { x: 20, y: 36,  w: 1520, h: 130, txt: 'Construcción: una vez, en seco, con datos de esta red', n: 1 },
       { x: 20, y: 216, w: 1520, h: 130, txt: 'Operación', n: 2 },
-      { x: 20, y: 396, w: 1520, h: 150, txt: 'Aprendizaje supervisado: cada noche, lo promueve una persona', n: 3 },
+      { x: 20, y: 396, w: 1520, h: 150, txt: 'Reentrenamiento con aprobación humana: cada noche, lo promueve una persona', n: 3 },
     ],
     nodos: [
       { id: 'c_datos',   x: 40,   y: 72,  w: 200, h: 64, icono: 'disco',    titulo: 'Datos de la red',      tag: 'SPAN → PCAP + eve.json', val: '335 202 ventanas' },
@@ -3014,14 +3018,14 @@ const TOPO_VISTAS = {
     ],
   },
   // --- Vista DECISION: dos niveles. El motor decide cada ventana; el publicador
-  // combina por IP cada 60 s sobre los ultimos 120 s y fija la caducidad.
+  // combina por IP cada 10 s sobre los ultimos 120 s y fija la caducidad.
   // Fuentes: motor_decision.py, heuristicos.py, publicar_feed.py, escalada.py.
   decision: {
     w: 1560, h: 520,
     packet: 'M230,149 L330,99 L630,99 L1060,140 L1160,174 L140,330 L240,359 L820,359 L920,388 L1140,440',
     grupos: [
       { x: 12, y: 32,  w: 1536, h: 236, txt: 'Motor · decide cada ventana', n: 1 },
-      { x: 12, y: 296, w: 1536, h: 112, txt: 'Publicador · cada 60 s, últimos 120 s, por IP', n: 2 },
+      { x: 12, y: 296, w: 1536, h: 112, txt: 'Publicador · ciclo 10 s, últimos 120 s, por IP', n: 2 },
     ],
     nodos: [
       { id: 'variables',   x: 40,   y: 120, w: 190, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s', tag: 'POR IP Y VENTANA' },
@@ -3070,18 +3074,18 @@ const TOPO_VISTAS = {
     ],
     nodos: [
       { id: 'control',    x: 40,   y: 110, w: 176, h: 58, icono: 'decision', titulo: 'Decisión', forma: 'rombo', rsub: 'detección ~2–40 s' },
-      { id: 'feed',       x: 320,  y: 110, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',  tag: 'DECISIÓN 17–18 s (N=2)' },
-      { id: 'relay',      x: 592,  y: 110, w: 176, h: 58, icono: 'espejo',  titulo: 'Relay',         tag: 'RÉPLICA', val: 'cada 60 s' },
+      { id: 'feed',       x: 320,  y: 110, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',  tag: 'CICLO ≤ 10 s' },
+      { id: 'relay',      x: 592,  y: 110, w: 176, h: 58, icono: 'espejo',  titulo: 'Relay',         tag: 'RÉPLICA', val: 'ciclo 10 s' },
       { id: 'agente',     x: 860,  y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'Agente',        tag: 'VERIFICA LA FIRMA' },
-      { id: 'p_nft',      x: 1110, y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'nftables',      tag: 'RESPUESTA 51–141 s', val: 'LIMIT · BLOCK', clase: 'acc-block' },
+      { id: 'p_nft',      x: 1110, y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'nftables',      tag: 'MEDIDO 15,3 s', val: 'LIMIT · BLOCK', clase: 'acc-block' },
       { id: 'p_noaplica', x: 860,  y: 230, w: 176, h: 58, icono: 'tijera',  titulo: 'Firma inválida', tag: 'LO VIGENTE CADUCA', val: 'no aplica nada', clase: 'sumidero' },
       { id: 'p_caduca',   x: 1110, y: 230, w: 176, h: 58, icono: 'ciclo',   titulo: 'Caduca sola',   tag: 'TIMEOUT DEL SET', val: '300 · 1800 · 3600 s' },
       { id: 'p_manual',   x: 1356, y: 110, w: 176, h: 58, icono: 'ojo',     titulo: 'Retirada manual', tag: 'UNA PERSONA', val: 'nft delete element' },
     ],
     aristas: [
-      { d: 'M216,139 L320,139',   desde: 'control', hasta: 'feed',       etiqueta: 'cada 60 s', ex: 268, ey: 130 },
-      { d: 'M496,139 L592,139',   desde: 'feed',    hasta: 'relay',      tipo: 'fijo', etiqueta: 'cada 60 s', ex: 544, ey: 130 },
-      { d: 'M768,139 L860,139',   desde: 'relay',   hasta: 'agente',     tipo: 'fijo', etiqueta: 'pull · 60 s', ex: 814, ey: 130 },
+      { d: 'M216,139 L320,139',   desde: 'control', hasta: 'feed',       etiqueta: 'ciclo 10 s', ex: 268, ey: 130 },
+      { d: 'M496,139 L592,139',   desde: 'feed',    hasta: 'relay',      tipo: 'fijo', etiqueta: '+3 s', ex: 544, ey: 130 },
+      { d: 'M768,139 L860,139',   desde: 'relay',   hasta: 'agente',     tipo: 'fijo', etiqueta: '+3 s', ex: 814, ey: 130 },
       { d: 'M1036,139 L1110,139', desde: 'agente',  hasta: 'p_nft',      tipo: 'fijo', etiqueta: 'válida', ex: 1073, ey: 130 },
       { d: 'M948,168 L948,230',   desde: 'agente',  hasta: 'p_noaplica', tipo: 'descarte' },
       { d: 'M1198,168 L1198,230', desde: 'p_nft',   hasta: 'p_caduca',   tipo: 'fijo' },
@@ -3231,7 +3235,7 @@ const TOPO_TEXTO = {
     flujoTit: 'Qué corre en el host y cómo bloquea',
     flujo: [
       {paso: 'Servicio web (servidor_lab.py)', fichero: 'HTTP 80 · HTTPS 443', garantia: 'objetivo del tráfico legítimo y de los ataques. Sirve /estatico/<n>k (tamaños) y /api/* — ok, auth→401, perdido→404, fallo→500, lento: cada endpoint alimenta una variable concreta'},
-      {paso: 'Agente de enforcement', fichero: 'ppi-enforce-agent.timer (pull 60 s)', garantia: 'trae el feed del relay, verifica la firma ed25519 y aplica nftables'},
+      {paso: 'Agente de enforcement', fichero: 'ppi-enforce-agent.timer (ciclo 10 s)', garantia: 'trae el feed del relay, verifica la firma ed25519 y aplica nftables'},
       {paso: 'BLOCK = drop', fichero: 'set cyberflow_bloqueados (con timeout)', garantia: 'ip saddr @bloqueados → drop; caduca solo'},
       {paso: 'LIMIT = rate-limit', fichero: 'set cyberflow_limitados (con timeout)', garantia: 'limit rate over 100/s burst 5 → drop el exceso'},
     ],
@@ -3251,7 +3255,7 @@ const TOPO_TEXTO = {
   },
   reentrenamiento: {
     que: 'El modelo envejece: la normalidad cambia con el tiempo. Cada noche el sistema sanea un lote, mide la deriva y, cuando toca, entrena y evalúa un candidato. Desplegarlo lo decide una persona: un modelo que se cambia solo podría aprender un ataque lento como normal.',
-    flujoTit: 'Reentrenamiento supervisado (cyberflow_aprendizaje.py)',
+    flujoTit: 'Reentrenamiento con aprobación humana (cyberflow_aprendizaje.py)',
     flujo: [
       {paso: '1 · Saneamiento', fichero: 'lotes/lote-AAAAMMDD.csv', garantia: 'fuera las IPs marcadas y lo atípico; lote rechazado si su PSI se dispara'},
       {paso: '2 · Linaje', fichero: 'registro.jsonl', garantia: 'sha256 de cada lote en una cadena: retocar uno la rompe'},
@@ -3282,7 +3286,7 @@ const TOPO_TEXTO = {
     nota: 'Separar captura (ens37, sin IP) de gestión (ens34, con IP) evita que el tráfico administrativo del propio sensor entre en su línea base. Son dos NIC de la MISMA máquina con trabajos distintos.',
   },
   gestion: {
-    que: 'El plano de gestión del sensor, que sale por ens34: la sesión SSH del administrador, el panel HTTPS y el envío del feed al relay del bastión cada 60 s. Separado del plano de captura (ens37).',
+    que: 'El plano de gestión del sensor, que sale por ens34: la sesión SSH del administrador, el panel HTTPS y el envío del feed al relay del bastión cada 10 s. Separado del plano de captura (ens37).',
   },
   captura: {
     que: 'tcpdump escribe un anillo de ficheros PCAP rotados por tiempo. De ahí salen las variables de red y transporte.',
@@ -3404,7 +3408,7 @@ const TOPO_TEXTO = {
     codigo: {
       archivo: 'scripts/engine/publicar_feed.py + feed.py',
       pseudo: [
-        'cada 60 s:',
+        'cada 10 s:',
         '  entradas ← acciones vigentes por IP (con su caducidad)',
         '  feed.json ← {ip, acción, hasta, motivo}',
         '  firmar feed.json con ed25519 (la clave privada vive solo aquí)',
@@ -3423,7 +3427,7 @@ const TOPO_TEXTO = {
     codigo: {
       archivo: 'scripts/enforce/agente_enforce.py   (corre en el host protegido)',
       pseudo: [
-        'cada 60 s:',
+        'cada 10 s:',
         '  feed ← traer del relay (bastión)',
         '  si la firma ed25519 no verifica: no tocar nada (fail-safe)',
         '  sincronizar nftables: LIMIT=rate-limit, BLOCK=drop con timeout',
@@ -3468,7 +3472,7 @@ const TOPO_TEXTO = {
   },
   relay: {
     que: 'El bastión copia el feed firmado del sensor a la red interna. Los hosts lo traen de aquí: nunca hablan con el sensor.',
-    nota: 'Es uno de los tres temporizadores de 60 s (publicador, relay, agente) que dominan el tiempo de respuesta.',
+    nota: 'Es uno de los tres temporizadores de 10 s, escalonados en :00/:03/:06 para preservar el orden publicador → relay → agente.',
   },
   // ---- Vista RED Y CAPTURA ----
   r_bastion: {
@@ -3476,7 +3480,7 @@ const TOPO_TEXTO = {
     flujoTit: 'Qué es el «relay del feed»',
     flujo: [
       {paso: 'Qué es el feed', fichero: 'feed.json + feed.sig', garantia: 'la lista FIRMADA (ed25519) de acciones por IP —PERMIT/LIMIT/BLOCK con caducidad— que publica el sensor'},
-      {paso: 'Qué hace el relay', fichero: 'ppi-relay-feed.timer · cada 60 s', garantia: 'relay-feed.sh TRAE (pull) el feed del sensor y lo EMPUJA (push) al host protegido'},
+      {paso: 'Qué hace el relay', fichero: 'ppi-relay-feed.timer · ciclo 10 s', garantia: 'relay-feed.sh TRAE (pull) el feed del sensor y lo EMPUJA (push) al host protegido'},
       {paso: 'Por qué hace falta', fichero: 'red segmentada por VLAN', garantia: 'el host de la DMZ no habla con el sensor directamente; el bastión alcanza a los dos y hace de puente'},
       {paso: 'Por qué es seguro', fichero: 'relay TONTO', garantia: 'solo copia bytes: la firma la pone el sensor y la verifica el host, así que el bastión no puede forjar ni alterar un bloqueo'},
     ],
@@ -3546,7 +3550,7 @@ const TOPO_TEXTO = {
     },
   },
   cf_modeling: {
-    que: 'El entrenamiento del modelo y el aprendizaje supervisado nocturno (saneo, deriva, candidato, promoción). Corre en el Sensor.',
+    que: 'El entrenamiento del modelo y el reentrenamiento nocturno con aprobación humana (saneo, deriva, candidato, promoción). Corre en el Sensor.',
     archivos: [
       { n: 'cyberflow_aprendizaje.py', host: 'sensor', d: 'aprendizaje nocturno' },
       { n: 'entrenar_preliminar.py',   host: 'sensor', d: 'entrena y fija el umbral' },
@@ -3613,7 +3617,7 @@ const TOPO_TEXTO = {
     archivos: [
       { n: 'instalar / desplegar',       host: 'sensor',   d: 'levanta el sensor desde cero' },
       { n: 'relay-feed.sh',              host: 'bastion',  d: 'copia el feed firmado a los hosts' },
-      { n: 'ppi-enforce-agent (unidad)', host: 'servidor', d: 'temporizador del agente, cada 60 s' },
+      { n: 'ppi-enforce-agent (unidad)', host: 'servidor', d: 'temporizador del agente, ciclo 10 s' },
     ],
   },
   cf_mas: {
@@ -3652,7 +3656,7 @@ const TOPO_TEXTO = {
   // ---- Vista RESPUESTA ----
   p_nft: {
     que: 'La regla ya aplicada en el núcleo del host protegido. Es el final del tiempo de respuesta.',
-    nota: 'Medido desde el inicio del ataque: entre 51 y 141 s. Lo dominan los tres temporizadores de 60 s, no el cómputo.',
+    nota: 'La medición histórica fue de 51 a 141 s con temporizadores de 60 s. La cadena vigente de 10 s midió 15,3 s desde la decisión hasta nftables; el cálculo corrigió 35,990 s de desfase NTP del sensor.',
   },
   p_noaplica: {
     que: 'Si la firma del feed no verifica, el agente no toca nada.',
@@ -4566,7 +4570,7 @@ const GUIA_CODIGO = {
     ],
   },
   'publicar_feed.py': {
-    explica: 'Cada 60 s combina las decisiones del motor por IP, aplica la escalera de reincidencia y publica el feed.',
+    explica: 'Cada 10 s combina las decisiones recientes del motor por IP, aplica la escalera de reincidencia y publica el feed.',
     editar: 'nano ~/cyberflow/scripts/engine/publicar_feed.py',
     pseudo: [
       { t: 'Veredicto de una decisión', ancla: 'def _verdicto_de' },
@@ -4596,7 +4600,7 @@ const GUIA_CODIGO = {
     ],
   },
   'cyberflow_aprendizaje.py': {
-    explica: 'El aprendizaje supervisado nocturno: sanea el lote, mide la deriva contra el oro, entrena un candidato y lo deja listo para que una persona lo promueva.',
+    explica: 'El reentrenamiento nocturno con aprobación humana: sanea el lote, mide la deriva contra el oro, entrena un candidato y lo deja listo para que una persona lo promueva.',
     editar: 'nano ~/cyberflow/scripts/modeling/cyberflow_aprendizaje.py',
     pseudo: [
       { t: 'PSI (índice de deriva)', ancla: 'def psi' },
@@ -4766,7 +4770,7 @@ const GUIA_FLUJO = {
       { k: 'proc', t: 'Adjuntar el veredicto de los 4 heurísticos', ancla: 'heuristicos.evaluar' },
       { k: 'io', t: 'Escribir la decisión en motor_decision.log', ancla: 'args.log_path.open' },
       { k: 'dec', t: 'Aplicar la acción', cond: '--enforce  y  decisión == ALERT', si: 'bloquea / relay', no: 'solo observa', ancla: 'def apply_enforcement' },
-      { k: 'archivo', t: 'publicar_feed.py lee el log cada 60 s', ir: 'publicar_feed.py' },
+      { k: 'archivo', t: 'publicar_feed.py lee el log cada 10 s', ir: 'publicar_feed.py' },
     ],
   },
   'heuristicos.py': {
@@ -4782,7 +4786,7 @@ const GUIA_FLUJO = {
     ],
   },
   'publicar_feed.py': {
-    titulo: 'Publicar el feed firmado · cada 60 s',
+    titulo: 'Publicar el feed firmado · ciclo 10 s',
     pasos: [
       { k: 'proc', t: 'Leer las decisiones recientes del log', ancla: 'def _leer_decisiones' },
       { k: 'dec', t: 'Veredicto por decisión', cond: 'ALERT modelo → LIMIT · heurístico → su acción', si: 'la más severa', no: 'None', ancla: 'def _verdicto_de' },
@@ -4827,7 +4831,7 @@ const GUIA_FLUJO = {
     ],
   },
   'agente_enforce.py': {
-    titulo: 'Agente en el host protegido · cada 60 s',
+    titulo: 'Agente en el host protegido · ciclo 10 s',
     pasos: [
       { k: 'inicio', t: 'Traer el feed del relay (bastión)' },
       { k: 'dec', t: 'Firma ed25519 válida', cond: 'con la clave pública', si: 'sigue', no: 'no toca nada (fail-safe)' },
@@ -6594,7 +6598,7 @@ def enforcement_list(enforce_command: str) -> list[dict]:
 SEVERIDAD_ACCION = {"BLOCK": 2, "LIMIT": 1}
 ESCALERA_BLOCK_S = {1: 300, 2: 1800, 3: 3600}     # = escalada.py
 TIMEOUT_LIMIT_S = 300
-CADENCIA_FEED_S = 60                              # el publicador corre cada minuto
+CADENCIA_FEED_S = 10                              # cadena escalonada cada 10 s
 REGLA_LEGACY = {"auth_failure_heuristic": "fallos de autenticación repetidos"}
 NUNCA_BLOQUEAR = {"10.10.10.30", "10.10.60.11", "10.10.30.1", "10.10.40.1",
                   "10.10.60.1", "10.10.20.1", "10.10.10.20"}   # = publicar_feed.py
@@ -7705,7 +7709,7 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
                                   "artefacto del detector activo; umbral en el manifiesto"),
                    _stat_fichero(manifest_path, "json", "hashes y evaluacion")],
         "reentrenamiento": [rel("scripts/modeling/cyberflow_aprendizaje.py", "py",
-                                "reentrenamiento supervisado: lote, deriva, candidato"),
+                                "reentrenamiento con aprobación humana: lote, deriva, candidato"),
                             rel("artifacts/aprendizaje/registro.jsonl", "jsonl",
                                 "linaje: un registro encadenado por lote"),
                             _stat_fichero(config_usada, "toml", "politica: seccion [reentrenamiento]")],
