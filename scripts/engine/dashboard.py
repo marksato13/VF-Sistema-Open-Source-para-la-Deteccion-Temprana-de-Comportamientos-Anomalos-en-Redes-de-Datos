@@ -1055,7 +1055,7 @@ HTML = """<!doctype html>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Modelo</th><th class="r">ROC-AUC</th><th class="r">PR-AUC</th><th class="r">FPR</th><th class="r">Det. @ FPR 5%</th></tr></thead>
       <tbody>
-        <tr><td style="box-shadow:inset 3px 0 0 var(--ok)"><b>IF recalibrado (desplegado)</b></td><td class="num r">0,923</td><td class="num r">0,203</td><td class="num r">4,45&#8239;%</td><td class="num r"><b>66,7&#8239;%</b></td></tr>
+        <tr><td style="box-shadow:inset 3px 0 0 var(--ok)"><b>IF limpio (desplegado)</b></td><td class="num r">0,923</td><td class="num r">0,203</td><td class="num r">4,53&#8239;%</td><td class="num r"><b>66,7&#8239;%</b></td></tr>
         <tr><td>IF scaled (lab)</td><td class="num r">0,825</td><td class="num r">0,004</td><td class="num r">30,3&#8239;%</td><td class="num r">16,7&#8239;%</td></tr>
         <tr><td>IF primary (lab)</td><td class="num r">0,828</td><td class="num r">0,004</td><td class="num r">29,1&#8239;%</td><td class="num r">16,7&#8239;%</td></tr>
         <tr><td>IF uniform (lab)</td><td class="num r">0,796</td><td class="num r">0,005</td><td class="num r">34,1&#8239;%</td><td class="num r">16,7&#8239;%</td></tr>
@@ -1066,7 +1066,7 @@ HTML = """<!doctype html>
     </table></div>
     <p class="toolbar-hint"><b>Gana el Isolation Forest recalibrado</b> en todas las métricas robustas al desbalance. A igualdad de FPR (5&#8239;%) detecta 66,7&#8239;% frente al 16,7&#8239;% del mejor de laboratorio; el OCSVM queda en ROC-AUC 0,456 (por debajo del azar). Diferencia significativa vs OCSVM/LOF (McNemar + Holm, p&lt;0,001). Gráficos (ROC, PR, separación de scores) en el repositorio de orquestación.</p>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Cómo se comparó.</strong> Dos lecturas: (1) con el <strong>umbral calibrado</strong> de cada modelo &rarr; mide si transfiere a esta red; (2) recalibrando todos al <strong>mismo 5&#8239;% de FPR</strong> sobre el oro &rarr; compara solo la arquitectura, a igualdad de falsos positivos. Se usan métricas robustas al desbalance (prevalencia 0,13&#8239;%): ROC-AUC, PR-AUC, FPR y detección; la precisión y el F1 son bajos para todos por construcción (miles de FP frente a decenas de TP), por eso no son el titular.</span></div>
-    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>El cálculo (matemático).</strong> El Isolation Forest aísla cada ventana con árboles aleatorios: cuanto <strong>más corto el camino</strong> para aislarla, más rara &rarr; score de anomalía. <code>score_samples(x)</code> devuelve ese score y la decisión es <code>score &lt; &theta;</code>, con el umbral <strong>&theta; congelado como el percentil &alpha;=0,05 de validación</strong> (objetivo de 5&#8239;% de FPR fijado ANTES de mirar la prueba: &theta;&nbsp;=&nbsp;&minus;0,568892). <strong>ROC-AUC</strong> = probabilidad de ordenar un ataque por delante de un normal; <strong>PR-AUC</strong> = área precisión-recall (la honesta con desbalance). La significancia entre pares se mide con <strong>McNemar</strong> sobre sus aciertos/errores y se corrige por comparaciones múltiples con <strong>Holm</strong>.</span></div>
+    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>El cálculo (matemático).</strong> El Isolation Forest aísla cada ventana con árboles aleatorios: cuanto <strong>más corto el camino</strong> para aislarla, más rara &rarr; score de anomalía. <code>score_samples(x)</code> devuelve ese score y la decisión es <code>score &lt; &theta;</code>, con el umbral <strong>&theta; congelado como el percentil &alpha;=0,05 de validación</strong> (objetivo de 5&#8239;% de FPR fijado ANTES de mirar la prueba: &theta;&nbsp;=&nbsp;&minus;0,569397). <strong>ROC-AUC</strong> = probabilidad de ordenar un ataque por delante de un normal; <strong>PR-AUC</strong> = área precisión-recall (la honesta con desbalance). La significancia entre pares se mide con <strong>McNemar</strong> sobre sus aciertos/errores y se corrige por comparaciones múltiples con <strong>Holm</strong>.</span></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Archivos y código</strong> (auditables desde <em>Mapa &rarr; Ver archivos</em>, con pseudocódigo y diagrama de flujo): <code>entrenar_preliminar.py</code> entrena y congela el umbral; <code>promover_preliminar.py</code> arma el Pipeline + manifiesto; <code>verificar_equivalencia_umbral.py</code> comprueba hash, orden y umbral; <code>compare_frozen_models_metrics.py</code> reproduce las métricas de los 7; <code>significancia_modelos.py</code> hace McNemar + Holm. Los 7 candidatos congelados están en <code>artifacts/model/candidates/*.joblib</code>.</span></div>
     <p class="lede-small">Y la detección no la hace el modelo solo. La <strong>ablación por componentes</strong> mide qué aporta cada pieza sobre 9 episodios (3 familias con 3 repeticiones):</p>
     <div class="grid">
@@ -1115,7 +1115,7 @@ HTML = """<!doctype html>
     <p class="toolbar-hint">Celda: episodios detectados / medidos · latencia mediana [mín–máx]. CyberFlow lee eventos de EVE, no alertas de Suricata. En SPAN, Suricata es IDS: se compara detección, no bloqueo.</p>
     <p class="toolbar-hint"><span class="badge heur">ejecutada</span> Batería N=3 por familia, con el mismo PCAP y la configuración fija. <span class="badge">propuesta</span> Campaña C3: N=5 por familia, fuerza bruta, tráfico legítimo intenso y 2 h de tráfico normal con los falsos positivos de Suricata medidos.</p>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Suricata NO está apagada:</strong> corre EN VIVO en el sensor y CyberFlow <strong>consume sus eventos</strong> (http/dns/tls) para las variables de capa 7 &mdash; es una <em>fuente</em> del sistema. Lo que se midió por <strong>replay</strong> (mismo PCAP a los dos, anclado al reloj del paquete) es su <strong>detección</strong>, no sus alertas en vivo: así los dos ven exactamente la misma entrada y la comparación de detección es limpia.</span></div>
-    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Falsos positivos de Suricata: MEDIDO (14-oct).</strong> Sobre ~4 min de tráfico benigno real (112 556 paquetes, 335 flujos de clientes) reproducido con ET Open en el comparador: <strong>0 falsos positivos de firma de amenaza sobre los clientes</strong> (las 11 alertas restantes son anomalías de stream del espejo SPAN, no amenazas). Es el <strong>tradeoff precisión/recall</strong>: Suricata es muy preciso pero <strong>ciego a lo sin firma</strong> (0/3 DNS/flood/escaneo); CyberFlow detecta eso a cambio de un FPR de modelo del 4,45&#8239;% &mdash; acotado: va a LIMIT, nunca a BLOCK. Se complementan. (Detalle: <em>FPR-SURICATA-BENIGNO-2026-10-14.md</em>.)</span></div>
+    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Falsos positivos de Suricata: MEDIDO (14-oct).</strong> Sobre ~4 min de tráfico benigno real (112 556 paquetes, 335 flujos de clientes) reproducido con ET Open en el comparador: <strong>0 falsos positivos de firma de amenaza sobre los clientes</strong> (las 11 alertas restantes son anomalías de stream del espejo SPAN, no amenazas). Es el <strong>tradeoff precisión/recall</strong>: Suricata es muy preciso pero <strong>ciego a lo sin firma</strong> (0/3 DNS/flood/escaneo); CyberFlow detecta eso a cambio de un FPR de modelo del 4,53&#8239;% &mdash; acotado: va a LIMIT, nunca a BLOCK. Se complementan. (Detalle: <em>FPR-SURICATA-BENIGNO-2026-10-14.md</em>.)</span></div>
     <ul class="cmp-notas" id="cmpNotas"></ul>
   </section>
 
@@ -2897,7 +2897,7 @@ const TOPO_VISTAS = {
     nodos: [
       { id: 'm_datos',  x: 32,   y: 78, w: 196, h: 62, icono: 'disco',    titulo: 'Línea base real',       tag: 'SPAN · PCAP · eve', val: 'hecho' },
       { id: 'm_feat',   x: 262,  y: 78, w: 196, h: 62, icono: 'tabla',    titulo: '28 variables L3/L4/L7', tag: 'extractor congelado', val: 'hecho' },
-      { id: 'm_modelo', x: 492,  y: 78, w: 196, h: 62, icono: 'modelo',   titulo: 'IF + heurísticos',      tag: 'θ = −0,568892', val: 'hecho' },
+      { id: 'm_modelo', x: 492,  y: 78, w: 196, h: 62, icono: 'modelo',   titulo: 'IF + heurísticos',      tag: 'θ = −0,569397', val: 'hecho' },
       { id: 'm_eval',   x: 722,  y: 78, w: 196, h: 62, icono: 'lupa',     titulo: 'Replay vs Suricata',    tag: '9/9 vs 0/9 · N=3', val: 'parcial · falta C3' },
       { id: 'm_resp',   x: 952,  y: 78, w: 196, h: 62, icono: 'escudo',   titulo: 'PERMIT/LIMIT/BLOCK',    tag: 'feed firmado', val: 'hecho' },
       { id: 'm_desp',   x: 1182, y: 78, w: 196, h: 62, icono: 'nic',      titulo: 'Desplegado en sensor',  tag: 'systemd · replicable', val: 'hecho' },
@@ -2937,7 +2937,7 @@ const TOPO_VISTAS = {
       { id: 'c_cand',    x: 808,  y: 72,  w: 200, h: 64, icono: 'modelo',   titulo: 'Candidatos',           tag: 'IF · LOF · OCSVM · EE', val: '7 (laboratorio) · IF aquí' },
       { id: 'c_metr',    x: 1064, y: 72,  w: 200, h: 64, icono: 'lupa',     titulo: 'Comparar métricas',    tag: 'FPR · recall · F1 · AUC', val: 'criterio fijado antes' },
       { id: 'c_sel',     x: 1320, y: 72,  w: 200, h: 64, icono: 'decision', titulo: 'Selección', forma: 'rombo', rsub: 'IF → esta red' },
-      { id: 'c_cong',    x: 1320, y: 252, w: 200, h: 64, icono: 'cpu',      titulo: 'Congelar modelo', tag: 'α=0,05 · −0,568892', val: 'sha256 d27f6871…' },
+      { id: 'c_cong',    x: 1320, y: 252, w: 200, h: 64, icono: 'cpu',      titulo: 'Congelar modelo', tag: 'α=0,05 · −0,569397', val: 'sha256 df547da0…' },
       { id: 'c_desp',    x: 1064, y: 252, w: 200, h: 64, icono: 'nic',      titulo: 'Despliegue',           tag: 'promover + verificar', val: 'manifiesto + hash' },
       { id: 'c_acum',    x: 808,  y: 252, w: 200, h: 64, icono: 'fichero',  titulo: 'Acumulación',          tag: 'temporizador · v3', val: 'cada 10 min' },
       { id: 'c_vivo',    x: 552,  y: 252, w: 200, h: 64, icono: 'escudo',   titulo: 'Motor en vivo',        tag: 'PERMIT · ALERT · BLOCK', val: 'marca IPs sospechosas' },
@@ -3033,7 +3033,7 @@ const TOPO_VISTAS = {
       { id: 'descartes',   x: 40,   y: 204, w: 190, h: 48, icono: 'tijera', titulo: 'IP excluida',      tag: 'SE CUENTA · NO SE PUNTÚA', clase: 'sumidero' },
       { id: 'modelo',      x: 330,  y: 70,  w: 200, h: 58, icono: 'modelo', titulo: 'Isolation Forest', tag: 'SOLO CON PAQUETES' },
       { id: 'heuristicos', x: 330,  y: 170, w: 200, h: 58, icono: 'reglas', titulo: 'Heurísticos',      tag: 'TAMBIÉN SIN PAQUETES (L7)' },
-      { id: 'd_alert',     x: 630,  y: 70,  w: 200, h: 58, icono: 'decision', titulo: 'ALERT del modelo', tag: 's(x) < −0,568892', val: 'pasa a LIMIT' },
+      { id: 'd_alert',     x: 630,  y: 70,  w: 200, h: 58, icono: 'decision', titulo: 'ALERT del modelo', tag: 's(x) < −0,569397', val: 'pasa a LIMIT' },
       { id: 'd_reglas',    x: 630,  y: 170, w: 300, h: 58, icono: 'reglas', titulo: 'Regla disparada',  tag: 'ABUSO HTTP · DNS → LIMIT', val: 'fuerza bruta · escaneo → BLOCK' },
       { id: 'registro',    x: 1060, y: 124, w: 200, h: 50, icono: 'fichero', titulo: 'motor_decision.log', tag: 'IP · VENTANA · SCORE · REGLA', clase: 'artefacto' },
       { id: 'd_nunca',     x: 40,   y: 330, w: 200, h: 58, icono: 'tijera', titulo: 'Nunca bloquear',   tag: 'FILTRO', val: 'bastión · sensor · DNS' },
@@ -3343,12 +3343,12 @@ const TOPO_TEXTO = {
     enlace: { href: '#s-vivo', vtab: 'eve', txt: 'Ver eventos parseados en vivo' },
   },
   modelo: {
-    que: 'El modelo one-class RECALIBRADO en esta red (IsolationForest). Aprende la normalidad propia; el umbral se congela desde validación (score_samples < -0,568892).',
+    que: 'El modelo one-class RECALIBRADO en esta red (IsolationForest). Aprende la normalidad propia; el umbral se congela desde validación (score_samples < -0,569397).',
     codigo: {
       archivo: 'modelo congelado en artifacts/ · entrenamiento en scripts/modeling/',
       pseudo: [
         'score ← modelo.score_samples(features)',
-        'si score < umbral (−0,568892): ALERT → LIMIT',
+        'si score < umbral (−0,569397): ALERT → LIMIT',
         'si no: PERMIT',
       ],
       editar: 'no se edita a mano: se reentrena y una persona lo promueve (ver Aprendizaje)',
@@ -3598,7 +3598,7 @@ const TOPO_TEXTO = {
   cf_artifacts: {
     que: 'Lo que no es código: el modelo congelado (pipeline + manifiesto con su hash), la línea base y los lotes del aprendizaje. Están en el Sensor.',
     archivos: [
-      { n: 'if_recalibrado_*.joblib', host: 'sensor', d: 'modelo congelado' },
+      { n: 'if_limpio_2026_10_*.joblib', host: 'sensor', d: 'modelo congelado' },
       { n: 'manifest-*.json',         host: 'sensor', d: 'umbral + orden + hash' },
       { n: 'linea-base/*.csv',        host: 'sensor', d: 'dataset acumulado' },
     ],
@@ -3681,7 +3681,7 @@ const TOPO_TEXTO = {
     nota: 'La limpieza acota la ENTRADA (deduplicar el espejo, quitar plano de control), nunca las fórmulas. 27 de 28 variables muestran variación observable.',
   },
   m_modelo: {
-    que: 'F3 · Detector híbrido. Dos señales sobre las mismas variables. (1) Un modelo NO supervisado —Isolation Forest, recalibrado en esta red, con el umbral congelado θ=−0,568892— marca lo que se desvía de lo normal aprendido. (2) Cuatro heurísticos deterministas cubren los patrones donde el modelo mide flojo (fuerza bruta, escaneo de puertos, abuso HTTP, DNS de alta entropía). La ablación lo justifica: solo el modelo detecta 6 de 9 familias, solo los heurísticos 7 de 9, y combinados 9 de 9.',
+    que: 'F3 · Detector híbrido. Dos señales sobre las mismas variables. (1) Un modelo NO supervisado —Isolation Forest, recalibrado en esta red, con el umbral congelado θ=−0,569397— marca lo que se desvía de lo normal aprendido. (2) Cuatro heurísticos deterministas cubren los patrones donde el modelo mide flojo (fuerza bruta, escaneo de puertos, abuso HTTP, DNS de alta entropía). La ablación lo justifica: solo el modelo detecta 6 de 9 familias, solo los heurísticos 7 de 9, y combinados 9 de 9.',
     nota: 'El modelo se elige comparando 7 candidatos, no a ciegas; el umbral se calibra en validación con objetivo de falsos positivos y se CONGELA antes de mirar el test.',
   },
   m_eval: {
@@ -3749,22 +3749,22 @@ const TOPO_TEXTO = {
     flujoTit: 'Métricas del IF vigente',
     flujo: [
       {paso: 'FPR validación', fichero: 'ensayo-if-v2.json', garantia: '5,00 % (por construcción: α = 0,05)'},
-      {paso: 'FPR prueba', fichero: 'ensayo-if-v2.json', garantia: '4,45 % sobre 65 421 ventanas normales'},
+      {paso: 'FPR prueba', fichero: 'ensayo-if-v2.json', garantia: '4,53 % sobre 65 421 ventanas normales'},
       {paso: 'Detección Kali', fichero: 'nota M', garantia: '54/84 = 64,3 % global; HTTP 35/43'},
     ],
-    nota: 'El criterio se fija ANTES de mirar la prueba: umbral desde validación con objetivo de FPR 5 %. El 4,45 % es del modelo sobre tráfico normal, no del sistema completo con heurísticos.',
+    nota: 'El criterio se fija ANTES de mirar la prueba: umbral desde validación con objetivo de FPR 5 %. El 4,53 % es del modelo sobre tráfico normal, no del sistema completo con heurísticos.',
   },
   c_sel: {
-    que: 'Por qué ganó: el OCSVM traído del laboratorio, con su umbral, marcaba como anómalo casi todo el tráfico normal de esta red —inservible aquí—. El IF recalibrado en ESTA red cumple el objetivo de falsos positivos en prueba (4,45 % sobre 65 421 ventanas normales) y detecta 54 de 84 ventanas de ataque (64,3 %). Se elige el que funciona en la red donde opera, no el que ganó en otra.',
+    que: 'Por qué ganó: el OCSVM traído del laboratorio, con su umbral, marcaba como anómalo casi todo el tráfico normal de esta red —inservible aquí—. El IF recalibrado en ESTA red cumple el objetivo de falsos positivos en prueba (4,53 % sobre 65 421 ventanas normales) y detecta 54 de 84 ventanas de ataque (64,3 %). Se elige el que funciona en la red donde opera, no el que ganó en otra.',
     nota: 'La detección no la hace el modelo solo: la ablación da modelo 6/9, heurísticos 7/9 y combinado 9/9. El modelo es una de dos señales.',
     enlace: { href: '#s-modelo', txt: 'Ver «Pruebas previas» y la ablación' },
   },
   c_cong: {
-    que: 'Congelar modelo y umbral: el escalador y el IF se empaquetan en un Pipeline y el umbral se fija como el percentil α = 0,05 de validación: score_samples < −0,568892 (decision_function < −0,068892). Desde aquí nada se reajusta: la prueba y la Kali se puntúan con este mismo modelo.',
+    que: 'Congelar modelo y umbral: el escalador y el IF se empaquetan en un Pipeline y el umbral se fija como el percentil α = 0,05 de validación: score_samples < −0,569397 (decision_function < −0,069397). Desde aquí nada se reajusta: la prueba y la Kali se puntúan con este mismo modelo.',
     flujoTit: 'Qué queda fijo',
     flujo: [
-      {paso: 'Pipeline', fichero: 'if_recalibrado_desplegable.joblib', garantia: 'sha256 d27f6871…125a'},
-      {paso: 'Umbral + orden de variables', fichero: 'manifest-if-recalibrado.json', garantia: 'el motor rechaza un orden distinto al del extractor'},
+      {paso: 'Pipeline', fichero: 'if_limpio_2026_10_desplegable.joblib', garantia: 'sha256 df547da0…fd60'},
+      {paso: 'Umbral + orden de variables', fichero: 'manifest-if-limpio-2026-10.json', garantia: 'el motor rechaza un orden distinto al del extractor'},
       {paso: 'Equivalencia', fichero: 'verificar_equivalencia_umbral.py', garantia: '0 decisiones distintas sobre filas reales'},
     ],
     nota: 'La promoción es reproducible: promover_preliminar.py regenera el modelo desde su paquete con scores idénticos (no byte a byte).',
