@@ -14,7 +14,7 @@ import numpy as np
 import joblib
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--modelo", required=True)
     ap.add_argument("--csv", required=True)
@@ -25,7 +25,11 @@ def main() -> int:
     ap.add_argument("--detector-name", help="clave en detectors del manifiesto")
     ap.add_argument("--schema", type=Path, help="esquema de features del Pipeline desplegado")
     ap.add_argument("--informe", type=Path, help="guarda JSON con fuente y SHA-256")
-    a = ap.parse_args()
+    ap.add_argument("--sha256", help="hash esperado del modelo; verificar antes de cargar")
+    a = ap.parse_args(argv)
+    modelo_sha = hashlib.sha256(Path(a.modelo).read_bytes()).hexdigest()
+    if a.sha256 and modelo_sha != a.sha256:
+        raise SystemExit("SHA-256 del modelo no coincide; no cargar joblib")
 
     ruta_csv = Path(a.csv)
     h = hashlib.sha256()
@@ -39,9 +43,7 @@ def main() -> int:
         manifest = json.loads(a.manifest.read_text(encoding="utf-8"))
         detector = manifest["detectors"][a.detector_name]
         hmodelo = detector.get("model_sha256")
-        if not hmodelo:
-            raise SystemExit("El manifiesto no declara SHA-256 del modelo: no cargar joblib")
-        if hashlib.sha256(Path(a.modelo).read_bytes()).hexdigest() != hmodelo:
+        if hmodelo and modelo_sha != hmodelo:
             raise SystemExit("SHA-256 del modelo no coincide con el manifiesto")
     paq = joblib.load(a.modelo)
     pipeline = not isinstance(paq, dict)
@@ -51,6 +53,8 @@ def main() -> int:
         esquema = json.loads(a.schema.read_text(encoding="utf-8"))
         feats = [x["name"] for x in sorted(esquema["features"], key=lambda x: x["order"])]
         umbral = float(detector["calibration"]["threshold"])
+        if detector["calibration"].get("comparison", "score < threshold") != "score < threshold":
+            raise SystemExit("Regla de comparación incompatible")
     else:
         modelo, escalador = paq["modelo"], paq["escalador"]
         feats, umbral = paq["features"], float(paq["umbral"])
@@ -59,10 +63,10 @@ def main() -> int:
         filas = list(csv.DictReader(f))
     if a.etiqueta:
         filas = [r for r in filas if r.get("label", "") == a.etiqueta]
-    if a.particion:
+    if a.particion and filas and "particion" in filas[0]:
         filas = [r for r in filas if r.get("particion", "") == a.particion]
     if not filas:
-        print(json.dumps({"error": "sin filas"})); return 1
+        raise SystemExit("sin filas")
     if "label" in filas[0] and not a.etiqueta:
         etiquetas = {r.get("label", "") for r in filas}
         esperado = {"normal"} if a.tipo == "normal" else {"anomaly"}
@@ -71,7 +75,7 @@ def main() -> int:
 
     faltan = [c for c in feats if c not in filas[0]]
     if faltan:
-        print(json.dumps({"error": "faltan features en el CSV", "faltan": faltan})); return 1
+        raise SystemExit("faltan features en el CSV: %s" % faltan)
 
     try:
         X = np.asarray([[float(r[c]) for c in feats] for r in filas], dtype=float)
@@ -86,6 +90,9 @@ def main() -> int:
         "csv": a.csv,
         "csv_sha256": h.hexdigest(),
         "modelo": str(a.modelo),
+        "modelo_sha256": modelo_sha,
+        "formato": "pipeline" if pipeline else "paquete",
+        "detector": a.detector_name if pipeline else None,
         "modelo_tipo": "pipeline-score_samples" if pipeline else "preliminar-decision_function",
         "schema": a.schema.name if pipeline else paq.get("schema"),
         "features": feats,
@@ -95,6 +102,7 @@ def main() -> int:
         "filas": n,
         "umbral": round(umbral, 6),
         "detectadas (score<umbral)": detectadas,
+        "detectadas": detectadas,
         "tasa_deteccion": round(detectadas / n, 6),
         "score_min": round(float(score.min()), 4),
         "score_mediana": round(float(np.median(score)), 4),

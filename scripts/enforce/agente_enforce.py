@@ -78,20 +78,16 @@ def vigentes(feed_obj: dict, ahora: float, nunca: set[str]) -> dict[str, dict]:
     return out
 
 
-def plan_nftables(vig: dict[str, dict], ahora: float) -> list[list[str]]:
-    """Comandos nft para dejar los sets igual al feed (idempotente).
-
-    - `flush` de cada set y re-añadir los vigentes con su `timeout` restante.
-      Flush+repoblar es la forma idempotente más simple: converge exactamente al
-      feed en cada pasada (add nuevos, quita los que ya no están).
-    """
+def plan_nftables(vig: dict[str, dict], ahora: float,
+                  actuales: dict[str, dict[str, float]] | None = None) -> list[list[str]]:
+    """Añade acciones sin acortar su caducidad nativa ni vaciar los sets."""
     blocks = {ip: v for ip, v in vig.items() if v["accion"] == "BLOCK"}
     limits = {ip: v for ip, v in vig.items() if v["accion"] == "LIMIT"}
+    actuales = actuales or {SET_BLOCK: {}, SET_LIMIT: {}}
     # Tabla PROPIA y AISLADA (`inet cyberflow`): coexiste con el firewall del host
     # sin tocarlo. La cadena tiene `policy accept` -> solo cae lo que esté en los
     # sets; jamás bloquea nada más. Los sets llevan `timeout` nativo (caducidad).
-    # Las reglas se recrean cada pasada (flush chain) para no duplicarse; los sets
-    # se repueblan para converger exactamente al feed (idempotente).
+    # Las reglas se recrean; los sets conservan su timeout firmado.
     cmds: list[list[str]] = [
         ["nft", "add", "table", "inet", "cyberflow"],
         ["nft", "add", "set", "inet", "cyberflow", SET_BLOCK,
@@ -107,18 +103,56 @@ def plan_nftables(vig: dict[str, dict], ahora: float) -> list[list[str]]:
          "ip", "saddr", "@" + SET_BLOCK, "drop"],
         ["nft", "add", "rule", "inet", "cyberflow", "entrada",
          "ip", "saddr", "@" + SET_LIMIT, "limit", "rate", "over", LIMIT_RATE, "drop"],
-        ["nft", "flush", "set", "inet", "cyberflow", SET_BLOCK],
-        ["nft", "flush", "set", "inet", "cyberflow", SET_LIMIT],
     ]
     for ip, v in sorted(blocks.items()):
-        resto = max(1, int(v["hasta"] - ahora))
-        cmds.append(["nft", "add", "element", "inet", "cyberflow", SET_BLOCK,
-                     "{", "%s timeout %ds" % (ip, resto), "}"])
+        _plan_elemento(cmds, ip, v, ahora, SET_BLOCK, SET_LIMIT, actuales)
     for ip, v in sorted(limits.items()):
-        resto = max(1, int(v["hasta"] - ahora))
-        cmds.append(["nft", "add", "element", "inet", "cyberflow", SET_LIMIT,
-                     "{", "%s timeout %ds" % (ip, resto), "}"])
+        _plan_elemento(cmds, ip, v, ahora, SET_LIMIT, SET_BLOCK, actuales)
     return cmds
+
+
+def _plan_elemento(cmds, ip, valor, ahora, destino, opuesto, actuales):
+    """Amplía una sanción sin acortarla ni degradar un BLOCK vigente."""
+    if destino == SET_LIMIT and ip in actuales.get(SET_BLOCK, {}):
+        return
+    if ip in actuales.get(opuesto, {}):
+        cmds.append(["nft", "delete", "element", "inet", "cyberflow", opuesto,
+                     "{", ip, "}"])
+    hasta_actual = actuales.get(destino, {}).get(ip)
+    if hasta_actual is not None and valor["hasta"] <= hasta_actual + 1:
+        return
+    if hasta_actual is not None:
+        cmds.append(["nft", "delete", "element", "inet", "cyberflow", destino,
+                     "{", ip, "}"])
+    resto = max(1, int(valor["hasta"] - ahora))
+    cmds.append(["nft", "add", "element", "inet", "cyberflow", destino,
+                 "{", "%s timeout %ds" % (ip, resto), "}"])
+
+
+def _elementos_actuales(nombre: str, ahora: float, usar_sudo: bool) -> dict[str, float]:
+    orden = (["sudo", "-n"] if usar_sudo else []) + [
+        "nft", "-j", "list", "set", "inet", "cyberflow", nombre]
+    r = subprocess.run(orden, check=False, capture_output=True, text=True)
+    if r.returncode != 0:
+        return {}
+    try:
+        doc = json.loads(r.stdout)
+        sets = [x["set"] for x in doc.get("nftables", []) if "set" in x]
+        elementos = sets[0].get("elem", []) if sets else []
+        return {str(e["elem"]["val"]): ahora + float(e["elem"]["expires"])
+                for e in elementos if "elem" in e and "expires" in e["elem"]}
+    except (KeyError, TypeError, ValueError):
+        return {}
+
+
+def _lote_nft(cmds: list[list[str]]) -> str:
+    return "\n".join(" ".join(c[1:]) for c in cmds) + "\n"
+
+
+def _ejecutar_lote(cmds, usar_sudo):
+    orden = (["sudo", "-n"] if usar_sudo else []) + ["nft", "-f", "-"]
+    return subprocess.run(orden, input=_lote_nft(cmds), check=False,
+                          capture_output=True, text=True)
 
 
 # --- I/O (fetch + aplicar) --------------------------------------------------
@@ -156,17 +190,22 @@ def main() -> int:
 
     ahora = time.time()
     vig = vigentes(feed_obj, ahora, NUNCA_BLOQUEAR)
-    cmds = plan_nftables(vig, ahora)
+    actuales = {nombre: _elementos_actuales(nombre, ahora, a.sudo)
+                for nombre in (SET_BLOCK, SET_LIMIT)}
+    cmds = plan_nftables(vig, ahora, actuales)
 
     errores: list[str] = []
     if a.aplicar:
-        for c in cmds:
-            orden = (["sudo", "-n", *c] if a.sudo else c)
-            r = subprocess.run(orden, check=False, capture_output=True, text=True)
-            # Un nft que falla y NO se reporta deja el host sin proteger creyendo
-            # que la aplico: por eso se cuenta y se guarda el primer motivo.
-            if r.returncode != 0:
-                errores.append((r.stderr or r.stdout or "fallo nft").strip()[:160])
+        r = _ejecutar_lote(cmds, a.sudo)
+        if r.returncode != 0:
+            # Releer si una entrada caducó entre el snapshot y el lote atómico.
+            ahora = time.time()
+            actuales = {nombre: _elementos_actuales(nombre, ahora, a.sudo)
+                        for nombre in (SET_BLOCK, SET_LIMIT)}
+            cmds = plan_nftables(vig, ahora, actuales)
+            r = _ejecutar_lote(cmds, a.sudo)
+        if r.returncode != 0:
+            errores.append((r.stderr or r.stdout or "fallo nft").strip()[:160])
     salida = {
         "estado": "aplicado" if a.aplicar else "dry-run",
         "block": sorted(ip for ip, v in vig.items() if v["accion"] == "BLOCK"),

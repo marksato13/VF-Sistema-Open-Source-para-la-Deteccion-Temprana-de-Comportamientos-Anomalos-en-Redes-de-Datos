@@ -22,10 +22,13 @@ TIMEOUT_LIMIT_S = 300
 ESCALERA_BLOCK_S = {1: 300, 2: 1800, 3: 3600}   # 3 = tope; 3+ usa 3600
 REVISION_HUMANA_DESDE = 3
 VENTANA_DECAIMIENTO_S = 24 * 3600
+SEPARACION_EPISODIO_S = 120
 
 
 def procesar(estado: dict, ip: str, accion: str, ahora: float,
-             ventana_s: int = VENTANA_DECAIMIENTO_S) -> dict:
+             ventana_s: int = VENTANA_DECAIMIENTO_S,
+             evento_ts: float | None = None,
+             separacion_episodio_s: int = SEPARACION_EPISODIO_S) -> dict:
     """Actualiza `estado[ip]` y devuelve el veredicto con su caducidad.
 
     accion: "LIMIT" o "BLOCK". Devuelve
@@ -36,10 +39,14 @@ def procesar(estado: dict, ip: str, accion: str, ahora: float,
     if st and (ahora - st.get("ultimo_visto", 0)) > ventana_s:
         st = None
 
-    bloqueos = st["bloqueos"] if st else 0
+    bloqueos = min(int(st.get("bloqueos", 0)), 3) if st else 0
 
     if accion == "BLOCK":
-        bloqueos += 1
+        ultimo_evento = float(st.get("ultimo_evento_block", 0)) if st else 0
+        mismo_episodio = (evento_ts is not None and ultimo_evento > 0
+                          and evento_ts <= ultimo_evento + separacion_episodio_s)
+        if not mismo_episodio:
+            bloqueos = min(bloqueos + 1, 3)
         nivel = min(bloqueos, 3)
         timeout = ESCALERA_BLOCK_S[nivel]
         revisar = bloqueos >= REVISION_HUMANA_DESDE
@@ -52,7 +59,12 @@ def procesar(estado: dict, ip: str, accion: str, ahora: float,
     else:
         raise ValueError("accion invalida: %r (usa LIMIT o BLOCK)" % accion)
 
-    estado[ip] = {"bloqueos": bloqueos, "ultimo_visto": ahora}
+    nuevo_estado = {"bloqueos": bloqueos, "ultimo_visto": ahora}
+    if st and "ultimo_evento_block" in st:
+        nuevo_estado["ultimo_evento_block"] = st["ultimo_evento_block"]
+    if accion == "BLOCK" and evento_ts is not None:
+        nuevo_estado["ultimo_evento_block"] = max(ultimo_evento, evento_ts)
+    estado[ip] = nuevo_estado
     return {"accion": accion, "timeout_s": timeout, "nivel": bloqueos,
             "revisar_humano": revisar}
 

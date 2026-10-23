@@ -1,11 +1,10 @@
 [Unit]
-Description=CyberFlow - publicar el feed cada minuto
+Description=CyberFlow - publicar el feed cada 10 segundos
 
 [Timer]
-# OnCalendar (no OnUnitActiveSec): este ultimo se quedaba con NextElapse=infinity
-# en este despliegue. 'minutely' = cada minuto en punto.
-OnCalendar=minutely
-AccuracySec=5s
+# Primer paso de la cadena: publicar :00, relay :03, agente :06.
+OnCalendar=*-*-* *:*:00/10
+AccuracySec=1s
 Persistent=false
 
 [Install]

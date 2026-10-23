@@ -84,7 +84,8 @@ class PanelConLogin(unittest.TestCase):
         cls.proc = subprocess.Popen(
             [sys.executable, str(REPO / "scripts/engine/dashboard.py"),
              "--log-path", str(d / "no-existe.log"),
-             "--manifest-path", str(REPO / "artifacts/model/manifest.json"),
+              "--manifest-path", str(REPO / "artifacts/model/manifest.json"),
+              "--detector-name", "ocsvm_scaled",
              "--schema", str(REPO / "configs/features/multilayer-v2.json"),
              "--schema-extra", str(REPO / "configs/features/multilayer-v3.json"),
              "--descripciones", str(REPO / "configs/features/descripciones.json"),

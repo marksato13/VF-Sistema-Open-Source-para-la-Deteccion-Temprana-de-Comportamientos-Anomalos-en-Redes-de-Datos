@@ -1,9 +1,9 @@
 [Unit]
-Description=CyberFlow - agente de enforcement cada minuto
+Description=CyberFlow - agente de enforcement cada 10 segundos
 
 [Timer]
-OnCalendar=minutely
-AccuracySec=5s
+OnCalendar=*-*-* *:*:06/10
+AccuracySec=1s
 Persistent=false
 
 [Install]
