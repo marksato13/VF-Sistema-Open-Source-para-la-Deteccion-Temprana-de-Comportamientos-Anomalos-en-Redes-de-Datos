@@ -1557,6 +1557,7 @@ const DETECTOR_LABEL = {
   ocsvm_scaled: 'modelo (OCSVM)',
   if_recalibrado_2026_09: 'modelo recalibrado (IsolationForest)',
   if_recalibrado: 'modelo recalibrado (IsolationForest)',
+  if_limpio_2026_10: 'modelo limpio (IsolationForest)',
   auth_failure_heuristic: 'fuerza bruta (heurístico)',
   brute_force: 'fuerza bruta (heurístico)',
   port_scan: 'escaneo de puertos (heurístico)',
