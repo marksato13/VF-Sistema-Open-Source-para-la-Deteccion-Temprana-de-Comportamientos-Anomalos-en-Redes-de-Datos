@@ -53,6 +53,17 @@ excluir_protocolos = [112, 240]
 excluir = [
     "10.10.60.11/32",   # el propio sensor: su SSH cruza el troncal espejado
     "10.10.10.30/32",   # el bastion, el otro extremo de esa sesion
+    # 24-oct-2026: equipos del perfil de egreso y los dos pfSense. Se capturan
+    # pero no se puntuan ni entran al dataset (misma lista en motor y acumulador).
+    "10.10.60.2/32",   # pfSense-A: el router no es un usuario; ademas nunca debe recibir LIMIT/BLOCK
+    "10.10.60.3/32",   # pfSense-B: idem (112 ALERT y un LIMIT en 48 h antes de excluirlo)
+    "10.10.60.10/32",   # Wazuh: infraestructura del perfil de egreso, fuera del diseno experimental
+    "10.10.60.20/32",   # AAA-01 (perfil de egreso)
+    "10.10.60.21/32",   # AAA-02 (perfil de egreso)
+    "10.10.60.30/32",   # VM-NETOPS (perfil de egreso, futura)
+    "10.10.60.40/32",   # NetBox (perfil de egreso)
+    "10.10.60.41/32",   # GLPI (perfil de egreso)
+    "10.10.60.50/32",   # IdP (perfil de egreso)
 ]
 
 [motor]
