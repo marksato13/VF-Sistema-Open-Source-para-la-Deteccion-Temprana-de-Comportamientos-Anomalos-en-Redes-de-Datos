@@ -67,7 +67,7 @@ excluir = [
 ]
 
 [motor]
-detector = "if_recalibrado_2026_09"
+detector = "if_limpio_2026_10"
 # "observacion" = puntua y registra, no toca nftables.
 # "bloqueo"     = anade --enforce. Solo tiene sentido si el sensor esta EN EL
 #                 CAMINO del trafico. Con un espejo SPAN no lo esta.
@@ -96,8 +96,8 @@ usuario = "m4rk"
 raiz = "/home/m4rk/cyberflow"
 entorno = ".venv"
 eve = "/var/log/suricata/eve.json"
-modelo = "artifacts/preliminar/if_recalibrado_desplegable.joblib"
-manifiesto = "artifacts/preliminar/manifest-if-recalibrado.json"
+modelo = "artifacts/preliminar/limpio-2026-10/if_limpio_2026_10_desplegable.joblib"
+manifiesto = "artifacts/preliminar/limpio-2026-10/manifest-if-limpio-2026-10.json"
 esquema = "configs/features/multilayer-v2.json"
 registro = "logs/motor_decision.log"
 
@@ -114,3 +114,15 @@ puerto = 8788
 # Si llega por Tailscale a traves de un enrutador de subred, el sensor ve la
 # IP de ESE enrutador, no la del portatil: Tailscale traduce el origen.
 permitir = ["10.10.10.30/32"]
+
+[reentrenamiento]
+# Reentrenamiento SUPERVISADO (docs/APRENDIZAJE.md). Prepara y evalua candidatos
+# cada noche; el modelo en uso solo cambia con "promover", a mano.
+activo = true
+# Particion de la nota L, reconstruida el 2026-10-11 y verificada: mismo sha256
+# (bdf6f641...) que anoto ensayo-if-v2.json, el paquete del modelo desplegado.
+base = "artifacts/aprendizaje/base/particionado-nota-L.csv"
+# Sin ventanas de ataque etiquetadas en esta red todavia: el veredicto quedara en
+# EVALUACION_INCOMPLETA hasta que se anadan (p. ej. las de la Kali, nota M).
+ataques = "artifacts/aprendizaje/ataques/ataques-nota-M.csv"
+excluir_ventanas = ["10.10.20.30@2026-10-15T10:00:00+00:00/2026-10-16T02:00:00+00:00", "10.10.20.30@2026-10-15T02:55:00+00:00/2026-10-15T05:30:00+00:00", "10.10.20.30@2026-09-27T21:35:00+00:00/2026-09-27T22:05:00+00:00", "10.10.20.30@2026-10-12T12:46:00+00:00/2026-10-12T12:49:00+00:00", "10.10.20.30@2026-10-13T22:18:00+00:00/2026-10-13T22:40:00+00:00", "10.10.20.30@2026-10-13T22:55:00+00:00/2026-10-13T23:30:00+00:00"]  # rafaga de la Kali dentro de la linea base (nota S)
