@@ -878,6 +878,66 @@ HTML = """<!doctype html>
   .ws-detalle .kv { padding-left: 1.2rem; color: var(--text-dim); white-space: pre-wrap; word-break: break-all; }
   .ws-detalle .kv b { color: var(--text); font-weight: 500; }
   .ws-detalle pre { margin: 0.3rem 0 0 1.2rem; white-space: pre-wrap; word-break: break-all; color: var(--text-dim); }
+
+  /* Revision GUI 28-oct: tareas primero, menos ambiguedad, evidencia enlazada. */
+  /* Con margin:auto un item de grid no se estira: tomaba el ancho de su tabla
+     mas ancha y la cabecera se salia de la pantalla. Ancho fijo a la columna. */
+  .shell > .wrap { width: 100%; box-sizing: border-box; }
+  @media (min-width: 1500px) { .wrap { max-width: 1320px; } }
+  /* El titulo de la seccion ya esta en la cabecera: no repetirlo debajo. */
+  .wrap > section > .sec-head, .wrap > section > .sec-head-row > .sec-head { display: none; }
+  .wrap > section > .sec-head-row { justify-content: flex-end; }
+  h1 small { font-family: var(--sans); font-size: 0.86rem; text-transform: none; letter-spacing: 0; }
+  .stamp { text-align: right; }
+  .stamp-tz { display: block; font-size: 0.74rem; }
+  .nav-grupo[hidden], #nav a[hidden] { display: none; }
+  .kpi[data-ir] { cursor: pointer; }
+  .kpi[data-ir]:hover, .kpi[data-ir]:focus-visible { border-color: var(--accent); outline: none; }
+  .kpi .k-ir { font-size: 0.76rem; color: var(--accent); margin-top: 0.35rem; }
+  .al-tag.modelo { background: color-mix(in srgb, var(--capa-b) 24%, transparent); color: #9cc3f7; }
+  .al-tag.regla { background: var(--surface-2); color: var(--text); }
+  .filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; margin: 0.7rem 0 0.5rem; }
+  .filtros label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--text-dim); }
+  .filtros input[type="datetime-local"] { background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    border-radius: 7px; padding: 0.3rem 0.45rem; font: 0.8rem var(--sans); color-scheme: dark; }
+  .btn-sec { background: none; border: 1px solid var(--border); color: var(--accent); border-radius: 7px;
+    padding: 0.28rem 0.6rem; font: 0.78rem var(--sans); cursor: pointer; white-space: nowrap; }
+  .btn-sec:hover, .btn-sec:focus-visible { border-color: var(--accent); }
+  .btn-sec.neutro { color: var(--text-dim); }
+  .estado-vacio { padding: 0.8rem 0; color: var(--text-dim); }
+  .estado-vacio .btn-sec { margin-left: 0.5rem; }
+  .al-ver { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; }
+  .dec-resumen { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; font-size: 0.84rem; color: var(--text-dim); margin: 0.3rem 0 0.5rem; }
+  .dec-resumen b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .periodo-info { font-size: 0.8rem; color: var(--text-dim); margin: 0 0 0.4rem; }
+  .periodo-info.activo { color: var(--text); border-left: 3px solid var(--accent); padding-left: 0.55rem; }
+  td.ip, td.num { white-space: nowrap; }
+  .why .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  tr.dec-fila.abierta > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  .det4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.9rem 1.4rem; }
+  .det4 h4 { margin: 0 0 0.35rem; font: 600 0.72rem var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
+  .det4 p { margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--text); }
+  .det4 dl { grid-template-columns: 1fr; }
+  .resp-fuente { font-size: 0.82rem; color: var(--text-dim); border-left: 3px solid var(--border); padding: 0.3rem 0.6rem; margin: 0.4rem 0 0.9rem; }
+  .est { display: inline-block; font: 600 0.68rem var(--sans); padding: 1px 7px; border-radius: 999px; margin: 1px 4px 1px 0;
+    border: 1px solid var(--border); color: var(--text-dim); white-space: nowrap; }
+  .est.si { color: var(--text); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+  .est.no { border-style: dashed; }
+  .alc-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.8rem; margin: 0.6rem 0 1rem; }
+  .alc-3 > div { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 0.95rem; }
+  .alc-3 h3 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+  .alc-3 ul { margin: 0; padding-left: 1.1rem; font-size: 0.86rem; line-height: 1.55; color: var(--text-dim); }
+  .alc-3 b { color: var(--text); font-weight: 600; }
+  details.diag, details.plegable { margin-top: 1rem; border: 1px solid var(--border); border-radius: 12px; padding: 0.55rem 0.9rem; background: var(--surface); }
+  details.diag > summary, details.plegable > summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+  details.diag[open] > summary, details.plegable[open] > summary { margin-bottom: 0.7rem; }
+  .vig-hist { font-size: 0.82rem; color: var(--text-dim); margin: 0.2rem 0 0.8rem; }
+  .vig-hist b { color: var(--text); }
+  .desp-sum { list-style: none; cursor: pointer; margin-bottom: 0.35rem; }
+  .desp-sum::-webkit-details-marker { display: none; }
+  .desp-comp .c-n .hace { display: block; font-size: 0.72rem; }
+  .desp-comp .c-u { text-align: right; }
+  .dec-chart[hidden] { display: none; }
 </style>
 
 <div class="shell">
@@ -885,18 +945,18 @@ HTML = """<!doctype html>
   <div class="brand">CyberFlow<small>Motor en vivo</small></div>
   <div class="side-state" id="sideState"><span class="dot"></span><span id="sideStateText">conectando&hellip;</span></div>
   <nav id="nav">
-    <div class="nav-grupo">Vigilancia</div>
-    <a href="#s-salud" data-sec="s-salud"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>Salud</a>
+    <div class="nav-grupo">Operación</div>
+    <a href="#s-salud" data-sec="s-salud"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>Resumen</a>
     <a href="#s-actividad" data-sec="s-actividad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg>Actividad</a>
     <a href="#s-alertas" data-sec="s-alertas"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>Alertas<span class="pill" id="navAlertPill" hidden></span></a>
     <a href="#s-decisiones" data-sec="s-decisiones"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>Decisiones</a>
-    <a href="#s-bloqueos" data-sec="s-bloqueos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Bloqueos</a>
+    <a href="#s-bloqueos" data-sec="s-bloqueos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Respuestas</a>
     <a href="#s-scores" data-sec="s-scores"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg>Scores</a>
     <!--ADMIN-->
     <div class="nav-grupo">Sistema</div>
-    <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Mapa del sistema</a>
     <a href="#s-despliegue" data-sec="s-despliegue"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="3" y="17" width="6" height="5" rx="1"/><rect x="15" y="17" width="6" height="5" rx="1"/><path d="M12 7v4M6 17v-3h12v3"/></svg>Despliegue</a>
     <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
+    <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Mapa del sistema</a>
     <div class="nav-grupo">Datos</div>
     <a href="#s-variables" data-sec="s-variables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg>Variables</a>
     <a href="#s-vivo" data-sec="s-vivo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 2-6 2 3h6"/></svg>Datos en vivo</a>
@@ -907,17 +967,19 @@ HTML = """<!doctype html>
     <a href="#s-comparacion" data-sec="s-comparacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg>Suricata</a>
     <a href="#s-simulacion" data-sec="s-simulacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg>Simulación</a>
     <!--/ADMIN-->
+    <div class="nav-grupo">Ayuda</div>
+    <a href="#" id="navGuia" role="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.2a2.6 2.6 0 1 1 3.7 2.4c-.8.4-1.1 1-1.1 1.8"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>Guía operativa</a>
   </nav>
   <div class="foot">SOLO LECTURA</div>
 </aside>
 
 <div class="wrap">
   <header>
-    <h1>CyberFlow<small>Motor en vivo &middot; solo lectura</small></h1>
-    <span class="stamp" id="stamp"></span>
+    <h1><span id="hTitulo">CyberFlow</span><small id="hSub">Motor en vivo</small></h1>
+    <span class="stamp"><span id="stamp"></span><span class="stamp-tz" id="stampTz"></span></span>
     <div class="sesion">
       <!--ADMIN--><button id="modoBtn" class="btn-modo" type="button"
-        title="Cambia entre la vista operativa y la de desarrollo. Las dos son de solo lectura."></button><!--/ADMIN-->
+        title="Operación: tareas del día a día (resumen, alertas, decisiones, respuestas). Desarrollo: añade mapa, datos, modelo y evaluación. Ninguna de las dos cambia nada en el sistema."></button><!--/ADMIN-->
       <button id="avisosBtn" class="btn-avisos" type="button" data-on="1"
         title="Alertas flotantes cuando una IP recibe LIMIT o BLOCK">Avisos: sí</button>
       <span class="quien" id="quien"></span>
@@ -932,11 +994,14 @@ HTML = """<!doctype html>
        daba sensacion de que "todo mostraba lo mismo". El estado sigue siempre a
        la vista en la barra lateral (punto + texto + pastilla de alertas). -->
   <section id="s-salud">
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><circle cx="7" cy="7" r="0.9" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg><h2>Salud del sistema</h2></div>
-    <div class="kpi-row" id="kpis"></div>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><circle cx="7" cy="7" r="0.9" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg><h2>Resumen</h2></div>
     <div class="healthbar" id="healthbar"></div>
+    <div class="kpi-row" id="kpis"></div>
     <div class="pulso" id="pulso" aria-label="Pulso de la ingesta"></div>
-    <div class="grid" id="health"></div>
+    <details class="diag">
+      <summary>Diagnóstico técnico <span class="th-sub">servicios, captura y descartes</span></summary>
+      <div class="grid" id="health"></div>
+    </details>
   </section>
 
   <!--ADMIN-->
@@ -986,9 +1051,16 @@ HTML = """<!doctype html>
 
   <section id="s-despliegue">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="2.5" y="17" width="6" height="5" rx="1"/><rect x="15.5" y="17" width="6" height="5" rx="1"/><path d="M12 7v4M5.5 17v-3h13v3"/></svg><h2>Despliegue y agentes</h2></div>
-    <p class="lede-small">Dónde está instalado cada componente y cómo viaja el feed firmado del sensor a los hosts protegidos. El sensor no tiene credenciales de los demás hosts: su estado sale de los servicios reales; el resto es el despliegue declarado.</p>
+    <p class="lede-small">Dónde está instalado cada componente y cómo viaja el feed firmado del sensor a los hosts protegidos. Cada línea dice de dónde sale su estado: <span class="est si">comprobado desde el sensor</span> (servicio consultado ahora) o <span class="est no">configuración declarada</span> (inventario versionado, verificado el 12-oct-2026; el panel no tiene credenciales de los demás hosts).</p>
     <div class="desp" id="despliegue"></div>
     <p class="toolbar-hint" id="desplieguePie"></p>
+    <details class="plegable">
+      <summary>Instalación, diagnóstico y mantenimiento</summary>
+      <p class="lede-small"><b>Requisitos del sensor</b>: Linux con systemd, interfaz conectada a un puerto espejo (SPAN), Suricata, Python con el entorno del proyecto y espacio para el anillo de PCAP. <b>Por host protegido</b>: nftables, el agente <code>agente_enforce.py</code> con su temporizador y la clave pública del sensor; el agente eleva solo <code>nft</code> con <code>sudo -n</code>.</p>
+      <p class="lede-small"><b>Comprobación tras instalar</b>: servicios activos en Resumen · decisiones nuevas en Decisiones · el feed aparece como publicado en Respuestas · en el host, el registro del agente muestra la firma verificada.</p>
+      <p class="lede-small"><b>Diagnóstico</b>: <code>journalctl -u ppi-motor -u ppi-motor-capture -n 100</code> en el sensor; <code>journalctl -u ppi-enforce-agent -n 50</code> en el host. <b>Recuperación</b>: si el agente rechaza la firma no aplica nada; las reglas caducan solas.</p>
+      <p class="lede-small"><b>Mantenimiento</b>: a diario, revisar Resumen (servicios y drops) y Respuestas; cada semana, el espacio del anillo, la deriva en Aprendizaje y las entidades con más respuestas. Guía completa: <code>docs/INSTALACION.md</code>.</p>
+    </details>
   </section>
 
   <section id="s-variables">
@@ -1000,7 +1072,7 @@ HTML = """<!doctype html>
 
     <div class="umb-box">
       <h3 class="umb-h">Umbrales y régimen de decisión</h3>
-      <p class="lede-small">Las 28 variables entran <strong>juntas</strong> a un modelo multivariante (IsolationForest): una ventana es anómala si su <strong>score combinado &lt; &minus;0,5689</strong> &mdash; un único umbral, calibrado estadísticamente (percentil &alpha;&nbsp;=&nbsp;0,05 sobre el conjunto de oro). <strong>No hay un corte por variable</strong>: el valor de una sola solo cobra sentido combinado con el resto. Solo una parte de las variables lleva, además, un <strong>umbral heurístico explícito</strong> &mdash; criterio razonado y versionado, no calibrado como el del modelo:</p>
+      <p class="lede-small">Las 28 variables entran <strong>juntas</strong> a un modelo multivariante (IsolationForest): una ventana es anómala si su <strong>score combinado &lt; &minus;0,569397</strong> (umbral vigente, <code>if_limpio_2026_10</code>) &mdash; un único umbral, calibrado estadísticamente (percentil &alpha;&nbsp;=&nbsp;0,05 sobre el conjunto de oro). <strong>No hay un corte por variable</strong>: el valor de una sola solo cobra sentido combinado con el resto. Solo una parte de las variables lleva, además, un <strong>umbral heurístico explícito</strong> &mdash; criterio razonado y versionado, no calibrado como el del modelo:</p>
       <div class="umb-tabla">
         <table>
           <thead><tr><th>Regla</th><th>Variables y umbral</th><th>Acción</th><th>Por qué ese valor</th></tr></thead>
@@ -1046,6 +1118,7 @@ HTML = """<!doctype html>
   <section id="s-modelo">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg><h2>Modelo congelado</h2></div>
     <div class="grid" id="model"></div>
+    <p class="vig-hist" id="modeloVigHist"><b>Vigente:</b> el detector y el umbral de las tarjetas los lee el panel del manifiesto que usa el motor. <b>Histórico:</b> <code>if_recalibrado_2026_09</code> (umbral &minus;0,568892, FPR 4,45&#8239;% en el oro) estuvo desplegado hasta el 19-oct-2026; sus cifras aparecen solo como antecedente.</p>
     <div class="fam-wrap" id="modeloFamilias"></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="16.5" r="0.7" fill="currentColor" stroke="none"/></svg><span id="modeloDebil"><strong>Punto débil conocido:</strong> un PERMIT del modelo no descarta un ataque por sí solo; los heurísticos cubren lo que el modelo no ve.</span></div>
 
@@ -1055,8 +1128,8 @@ HTML = """<!doctype html>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Modelo</th><th class="r">ROC-AUC</th><th class="r">AP</th><th class="r">FPR</th><th class="r">Recall (umbral propio)</th></tr></thead>
       <tbody>
-        <tr><td style="box-shadow:inset 3px 0 0 var(--ok)"><b>IF limpio (referencia vigente)</b></td><td class="num r">0,9247</td><td class="num r">0,1858</td><td class="num r">4,53&#8239;%</td><td class="num r"><b>64,29&#8239;%</b></td></tr>
-        <tr><td>IF recalibrado (antecedente)</td><td class="num r">0,9228</td><td class="num r">0,2026</td><td class="num r">4,45&#8239;%</td><td class="num r">64,29&#8239;%</td></tr>
+        <tr><td style="box-shadow:inset 3px 0 0 var(--ok)"><b>IF limpio · <code>if_limpio_2026_10</code> (vigente desde 19-oct)</b></td><td class="num r">0,9247</td><td class="num r">0,1858</td><td class="num r">4,53&#8239;%</td><td class="num r"><b>64,29&#8239;%</b></td></tr>
+        <tr><td>IF recalibrado · <code>if_recalibrado_2026_09</code> (histórico, hasta 19-oct)</td><td class="num r">0,9228</td><td class="num r">0,2026</td><td class="num r">4,45&#8239;%</td><td class="num r">64,29&#8239;%</td></tr>
         <tr><td>IF scaled (lab)</td><td class="num r">0,8250</td><td class="num r">0,0043</td><td class="num r">30,34&#8239;%</td><td class="num r">91,67&#8239;%</td></tr>
         <tr><td>IF primary (lab)</td><td class="num r">0,8283</td><td class="num r">0,0044</td><td class="num r">29,07&#8239;%</td><td class="num r">82,14&#8239;%</td></tr>
         <tr><td>IF uniform / exact (scores idénticos)</td><td class="num r">0,7960</td><td class="num r">0,0054</td><td class="num r">34,13&#8239;%</td><td class="num r">85,71&#8239;%</td></tr>
@@ -1122,11 +1195,30 @@ HTML = """<!doctype html>
 
   <section id="s-alcance">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg><h2>Alcance del análisis</h2></div>
-    <div class="umb-box">
-      <h3 class="umb-h">Alcance declarado</h3>
-      <p class="lede-small">CyberFlow analiza las capas de <strong>red (L3)</strong>, <strong>transporte (L4)</strong> y <strong>aplicación (L7)</strong> sobre <strong>IPv4</strong>. Observa el tráfico de la <strong>LAN</strong> y el que va <strong>hacia Internet</strong> mediante un <strong>puerto espejo (SPAN)</strong>; no inspecciona la capa&nbsp;2 ni IPv6. El sensor observa <strong>en paralelo, no en línea</strong>, y la respuesta (LIMIT/BLOCK) se aplica <strong>en el host protegido</strong>. IPv6 queda declarado como trabajo futuro.</p>
+    <div class="alc-3">
+      <div><h3>Observa</h3><ul>
+        <li><b>IPv4</b>, capas <b>L3, L4 y L7</b></li>
+        <li>LAN y tráfico hacia Internet, por <b>puerto espejo (SPAN)</b></li>
+        <li>En paralelo, no en línea: no retrasa el tráfico</li></ul></div>
+      <div><h3>Responde</h3><ul>
+        <li><b>LIMIT</b> (degrada la tasa) o <b>BLOCK</b> (corta), con caducidad</li>
+        <li>Solo en hosts que tienen el <b>agente</b> instalado</li>
+        <li>El sensor publica un feed firmado; el host lo aplica</li></ul></div>
+      <div><h3>Límites</h3><ul>
+        <li>IPv6: trabajo futuro</li>
+        <li>Sin inspección de capa 2</li>
+        <li>La visibilidad depende de lo que llegue al espejo y del cifrado (en TLS solo se ven metadatos)</li></ul></div>
     </div>
-    <p class="lede-small">Lo que se captura pero NO se puntúa, y por qué. Declararlo con su cifra es parte del método: sin número, «se excluyó» no es una medición.</p>
+    <div class="umb-box">
+      <h3 class="umb-h">Cómo leer el panel</h3>
+      <p class="lede-small"><b>Anomalía</b>: una ventana cuyo score del modelo queda por debajo del umbral vigente; es una señal, no un ataque confirmado. <b>PERMIT</b>: no se pide acción para esa ventana; no prueba que no haya ataque (el modelo es débil en algunas familias). <b>Dónde se aplica</b>: en el host protegido, por su agente. <b>Qué no confirma el panel</b>: que el host haya aplicado la acción; eso solo lo registra el agente.</p>
+    </div>
+    <details class="plegable">
+      <summary>Alcance declarado en detalle</summary>
+      <p class="lede-small">CyberFlow analiza las capas de <strong>red (L3)</strong>, <strong>transporte (L4)</strong> y <strong>aplicación (L7)</strong> sobre <strong>IPv4</strong>. Observa el tráfico de la <strong>LAN</strong> y el que va <strong>hacia Internet</strong> mediante un <strong>puerto espejo (SPAN)</strong>; no inspecciona la capa&nbsp;2 ni IPv6. El sensor observa <strong>en paralelo, no en línea</strong>, y la respuesta (LIMIT/BLOCK) se aplica <strong>en el host protegido</strong>. IPv6 queda declarado como trabajo futuro.</p>
+    </details>
+    <h3 class="umb-h" style="margin-top:1.2rem">Filtros y cobertura de captura</h3>
+    <p class="lede-small">Lo que se captura pero NO se puntúa, y por qué. Declararlo con su cifra es parte del método: sin número, «se excluyó» no es una medición. Las cifras se acumulan desde el último arranque del motor.</p>
     <div class="grid" id="alcance"></div>
     <p class="toolbar-hint" id="alcanceDetalle"></p>
   </section>
@@ -1230,7 +1322,7 @@ seq 1 250 | xargs -P10 -I{} curl -s -o /dev/null http://10.10.30.10/
 for i in $(seq 1 50); do curl -s -o /dev/null -u admin:wrong$i http://10.10.30.10:8081/; sleep 0.4; done
 <span class="c"># verificar el corte: open &rarr; filtered</span>
 nmap -Pn -p80,443 10.10.30.10</div>
-      <p class="toolbar-hint">El panel <strong>no ejecuta</strong> nada: estos comandos se copian y se lanzan en la terminal SSH correspondiente. La respuesta se ve luego en Actividad, Decisiones y Bloqueos.</p>
+      <p class="toolbar-hint">El panel <strong>no ejecuta</strong> nada: estos comandos se copian y se lanzan en la terminal SSH correspondiente. La respuesta se ve luego en Actividad, Decisiones y Respuestas.</p>
 
       <h3 class="umb-h" style="margin-top:1.1rem">Anatomía: por qué cada rango es normal o anómalo</h3>
       <p class="lede-small">Qué significa cada parte del comando y por qué ese valor cae dentro o fuera de lo normal.</p>
@@ -1320,8 +1412,8 @@ nmap -Pn -p80,443 10.10.30.10</div>
   <!--/ADMIN-->
 
   <section id="s-scores">
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg><h2>Distribución de scores recientes</h2></div>
-    <p class="lede-small">Qué tan cerca del umbral está pasando el tráfico reciente &mdash; no solo si alertó o no, sino cuánto margen hubo. La línea marca el umbral operativo.</p>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg><h2>Distribución de scores</h2></div>
+    <p class="lede-small">Qué tan cerca del umbral está pasando el tráfico reciente (últimas 500 decisiones) &mdash; no solo si alertó o no, sino cuánto margen hubo. La línea marca el <b>umbral vigente</b>, el mismo que usan Decisiones y el motor. Un score inferior al umbral genera una señal del modelo; la decisión final combina otras reglas.</p>
     <div class="spark-wrap">
       <svg id="histogram" role="img" aria-label="Histograma de scores recientes con el umbral"></svg>
       <p class="toolbar-hint" id="histogramHint"></p>
@@ -1356,9 +1448,9 @@ nmap -Pn -p80,443 10.10.30.10</div>
         </div>
       </div>
       <div>
-        <p class="act-h">IPs con más acciones</p>
+        <p class="act-h">Entidades con señales <span class="th-sub">última hora · pulsa para ver sus decisiones</span></p>
         <div class="tbl-wrap">
-          <table><thead><tr><th>IP</th><th class="r">Acciones</th><th>Última</th></tr></thead><tbody id="topIps"></tbody></table>
+          <table><thead><tr><th>Entidad</th><th class="r">Decisiones con acción</th><th>Última</th></tr></thead><tbody id="topIps"></tbody></table>
         </div>
       </div>
     </div>
@@ -1368,21 +1460,35 @@ nmap -Pn -p80,443 10.10.30.10</div>
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg><h2>Alertas</h2></div>
     <p class="sec-sub">Cada ventana en la que el sistema detectó algo: una <b>anomalía del modelo</b> (score por debajo del umbral) o una <b>regla disparada</b> (escaneo, fuerza bruta, abuso HTTP, DNS). A la derecha, la acción que provoca.</p>
     <div class="alertas-resumen" id="alertasResumen"></div>
-    <div class="range-toggle" id="alertasFiltro">
-      <button data-af="todas" class="active">Todas</button>
-      <button data-af="modelo">Anomalía del modelo</button>
-      <button data-af="regla">Reglas</button>
+    <div class="filtros">
+      <label>Fuente
+        <span class="range-toggle" id="alertasFiltro">
+          <button data-af="todas" class="active">Todas</button>
+          <button data-af="modelo">Modelo</button>
+          <button data-af="regla">Reglas</button>
+        </span></label>
+      <label>Acción
+        <span class="range-toggle" id="alertasAccion">
+          <button data-aa="todas" class="active">Todas</button>
+          <button data-aa="LIMIT">LIMIT</button>
+          <button data-aa="BLOCK">BLOCK</button>
+        </span></label>
+      <input type="text" id="alertasIp" class="ip-filter" placeholder="Filtrar por IP..." aria-label="Filtrar alertas por IP">
+      <button type="button" class="btn-sec neutro" id="alertasLimpiar">Limpiar filtros</button>
     </div>
     <div class="alertas-lista" id="alertasLista"></div>
   </section>
 
   <section id="s-bloqueos">
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><h2>IPs bloqueadas ahora</h2></div>
-    <p class="sec-sub" id="vigentesSub">LIMIT y BLOCK que el agente aplica en el host. <b>Reconstruido del registro del motor y del feed publicado</b>, no leído del nftables remoto: es el estado que el sensor <i>sabe</i> que publicó, no una verificación directa en el host. Por eso puede diferir del feed instantáneo (0 entradas entre ciclos) o del historial (un episodio ya caducado).</p>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><h2>Respuestas</h2></div>
+    <p class="sec-sub"><b>LIMIT</b> degrada la tasa de una IP; solo <b>BLOCK</b> la corta.</p>
+    <p class="resp-fuente" id="vigentesSub">Fuente: registro del motor y feed publicado por el sensor. La aplicación en el host no se verifica desde esta vista: el panel no tiene acceso al nftables remoto. Por eso puede diferir del feed instantáneo (0 entradas entre ciclos) o del historial (un episodio ya caducado).</p>
+    <p class="act-h">Respuestas registradas como vigentes <span class="th-sub" id="vigentesN"></span></p>
     <div class="tbl-wrap">
-      <table><thead><tr><th>IP</th><th>Acción</th><th>Motivo</th><th>Desde</th><th>Expira en</th><th>Reincidencia</th></tr></thead><tbody id="blocked"></tbody></table>
+      <table><thead><tr><th>Entidad</th><th>Acción</th><th>Motivo</th><th>Inicio del episodio · última renovación</th><th>Caduca</th><th>Evidencia</th></tr></thead><tbody id="blocked"></tbody></table>
     </div>
-    <p class="act-h" style="margin-top:1.2rem">Acciones de las últimas 24 h <span class="th-sub" id="histSub"></span></p>
+    <p class="toolbar-hint">Estados: <span class="est si">registrada</span> el motor la decidió · <span class="est si">publicada</span> está en el feed firmado · <span class="est no">aplicación en el host: no comprobada</span> solo el agente del host lo sabe.</p>
+    <p class="act-h" style="margin-top:1.2rem">Historial de las últimas 24 h <span class="th-sub" id="histSub"></span></p>
     <div class="spark-wrap" style="margin-bottom:0.8rem">
       <svg id="histChart" class="hist-chart" role="img" aria-label="Línea de tiempo de acciones por IP en las últimas 24 horas"></svg>
       <div class="spark-legend">
@@ -1392,13 +1498,13 @@ nmap -Pn -p80,443 10.10.30.10</div>
       </div>
     </div>
     <div class="tbl-wrap tbl-scroll" style="max-height:280px">
-      <table><thead><tr><th>Inicio</th><th>IP</th><th>Acción</th><th>Motivo</th><th>Duración</th><th class="r">Ventanas</th><th>Estado</th></tr></thead><tbody id="histTabla"></tbody></table>
+      <table><thead><tr><th>Inicio</th><th>Entidad</th><th>Acción</th><th>Motivo</th><th>Racha de decisiones</th><th>Caducidad configurada</th><th class="r">Ventanas</th><th>Estado según registro</th><th></th></tr></thead><tbody id="histTabla"></tbody></table>
     </div>
   </section>
 
   <section id="s-decisiones">
     <div class="sec-head-row">
-      <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg><h2>Decisiones recientes</h2></div>
+      <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg><h2>Decisiones</h2></div>
       <div class="toolbar">
         <div class="range-toggle" id="decVista">
           <button data-dv="accion" class="active">Con acción</button>
@@ -1407,13 +1513,23 @@ nmap -Pn -p80,443 10.10.30.10</div>
           <button data-dv="todas">Todas</button>
         </div>
         <input type="text" id="ipFilter" placeholder="Filtrar por IP..." class="ip-filter">
-        <button id="exportCsv" class="export-btn">
+        <button id="exportCsv" class="export-btn" title="Exporta las filas que ves ahora: vista, filtro de IP y periodo actuales">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7,10 12,15 17,10"/><path d="M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
           Exportar CSV
         </button>
       </div>
     </div>
-    <div class="spark-wrap dec-chart">
+    <div class="filtros" id="decPeriodo">
+      <label>Desde <input type="datetime-local" id="decDesde" step="60"></label>
+      <label>Hasta <input type="datetime-local" id="decHasta" step="60"></label>
+      <button type="button" class="btn-sec" id="decConsultar">Consultar periodo</button>
+      <button type="button" class="btn-sec neutro" id="decEnVivo" hidden>Volver a en vivo</button>
+      <button type="button" class="btn-sec neutro" id="decLimpiar">Limpiar filtros</button>
+      <button type="button" class="btn-sec neutro" id="decGrafBtn" aria-expanded="true">Ocultar gráfico</button>
+    </div>
+    <p class="periodo-info" id="decPeriodoInfo"></p>
+    <div class="dec-resumen" id="decResumen"></div>
+    <div class="spark-wrap dec-chart" id="decChartWrap">
       <svg id="decChart" role="img" aria-label="Score de cada decisión en el tiempo, con el umbral"></svg>
       <div class="chart-tip" id="decTip"></div>
       <div class="spark-legend">
@@ -1426,7 +1542,7 @@ nmap -Pn -p80,443 10.10.30.10</div>
     <p class="toolbar-hint" id="filterHint"></p>
     <div class="tbl-wrap tbl-scroll">
       <table>
-        <thead><tr><th>Hora</th><th>IP</th><th>Acción</th><th>Motivo</th><th>Modelo <span class="th-sub">score frente al umbral</span></th><th class="r">Paquetes</th></tr></thead>
+        <thead><tr><th>Hora</th><th>Entidad</th><th>Decisión</th><th>Fuente</th><th>Motivo</th><th>Modelo <span class="th-sub">score frente al umbral</span></th><th class="r">Paquetes</th><th></th></tr></thead>
         <tbody id="decisions"></tbody>
       </table>
     </div>
@@ -1710,21 +1826,33 @@ function renderKpis(status) {
   if (!el) return;
   const c = status.counters || {};
   const cal = status.calibracion && status.calibracion.calibrado_en_esta_red;
-  const alertas = c.alert_model || 0;
-  const hr = window._histResumen;
-  const tile = (lab, val, sub, estado) =>
-    `<div class="kpi ${estado || ''}"><div class="k-dot"></div>`
+  const nMod = c.alert_model || 0;
+  const nAcc = (c.block || 0) + (c.limit || 0);
+  const vig = (status.vigentes || []).length;
+  // Cada cifra lleva a la vista donde se ve su detalle. Ambar solo si pide
+  // atencion; nunca verde por «hay respuesta»: eso no confirma nada en el host.
+  const tile = (lab, val, sub, estado, ir) =>
+    `<div class="kpi ${estado || ''}"${ir ? ` data-ir="${ir}" role="link" tabindex="0"` : ''}><div class="k-dot"></div>`
     + `<div class="k-lab">${lab}</div><div class="k-val">${val}</div>`
-    + `<div class="k-sub">${sub}</div></div>`;
+    + `<div class="k-sub">${sub}</div>${ir ? '<div class="k-ir">Ver ' + escSimple(SEC_TITULO_CORTO[ir] || '') + ' &rarr;</div>' : ''}</div>`;
   el.innerHTML =
-    tile('Entidades vigiladas', c.entidades != null ? c.entidades : '—', 'última hora', '') +
-    tile('Ventanas/h', (c.total != null ? c.total : 0).toLocaleString('es'), 'analizadas', '') +
-    tile('Cerca del umbral', hr ? hr.pct + '<small>%</small>' : '—',
-         hr ? hr.bajoUmbral + ' de ' + hr.n + ' scores' : 'sin scores', hr && hr.pct > 20 ? 'warn' : '') +
-    tile('Anomalías del modelo (1h)', alertas,
-         cal ? 'no equivalen a ataques confirmados' : 'modelo sin calibrar: ruido',
-         !cal ? 'warn' : (alertas > 0 ? 'bad' : 'ok'));
+    tile('Entidades observadas', c.entidades != null ? c.entidades : '—', 'IPs con ventanas en la última hora', '', 's-actividad') +
+    tile('Ventanas analizadas', (c.total != null ? c.total : 0).toLocaleString('es'), 'en la última hora', '', 's-decisiones') +
+    tile('Alertas detectadas', nAcc,
+         nMod + ' anomalía(s) del modelo · ' + Math.max(0, nAcc - nMod) + ' por reglas' + (cal ? '' : ' · modelo sin calibrar'),
+         !cal || nAcc > 0 ? 'warn' : '', 's-alertas') +
+    tile('Respuestas registradas', vig, 'vigentes según el registro del motor; la aplicación en el host no se comprueba aquí',
+         vig > 0 ? 'warn' : '', 's-bloqueos');
 }
+const SEC_TITULO_CORTO = { 's-actividad': 'Actividad', 's-decisiones': 'Decisiones', 's-alertas': 'Alertas', 's-bloqueos': 'Respuestas' };
+on('kpis', 'click', (ev) => {
+  const k = ev.target.closest('[data-ir]');
+  if (k && typeof mostrarSeccion === 'function') mostrarSeccion(k.dataset.ir);
+});
+on('kpis', 'keydown', (ev) => {
+  const k = ev.target.closest('[data-ir]');
+  if (k && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); mostrarSeccion(k.dataset.ir); }
+});
 
 // La franja de salud la decide el servidor (status.salud): una sola verdad,
 // testeable, que separa salud de servicio de actividad de respuesta. Aqui solo
@@ -1941,14 +2069,19 @@ function on(id, evento, fn) {
 // disponible siempre en el botón flotante. Cada paso enfoca una sección; los
 // pasos cuyo elemento no existe -por rol o vista- se saltan solos.
 const TOUR_PASOS = [
-  { sel: '#kpis', t: 'Las cifras clave', d: 'Cuatro números de un vistazo: entidades vigiladas, ventanas analizadas por hora, cuántos scores rozan el umbral y las alertas reales de la última hora.' },
+  // Cuatro tareas operativas primero; la arquitectura y el entrenamiento van
+  // despues como recorrido avanzado (solo aparecen en la vista de desarrollo).
+  { sel: '#s-salud', t: '1 · Comprobar la salud', d: 'Arriba, el estado general: si los servicios están operativos y si hay algo que atender. Debajo, cuatro cifras de la última hora: entidades observadas, ventanas analizadas, anomalías del modelo y alertas de reglas, y respuestas registradas. Pulsa una cifra para ir a su detalle.' },
+  { sel: '#s-alertas', t: '2 · Encontrar el episodio', d: 'Alertas lista cada ventana con señal: anomalía del modelo (azul) o regla disparada. Filtra por fuente, acción o IP. «Ver decisión» abre la decisión exacta.' },
+  { sel: '#s-decisiones', t: '3 · Entender la decisión', d: 'Cada fila tiene «Ver detalle»: resultado, por qué se decidió, la evidencia (score frente al umbral, regla) y el contexto técnico. Para mirar atrás, elige un periodo y pulsa «Consultar periodo».' },
+  { sel: '#s-bloqueos', t: '4 · Revisar la respuesta', d: 'Respuestas separa lo registrado por el motor, lo publicado en el feed firmado y lo aplicado en el host, que este panel no comprueba. LIMIT degrada la tasa; solo BLOCK corta.' },
+  { sel: '#kpis', t: 'Recorrido avanzado', d: 'Lo que sigue explica la arquitectura, el modelo y la evaluación. Puedes cerrar la guía aquí si solo vas a operar.' },
   { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo y heurísticos → decisión → respuesta en el host. Pulsa cualquier componente para ver qué hace.' },
   { sel: '#topoVista', t: 'Siete vistas', d: 'De la red a la validación: cada botón es un diagrama del mismo sistema.' },
   { sel: '#topoArchivosBtn', t: 'Código auditable', d: 'En modo desarrollador, pulsa Ver archivos, elige un componente y un archivo; en su ficha pulsa ◎ Ver contenido. El visor es de solo lectura y solo muestra rutas permitidas.' },
   { sel: '#s-modelo', t: 'El detector activo y su umbral', d: 'El detector desplegado aprende la normalidad de esta red; el umbral se fijó con validación. Aquí ves el modelo activo y sus métricas, no una etiqueta fija de OCSVM.' },
   { sel: '#pruebasPrevias', t: 'Pruebas previas', d: 'Siete modelos se compararon en el estudio; la ablación sobre nueve episodios separa modelo solo (6), heurísticos solos (7) y ambos combinados (9). No confundas el 9/9 del sistema con el modelo solo.' },
-  { sel: '#s-scores', t: 'Distribución de scores', d: 'No solo si alertó o no, sino cuánto margen hubo respecto al umbral. Rojo = ALERT, verde = PERMIT.' },
-  { sel: '#s-decisiones', t: 'Las decisiones', d: 'Cada ventana con su decisión, su score frente al umbral (la mini-barra) y el motivo. Filtrable por IP y exportable.' },
+  { sel: '#s-scores', t: 'Distribución de scores', d: 'No solo si alertó o no, sino cuánto margen hubo respecto al umbral vigente. A la izquierda de la línea, anómalo para el modelo; a la derecha, normal.' },
   { sel: '#s-simulacion', t: 'Escenarios guiados', d: 'Comandos listos para provocar tráfico normal o un ataque y ver cómo responde el modelo. El panel no ejecuta: copias el comando y observas.' },
   { sel: null, t: 'Esto es el demo', d: 'Estás viendo datos de ejemplo. Para usarlo en tu propia red, sigue la instalación del README (modo despliegue) y recalibra con tu tráfico.' },
 ];
@@ -2087,11 +2220,6 @@ function renderPulso(status) {
     + ficha('Decisiones', String(p.decisiones_60s), '/min',
             'última ' + pulsoHace(edad(p.ultima_decision)), edad(p.ultima_decision), 60,
             pulsoSpark(pulsoHist.dec, 'var(--ok)'))
-    + ficha('Dataset acumulado', filas == null ? '—' : filas.toLocaleString('es'), 'filas',
-            p.dataset ? 'escrito ' + pulsoHace(edad(p.dataset.mtime))
-              + (filas != null && filas > pulsoFilas0 ? ' · +' + (filas - pulsoFilas0).toLocaleString('es') + ' en esta sesión' : '')
-              : 'sin dato',
-            p.dataset ? edad(p.dataset.mtime) : null, 1200, '')
     + ficha('Feed publicado', p.feed ? String(p.feed.entradas) : '—', p.feed && p.feed.entradas === 1 ? 'entrada' : 'entradas',
             p.feed ? 'firmado ' + pulsoHace(edad(p.feed.generado)) : 'sin dato',
             p.feed ? edad(p.feed.generado) : null, 150, '');
@@ -2105,7 +2233,9 @@ async function refresh() {
       fetch('/api/status'), fetch('/api/score-histogram')]);
     const status = await statusRes.json();
     const histogramData = await histRes.json();
-    stamp.textContent = 'Actualizado ' + new Date().toLocaleTimeString();
+    ultimaActualizacion = Date.now();
+    errorActualizacion = '';
+    pintarSello();
 
     window._fprRef = status.model ? status.model.test_fpr : null;
     renderHistogram(histogramData);
@@ -2147,6 +2277,15 @@ async function refresh() {
         estado
       ));
     }
+    // El dataset acumulado es diagnostico (aprendizaje), no pulso operativo.
+    const pd = status.pulso && status.pulso.dataset;
+    if (pd) {
+      const filas = pd.filas;
+      healthCards.push(card('Dataset acumulado', (filas == null ? '—' : filas.toLocaleString('es'))
+        + '<small>filas · escrito ' + pulsoHace(status.pulso.ahora - pd.mtime)
+        + (filas != null && pulsoFilas0 != null && filas > pulsoFilas0 ? ' · +' + (filas - pulsoFilas0).toLocaleString('es') + ' en esta sesión' : '')
+        + '</small>'));
+    }
     health.innerHTML = healthCards.join('');
 
     const modelEl = document.getElementById('model');
@@ -2158,20 +2297,28 @@ async function refresh() {
       const ev = m.evaluacion;
       const coma = (v, d) => v.toFixed(d).split('.').join(',');
       const tarjetas = [
-        card('Detector', escSimple(DETECTOR_LABEL[m.detector_name] || m.detector_name || 'no disponible'), 'txt'),
-        card('Umbral', coma(m.threshold, 4), 'accent'),
+        card('Detector vigente', escSimple(DETECTOR_LABEL[m.detector_name] || m.detector_name || 'no disponible')
+          + '<small>' + escSimple(m.detector_name || '') + '</small>', 'txt'),
+        card('Umbral vigente', coma(m.threshold, 6) + '<small>score_samples · del manifiesto del motor</small>', 'accent'),
       ];
       if (ev) {
         // Cifras medidas del detector en uso (docs/evaluacion/modelo-vigente.json).
         const dk = ev.deteccion_kali;
-        tarjetas.push(card('FPR en el oro', coma(ev.fpr_oro.valor * 100, 2) + ' %<small>' + ev.fpr_oro.ventanas.toLocaleString('es') + ' ventanas</small>'));
+        tarjetas.push(card('FPR en el oro (vigente)', coma(ev.fpr_oro.valor * 100, 2) + ' %<small>' + ev.fpr_oro.ventanas.toLocaleString('es') + ' ventanas</small>'));
         tarjetas.push(card('Detección del modelo solo', coma(100 * dk.detectadas / dk.total, 1) + ' %<small>' + dk.detectadas + ' de ' + dk.total + ' ventanas de ataque</small>', 'accent'));
       } else {
-        tarjetas.push(card('FPR benigno', pct(m.test_fpr, 2)));
+        tarjetas.push(card('FPR benigno (vigente)', pct(m.test_fpr, 2) + '<small>del manifiesto; «—» si no lo trae</small>'));
         tarjetas.push(card('Detección global', pct(m.detection_rate, 1), 'accent'));
         tarjetas.push(card('Detección Kali-real', pct(m.kali_real_detection_rate, 1), 'accent'));
       }
       modelEl.innerHTML = tarjetas.join('');
+      // Si se hubiera hecho rollback al recalibrado, la nota fija de «histórico»
+      // mentiria: se reescribe con lo que dice el manifiesto.
+      const vh = document.getElementById('modeloVigHist');
+      if (vh && m.detector_name && m.detector_name !== 'if_limpio_2026_10') {
+        vh.innerHTML = '<b>Vigente:</b> <code>' + escSimple(m.detector_name) + '</code>, umbral ' + coma(m.threshold, 6)
+          + ' (leído del manifiesto del motor). Las cifras de la tabla de abajo marcadas como vigentes corresponden a <code>if_limpio_2026_10</code>: no aplican a este detector.';
+      }
       const fam = document.getElementById('modeloFamilias'), debil = document.getElementById('modeloDebil');
       if (ev && fam) {
         // Barras por familia: la mas floja es el punto debil, dicho con su cifra.
@@ -2227,15 +2374,55 @@ async function refresh() {
     if (currentRange === '1h') renderSparkline(status.activity);
     else loadActivity(currentRange);
 
-    lastDecisions = await (await fetch('/api/decisions?limit=600')).json();
+    try {
+      lastDecisions = await (await fetch('/api/decisions?limit=600')).json();
+      decisionesCargadas = true;
+      decisionesError = false;
+    } catch (e) {
+      decisionesError = true;
+      throw e;
+    }
     markSeenAndCountNewAlerts(lastDecisions);
     renderDecisionsTable();
     renderAlertas();
     renderTopIps();
   } catch (e) {
-    stamp.textContent = 'Error al actualizar: ' + e;
+    errorActualizacion = String(e);
+    pintarSello();
+    renderAlertas();
   }
 }
+
+// Sello de frescura: cuanto hace de la ultima lectura buena, con la hora exacta
+// al pasar el raton. Si las lecturas fallan, se dice «datos desactualizados».
+let ultimaActualizacion = 0, errorActualizacion = '';
+let decisionesCargadas = false, decisionesError = false;
+function pintarSello() {
+  const el = document.getElementById('stamp');
+  if (!el) return;
+  if (!ultimaActualizacion) {
+    el.textContent = errorActualizacion ? 'Sin conexión con el panel' : 'Conectando…';
+    return;
+  }
+  const s = Math.max(0, Math.round((Date.now() - ultimaActualizacion) / 1000));
+  const viejo = s > 20 || errorActualizacion;
+  el.textContent = (viejo ? 'Datos desactualizados · ' : '') + 'Actualizado hace ' + (s < 60 ? s + ' s' : Math.floor(s / 60) + ' min');
+  el.title = 'Última lectura correcta: ' + new Date(ultimaActualizacion).toLocaleString('es-PE', { hour12: false })
+    + (errorActualizacion ? '\\nÚltimo error: ' + errorActualizacion : '');
+  el.style.color = viejo ? 'var(--amber)' : '';
+}
+setInterval(pintarSello, 1000);
+(function zonaHoraria() {
+  const el = document.getElementById('stampTz');
+  if (!el) return;
+  let tz = '';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* sin Intl */ }
+  const off = -new Date().getTimezoneOffset() / 60;
+  const utc = 'UTC' + (off === 0 ? '' : (off > 0 ? '+' : '−') + Math.abs(off));
+  const nombre = tz === 'America/Lima' ? 'Lima' : (tz.split('/').pop() || '').replace(/_/g, ' ');
+  el.textContent = 'Horas: ' + (nombre ? nombre + ' · ' : '') + utc;
+  el.title = 'Las horas se muestran en la zona de este navegador. Los registros del motor están en UTC (ventana_end_utc).';
+})();
 
 // Seccion C: el filtro y la exportacion trabajan sobre lastDecisions (lo
 // que ya esta cargado en el navegador), sin pedir nada nuevo al backend.
@@ -2256,7 +2443,7 @@ function miniBarraScore(score) {
   const x = v => ((Math.max(e.min, Math.min(e.max, v)) - e.min) / (e.max - e.min)) * (w - 6) + 3;
   const ux = x(e.umbral), sx = x(score);
   const col = score < e.umbral ? 'var(--danger)' : 'var(--ok)';
-  const zona = score < e.umbral ? 'ALERT' : 'PERMIT';
+  const zona = score < e.umbral ? 'anómalo para el modelo' : 'normal para el modelo';
   return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img"`
     + ` aria-label="score ${score.toFixed(3)}, umbral ${e.umbral.toFixed(3)}, ${zona}">`
     + `<title>score ${score.toFixed(3)} · umbral ${e.umbral.toFixed(3)} · ${zona}</title>`
@@ -2309,37 +2496,56 @@ function renderAlertas() {
   const totalHora = hayCont ? (c.block || 0) + (c.limit || 0) : h.length;
   const nMod = (c.alert_model != null) ? c.alert_model : h.filter(d => alertaTipos(d).modelo).length;
   const nReg = hayCont ? Math.max(0, totalHora - nMod) : h.filter(d => alertaTipos(d).regla).length;
-  const listadas = Math.min(h.length, totalHora);
   resumen.innerHTML = `<div class="al-num ${totalHora ? 'hay' : ''}">${totalHora}</div>`
     + `<div class="al-num-t">alerta(s) en la última hora`
-    + `<small>${nReg} por reglas · ${nMod} anomalía(s) del modelo`
-    + (totalHora > listadas ? ` · se listan las ${listadas} más recientes` : '')
+    + `<small>${nReg} por reglas · ${nMod} anomalía(s) del modelo · ${h.length} disponible(s) en la lista cargada`
     + `</small></div>`;
+  // Estados vacios: dependen de por que no hay filas. Una lista filtrada vacia
+  // NUNCA permite concluir que el sistema este en PERMIT.
+  const vacio = (txt, boton) => {
+    lista.innerHTML = `<p class="estado-vacio">${txt}${boton || ''}</p>`;
+  };
+  if (decisionesError && !decisionesCargadas) {
+    vacio('No se pudieron cargar las alertas.', ' <button type="button" class="btn-sec" data-al-reintentar="1">Reintentar</button>');
+    return;
+  }
+  if (!decisionesCargadas) { vacio('Cargando alertas…'); return; }
+  if (!(lastDecisions || []).length) { vacio('Todavía no se han recibido registros del motor.'); return; }
+  const ipQ = ((document.getElementById('alertasIp') || {}).value || '').trim();
   let rows = todas;
   if (alertasFiltro === 'modelo') rows = rows.filter(d => alertaTipos(d).modelo);
   if (alertasFiltro === 'regla') rows = rows.filter(d => alertaTipos(d).regla);
+  if (alertasAccion !== 'todas') rows = rows.filter(d => accionDeDecision(d) === alertasAccion);
+  if (ipQ) rows = rows.filter(d => String(d.entity_ip).includes(ipQ));
   rows = rows.slice(0, 80);
   if (!rows.length) {
-    lista.innerHTML = '<p class="dim" style="padding:0.7rem 0">Sin alertas en el periodo cargado — el sistema está en PERMIT.</p>';
+    const limpiar = ' <button type="button" class="btn-sec neutro" data-al-limpiar="1">Limpiar filtros</button>';
+    if (ipQ) vacio('No encontramos alertas para esta IP en la lista cargada.', limpiar);
+    else if (alertasFiltro === 'regla') vacio('No hay alertas de reglas en los registros cargados. Puede haber anomalías del modelo; consulta «Todas».', limpiar);
+    else if (alertasFiltro === 'modelo') vacio('No hay anomalías del modelo en los registros cargados. Puede haber alertas de reglas; consulta «Todas».', limpiar);
+    else if (alertasAccion !== 'todas') vacio('No hay alertas con ' + alertasAccion + ' en los registros cargados.', limpiar);
+    else vacio('No hay alertas en los registros cargados (' + lastDecisions.length + ' decisiones, desde las ' + fmtTime(Math.min(...lastDecisions.map(d => d.logged_at || Infinity))) + '). Para periodos anteriores, consulta Decisiones.');
     return;
   }
   lista.innerHTML = rows.map(d => {
     const acc = accionDeDecision(d);
     const t = alertaTipos(d);
     const tags = [];
-    if (t.regla) tags.push('<span class="al-tag regla">Regla: ' + varEsc(t.regla) + '</span>');
     if (t.modelo) tags.push('<span class="al-tag modelo">Anomalía del modelo</span>');
+    if (t.regla) tags.push('<span class="al-tag regla">Regla: ' + varEsc(t.regla) + '</span>');
     const motivo = (d.heuristico && d.heuristico.motivo) ? varEsc(d.heuristico.motivo)
       : (d.score != null ? 'score ' + coma3(d.score) + ' por debajo del umbral ' + coma3(d.threshold) : '');
+    const key = d.entity_ip + '|' + d.window_end_utc;
     return `<div class="al-card al-${acc.toLowerCase()}">`
       + `<div class="al-sev"><span class="badge acc-${acc.toLowerCase()}">${acc}</span></div>`
       + `<div class="al-main"><div class="al-top"><span class="al-ip">${varEsc(d.entity_ip)}</span>`
-      + `<span class="al-hace">${haceTexto(d.logged_at)}</span></div>`
+      + `<span class="al-hace" title="${varEsc(String(d.window_end_utc || ''))} UTC">${fmtTime(d.logged_at)} · ${haceTexto(d.logged_at)}</span></div>`
       + `<div class="al-tags">${tags.join(' ')}</div>`
       + `<div class="al-motivo">${motivo}</div></div>`
-      + `<div class="al-mini">${miniBarraScore(d.score)}</div></div>`;
+      + `<div class="al-ver">${miniBarraScore(d.score)}<button type="button" class="btn-sec" data-ver-dec="${varEsc(key)}" data-ip="${varEsc(d.entity_ip)}">Ver decisión &rarr;</button></div></div>`;
   }).join('');
 }
+let alertasAccion = 'todas';
 on('alertasFiltro', 'click', (ev) => {
   const b = ev.target.closest('button[data-af]');
   if (!b) return;
@@ -2347,6 +2553,43 @@ on('alertasFiltro', 'click', (ev) => {
   document.querySelectorAll('#alertasFiltro button').forEach(x => x.classList.toggle('active', x === b));
   renderAlertas();
 });
+on('alertasAccion', 'click', (ev) => {
+  const b = ev.target.closest('button[data-aa]');
+  if (!b) return;
+  alertasAccion = b.dataset.aa;
+  document.querySelectorAll('#alertasAccion button').forEach(x => x.classList.toggle('active', x === b));
+  renderAlertas();
+});
+on('alertasIp', 'input', () => renderAlertas());
+function limpiarFiltrosAlertas() {
+  alertasFiltro = 'todas'; alertasAccion = 'todas';
+  const ip = document.getElementById('alertasIp');
+  if (ip) ip.value = '';
+  document.querySelectorAll('#alertasFiltro button').forEach(x => x.classList.toggle('active', x.dataset.af === 'todas'));
+  document.querySelectorAll('#alertasAccion button').forEach(x => x.classList.toggle('active', x.dataset.aa === 'todas'));
+  renderAlertas();
+}
+on('alertasLimpiar', 'click', limpiarFiltrosAlertas);
+on('alertasLista', 'click', (ev) => {
+  if (ev.target.closest('[data-al-limpiar]')) { limpiarFiltrosAlertas(); return; }
+  if (ev.target.closest('[data-al-reintentar]')) { refresh(); return; }
+  const b = ev.target.closest('[data-ver-dec]');
+  if (b) abrirDecision(b.dataset.ip, b.dataset.verDec);
+});
+// Salta de una alerta (o respuesta) a su decision: filtra por IP, abre su
+// detalle y la deja a la vista. El detalle sigue abierto en los refrescos.
+function abrirDecision(ip, key) {
+  const f = document.getElementById('ipFilter');
+  if (f) f.value = ip || '';
+  decVista = 'todas'; pintarDecVista();
+  if (key) decAbiertas.add(key);
+  renderDecisionsTable();
+  mostrarSeccion('s-decisiones');
+  if (key) {
+    const tr = [...document.querySelectorAll('#decisions tr.dec-fila')].find(t => t.dataset.key === key);
+    if (tr) tr.scrollIntoView({ block: 'center' });
+  }
+}
 
 function haceTexto(t) {
   const s = Math.max(0, Math.round(Date.now() / 1000 - t));
@@ -2364,28 +2607,42 @@ function duracionTexto(s) {
 // Acciones vigentes: del feed publicado (caducidad exacta) o reconstruidas del
 // registro con la misma escalera. Si el host tuviera nftables local, tambien.
 function renderVigentes(vigentes, locales) {
+  const ahora = Date.now() / 1000;
   const filas = vigentes.map(v => {
     const total = v.accion === 'BLOCK' ? ({ 1: 300, 2: 1800, 3: 3600 }[v.nivel] || 300) + 60 : 360;
     const pct = Math.max(2, Math.min(100, Math.round(100 * v.expira_s / total)));
     const color = v.accion === 'BLOCK' ? 'var(--danger)' : 'var(--amber)';
     const reinc = v.accion === 'BLOCK'
-      ? 'nivel ' + (v.nivel || 1) + (v.revisar_humano ? ' · revisar' : '')
-      : '—';
+      ? 'reincidencia nivel ' + (v.nivel || 1) + (v.revisar_humano ? ' · revisar' : '')
+      : '';
+    const caducaEn = ahora + (v.expira_s || 0);
+    const registrada = v.registrada !== false;
+    const publicada = v.publicada != null ? v.publicada : v.fuente === 'feed';
+    const estados = `<span class="est ${registrada ? 'si' : 'no'}">${registrada ? 'registrada' : 'solo en el feed'}</span>`
+      + `<span class="est ${publicada ? 'si' : 'no'}">${publicada ? 'publicada' : 'no vista en el feed'}</span>`
+      + `<span class="est no" title="El panel no consulta el nftables del host">host: no comprobada</span>`;
     return `<tr class="row-${v.accion.toLowerCase()}"><td class="ip">${varEsc(v.ip)}</td>`
-      + `<td><span class="badge acc-${v.accion.toLowerCase()}">${v.accion}</span></td>`
-      + `<td class="why">${varEsc(v.origen || '')}${v.motivo ? ' · ' + varEsc(v.motivo) : ''}</td>`
-      + `<td class="num">${v.desde ? fmtTime(v.desde) : '—'}${v.ofensas ? '<span class="hace">' + v.ofensas + ' ventanas</span>' : ''}</td>`
-      + `<td class="num">${duracionTexto(v.expira_s)}<div class="vig-barra"><i style="width:${pct}%;background:${color}"></i></div></td>`
-      + `<td>${reinc}<div class="vig-fuente">${v.fuente === 'feed' ? 'feed publicado' : 'según registro'}</div></td></tr>`;
+      + `<td><span class="badge acc-${v.accion.toLowerCase()}">${v.accion}</span>${reinc ? '<span class="hace">' + reinc + '</span>' : ''}</td>`
+      + `<td class="why"><span class="clamp">${varEsc(v.origen || '')}${v.motivo ? ' · ' + varEsc(v.motivo) : ''}</span></td>`
+      + `<td class="num">${v.desde ? fmtTime(v.desde) : '—'}${v.ultima ? '<span class="hace">renovada ' + fmtTime(v.ultima) + (v.ofensas ? ' · ' + v.ofensas + ' ventanas' : '') + '</span>' : ''}</td>`
+      + `<td class="num">${fmtTime(caducaEn)}<span class="hace">en ${duracionTexto(v.expira_s)}</span><div class="vig-barra"><i style="width:${pct}%;background:${color}"></i></div></td>`
+      + `<td>${estados}<div><button type="button" class="btn-sec" data-ver-ip="${varEsc(v.ip)}">Ver decisiones &rarr;</button></div></td></tr>`;
   });
   for (const b of locales) {
     filas.push(`<tr class="row-block"><td class="ip">${varEsc(b.ip)}</td><td><span class="badge acc-block">BLOCK</span></td>`
-      + `<td class="why">nftables local</td><td class="num">—</td>`
-      + `<td class="num">${b.expires_seconds != null ? duracionTexto(b.expires_seconds) : '?'}</td><td>—</td></tr>`);
+      + `<td class="why">nftables de este equipo</td><td class="num">—</td>`
+      + `<td class="num">${b.expires_seconds != null ? 'en ' + duracionTexto(b.expires_seconds) : '?'}</td>`
+      + `<td><span class="est si">aplicada en este equipo</span></td></tr>`);
   }
+  const n = document.getElementById('vigentesN');
+  if (n) n.textContent = vigentes.length + ' según registro y feed' + (locales.length ? ' · ' + locales.length + ' en el nftables de este equipo' : '');
   document.getElementById('blocked').innerHTML = filas.length ? filas.join('')
-    : '<tr class="empty-row"><td colspan="6">Ninguna IP limitada ni bloqueada ahora mismo.</td></tr>';
+    : '<tr class="empty-row"><td colspan="6">Ninguna respuesta registrada como vigente. Esto no comprueba el estado del nftables del host.</td></tr>';
 }
+on('blocked', 'click', (ev) => {
+  const b = ev.target.closest('[data-ver-ip]');
+  if (b) abrirDecision(b.dataset.verIp, null);
+});
 
 // Historial de acciones: lo que ya paso, no solo lo vigente. Una fila por IP en
 // la linea de tiempo; la zona anterior al registro leido se raya, porque ahi no
@@ -2434,13 +2691,19 @@ function renderHistorial(d) {
   svg.innerHTML = g;
   tb.innerHTML = eps.length ? eps.slice(0, 60).map(e => {
     const dur = Math.round(e.fin - e.inicio);
-    return `<tr class="row-${e.accion.toLowerCase()}" data-ip="${varEsc(e.ip)}" style="cursor:pointer" title="Pulsa para filtrar las decisiones de esta IP">`
+    // Racha = cuanto duraron las decisiones; caducidad = lo que se configuro
+    // que dure la accion tras la ultima. Lo aplicado en el host no se ve aqui.
+    const cadConf = e.accion === 'BLOCK' ? '300 s (nivel 1; 1800/3600 s si reincide)' : '300 s';
+    return `<tr class="row-${e.accion.toLowerCase()}" data-ip="${varEsc(e.ip)}" style="cursor:pointer" title="Pulsa para ver las decisiones de esta IP">`
       + `<td class="num">${fmtTime(e.inicio)}<span class="hace">${haceTexto(e.inicio)}</span></td>`
       + `<td class="ip">${varEsc(e.ip)}</td><td><span class="badge acc-${e.accion.toLowerCase()}">${e.accion}</span></td>`
-      + `<td class="why">${e.origen && e.origen !== 'modelo' ? '<span class="badge heur">' + varEsc(e.origen) + '</span> ' : ''}${varEsc(e.motivo || '')}</td>`
-      + `<td class="num">${dur > 0 ? duracionTexto(dur) : 'una ventana'}</td><td class="num r">${e.ventanas}</td>`
-      + `<td>${e.vigente ? '<span class="badge acc-' + e.accion.toLowerCase() + '">en vigor</span>' : '<span class="hace" style="display:inline">caducada</span>'}</td></tr>`;
-  }).join('') : '<tr class="empty-row"><td colspan="7">Ninguna IP limitada ni bloqueada en este tramo.</td></tr>';
+      + `<td class="why"><span class="clamp">${e.origen && e.origen !== 'modelo' ? '<span class="badge heur">' + varEsc(e.origen) + '</span> ' : ''}${varEsc(e.motivo || '')}</span></td>`
+      + `<td class="num">${dur > 0 ? duracionTexto(dur) : 'una ventana'}<span class="hace">${fmtTime(e.inicio)}–${fmtTime(e.fin)}</span></td>`
+      + `<td class="num">${cadConf}${e.caduca ? '<span class="hace">hasta ' + fmtTime(e.caduca) + '</span>' : ''}</td>`
+      + `<td class="num r">${e.ventanas}</td>`
+      + `<td>${e.vigente ? '<span class="badge acc-' + e.accion.toLowerCase() + '">vigente</span>' : '<span class="hace" style="display:inline">caducada</span>'}</td>`
+      + `<td><button type="button" class="btn-sec">Ver &rarr;</button></td></tr>`;
+  }).join('') : '<tr class="empty-row"><td colspan="9">Ninguna respuesta registrada en este tramo.</td></tr>';
 }
 async function cargarHistorial() {
   if (!document.getElementById('histChart')) return;
@@ -2464,18 +2727,23 @@ function renderDespliegue(status) {
       let cls = '', est = '';
       if (n.rol === 'sensor' && c.servicio && (c.servicio in serv)) {
         cls = serv[c.servicio] ? 'ok' : 'bad';
-        est = serv[c.servicio] ? 'activo' : 'inactivo';
+        est = 'comprobado desde el sensor: ' + (serv[c.servicio] ? 'activo' : 'inactivo');
+      } else if (n.rol !== 'sensor') {
+        est = 'estado no comprobado desde este panel';
       }
-      const meta = c.cadencia || c.detalle || c.fichero || c.unidad || '';
+      // La periodicidad viene del inventario: se dice que es declarada, no medida.
+      const meta = c.cadencia ? c.cadencia + ' · configuración declarada' : (c.detalle || c.fichero || c.unidad || '');
       return `<div class="desp-comp ${cls}"><span class="c-dot"></span><span class="c-n">${varEsc(c.nombre)}`
-        + (est ? ` <span class="hace" style="display:inline">${est}</span>` : '') + `</span>`
+        + (est ? `<span class="hace">${est}</span>` : '') + `</span>`
         + (meta ? `<span class="c-u" title="${varEsc(c.unidad || '')}">${varEsc(meta)}</span>` : '') + `</div>`;
     }).join('');
-    return `<div class="desp-card ${n.rol}"><div class="desp-rol">${ROL[n.rol] || n.rol}</div>`
+    const funciones = n.rol === 'agente'
+      ? '<div class="desp-meta"><span class="est si">Verifica firma</span><span class="est si">Aplica nftables con caducidad</span></div>' : '';
+    return `<details class="desp-card ${n.rol}" open><summary class="desp-sum"><div class="desp-rol">${ROL[n.rol] || n.rol}</div>`
       + `<div class="desp-h">${varEsc(n.titulo)}</div>`
-      + `<div class="desp-host">${varEsc(n.host)} · ${varEsc(n.ip)}</div>`
+      + `<div class="desp-host">${varEsc(n.host)} · ${varEsc(n.ip)}</div></summary>`
       + `<div class="desp-meta">VLAN ${varEsc(n.vlan || '—')} · ${varEsc(n.donde || '')}</div>`
-      + comps + (n.nota ? `<div class="desp-nota">${varEsc(n.nota)}</div>` : '') + `</div>`;
+      + funciones + comps + (n.nota ? `<div class="desp-nota">${varEsc(n.nota)}</div>` : '') + `</details>`;
   });
   // Flechas entre eslabones (el feed firmado viaja de izquierda a derecha).
   cont.innerHTML = tarjetas.join('<div class="desp-flecha" title="feed firmado">&rarr;</div>');
@@ -2517,7 +2785,9 @@ function renderTopIps() {
   el.innerHTML = lista.length ? lista.map(p =>
     `<tr class="row-${p.acc.toLowerCase()}" data-ip="${varEsc(p.ip)}" style="cursor:pointer"><td class="ip">${varEsc(p.ip)}</td>`
     + `<td class="num r">${p.n}</td><td><span class="badge acc-${p.acc.toLowerCase()}">${p.acc}</span><span class="hace">${haceTexto(p.ult)}</span></td></tr>`).join('')
-    : '<tr class="empty-row"><td colspan="3">Ninguna IP con acciones en la última hora.</td></tr>';
+    : '<tr class="empty-row"><td colspan="3">' + (lastDecisions.length
+      ? 'Ninguna entidad con acciones en las decisiones cargadas de la última hora.'
+      : 'Todavía no se han recibido decisiones.') + '</td></tr>';
 }
 
 on('topIps', 'click', (ev) => {
@@ -2542,9 +2812,96 @@ on('decVista', 'click', (ev) => {
   renderDecisionsTable();
 });
 
+// Las decisiones que se miran: las ultimas 600 en vivo o, si se consulto un
+// periodo, las de ese periodo. El refresco de 5 s no pisa una consulta.
+let decPeriodo = null;
+function decFuente() { return decPeriodo ? decPeriodo.decisiones : lastDecisions; }
+
+function fechaLocalInput(t) {
+  const d = new Date(t * 1000), p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function fmtFechaHora(t) {
+  return new Date(t * 1000).toLocaleString('es-PE', { hour12: false, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+async function consultarPeriodo() {
+  const vd = document.getElementById('decDesde').value, vh = document.getElementById('decHasta').value;
+  const desde = vd ? new Date(vd).getTime() / 1000 : null, hasta = vh ? new Date(vh).getTime() / 1000 : null;
+  const info = document.getElementById('decPeriodoInfo');
+  if (desde == null && hasta == null) { info.textContent = 'Indica al menos «Desde» o «Hasta».'; return; }
+  if (desde != null && hasta != null && hasta < desde) { info.textContent = '«Hasta» es anterior a «Desde».'; return; }
+  info.className = 'periodo-info';
+  info.textContent = 'Consultando el registro…';
+  try {
+    const q = 'desde=' + (desde != null ? desde : '') + '&hasta=' + (hasta != null ? hasta : '');
+    decPeriodo = await (await fetch('/api/decisions?' + q)).json();
+  } catch (e) {
+    info.textContent = 'No se pudo consultar el periodo: ' + e;
+    return;
+  }
+  document.getElementById('decEnVivo').hidden = false;
+  renderDecisionsTable();
+}
+function pintarPeriodoInfo() {
+  const info = document.getElementById('decPeriodoInfo');
+  if (!info) return;
+  if (!decPeriodo) {
+    const ts = lastDecisions.map(d => d.logged_at).filter(Boolean);
+    info.className = 'periodo-info';
+    info.textContent = ts.length ? 'En vivo: las ' + lastDecisions.length + ' decisiones más recientes, desde '
+      + fmtFechaHora(Math.min(...ts)) + '. Para ver antes, elige un periodo.' : 'En vivo: aún no hay decisiones cargadas.';
+    return;
+  }
+  const p = decPeriodo;
+  const ini = p.desde != null ? fmtFechaHora(p.desde) : 'el inicio del registro';
+  const fin = p.hasta != null ? fmtFechaHora(p.hasta) : 'ahora';
+  let txt = 'Periodo consultado: ' + ini + ' – ' + fin + ' · ' + p.total.toLocaleString('es') + ' decisiones';
+  if (p.truncado) txt += ' · se muestran las ' + p.limite.toLocaleString('es') + ' más recientes';
+  if (p.registro_desde != null && p.desde != null && p.registro_desde > p.desde + 60) {
+    txt += ' · el registro leído empieza el ' + fmtFechaHora(p.registro_desde) + ': antes no se puede saber si hubo decisiones';
+  }
+  info.className = 'periodo-info activo';
+  info.textContent = txt;
+}
+on('decConsultar', 'click', consultarPeriodo);
+on('decEnVivo', 'click', () => {
+  decPeriodo = null;
+  document.getElementById('decEnVivo').hidden = true;
+  renderDecisionsTable();
+});
+on('decLimpiar', 'click', () => {
+  decPeriodo = null;
+  document.getElementById('decEnVivo').hidden = true;
+  document.getElementById('decDesde').value = '';
+  document.getElementById('decHasta').value = '';
+  document.getElementById('ipFilter').value = '';
+  decVista = 'accion'; pintarDecVista();
+  decAbiertas.clear();
+  renderDecisionsTable();
+});
+(function () {
+  // Periodo por omision en los campos: la ultima hora (no se consulta hasta pulsar).
+  const d = document.getElementById('decDesde'), h = document.getElementById('decHasta');
+  if (d && h) { const t = Date.now() / 1000; d.value = fechaLocalInput(t - 3600); h.value = fechaLocalInput(t); }
+})();
+let decGrafVisible = true;
+try { decGrafVisible = localStorage.getItem('cf_dec_graf') !== '0'; } catch (e) { /* por omision, visible */ }
+function pintarDecGraf() {
+  const w = document.getElementById('decChartWrap'), b = document.getElementById('decGrafBtn');
+  if (w) w.hidden = !decGrafVisible;
+  if (b) { b.textContent = decGrafVisible ? 'Ocultar gráfico' : 'Mostrar gráfico'; b.setAttribute('aria-expanded', String(decGrafVisible)); }
+}
+pintarDecGraf();
+on('decGrafBtn', 'click', () => {
+  decGrafVisible = !decGrafVisible;
+  try { localStorage.setItem('cf_dec_graf', decGrafVisible ? '1' : '0'); } catch (e) { /* sin persistir */ }
+  pintarDecGraf();
+  if (decGrafVisible) renderDecChart();
+});
+
 function filasFiltradas() {
   const query = document.getElementById('ipFilter').value.trim();
-  let rows = lastDecisions;
+  let rows = decFuente();
   if (decVista === 'accion') rows = rows.filter(d => accionDeDecision(d) !== 'PERMIT');
   if (decVista === 'limit') rows = rows.filter(d => accionDeDecision(d) === 'LIMIT');
   if (decVista === 'block') rows = rows.filter(d => accionDeDecision(d) === 'BLOCK');
@@ -2558,9 +2915,10 @@ function filasFiltradas() {
 let decPuntos = [];
 function renderDecChart() {
   const svg = document.getElementById('decChart');
-  if (!svg) return;
+  if (!svg || !decGrafVisible) return;
   const query = document.getElementById('ipFilter').value.trim();
-  const datos = (query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions)
+  const fuente = decFuente();
+  const datos = (query ? fuente.filter(d => d.entity_ip.includes(query)) : fuente)
     .filter(d => d.logged_at);
   const W = Math.max(320, svg.clientWidth || 900), H = 170;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
@@ -2571,7 +2929,8 @@ function renderDecChart() {
     return;
   }
   const ahora = Date.now() / 1000;
-  const t0 = Math.min(...datos.map(d => d.logged_at)), t1 = Math.max(ahora, t0 + 60);
+  const t0 = Math.min(...datos.map(d => d.logged_at));
+  const t1 = Math.max(decPeriodo ? Math.max(...datos.map(d => d.logged_at)) : ahora, t0 + 60);
   const conScore = datos.filter(d => d.score != null);
   const umbral = conScore.length ? conScore[0].threshold : (window._escalaScore ? window._escalaScore.umbral : null);
   let lo = Math.min(...conScore.map(d => d.score)), hi = Math.max(...conScore.map(d => d.score));
@@ -2602,7 +2961,7 @@ function renderDecChart() {
   for (let i = 0; i <= 4; i++) {
     const t = t0 + (t1 - t0) * i / 4, x = px(t);
     s += `<line x1="${x.toFixed(1)}" y1="${Y1}" x2="${x.toFixed(1)}" y2="${Y1 + 3}" stroke="var(--border)"/>`;
-    s += `<text x="${x.toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${i === 4 ? 'ahora' : fmtTime(t)}</text>`;
+    s += `<text x="${x.toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${i === 4 && !decPeriodo ? 'ahora' : fmtTime(t)}</text>`;
   }
   const estilo = { PERMIT: ['var(--accent)', 2, 0.4], LIMIT: ['var(--amber)', 3.8, 0.95], BLOCK: ['var(--danger)', 4.4, 1] };
   // Los PERMIT primero: las acciones se dibujan encima y no quedan tapadas.
@@ -2658,24 +3017,60 @@ on('decChart', 'click', (ev) => {
 
 // Filas abiertas: el detalle sobrevive al refresco de 5 s.
 const decAbiertas = new Set();
+// Quien pidio la accion: el modelo, una regla, los dos o ninguno.
+function fuenteDecision(d) {
+  const t = alertaTipos(d);
+  if (t.modelo && t.regla) return 'Modelo + regla';
+  if (t.regla) return 'Regla: ' + t.regla;
+  if (t.modelo) return 'Modelo';
+  return d.score == null ? 'Sin puntuar' : 'Modelo (normal)';
+}
+// Explicacion en lenguaje natural de POR QUE salio esta accion.
+function porQueDecision(d, accion) {
+  const t = alertaTipos(d), h = d.heuristico;
+  const reglaTxt = t.regla ? 'la regla «' + t.regla + '»' + (h && h.motivo ? ' (' + h.motivo + ')' : '') : '';
+  const modeloTxt = d.score == null ? 'El modelo no puntuó esta ventana (sin paquetes).'
+    : (t.modelo ? 'El score del modelo fue inferior al umbral vigente.' : 'El score del modelo quedó por encima del umbral: normal para el modelo.');
+  if (accion === 'PERMIT') {
+    return 'No se pidió acción: ninguna regla se activó y ' + (d.score == null ? 'el modelo no puntuó la ventana.' : 'el modelo no vio anomalía.')
+      + ' PERMIT no prueba que no haya ataque.';
+  }
+  if (t.regla && t.modelo) return 'Se decidió ' + accion + ' porque se activó ' + reglaTxt + ' y, además, el score del modelo fue inferior al umbral vigente. Manda la acción más severa.';
+  if (t.regla) return 'Se decidió ' + accion + ' porque se activó ' + reglaTxt + '. ' + modeloTxt;
+  return 'Se decidió ' + accion + ' porque el score del modelo fue inferior al umbral vigente. No se activaron reglas heurísticas en esta ventana. Una anomalía del modelo solo llega a LIMIT.';
+}
 function decDetalleHTML(d, accion) {
   const h = d.heuristico;
   const margen = d.score != null && d.threshold != null ? d.score - d.threshold : null;
-  const caduca = accion === 'LIMIT' ? '300 s' : (accion === 'BLOCK' ? '300, 1800 o 3600 s según reincidencia' : 'no aplica');
+  const caduca = accion === 'LIMIT' ? '300 s tras la última decisión' : (accion === 'BLOCK' ? '300, 1800 o 3600 s según reincidencia' : 'no aplica');
   const fila = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
-  return '<dl>'
-    + fila('Ventana (UTC)', varEsc(String(d.window_end_utc || '—')))
-    + fila('Detector', varEsc(String(d.detector_name || '—')))
+  return '<div class="det4">'
+    + '<div><h4>Resultado</h4><dl>'
+    + fila('Decisión', `<span class="badge acc-${accion.toLowerCase()}">${accion}</span>`)
+    + fila('Entidad', varEsc(String(d.entity_ip || '—')))
+    + fila('Hora', fmtTime(d.logged_at) + ' · ventana ' + varEsc(String(d.window_end_utc || '—')) + ' UTC')
+    + fila('Caducidad configurada', caduca)
+    + '</dl></div>'
+    + '<div><h4>Por qué</h4><p>' + varEsc(porQueDecision(d, accion)) + '</p>'
+    + (accion !== 'PERMIT' ? '<p style="margin-top:0.5rem"><button type="button" class="btn-sec" data-ir-resp="1">Ver su respuesta &rarr;</button></p>' : '')
+    + '</div>'
+    + '<div><h4>Evidencia</h4><dl>'
     + fila('Score y umbral', d.score != null ? d.score.toFixed(4) + ' frente a ' + (d.threshold != null ? d.threshold.toFixed(4) : '—') : 'sin puntuar: ventana sin paquetes')
-    + fila('Margen al umbral', margen == null ? '—' : (margen >= 0 ? '+' : '') + margen.toFixed(4) + (margen < 0 ? ' · anomalía' : ' · normal'))
+    + fila('Margen al umbral', margen == null ? '—' : (margen >= 0 ? '+' : '') + margen.toFixed(4) + (margen < 0 ? ' · anómalo' : ' · normal'))
     + fila('Regla', h && h.heuristico ? varEsc(h.heuristico) + ' → ' + varEsc(h.accion || '') : 'ninguna')
     + fila('Qué midió la regla', h && h.motivo ? varEsc(h.motivo) : '—')
     + fila('Paquetes en 10 s', d.packet_count_10s ?? '—')
+    + '</dl></div>'
+    + '<div><h4>Contexto técnico</h4><dl>'
+    + fila('Detector', varEsc(String(d.detector_name || '—')))
+    + fila('Decisión del modelo', varEsc(String(d.decision || '—')))
     + fila('Historia cubierta', d.history_coverage_s != null ? d.history_coverage_s + ' s' : '—')
-    + fila('Acción y caducidad', accion + ' · ' + caduca)
-    + '</dl>';
+    + fila('Registrada (logged_at)', d.logged_at ? new Date(d.logged_at * 1000).toLocaleString('es-PE', { hour12: false }) : '—')
+    + '</dl></div>'
+    + '</div>';
 }
 on('decisions', 'click', (ev) => {
+  if (ev.target.closest('[data-ir-resp]')) { mostrarSeccion('s-bloqueos'); return; }
   const tr = ev.target.closest('tr.dec-fila');
   if (!tr) return;
   const k = tr.dataset.key;
@@ -2685,32 +3080,45 @@ on('decisions', 'click', (ev) => {
 
 function renderDecisionsTable() {
   const { rows, query } = filasFiltradas();
-  const nAcc = lastDecisions.filter(d => accionDeDecision(d) !== 'PERMIT').length;
+  const fuente = decFuente();
+  const cuenta = { PERMIT: 0, LIMIT: 0, BLOCK: 0 };
+  fuente.forEach(d => { cuenta[accionDeDecision(d)] += 1; });
   const quees = { accion: 'con acción', limit: 'con LIMIT', block: 'con BLOCK' }[decVista];
+  const base = decPeriodo ? 'decisiones del periodo' : 'decisiones recientes';
   document.getElementById('filterHint').textContent =
-    (quees ? (decVista === 'accion' ? nAcc : rows.length) + ' ' + quees + ' de ' + lastDecisions.length + ' decisiones recientes' : lastDecisions.length + ' decisiones recientes')
-    + (query ? ' · ' + rows.length + ' coinciden con «' + query + '»' : '');
+    (quees ? rows.length + ' ' + quees + ' de ' + fuente.length + ' ' + base : fuente.length + ' ' + base)
+    + (query ? ' · filtradas por «' + query + '»' : '');
+  const res = document.getElementById('decResumen');
+  if (res) res.innerHTML = `<span>Total <b>${fuente.length.toLocaleString('es')}</b></span>`
+    + `<span>PERMIT <b>${cuenta.PERMIT.toLocaleString('es')}</b></span>`
+    + `<span>LIMIT <b>${cuenta.LIMIT.toLocaleString('es')}</b></span>`
+    + `<span>BLOCK <b>${cuenta.BLOCK.toLocaleString('es')}</b></span>`;
+  pintarPeriodoInfo();
   renderDecChart();
-  document.getElementById('decisions').innerHTML = rows.length ? rows.map(d => {
+  document.getElementById('decisions').innerHTML = rows.length ? rows.slice(0, 1500).map(d => {
     const accion = accionDeDecision(d);
     const accBadge = `<span class="badge acc-${accion.toLowerCase()}">${accion}</span>`;
     const isAlert = d.decision === 'ALERT';
     const modelo = d.score != null
-      ? `<span class="modelo-celda"><span class="${isAlert ? 'm-alert' : 'm-permit'}">${isAlert ? 'ALERT' : 'normal'}</span>`
+      ? `<span class="modelo-celda"><span class="${isAlert ? 'm-alert' : 'm-permit'}">${isAlert ? 'Anómalo' : 'Normal'}</span>`
         + `<span>${d.score.toFixed(3)}</span>${miniBarraScore(d.score)}</span>`
       : '<span class="modelo-celda"><span class="m-permit">sin puntuar</span></span>';
     const m = motivoDeDecision(d);
     const motivoTxt = m.regla && m.regla !== 'modelo'
-      ? `<span class="badge heur" title="regla determinista, sin firma">${varEsc(m.regla)}</span> ${varEsc(m.texto)}`
+      ? varEsc(m.texto)
       : (m.regla === 'modelo' ? varEsc(m.texto) : varEsc(DETECTOR_LABEL[d.detector_name] || d.detector_name || ''));
+    const fte = fuenteDecision(d);
+    const fteHTML = fte.startsWith('Regla: ') ? `<span class="badge heur" title="regla determinista, sin firma">${varEsc(fte.slice(7))}</span>` : varEsc(fte);
     const key = d.entity_ip + '|' + d.window_end_utc;
-    const cls = 'dec-fila ' + (accion !== 'PERMIT' ? 'row-' + accion.toLowerCase() : '') + (nuevasClaves.has(key) ? ' row-nueva' : '');
-    return `<tr class="${cls}" data-key="${varEsc(key)}" title="Pulsa para ver el detalle"><td class="num">${fmtTime(d.logged_at)}<span class="hace">${haceTexto(d.logged_at)}</span></td>`
-      + `<td class="ip">${varEsc(d.entity_ip)}</td><td>${accBadge}</td><td class="why">${motivoTxt}</td>`
-      + `<td>${modelo}</td><td class="num r">${d.packet_count_10s ?? '—'}</td></tr>`
-      + (decAbiertas.has(key) ? `<tr class="dec-det"><td colspan="6">${decDetalleHTML(d, accion)}</td></tr>` : '');
-  }).join('') : `<tr class="empty-row"><td colspan="6">${query ? 'Ninguna decisión coincide con el filtro.'
-      : (decVista === 'accion' ? 'Ninguna acción reciente: todo el tráfico se permitió.' : 'Sin decisiones recientes.')}</td></tr>`;
+    const abierta = decAbiertas.has(key);
+    const cls = 'dec-fila ' + (accion !== 'PERMIT' ? 'row-' + accion.toLowerCase() : '') + (nuevasClaves.has(key) ? ' row-nueva' : '') + (abierta ? ' abierta' : '');
+    return `<tr class="${cls}" data-key="${varEsc(key)}"><td class="num">${fmtTime(d.logged_at)}<span class="hace">${haceTexto(d.logged_at)}</span></td>`
+      + `<td class="ip">${varEsc(d.entity_ip)}</td><td>${accBadge}</td><td>${fteHTML}</td><td class="why"><span class="clamp">${motivoTxt}</span></td>`
+      + `<td>${modelo}</td><td class="num r">${d.packet_count_10s ?? '—'}</td>`
+      + `<td><button type="button" class="btn-sec" aria-expanded="${abierta}">${abierta ? 'Ocultar' : 'Ver detalle'}</button></td></tr>`
+      + (abierta ? `<tr class="dec-det"><td colspan="8">${decDetalleHTML(d, accion)}</td></tr>` : '');
+  }).join('') : `<tr class="empty-row"><td colspan="8">${query ? 'Ninguna decisión coincide con el filtro en ' + (decPeriodo ? 'el periodo consultado.' : 'las decisiones cargadas.')
+      : (decVista === 'accion' ? 'Ninguna decisión con acción en ' + (decPeriodo ? 'el periodo consultado.' : 'las decisiones cargadas.') : 'Sin decisiones en ' + (decPeriodo ? 'el periodo consultado.' : 'las decisiones cargadas.'))}</td></tr>`;
 }
 
 on('ipFilter', 'input', renderDecisionsTable);
@@ -2733,7 +3141,9 @@ on('exportCsv', 'click', () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `cyberflow-decisiones-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+  // El nombre dice el alcance: en vivo (ultimas cargadas) o el periodo pedido, y la vista.
+  const alcance = decPeriodo ? 'periodo-' + fechaLocalInput(decPeriodo.desde || 0).replace(/[:T]/g, '') : 'envivo';
+  a.download = `cyberflow-decisiones-${alcance}-${decVista}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -5285,11 +5695,26 @@ function primeraVisible() {
   for (const [id, s] of seccionesPag) { if (!s.hidden) return id; }
   return seccionesPag.keys().next().value;
 }
+// Frase de contexto bajo el titulo de cada seccion (la cabecera nombra la
+// seccion; «solo lectura» ya lo dice una vez la barra lateral).
+const SEC_SUB = {
+  's-salud': 'Estado general, cifras de la última hora y pulso de la ingesta',
+  's-actividad': 'Volumen analizado y acciones por minuto u hora',
+  's-alertas': 'Anomalías del modelo y alertas de reglas, con su acción',
+  's-decisiones': 'Cada ventana decidida, con su motivo y su evidencia',
+  's-bloqueos': 'Decisiones de limitación y bloqueo, publicación y caducidad',
+  's-scores': 'Cuánto margen deja el tráfico respecto al umbral vigente',
+  's-despliegue': 'Dónde corre cada componente y de dónde sale su estado',
+  's-alcance': 'Qué observa CyberFlow, dónde responde y qué no puede confirmar',
+};
 function mostrarSeccion(id, subir) {
   const sec = seccionesPag.get(id);
   if (!sec || sec.hidden) id = primeraVisible();
   seccionesPag.forEach((s, k) => s.classList.toggle('pag-activa', k === id));
   enlaces.forEach((a, k) => a.classList.toggle('active', k === id));
+  const ht = document.getElementById('hTitulo'), hs = document.getElementById('hSub');
+  if (ht) ht.textContent = SEC_TITULO.get(id) || 'CyberFlow';
+  if (hs) hs.textContent = 'CyberFlow · ' + (SEC_SUB[id] || 'motor en vivo');
   pintarRelaciones(id);
   try { history.replaceState(null, '', '#' + id); } catch (e) { /* sin hash */ }
   if (subir !== false) window.scrollTo({ top: 0, behavior: 'auto' });
@@ -6129,7 +6554,11 @@ function renderAprendizaje(e) {
   document.getElementById('aprCandidato').innerHTML = c;
 
   const filasPol = [
-    ['activo', p.activo ? 'sí' : 'no'], ['modo', p.modo],
+    // El valor interno del .toml sigue siendo «supervisado»; lo que significa
+    // para quien lee es que nada se promueve sin una persona.
+    ['activo', p.activo ? 'sí' : 'no'],
+    ['modo', p.modo === 'supervisado'
+      ? '<span title="valor en el .toml: supervisado">Promoción con aprobación humana</span>' : varEsc(String(p.modo))],
     ['cadencia', p.cadencia_dias + ' días · mínimo ' + p.dias_minimos + ' lotes'],
     ['deriva', 'PSI > ' + p.psi_alerta + ' o anómalo > ' + aprPct(p.tasa_anomala_max) + ' durante ' + p.dias_deriva + ' días'],
     ['saneamiento', '±' + p.margen_contaminacion_s + ' s de IPs marcadas · atípica en ≥ ' + p.max_variables_atipicas + ' variables · lote fuera si PSI > ' + p.psi_rechazo_lote],
@@ -6209,7 +6638,21 @@ if (document.getElementById('aprDefensas')) {
 // quitarse de encima lo que no necesita mientras opera. Por eso vive en
 // localStorage y no en la sesion: es preferencia, no autorizacion.
 const SESION = JSON.parse(document.getElementById('datosSesion').textContent);
-const DEV_SECS = ['s-topologia', 's-variables', 's-vivo', 's-modelo', 's-comparacion', 's-alcance', 's-simulacion', 's-aprendizaje'];
+// Alcance NO esta aqui: explica que observa y que no confirma el panel, y eso
+// lo necesita quien opera, no solo quien desarrolla.
+const DEV_SECS = ['s-topologia', 's-variables', 's-vivo', 's-modelo', 's-comparacion', 's-simulacion', 's-aprendizaje'];
+
+// Un encabezado de grupo sin enlaces visibles debajo se oculta (p.ej. DATOS,
+// MODELO y EVALUACION en el modo operativo).
+function pintarGruposNav() {
+  let grupo = null, visibles = 0;
+  const cerrar = () => { if (grupo) grupo.hidden = visibles === 0; };
+  for (const el of document.querySelectorAll('#nav > .nav-grupo, #nav > a')) {
+    if (el.classList.contains('nav-grupo')) { cerrar(); grupo = el; visibles = 0; }
+    else if (!el.hidden) visibles += 1;
+  }
+  cerrar();
+}
 
 function aplicarModo(modo) {
   const dev = modo === 'desarrollo';
@@ -6219,10 +6662,11 @@ function aplicarModo(modo) {
     const enlace = document.querySelector('#nav a[data-sec="' + id + '"]');
     if (enlace) enlace.hidden = !dev;
   }
+  pintarGruposNav();
   const b = document.getElementById('modoBtn');
   if (b) {
     b.dataset.modo = modo;
-    b.textContent = dev ? 'Modo desarrollo' : 'Modo operativo';
+    b.textContent = 'Vista: ' + (dev ? 'Desarrollo' : 'Operación') + ' · cambiar';
   }
   try { localStorage.setItem('cyberflow_modo', modo); } catch (e) { /* sin persistir */ }
   // Si la seccion que se veia quedo oculta al pasar a operativo, saltar a una
@@ -6234,7 +6678,14 @@ function aplicarModo(modo) {
   }
 }
 
-document.getElementById('quien').textContent = SESION.usuario + ' · ' + SESION.rol;
+const ROL_NOMBRE = { admin: 'Administrador', lector: 'Lector' };
+document.getElementById('quien').textContent = SESION.usuario + ' · ' + (ROL_NOMBRE[SESION.rol] || SESION.rol);
+pintarGruposNav();
+on('navGuia', 'click', (ev) => {
+  ev.preventDefault();
+  const b = document.getElementById('tourBtn');
+  if (b) b.click();
+});
 
 if (SESION.rol === 'admin') {
   let modo = 'operativo';
@@ -6276,6 +6727,34 @@ def read_decisions(log_path: Path, limit: int, max_bytes: int = 1_048_576) -> li
             records.append(event)
     records.sort(key=lambda item: item.get("logged_at", 0))
     return records[-limit:][::-1]
+
+
+PERIODO_MAX_BYTES = 33_554_432   # 32 MiB del final del registro
+PERIODO_MAX_FILAS = 5000
+
+
+def consultar_periodo(log_path: Path, desde: float | None, hasta: float | None,
+                      limite: int = PERIODO_MAX_FILAS,
+                      max_bytes: int = PERIODO_MAX_BYTES) -> dict:
+    """Decisiones con ``logged_at`` en [desde, hasta], mas recientes primero.
+
+    Devuelve tambien lo que de verdad se pudo consultar: desde cuando hay
+    registro en el tramo leido y si se corto por el tope de filas. Asi el panel
+    dice «periodo consultado» y no deja creer que un hueco es ausencia de
+    decisiones cuando en realidad el registro no llegaba tan atras.
+    """
+    todas = read_decisions(log_path, limit=10_000_000, max_bytes=max_bytes)
+    registro_desde = min((float(d.get("logged_at", 0)) for d in todas), default=None)
+    registro_hasta = max((float(d.get("logged_at", 0)) for d in todas), default=None)
+    sel = [d for d in todas
+           if (desde is None or float(d.get("logged_at", 0)) >= desde)
+           and (hasta is None or float(d.get("logged_at", 0)) <= hasta)]
+    return {
+        "desde": desde, "hasta": hasta,
+        "registro_desde": registro_desde, "registro_hasta": registro_hasta,
+        "total": len(sel), "truncado": len(sel) > limite, "limite": limite,
+        "decisiones": sel[:limite],
+    }
 
 
 def leer_alcance(log_path: Path) -> dict:
@@ -6464,13 +6943,15 @@ def resumen_salud(modo: str, services: dict, counters: dict, drops: dict,
             partes.append("%d anomalía(s) del modelo" % n_alert_modelo)
         if n_alert_fb:
             partes.append("%d alerta(s) de fuerza bruta" % n_alert_fb)
+        # Lo que el sensor sabe es que DECIDIO una accion; si el host la aplico no
+        # se ve desde aqui. Por eso «decisiones registradas», no «respuesta activa».
         if n_accion > 0:
-            msg = "Servicios activos · respuesta activa en la última hora"
+            msg = "Servicios operativos · %d decisión(es) LIMIT/BLOCK en la última hora" % n_accion
         else:
-            msg = "Servicios activos · %d alerta(s) en la última hora" % (n_alert_modelo + n_alert_fb)
+            msg = "Servicios operativos · %d alerta(s) en la última hora" % (n_alert_modelo + n_alert_fb)
         return {"nivel": "warn", "msg": msg,
-                "sub": "El sistema está respondiendo: " + " · ".join(partes)
-                       + ". Revisar Decisiones y Bloqueos abajo."}
+                "sub": "Registradas en la última hora: " + " · ".join(partes)
+                       + ". Consulta su publicación y vigencia en Respuestas."}
     if subiendo_drops:
         d = drops.get("delta")
         return {"nivel": "warn",
@@ -6636,10 +7117,16 @@ def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | Non
     saberlo, porque el bloqueo ocurre en el host.
     """
     vigentes: dict[str, dict] = {}
+    # Tres estados distintos que el panel no debe mezclar: registrada (el motor
+    # la decidio), publicada (esta en el feed firmado) y aplicada en el host
+    # (eso solo lo sabe el agente; aqui nunca se afirma).
+    en_feed: set[str] = set()
     if feed_path is not None:
         try:
             feed = json.loads(Path(feed_path).read_text(encoding="utf-8"))
             for e in feed.get("entradas", []):
+                if e.get("ip"):
+                    en_feed.add(str(e["ip"]))
                 if float(e.get("hasta", 0)) > ahora and e.get("ip"):
                     vigentes[e["ip"]] = {
                         "ip": e["ip"], "accion": e.get("accion"), "motivo": e.get("motivo", ""),
@@ -6689,10 +7176,14 @@ def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | Non
             previo = vigentes.get(ip)
         if previo is not None:
             previo["desde"] = inicio
+            previo["ultima"] = t_ultima
             previo["ofensas"] = len(episodio)
+            previo["registrada"] = True
     salida = []
     for v in vigentes.values():
         v["expira_s"] = max(0, int(v["hasta"] - ahora))
+        v["publicada"] = v["ip"] in en_feed
+        v.setdefault("registrada", False)
         salida.append(v)
     salida.sort(key=lambda v: (-SEVERIDAD_ACCION.get(v["accion"], 0), -v["hasta"]))
     return salida
@@ -6710,7 +7201,7 @@ def historial_acciones(log_path: Path, ahora: float, horas: int = 24,
                        cache_s: float = 30.0) -> dict:
     """Episodios de LIMIT/BLOCK de las ultimas horas, uno por IP y racha.
 
-    «IPs bloqueadas ahora» ensena lo vigente; esto ensena lo que ya paso. Se lee
+    «Respuestas registradas como vigentes» ensena lo vigente; esto, lo que ya paso. Se lee
     la cola del registro y solo se interpretan las lineas que pueden pedir una
     accion (un ALERT o un heuristico), que son muy pocas. `desde` dice hasta
     donde alcanza de verdad el registro leido: si no llega a las horas pedidas,
@@ -6759,7 +7250,7 @@ def historial_acciones(log_path: Path, ahora: float, horas: int = 24,
             episodios.append({
                 "ip": ip, "accion": peor[1], "motivo": peor[2], "origen": peor[3],
                 "inicio": racha[0][0], "fin": racha[-1][0], "ventanas": len(racha),
-                "vigente": caduca > ahora,
+                "vigente": caduca > ahora, "caduca": caduca,
             })
             if o is not None:
                 racha = [o]
@@ -8254,7 +8745,16 @@ def main() -> int:
                 self._send_json(estado_aprendizaje(args.config_toml, args.demo))
                 return
             if path == "/api/decisions":
-                params = dict(pair.split("=") for pair in query.split("&") if "=" in pair)
+                params = dict(pair.split("=", 1) for pair in query.split("&") if "=" in pair)
+                if "desde" in params or "hasta" in params:
+                    def _t(v):
+                        try:
+                            return float(v) if v else None
+                        except ValueError:
+                            return None
+                    self._send_json(consultar_periodo(
+                        args.log_path, _t(params.get("desde")), _t(params.get("hasta"))))
+                    return
                 limit = int(params.get("limit", "100"))
                 self._send_json(read_decisions(args.log_path, limit=limit))
                 return
