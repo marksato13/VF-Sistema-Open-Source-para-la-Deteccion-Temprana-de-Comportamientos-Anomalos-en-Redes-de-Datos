@@ -53,10 +53,6 @@ for u in ppi-dashboard cyberflow-panel-acceso ppi-motor ppi-motor-capture cyberf
 done
 hacer "systemctl disable --now cyberflow-limpieza.timer"
 hacer "rm -f /etc/systemd/system/cyberflow-limpieza.timer /etc/systemd/system/cyberflow-limpieza.service"
-if [[ -f /etc/systemd/system/cyberflow-aprendizaje.timer ]]; then
-    hacer "systemctl disable --now cyberflow-aprendizaje.timer"
-    hacer "rm -f /etc/systemd/system/cyberflow-aprendizaje.timer /etc/systemd/system/cyberflow-aprendizaje.service"
-fi
 hacer "systemctl daemon-reload"
 hacer "systemctl reset-failed"
 

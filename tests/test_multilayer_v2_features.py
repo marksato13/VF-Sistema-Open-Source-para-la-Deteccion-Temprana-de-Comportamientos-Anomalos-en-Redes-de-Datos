@@ -148,19 +148,14 @@ class MultilayerV2FeatureTests(unittest.TestCase):
                 "event_type": "dns",
                 "src_ip": self.client,
                 "dest_ip": self.server,
-                "dns": {"type": "query", "rcode": "NOERROR", "rrname": "server.ppi.lab"},
+                "dns": {"type": "request", "rcode": "NOERROR", "rrname": "server.ppi.lab"},
             },
             {
-                # Suricata emite "answer" (no "response") y registra el evento con
-                # las direcciones del FLUJO: src sigue siendo quien preguntó (el
-                # cliente), no el servidor DNS. Por eso el NXDOMAIN se atribuye al
-                # cliente. Ver nota en extract_multilayer_v2.py y
-                # tests/test_dns_formato_suricata.py.
                 "timestamp": iso_timestamp(1004.2),
                 "event_type": "dns",
-                "src_ip": self.client,
-                "dest_ip": self.server,
-                "dns": {"type": "answer", "rcode": "NXDOMAIN"},
+                "src_ip": self.server,
+                "dest_ip": self.client,
+                "dns": {"type": "response", "rcode": "NXDOMAIN"},
             },
             {
                 "timestamp": iso_timestamp(1004.3),

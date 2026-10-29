@@ -22,13 +22,13 @@
   "benigno": {
     "ventanas": 527,
     "horas": null,
-    "falsos": {"suricata": "0 firmas ET sobre clientes (muestra benigna aparte, 14-oct)", "modelo": 0, "heuristicos": 0, "combinado": 0}
+    "falsos": {"suricata": "no medido", "modelo": 0, "heuristicos": 0, "combinado": 0}
   },
   "notas": [
     "N = 3 por familia sin firma y N = 1 con firma: es un piloto ampliado, no una campaña.",
     "Escaneo en heurísticos: 1/3 con los umbrales 2026-10-06.1; tras añadir la rama de ráfaga (2026-10-06.2) la confirmación dio 3/3 (N = 3), sin cambiar el FPR.",
     "Nikto: solo se midió el modelo; el heurístico http_abuse no se midió, así que la latencia del combinado es como máximo 12,0 s.",
     "Suricata en SPAN funciona como IDS: se compara detección, no bloqueo. El bloqueo es una capacidad adicional de CyberFlow.",
-    "Falsos positivos de Suricata: MEDIDO el 14-oct (replay ET Open de ~4 min benignos, 112556 paquetes): 0 firmas ET de amenaza sobre clientes; 11 anomalias de stream del espejo SPAN (no amenazas). Tradeoff: Suricata preciso pero ciego a lo sin firma; CyberFlow detecta eso con FPR de modelo 4,45% acotado a LIMIT. Ver FPR-SURICATA-BENIGNO-2026-10-14.md."
+    "Falsos positivos de Suricata sobre la línea base: no medidos todavía; van en la campaña C3."
   ]
 }

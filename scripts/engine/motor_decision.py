@@ -254,6 +254,53 @@ def list_closed_pcap_files(
     return fresh
 
 
+def ventana_completa(window_end: float, marca_pcap: float | None) -> bool:
+    """La ventana solo se decide cuando los PCAP CERRADOS ya llegan hasta su final.
+
+    build_rows() crea ventanas hasta la observacion mas nueva de la entidad, sea
+    un paquete o un evento de eve.json. eve.json se escribe casi en tiempo real,
+    pero los paquetes solo se leen de ficheros cerrados (rotacion de 15 s), asi
+    que una ventana podia existir por un evento L7 antes de que sus paquetes
+    estuvieran en disco. Se decidia con packet_count_10s=0 (o con un conteo a
+    medias) y quedaba en scored_windows: nunca se volvia a evaluar. Medido el
+    2026-10-28 contra el PCAP completo: 241 de 2 791 ventanas con trafico.
+    'Datos aun no disponibles' no es 'cero trafico': la ventana queda pendiente
+    hasta que marca_pcap (paquete mas nuevo ya leido de un fichero cerrado) la
+    cubre. No es una espera fija: se evalua en el primer ciclo en que esta completa.
+    """
+    return marca_pcap is not None and window_end <= marca_pcap
+
+
+def claves_ya_registradas(log_path: Path, max_bytes: int = 16 * 1024 * 1024) -> dict[tuple[str, str], float]:
+    """Claves (entidad, window_end_utc) ya escritas en el registro, para no repetirlas al reiniciar.
+
+    Al arrancar, build_rows() vuelve a crear las ventanas de los ultimos
+    history_seconds a partir del anillo; sin esto, un reinicio duplicaria en el
+    registro decisiones de ventanas ya decididas.
+    """
+    claves: dict[tuple[str, str], float] = {}
+    try:
+        with log_path.open("rb") as handle:
+            size = handle.seek(0, 2)
+            handle.seek(max(0, size - max_bytes))
+            data = handle.read().decode("utf-8", errors="replace").split("\n")
+    except FileNotFoundError:
+        return claves
+    if size > max_bytes:
+        data = data[1:]
+    for line in data:
+        if '"window_end_utc"' not in line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if record.get("event") in ("decision", "ventana_no_evaluada"):
+            key = (str(record["entity_ip"]), str(record["window_end_utc"]))
+            claves[key] = extractor.parse_eve_timestamp(key[1])
+    return claves
+
+
 def parse_pcap_to_packets(path: Path) -> list:
     """Decodifica un PCAP a FrameContext (parseo, sin atribucion de flujo).
 
@@ -315,7 +362,14 @@ def main() -> int:
 
     tail = EveTail(args.eve_path)
     eve_buffer: collections.deque[tuple[float, str]] = collections.deque()
-    scored_windows: dict[tuple[str, str], float] = {}
+    scored_windows: dict[tuple[str, str], float] = claves_ya_registradas(args.log_path)
+    # Ventanas vistas pero aun sin sus paquetes en ficheros cerrados: clave -> primer ciclo en que se vio.
+    pendientes: collections.OrderedDict[tuple[str, str], float] = collections.OrderedDict()
+    marca_pcap: float | None = None   # paquete mas nuevo leido de un PCAP cerrado
+    marca_eve: float | None = None    # evento mas nuevo leido de eve.json (solo se registra)
+    # Mas alla de esta antiguedad la historia de 60 s de la ventana ya no esta entera en el buffer
+    # (se poda a history_seconds desde el dato mas nuevo): no se puede evaluar bien y se registra como no evaluada.
+    limite_pendiente = args.history_seconds - 60
     descartados_plano_control = 0
     ventanas_excluidas = 0
     pcaps_ilegibles = 0
@@ -343,6 +397,7 @@ def main() -> int:
         "eve_path": str(args.eve_path),
         "step_seconds": args.step_seconds,
         "history_seconds": args.history_seconds,
+        "claves_previas_cargadas": len(scored_windows),
     }
     with args.log_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(startup_record, sort_keys=True) + "\n")
@@ -374,6 +429,7 @@ def main() -> int:
             except ValueError:
                 continue
             eve_buffer.append((event_time, raw_line))
+            marca_eve = event_time if marca_eve is None else max(marca_eve, event_time)
 
         cutoff = cycle_start - args.history_seconds
         while eve_buffer and eve_buffer[0][0] < cutoff:
@@ -411,7 +467,11 @@ def main() -> int:
             if pcap.name in parsed_pcaps:
                 continue
             try:
-                packet_buffer.extend(parse_pcap_to_packets(pcap))
+                nuevos = parse_pcap_to_packets(pcap)
+                packet_buffer.extend(nuevos)
+                if nuevos:
+                    mas_nuevo = max(pk.packet.timestamp for pk in nuevos)
+                    marca_pcap = mas_nuevo if marca_pcap is None else max(marca_pcap, mas_nuevo)
             except Exception as exc:
                 # Se salta, pero SE CUENTA. Tragarse esto en silencio escondio
                 # durante meses que el motor descartaba el 5,55 % de su propio
@@ -511,7 +571,12 @@ def main() -> int:
                     continue
                 if not row["eligible_training"]:
                     continue
-                scored_windows[window_key] = extractor.parse_eve_timestamp(row["window_end_utc"])
+                window_end = extractor.parse_eve_timestamp(row["window_end_utc"])
+                if not ventana_completa(window_end, marca_pcap):
+                    pendientes.setdefault(window_key, cycle_start)
+                    continue
+                pendiente_desde = pendientes.pop(window_key, None)
+                scored_windows[window_key] = window_end
 
                 # Heuristico explicito, no un ajuste silencioso del modelo
                 # congelado: ocsvm_scaled nunca vio ventanas "todo ceros" en
@@ -614,6 +679,13 @@ def main() -> int:
                     # intacta); lo consume publicar_feed.py para derivar LIMIT/BLOCK
                     # sin tocar el modelo. None si ningun heuristico dispara.
                     "heuristico": heuristicos.evaluar(row),
+                    # Disponibilidad de las fuentes al decidir. logged_at sigue siendo la
+                    # hora real de emision; pendiente_desde (ciclo en que la ventana se vio
+                    # por primera vez sin sus paquetes, o null) permite medir la espera.
+                    "inicio_ciclo": cycle_start,
+                    "marca_pcap": marca_pcap,
+                    "marca_eve": marca_eve,
+                    "pendiente_desde": pendiente_desde,
                 }
                 # decision == "ALERT" solo ocurre por (modelo con pkts10>0) o
                 # (heuristico de fuerza bruta sobre L7); ambos son bloqueos
@@ -629,6 +701,35 @@ def main() -> int:
                     handle.write(json.dumps(record, sort_keys=True) + "\n")
                 if decision == "ALERT":
                     print(json.dumps(record, sort_keys=True), flush=True)
+
+        # Una ventana pendiente nunca desaparece en silencio: si sus paquetes no llegan
+        # a tiempo (captura parada, PCAP ilegible...) se registra como no evaluada.
+        # Si los PCAP SI la cubren pero build_rows ya no la genera (solo existia por
+        # observaciones viejas de la entidad que la poda a history_seconds saco del
+        # buffer), el motivo es otro: se distingue para no culpar a la captura.
+        for window_key, visto in list(pendientes.items()):
+            if window_key in scored_windows:
+                del pendientes[window_key]
+                continue
+            window_end = extractor.parse_eve_timestamp(window_key[1])
+            if cycle_start - window_end <= limite_pendiente:
+                continue
+            del pendientes[window_key]
+            scored_windows[window_key] = window_end
+            with args.log_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps({
+                    "event": "ventana_no_evaluada",
+                    "logged_at": time.time(),
+                    "entity_ip": window_key[0],
+                    "window_end_utc": window_key[1],
+                    "motivo": ("ventana_no_regenerada" if ventana_completa(window_end, marca_pcap)
+                               else "pcap_incompleto"),
+                    "pendiente_desde": visto,
+                    "inicio_ciclo": cycle_start,
+                    "marca_pcap": marca_pcap,
+                    "marca_eve": marca_eve,
+                    "pcaps_ilegibles": pcaps_ilegibles,
+                }, sort_keys=True) + "\n")
 
         elapsed = time.time() - cycle_start
         time.sleep(max(0.5, args.step_seconds - elapsed))

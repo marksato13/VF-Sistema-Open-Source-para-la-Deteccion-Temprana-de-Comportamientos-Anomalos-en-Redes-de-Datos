@@ -83,11 +83,12 @@ def decisiones_a_entradas(decisiones: list[dict], estado: dict, ahora: float,
         accion, motivo, detector = v
         evento_ts = float(d.get("logged_at", 0))
         prev = por_ip.get(ip)
-        if (prev is None or _SEVERIDAD[accion] > _SEVERIDAD[prev["accion"]]
+        if (prev is None
+                or _SEVERIDAD[accion] > _SEVERIDAD[prev["accion"]]
                 or (_SEVERIDAD[accion] == _SEVERIDAD[prev["accion"]]
                     and evento_ts > prev["evento_ts"])):
-            por_ip[ip] = {"accion": accion, "motivo": motivo, "detector": detector,
-                          "evento_ts": evento_ts}
+            por_ip[ip] = {"accion": accion, "motivo": motivo,
+                          "detector": detector, "evento_ts": evento_ts}
 
     entradas = []
     for ip, v in sorted(por_ip.items()):

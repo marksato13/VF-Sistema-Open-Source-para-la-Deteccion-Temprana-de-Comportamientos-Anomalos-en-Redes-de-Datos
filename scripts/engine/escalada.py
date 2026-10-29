@@ -39,12 +39,17 @@ def procesar(estado: dict, ip: str, accion: str, ahora: float,
     if st and (ahora - st.get("ultimo_visto", 0)) > ventana_s:
         st = None
 
+    # Solo hay tres niveles efectivos. Acotar también migra estados históricos
+    # inflados por republicar la misma decisión en cada ciclo del timer.
     bloqueos = min(int(st.get("bloqueos", 0)), 3) if st else 0
 
     if accion == "BLOCK":
         ultimo_evento = float(st.get("ultimo_evento_block", 0)) if st else 0
-        mismo_episodio = (evento_ts is not None and ultimo_evento > 0
-                          and evento_ts <= ultimo_evento + separacion_episodio_s)
+        mismo_episodio = (
+            evento_ts is not None
+            and ultimo_evento > 0
+            and evento_ts <= ultimo_evento + separacion_episodio_s
+        )
         if not mismo_episodio:
             bloqueos = min(bloqueos + 1, 3)
         nivel = min(bloqueos, 3)
