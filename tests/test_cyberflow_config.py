@@ -222,9 +222,15 @@ class RotacionDelRegistro(unittest.TestCase):
 
     def test_se_genera_para_el_registro_del_motor(self):
         r = cc.render(cfg())[cc.RUTA_ROTACION]
-        self.assertIn("/no/existe/cyberflow/logs/motor_decision.log {", r)
+        self.assertIn("/no/existe/cyberflow/logs/motor_decision.log ", r)
         self.assertIn("maxsize 200M", r)
         self.assertIn("create 0640 m4rk m4rk", r)
+
+    def test_rota_tambien_el_registro_por_ciclo(self):
+        # El motor anade una linea por ciclo a <logs>/_state/ciclos.jsonl (--ciclos-path por omision).
+        r = cc.render(cfg())[cc.RUTA_ROTACION]
+        self.assertIn("/no/existe/cyberflow/logs/motor_decision.log "
+                      "/no/existe/cyberflow/logs/_state/ciclos.jsonl {", r)
 
     def test_sin_copytruncate(self):
         # El motor reabre el fichero en cada escritura, asi que copytruncate

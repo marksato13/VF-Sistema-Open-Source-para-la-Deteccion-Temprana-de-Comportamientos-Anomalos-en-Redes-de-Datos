@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import ipaddress
 import os
+import posixpath
 import shutil
 import sys
 import tomllib
@@ -340,8 +341,10 @@ ROTACION = """# Generado por scripts/setup/cyberflow_config.py. NO editar a mano
 #
 # Sin copytruncate a proposito: el motor abre el fichero en modo append en
 # cada escritura y lo cierra, asi que tras renombrarlo escribe en el nuevo sin
-# necesidad de senales ni de reiniciar el servicio.
-{registro} {{
+# necesidad de senales ni de reiniciar el servicio. Lo mismo vale para
+# _state/ciclos.jsonl, el registro por ciclo del motor (~0,9 kB por ciclo,
+# ~8 MB al dia con paso de 10 s).
+{registro} {ciclos} {{
     daily
     maxsize 200M
     rotate 14
@@ -495,8 +498,11 @@ def render(cfg: dict) -> dict[str, str]:
             glob=cap.get("anillo_glob", "live-*.pcap"),
             retener=cap["retener_minutos"]),
         "cyberflow-limpieza.timer": LIMPIEZA_TIMER.format(cabecera=cabecera),
-        RUTA_ROTACION: ROTACION.format(registro="%s/%s" % (raiz, rut["registro"]),
-                                       usuario=rut["usuario"]),
+        RUTA_ROTACION: ROTACION.format(
+            registro="%s/%s" % (raiz, rut["registro"]),
+            # motor_decision.py: ciclos.jsonl en --state-dir, por omision <dir del registro>/_state
+            ciclos="%s/%s" % (raiz, posixpath.join(posixpath.dirname(rut["registro"]), "_state", "ciclos.jsonl")),
+            usuario=rut["usuario"]),
         "cyberflow-capture-nic.service": NIC.format(**comun),
         "ppi-motor-capture.service": CAPTURA.format(**comun),
         "ppi-motor.service": MOTOR.format(
