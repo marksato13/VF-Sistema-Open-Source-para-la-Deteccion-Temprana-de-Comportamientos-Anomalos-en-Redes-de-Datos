@@ -341,6 +341,33 @@ def parse_pcap_to_packets(path: Path) -> list:
     return out
 
 
+def escribir_registros(log_path: Path, registros: list[dict]) -> float | None:
+    """Escribe los registros del ciclo en un solo write y devuelve cuando quedaron visibles.
+
+    ``logged_at`` se asigna aqui, justo antes de escribir, a todos los registros
+    del lote: conserva el significado de 7b275b8 (instante de escritura, la hora
+    que leen publicar_feed.py y el analizador) aunque las decisiones se hayan
+    tomado antes en el ciclo (``decidido_en``). Es una cota inferior de la
+    disponibilidad; el valor devuelto, tomado al cerrar el fichero, es la cota
+    superior y va a ciclos.jsonl como ``registro_escrito_en``. None si no hay
+    nada que escribir.
+    """
+    if not registros:
+        return None
+    escrito = time.time()
+    lineas = []
+    for record in registros:
+        record["logged_at"] = escrito
+        lineas.append(json.dumps(record, sort_keys=True))
+    with log_path.open("a", encoding="utf-8") as handle:
+        handle.write("\n".join(lineas) + "\n")
+    disponible = time.time()
+    for record, linea in zip(registros, lineas):
+        if record.get("decision") == "ALERT":
+            print(linea, flush=True)
+    return disponible
+
+
 def main() -> int:
     args = parse_args()
 
@@ -594,7 +621,14 @@ def main() -> int:
             duplicados_espejo += quitados
         t = cerrar_etapa("deduplicacion", t)
 
-        lineas_registro: list[str] = []
+        # Registros del ciclo, escritos juntos al final (escribir_registros). Tiempos:
+        #   decidido_en  momento en que el motor tomo la decision o expiro la ventana;
+        #   logged_at    instante de escritura, asignado justo antes del write, igual que
+        #                en 7b275b8 (alli cada registro se escribia al decidirlo): es el
+        #                significado que usan publicar_feed.py y el analizador;
+        #   ciclos.jsonl registro_escrito_en: despues de cerrar el fichero, cuando el
+        #                registro ya es visible para los consumidores (cota superior).
+        registros_ciclo: list[dict] = []
         cuenta = collections.Counter()
         packets: list = []
         apps: list = []
@@ -790,7 +824,7 @@ def main() -> int:
                     "pcaps_ilegibles": pcaps_ilegibles,
                     "pcaps_ilegibles_motivo": motivos_ilegibles or None,
                     "duplicados_espejo": duplicados_espejo,
-                    "logged_at": time.time(),
+                    "decidido_en": time.time(),
                     "entity_ip": row["entity_ip"],
                     "window_end_utc": row["window_end_utc"],
                     "history_coverage_s": row["history_coverage_s"],
@@ -805,8 +839,8 @@ def main() -> int:
                     # intacta); lo consume publicar_feed.py para derivar LIMIT/BLOCK
                     # sin tocar el modelo. None si ningun heuristico dispara.
                     "heuristico": heuristicos.evaluar(row),
-                    # Disponibilidad de las fuentes al decidir. logged_at sigue siendo la
-                    # hora real de emision; pendiente_desde (ciclo en que la ventana se vio
+                    # Disponibilidad de las fuentes al decidir. logged_at (lo pone
+                    # escribir_registros) sigue siendo el instante de escritura; pendiente_desde (ciclo en que la ventana se vio
                     # por primera vez sin sus paquetes, o null) permite medir la espera.
                     "inicio_ciclo": cycle_start,
                     "marca_pcap": marca_pcap,
@@ -824,10 +858,8 @@ def main() -> int:
                     )
 
                 # Se escribe una vez por ciclo (abajo), no abriendo el fichero en cada decision.
-                lineas_registro.append(json.dumps(record, sort_keys=True))
+                registros_ciclo.append(record)
                 cuenta["decididas"] += 1
-                if decision == "ALERT":
-                    print(json.dumps(record, sort_keys=True), flush=True)
             t = cerrar_etapa("decision_y_registro", t)
 
         # Una ventana pendiente nunca desaparece en silencio: si sus paquetes no llegan
@@ -845,9 +877,9 @@ def main() -> int:
             del pendientes[window_key]
             scored_windows[window_key] = window_end
             cuenta["no_evaluadas"] += 1
-            lineas_registro.append(json.dumps({
+            registros_ciclo.append({
                 "event": "ventana_no_evaluada",
-                "logged_at": time.time(),
+                "decidido_en": time.time(),
                 "entity_ip": window_key[0],
                 "window_end_utc": window_key[1],
                 "motivo": ("ventana_no_regenerada" if ventana_completa(window_end, marca_pcap)
@@ -857,10 +889,8 @@ def main() -> int:
                 "marca_pcap": marca_pcap,
                 "marca_eve": marca_eve,
                 "pcaps_ilegibles": pcaps_ilegibles,
-            }, sort_keys=True))
-        if lineas_registro:
-            with args.log_path.open("a", encoding="utf-8") as handle:
-                handle.write("\n".join(lineas_registro) + "\n")
+            })
+        registro_escrito_en = escribir_registros(args.log_path, registros_ciclo)
         t = cerrar_etapa("expiracion_y_escritura", t)
 
         # Un registro por ciclo, incluidos los que no deciden nada: distingue un
@@ -873,6 +903,8 @@ def main() -> int:
                     "event": "ciclo",
                     "inicio_ciclo": cycle_start,
                     "fin_ciclo": fin_ciclo,
+                    "registro_escrito_en": registro_escrito_en,
+                    "registros_escritos": len(registros_ciclo),
                     "duracion_s": round(time.perf_counter() - t_ciclo, 4),
                     "etapas_s": etapas,
                     "marca_pcap": marca_pcap,

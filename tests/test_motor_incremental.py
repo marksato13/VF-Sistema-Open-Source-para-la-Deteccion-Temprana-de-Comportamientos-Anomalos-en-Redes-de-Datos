@@ -348,6 +348,50 @@ def escenario(tmp: Path, t0: int) -> tuple[Path, Path]:
     return capt, eve
 
 
+class TiemposDeRegistro(unittest.TestCase):
+    """decidido_en, logged_at y registro_escrito_en distinguen decidir de quedar disponible."""
+
+    def test_logged_at_antes_del_write_y_disponibilidad_despues(self):
+        import motor_decision as md
+
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "motor_decision.log"
+            log.write_text("", encoding="utf-8")
+
+            class Reloj:
+                """Cada lectura avanza 1 s y anota si la linea ya era visible en el fichero."""
+                def __init__(self):
+                    self.t, self.visto = 100.0, []
+
+                def time(self):
+                    self.t += 1.0
+                    self.visto.append((self.t, "10.10.20.21" in log.read_text(encoding="utf-8")))
+                    return self.t
+
+            reloj, original = Reloj(), md.time
+            md.time = reloj
+            try:
+                regs = [{"event": "decision", "decision": "ALERT", "entity_ip": "10.10.20.21",
+                         "window_end_utc": "2026-10-29T09:00:00Z", "decidido_en": 50.0},
+                        {"event": "ventana_no_evaluada", "entity_ip": "10.10.20.22",
+                         "window_end_utc": "2026-10-29T09:00:00Z", "decidido_en": 51.0}]
+                disponible = md.escribir_registros(log, regs)
+                self.assertIsNone(md.escribir_registros(log, []))
+            finally:
+                md.time = original
+            escritos = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
+
+        self.assertEqual(len(escritos), 2)
+        logged = {r["logged_at"] for r in escritos}
+        self.assertEqual(len(logged), 1, "un solo instante de escritura por lote")
+        (t_log,) = logged
+        # logged_at se tomo con el registro aun NO visible; la disponibilidad, ya visible
+        self.assertIn((t_log, False), reloj.visto)
+        self.assertIn((disponible, True), reloj.visto)
+        self.assertGreater(disponible, t_log)
+        self.assertTrue(all(r["decidido_en"] <= r["logged_at"] for r in escritos))
+
+
 class ExtremoAExtremo(unittest.TestCase):
     def test_escenario_sintetico_con_reinicio(self):
         try:
@@ -412,7 +456,20 @@ class ExtremoAExtremo(unittest.TestCase):
                                                                 and c["observaciones_l7"] == 0
                                                                 and c["paquetes_deduplicados"] == 0))
         self.assertTrue(all({"inicio_ciclo", "fin_ciclo", "duracion_s", "etapas_s", "marca_pcap", "marca_eve",
-                             "decididas", "ventanas_pendientes", "no_evaluadas"} <= set(c) for c in ciclos))
+                             "decididas", "ventanas_pendientes", "no_evaluadas", "registro_escrito_en",
+                             "registros_escritos"} <= set(c) for c in ciclos))
+        # tiempos de registro: decidir <= escribir <= disponible, y el ciclo cuenta lo que escribio
+        self.assertTrue(all(r["decidido_en"] <= r["logged_at"] for r in decisiones + no_evaluadas))
+        por_ciclo = {}
+        for r in decisiones + no_evaluadas:
+            por_ciclo.setdefault(r["inicio_ciclo"], []).append(r)
+        for c in ciclos:
+            escritos = por_ciclo.get(c["inicio_ciclo"], [])
+            self.assertEqual(c["registros_escritos"], len(escritos))
+            if escritos:
+                self.assertGreaterEqual(c["registro_escrito_en"], max(r["logged_at"] for r in escritos))
+            else:
+                self.assertIsNone(c["registro_escrito_en"])
 
 
 if __name__ == "__main__":
