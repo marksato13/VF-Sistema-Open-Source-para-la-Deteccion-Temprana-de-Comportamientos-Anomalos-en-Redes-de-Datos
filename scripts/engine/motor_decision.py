@@ -64,6 +64,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "features"))
 import extract_multilayer_v2 as extractor  # noqa: E402
 import extract_multilayer_v3 as v3  # noqa: E402  (capa 2 y deduplicacion)
 import heuristicos  # noqa: E402  (heuristicos deterministas para el feed de enforcement)
+import motor_incremental as incremental  # noqa: E402  (mismo extractor congelado, sin trabajo repetido)
 
 try:
     import joblib
@@ -131,6 +132,24 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--log-path", type=Path, required=True)
     parser.add_argument("--state-dir", type=Path, default=None)
+    parser.add_argument(
+        "--ciclos-path",
+        type=Path,
+        default=None,
+        help="registro de un ciclo por linea (inicio, fin, duracion por etapa, marcas "
+             "de disponibilidad y conteos de ventanas). Por omision, ciclos.jsonl en "
+             "--state-dir. Va aparte de --log-path para no alterar lo que leen el "
+             "panel y el analizador",
+    )
+    parser.add_argument(
+        "--verificar-equivalencia",
+        type=Path,
+        default=None,
+        help="SOLO para validar: en cada ciclo recalcula tambien por la via global "
+             "congelada (deduplicacion, atribucion, EVE y build_rows de toda la "
+             "historia) y escribe aqui si coincide con la incremental. Cuesta lo "
+             "mismo que el motor original; no cambia ninguna decision",
+    )
     parser.add_argument("--step-seconds", type=int, default=10)
     parser.add_argument("--history-seconds", type=int, default=110)
     parser.add_argument(
@@ -356,12 +375,17 @@ def main() -> int:
 
     state_dir = args.state_dir or (args.log_path.parent / "_state")
     state_dir.mkdir(parents=True, exist_ok=True)
+    # Solo lo usa --verificar-equivalencia: el motor ya no vuelca ni relee la
+    # historia de eve.json en cada ciclo (cada linea se lee una vez al llegar).
     eve_slice_path = state_dir / "eve_window.jsonl"
+    ciclos_path = args.ciclos_path or (state_dir / "ciclos.jsonl")
 
     args.log_path.parent.mkdir(parents=True, exist_ok=True)
 
     tail = EveTail(args.eve_path)
-    eve_buffer: collections.deque[tuple[float, str]] = collections.deque()
+    # (hora del evento, linea, sus observaciones L7): las observaciones se
+    # calculan con la funcion congelada una sola vez, cuando la linea llega.
+    eve_buffer: collections.deque[tuple[float, str, list]] = collections.deque()
     scored_windows: dict[tuple[str, str], float] = claves_ya_registradas(args.log_path)
     # Ventanas vistas pero aun sin sus paquetes en ficheros cerrados: clave -> primer ciclo en que se vio.
     pendientes: collections.OrderedDict[tuple[str, str], float] = collections.OrderedDict()
@@ -382,6 +406,20 @@ def main() -> int:
     packet_buffer: collections.deque = collections.deque()
     parsed_pcaps: collections.OrderedDict[str, None] = collections.OrderedDict()
     MAX_PARSED_PCAP_NAMES = 4000
+    # Orden de llegada al anillo de cada trama (y de su paquete). Las funciones
+    # congeladas ordenan de forma estable por timestamp: (timestamp, llegada)
+    # reproduce ese orden aunque se les pase solo una parte del anillo.
+    llegada: dict[int, int] = {}
+    llegada_paquete: dict[int, int] = {}
+    siguiente_llegada = 0
+    deduplicador = incremental.Deduplicador(v3.deduplicar_espejo)
+    atribuidor = incremental.Atribuidor(extractor.attribute_packets, extractor.canonical_flow_key)
+
+    def orden_paquete(paquete) -> tuple[float, int]:
+        return paquete.timestamp, llegada_paquete[id(paquete)]
+
+    verificacion = (args.verificar_equivalencia.open("a", encoding="utf-8")
+                    if args.verificar_equivalencia else None)
 
     startup_record = {
         "event": "motor_startup",
@@ -398,6 +436,9 @@ def main() -> int:
         "step_seconds": args.step_seconds,
         "history_seconds": args.history_seconds,
         "claves_previas_cargadas": len(scored_windows),
+        # Mismas funciones congeladas; ver scripts/engine/motor_incremental.py.
+        "procesamiento": "incremental",
+        "ciclos_path": str(ciclos_path),
     }
     with args.log_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(startup_record, sort_keys=True) + "\n")
@@ -415,7 +456,17 @@ def main() -> int:
 
     while True:
         cycle_start = time.time()
+        t_ciclo = time.perf_counter()
+        etapas: dict[str, float] = {}
+        marca_pcap_previa = marca_pcap
 
+        def cerrar_etapa(nombre: str, desde: float) -> float:
+            ahora = time.perf_counter()
+            etapas[nombre] = round(etapas.get(nombre, 0.0) + ahora - desde, 4)
+            return ahora
+
+        t = time.perf_counter()
+        lineas_eve_nuevas = 0
         for raw_line in tail.poll():
             try:
                 event = json.loads(raw_line)
@@ -428,8 +479,11 @@ def main() -> int:
                 event_time = extractor.parse_eve_timestamp(timestamp_raw)
             except ValueError:
                 continue
-            eve_buffer.append((event_time, raw_line))
+            eve_buffer.append((event_time, raw_line,
+                               incremental.observaciones_de_linea(extractor, raw_line, entity_network)))
+            lineas_eve_nuevas += 1
             marca_eve = event_time if marca_eve is None else max(marca_eve, event_time)
+        t = cerrar_etapa("eve_lectura", t)
 
         cutoff = cycle_start - args.history_seconds
         while eve_buffer and eve_buffer[0][0] < cutoff:
@@ -449,10 +503,7 @@ def main() -> int:
         while len(scored_windows) > MAX_SCORED_WINDOWS:
             oldest_key = next(iter(scored_windows))
             del scored_windows[oldest_key]
-
-        with eve_slice_path.open("w", encoding="utf-8") as handle:
-            for _, raw_line in eve_buffer:
-                handle.write(raw_line + "\n")
+        t = cerrar_etapa("eve_poda", t)
 
         pcap_files = list_closed_pcap_files(
             args.capture_dir,
@@ -463,11 +514,17 @@ def main() -> int:
         # Parseo INCREMENTAL: decodifica de disco solo los PCAP no vistos antes.
         # Equivalente exacto a re-parsear todo el anillo porque
         # attribute_packets() ordena por timestamp internamente.
+        pcaps_nuevos = 0
         for pcap in pcap_files:
             if pcap.name in parsed_pcaps:
                 continue
             try:
                 nuevos = parse_pcap_to_packets(pcap)
+                pcaps_nuevos += 1
+                for pk in nuevos:
+                    llegada[id(pk)] = siguiente_llegada
+                    llegada_paquete[id(pk.packet)] = siguiente_llegada
+                    siguiente_llegada += 1
                 packet_buffer.extend(nuevos)
                 if nuevos:
                     mas_nuevo = max(pk.packet.timestamp for pk in nuevos)
@@ -485,6 +542,7 @@ def main() -> int:
             parsed_pcaps[pcap.name] = None
         while len(parsed_pcaps) > MAX_PARSED_PCAP_NAMES:
             parsed_pcaps.popitem(last=False)
+        t = cerrar_etapa("pcap_parseo", t)
         # Poda por TIEMPO DEL DATO (no del reloj de pared): se conserva
         # history_seconds hacia atras desde el paquete mas nuevo del buffer.
         # Critico: podar por reloj de pared descartaria paquetes AUN NO
@@ -496,9 +554,14 @@ def main() -> int:
             newest_data = max(pk.packet.timestamp for pk in packet_buffer)
             data_cutoff = newest_data - args.history_seconds
             if packet_buffer[0].packet.timestamp < data_cutoff:
+                for pk in packet_buffer:
+                    if pk.packet.timestamp < data_cutoff:
+                        del llegada[id(pk)]
+                        del llegada_paquete[id(pk.packet)]
                 packet_buffer = collections.deque(
                     pk for pk in packet_buffer if pk.packet.timestamp >= data_cutoff
                 )
+        t = cerrar_etapa("pcap_poda", t)
 
         # El plano de control se descarta ANTES de atribuir: un anuncio CARP
         # crea un flujo cuyo iniciador es la interfaz del cortafuegos, y esa
@@ -512,6 +575,7 @@ def main() -> int:
             descartados_plano_control += len(packet_buffer) - len(paquetes_utiles)
         else:
             paquetes_utiles = list(packet_buffer)
+        t = cerrar_etapa("filtro_plano_control", t)
 
         # La sesion SPAN ensena la misma trama dos veces: el trafico entre VLAN
         # se ve al entrar y al salir del cortafuegos (TTL-1), y la difusion
@@ -521,26 +585,45 @@ def main() -> int:
         # y 0,0000 despues -- las 100 "retransmisiones" eran las 100 copias.
         # Se filtra la ENTRADA del extractor congelado, no su formula, igual
         # que con CARP y pfsync.
+        # Misma entrada y mismo resultado que v3.deduplicar_espejo(paquetes_utiles):
+        # solo se vuelven a deduplicar las claves que cambiaron en este ciclo.
         if args.sin_deduplicar:
-            paquetes = [pk.packet for pk in paquetes_utiles]
+            paquetes = sorted((pk.packet for pk in paquetes_utiles), key=orden_paquete)
         else:
-            paquetes, quitados = v3.deduplicar_espejo(paquetes_utiles)
+            paquetes, quitados = deduplicador.actualizar(paquetes_utiles, llegada)
             duplicados_espejo += quitados
+        t = cerrar_etapa("deduplicacion", t)
 
+        lineas_registro: list[str] = []
+        cuenta = collections.Counter()
+        packets: list = []
+        apps: list = []
         if paquetes or eve_buffer:
+            # Misma lista que extractor.attribute_packets(paquetes, entity_network):
+            # solo se vuelven a atribuir los flujos que ganaron o perdieron paquetes.
             packets = (
-                extractor.attribute_packets(paquetes, entity_network)
+                atribuidor.actualizar(paquetes, entity_network, orden_paquete)
                 if paquetes
                 else []
             )
+            cuenta["flujos_recalculados"] = atribuidor.flujos_recalculados if paquetes else 0
+            t = cerrar_etapa("atribucion", t)
+            # Misma lista que load_app_observations(volcado del buffer): cada linea
+            # trae sus observaciones calculadas al llegar.
             apps = (
-                extractor.load_app_observations(eve_slice_path, entity_network)
+                [obs for _, _, lista in eve_buffer for obs in lista]
                 if eve_buffer
                 else []
             )
+            t = cerrar_etapa("eve_observaciones", t)
             observation_timestamps = [item.timestamp for item in packets] + [
                 item.timestamp for item in apps
             ]
+            # Por entidad, en el mismo orden que build_rows (IP ordenada):
+            # ("filas", filas desde su primera ancla no puntuada) o, para una
+            # entidad excluida, ("excluida", entidad, anclas sin puntuar), que es
+            # todo lo que el motor hace con sus ventanas.
+            items: list[tuple] = []
             if observation_timestamps:
                 # capture_epoch es un piso fijo (arranque del proceso), pero el
                 # anillo de captura sigue corriendo aunque el motor se
@@ -550,33 +633,77 @@ def main() -> int:
                 # aprovecha historia genuina ya existente en vez de
                 # descartarla en cada reinicio del proceso de scoring.
                 effective_capture_start = min(capture_epoch, min(observation_timestamps))
-                rows = extractor.build_rows(
-                    "motor-live",
-                    packets,
-                    apps,
-                    step_seconds=args.step_seconds,
-                    capture_start=effective_capture_start,
-                )
-            else:
-                rows = []
+                por_paquetes, por_apps = incremental.agrupar_por_entidad(packets, apps)
+                for entidad in sorted(set(por_paquetes) | set(por_apps)):
+                    cuenta["entidades"] += 1
+                    if entidad_excluida(entidad):
+                        items.append(("excluida", entidad, incremental.anclas_sin_puntuar(
+                            entidad, por_paquetes[entidad], por_apps[entidad],
+                            args.step_seconds, scored_windows)))
+                        continue
+                    filas, _ = incremental.filas_pendientes(
+                        extractor.build_rows, entidad, por_paquetes[entidad], por_apps[entidad],
+                        args.step_seconds, effective_capture_start, scored_windows)
+                    cuenta["filas_construidas"] += len(filas)
+                    items.append(("filas", filas))
+            t = cerrar_etapa("filas", t)
 
-            for row in rows:
-                window_key = (str(row["entity_ip"]), str(row["window_end_utc"]))
-                if window_key in scored_windows:
+            if verificacion is not None:
+                verificacion.write(json.dumps(incremental.comprobar_equivalencia(
+                    extractor, v3, cycle_start, paquetes_utiles, args.sin_deduplicar,
+                    paquetes, packets, apps, eve_buffer, eve_slice_path, entity_network,
+                    args.step_seconds, observation_timestamps, capture_epoch, items,
+                    scored_windows, entidad_excluida, puntuar=pipeline.score_samples,
+                    feature_names=feature_names)) + "\n")
+                verificacion.flush()
+                t = cerrar_etapa("verificacion", t)
+
+            # 1) Las mismas reglas y en el mismo orden que el bucle original: que
+            #    ventanas se deciden, cuales quedan pendientes, cuales se marcan
+            #    por exclusion. 2) Puntuacion en un solo lote. 3) Registros.
+            decididas: list[tuple] = []
+            for item in items:
+                if item[0] == "excluida":
+                    _, entidad, anclas = item
+                    for ancla in anclas:
+                        window_key = (entidad, incremental.clave_ventana(ancla))
+                        if window_key in scored_windows:
+                            continue
+                        ventanas_excluidas += 1
+                        cuenta["excluidas_nuevas"] += 1
+                        scored_windows[window_key] = extractor.parse_eve_timestamp(window_key[1])
                     continue
-                if entidad_excluida(str(row["entity_ip"])):
-                    ventanas_excluidas += 1
-                    scored_windows[window_key] = extractor.parse_eve_timestamp(
-                        str(row["window_end_utc"]))
-                    continue
-                if not row["eligible_training"]:
-                    continue
-                window_end = extractor.parse_eve_timestamp(row["window_end_utc"])
-                if not ventana_completa(window_end, marca_pcap):
-                    pendientes.setdefault(window_key, cycle_start)
-                    continue
-                pendiente_desde = pendientes.pop(window_key, None)
-                scored_windows[window_key] = window_end
+                for row in item[1]:
+                    window_key = (str(row["entity_ip"]), str(row["window_end_utc"]))
+                    if window_key in scored_windows:
+                        continue
+                    if not row["eligible_training"]:
+                        cuenta["no_elegibles"] += 1
+                        continue
+                    window_end = extractor.parse_eve_timestamp(row["window_end_utc"])
+                    if not ventana_completa(window_end, marca_pcap):
+                        if window_key not in pendientes:
+                            cuenta["pendientes_nuevas"] += 1
+                        pendientes.setdefault(window_key, cycle_start)
+                        continue
+                    pendiente_desde = pendientes.pop(window_key, None)
+                    scored_windows[window_key] = window_end
+                    decididas.append((row, pendiente_desde, ventanas_excluidas))
+            t = cerrar_etapa("seleccion", t)
+
+            # score_samples puntua cada fila por separado: el lote da los mismos
+            # valores que una llamada por fila (comprobado bit a bit en
+            # --verificar-equivalencia y en tests/test_motor_incremental.py).
+            con_paquetes = [row for row, _, _ in decididas if row["packet_count_10s"] != 0]
+            puntuaciones: dict[int, float] = {}
+            if con_paquetes:
+                lote = [[float(row[name]) for name in feature_names] for row in con_paquetes]
+                for row, valor in zip(con_paquetes, pipeline.score_samples(lote)):
+                    puntuaciones[id(row)] = float(valor)
+            cuenta["puntuadas"] = len(con_paquetes)
+            t = cerrar_etapa("puntuacion", t)
+
+            for row, pendiente_desde, excluidas_momento in decididas:
 
                 # Heuristico explicito, no un ajuste silencioso del modelo
                 # congelado: ocsvm_scaled nunca vio ventanas "todo ceros" en
@@ -627,8 +754,7 @@ def main() -> int:
                         else "no_live_packets_heuristic"
                     )
                 else:
-                    feature_vector = [[float(row[name]) for name in feature_names]]
-                    score = float(pipeline.score_samples(feature_vector)[0])
+                    score = puntuaciones[id(row)]
                     decision = "ALERT" if score < threshold else "PERMIT"
 
                 # Heuristico complementario, no un reemplazo del modelo: la
@@ -659,7 +785,7 @@ def main() -> int:
 
                 record = {
                     "event": "decision",
-                    "excluidas_acumulado": ventanas_excluidas,
+                    "excluidas_acumulado": excluidas_momento,
                     "plano_control_descartado": descartados_plano_control,
                     "pcaps_ilegibles": pcaps_ilegibles,
                     "pcaps_ilegibles_motivo": motivos_ilegibles or None,
@@ -697,10 +823,12 @@ def main() -> int:
                         args.enforce_command, row["entity_ip"], args.block_timeout_seconds
                     )
 
-                with args.log_path.open("a", encoding="utf-8") as handle:
-                    handle.write(json.dumps(record, sort_keys=True) + "\n")
+                # Se escribe una vez por ciclo (abajo), no abriendo el fichero en cada decision.
+                lineas_registro.append(json.dumps(record, sort_keys=True))
+                cuenta["decididas"] += 1
                 if decision == "ALERT":
                     print(json.dumps(record, sort_keys=True), flush=True)
+            t = cerrar_etapa("decision_y_registro", t)
 
         # Una ventana pendiente nunca desaparece en silencio: si sus paquetes no llegan
         # a tiempo (captura parada, PCAP ilegible...) se registra como no evaluada.
@@ -716,20 +844,54 @@ def main() -> int:
                 continue
             del pendientes[window_key]
             scored_windows[window_key] = window_end
+            cuenta["no_evaluadas"] += 1
+            lineas_registro.append(json.dumps({
+                "event": "ventana_no_evaluada",
+                "logged_at": time.time(),
+                "entity_ip": window_key[0],
+                "window_end_utc": window_key[1],
+                "motivo": ("ventana_no_regenerada" if ventana_completa(window_end, marca_pcap)
+                           else "pcap_incompleto"),
+                "pendiente_desde": visto,
+                "inicio_ciclo": cycle_start,
+                "marca_pcap": marca_pcap,
+                "marca_eve": marca_eve,
+                "pcaps_ilegibles": pcaps_ilegibles,
+            }, sort_keys=True))
+        if lineas_registro:
             with args.log_path.open("a", encoding="utf-8") as handle:
+                handle.write("\n".join(lineas_registro) + "\n")
+        t = cerrar_etapa("expiracion_y_escritura", t)
+
+        # Un registro por ciclo, incluidos los que no deciden nada: distingue un
+        # ciclo sin ventanas completas de un procesamiento tardio o de una
+        # ventana perdida, cosa que motor_decision.log solo deja inferir.
+        fin_ciclo = time.time()
+        try:
+            with ciclos_path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps({
-                    "event": "ventana_no_evaluada",
-                    "logged_at": time.time(),
-                    "entity_ip": window_key[0],
-                    "window_end_utc": window_key[1],
-                    "motivo": ("ventana_no_regenerada" if ventana_completa(window_end, marca_pcap)
-                               else "pcap_incompleto"),
-                    "pendiente_desde": visto,
+                    "event": "ciclo",
                     "inicio_ciclo": cycle_start,
+                    "fin_ciclo": fin_ciclo,
+                    "duracion_s": round(time.perf_counter() - t_ciclo, 4),
+                    "etapas_s": etapas,
                     "marca_pcap": marca_pcap,
+                    "marca_pcap_avanzo": marca_pcap != marca_pcap_previa,
                     "marca_eve": marca_eve,
-                    "pcaps_ilegibles": pcaps_ilegibles,
+                    "pcaps_nuevos": pcaps_nuevos,
+                    "lineas_eve_nuevas": lineas_eve_nuevas,
+                    "paquetes_anillo": len(packet_buffer),
+                    "paquetes_deduplicados": len(paquetes),
+                    "observaciones_paquete": len(packets),
+                    "observaciones_l7": len(apps),
+                    "ventanas_pendientes": len(pendientes),
+                    **{k: cuenta.get(k, 0) for k in (
+                        "entidades", "filas_construidas", "decididas", "puntuadas",
+                        "pendientes_nuevas", "no_evaluadas", "no_elegibles",
+                        "excluidas_nuevas", "flujos_recalculados")},
                 }, sort_keys=True) + "\n")
+        except OSError:
+            pass  # la instrumentacion nunca para el motor
 
         elapsed = time.time() - cycle_start
         time.sleep(max(0.5, args.step_seconds - elapsed))
