@@ -164,3 +164,23 @@ def evaluar(row: dict, umbrales: dict | None = None) -> dict | None:
         if mejor is None or _SEVERIDAD[accion] > _SEVERIDAD[mejor["accion"]]:
             mejor = {"heuristico": nombre, "accion": accion, "motivo": motivo}
     return mejor
+
+
+def evaluar_todas(row: dict, umbrales: dict | None = None) -> list[dict]:
+    """Todas las reglas que disparan, en el orden de `_REGLAS` (Etapa 2).
+
+    `evaluar()` devuelve solo la más severa, y eso basta cuando hay un único punto
+    de aplicación. Con destinos separados (DNS en DC1, resto en srv-dmz) una
+    ventana puede disparar `dns_entropy` y otra regla a la vez, y las dos acciones
+    deben llegar a su destino: elegir una perdería la otra.
+    """
+    cfg = umbrales or UMBRALES_POR_DEFECTO
+    out = []
+    for nombre, regla in _REGLAS:
+        u = cfg.get(nombre)
+        if not u:
+            continue
+        motivo = regla(row, u)
+        if motivo is not None:
+            out.append({"heuristico": nombre, "accion": u["accion"], "motivo": motivo})
+    return out

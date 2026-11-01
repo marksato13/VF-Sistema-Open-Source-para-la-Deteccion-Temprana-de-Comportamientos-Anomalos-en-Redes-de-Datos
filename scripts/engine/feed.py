@@ -89,3 +89,144 @@ def verificar(datos: bytes, firma: bytes, pub_path: str) -> bool:
     finally:
         os.unlink(dpath)
         os.unlink(spath)
+
+
+# --- Feed v2 (Etapa 2, rama candidata) --------------------------------------
+#
+# Cambios respecto a v1, todos DENTRO de lo firmado (el JSON canonico entero):
+#   - `secuencia` (entero creciente por emisor) y `expira` (epoch): un agente
+#     rechaza un feed caducado y uno con secuencia anterior a la ya aplicada
+#     (repeticion o fuera de orden). Con la misma secuencia no hace nada: no se
+#     renueva una restriccion por releer el mismo feed.
+#   - cada entrada lleva `destino` (que agente la aplica) y `alcance` (que
+#     trafico restringe), `id` (huella estable de la entrada) y `evento_id` (la
+#     decision del motor que la origino). Una misma IP puede tener a la vez una
+#     entrada para srv-dmz y otra para DC1.
+#
+# Contrato de alcance por destino: srv-dmz solo admite "todo" (todo el trafico
+# entrante del origen); dc1 solo admite "dns" (UDP/TCP 53). Cualquier otro par
+# se rechaza en el agente: un DC no se bloquea entero por una senal DNS y un
+# servidor web no aplica una regla pensada para DNS.
+
+VERSION_FEED_V2 = 2
+ALCANCES_POR_DESTINO = {"srv-dmz": frozenset({"todo"}), "dc1": frozenset({"dns"})}
+ACCIONES = frozenset({"LIMIT", "BLOCK"})
+# Mayor caducidad que puede pedir una entrada (escalera: tope 3600 s) + margen.
+HASTA_MAXIMO_S = 3600 + 120
+TOLERANCIA_RELOJ_S = 30
+
+
+def id_entrada(ip: str, destino: str, alcance: str, accion: str, evento_id: str) -> str:
+    """Huella estable de una entrada: misma decision -> mismo id en todos los feeds."""
+    import hashlib
+    clave = "|".join((ip, destino, alcance, accion, evento_id)).encode("utf-8")
+    return hashlib.sha256(clave).hexdigest()[:16]
+
+
+def construir_v2(entradas: list[dict], secuencia: int, ahora: float, vigencia_s: float,
+                 umbrales: str = "", emisor: str = "sensor1") -> dict:
+    return {
+        "version": VERSION_FEED_V2,
+        "emisor": emisor,
+        "secuencia": int(secuencia),
+        "generado": ahora,
+        "expira": ahora + vigencia_s,
+        "umbrales": umbrales,
+        "entradas": sorted(entradas, key=lambda e: (e["ip"], e["destino"], e["alcance"], e["accion"])),
+    }
+
+
+def _ipv4_valida(ip) -> bool:
+    import ipaddress
+    try:
+        return isinstance(ip, str) and isinstance(ipaddress.ip_address(ip), ipaddress.IPv4Address)
+    except ValueError:
+        return False
+
+
+def validar_v2(feed_obj: dict, destino_local: str, ahora: float,
+               ultima_secuencia: int | None, nunca: set[str]) -> dict:
+    """Valida un feed v2 YA verificado en firma, para el agente `destino_local`.
+
+    Devuelve {"estado", "motivo", "entradas", "rechazadas", "ajenas"}:
+      estado "aceptado": `entradas` son las del destino local, validas y vigentes;
+      estado "repetido": misma secuencia ya aplicada -> no se toca nada;
+      estado "rechazado": el feed entero se descarta (fail-safe: se conserva lo
+      ya aplicado, que caduca solo por el timeout nativo de nftables).
+    Las entradas invalidas se rechazan una a una con su motivo; nunca se
+    reinterpreta una entrada antigua o desconocida como "todo".
+    """
+    out = {"estado": "rechazado", "motivo": "", "entradas": [], "rechazadas": [], "ajenas": 0}
+    if not isinstance(feed_obj, dict) or feed_obj.get("version") != VERSION_FEED_V2:
+        out["motivo"] = "version_no_soportada"
+        return out
+    if destino_local not in ALCANCES_POR_DESTINO:
+        out["motivo"] = "destino_local_desconocido"
+        return out
+    try:
+        secuencia = int(feed_obj["secuencia"])
+        expira = float(feed_obj["expira"])
+        generado = float(feed_obj["generado"])
+        entradas = list(feed_obj["entradas"])
+    except (KeyError, TypeError, ValueError):
+        out["motivo"] = "campos_obligatorios"
+        return out
+    if expira <= ahora:
+        out["motivo"] = "feed_caducado"
+        return out
+    if generado > ahora + TOLERANCIA_RELOJ_S:
+        out["motivo"] = "feed_del_futuro"
+        return out
+    if ultima_secuencia is not None:
+        if secuencia < ultima_secuencia:
+            out["motivo"] = "secuencia_anterior"
+            return out
+        if secuencia == ultima_secuencia:
+            out["estado"] = "repetido"
+            out["motivo"] = "misma_secuencia"
+            return out
+    vistos = set()
+    for e in entradas:
+        motivo = None
+        if not isinstance(e, dict):
+            motivo = "entrada_no_objeto"
+        else:
+            destino, alcance = e.get("destino"), e.get("alcance")
+            if destino not in ALCANCES_POR_DESTINO:
+                motivo = "destino_desconocido"
+            elif destino != destino_local:
+                out["ajenas"] += 1
+                continue
+            elif alcance not in ALCANCES_POR_DESTINO[destino]:
+                motivo = "alcance_no_permitido" if isinstance(alcance, str) else "alcance_desconocido"
+            elif e.get("accion") not in ACCIONES:
+                motivo = "accion_desconocida"
+            elif not _ipv4_valida(e.get("ip")):
+                motivo = "ip_invalida"
+            elif e["ip"] in nunca:
+                motivo = "nunca_bloquear"
+            else:
+                try:
+                    hasta = float(e["hasta"])
+                except (KeyError, TypeError, ValueError):
+                    hasta = None
+                if hasta is None:
+                    motivo = "hasta_invalido"
+                elif hasta <= ahora:
+                    motivo = "entrada_caducada"
+                elif hasta - ahora > HASTA_MAXIMO_S:
+                    motivo = "hasta_excesivo"
+                elif e.get("id") != id_entrada(e["ip"], destino, alcance, e["accion"],
+                                               str(e.get("evento_id", ""))):
+                    motivo = "id_incoherente"
+                elif e["id"] in vistos:
+                    motivo = "id_duplicado"
+        if motivo:
+            out["rechazadas"].append({"ip": e.get("ip") if isinstance(e, dict) else None,
+                                      "motivo": motivo})
+            continue
+        vistos.add(e["id"])
+        out["entradas"].append(e)
+    out["estado"] = "aceptado"
+    out["secuencia"] = secuencia
+    return out

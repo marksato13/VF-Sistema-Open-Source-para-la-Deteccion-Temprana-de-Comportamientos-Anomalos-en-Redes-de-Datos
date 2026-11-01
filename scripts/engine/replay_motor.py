@@ -20,6 +20,21 @@ exactamente las mismas entradas, ciclo a ciclo, sin tocar su codigo:
   inicio del flujo). Igual que EveTail, al arrancar empieza al final de lo ya
   escrito.
 
+Reloj (``--reloj``):
+
+- ``reticula`` (por omision, comportamiento del paso 1): los ciclos empiezan en
+  una reticula fija de ``--paso`` s y el reloj no avanza durante el ciclo.
+- ``coste`` (Etapa 2): el reloj simulado avanza dentro del ciclo con su coste
+  REAL de proceso (multiplicado por ``--factor-cpu``), y el siguiente ciclo
+  empieza cuando lo decidiria el motor: en modo periodico, ``max(fin + 0,5,
+  inicio + paso)``; con ``--disparo eventos``, en el primer sondeo (cada
+  ``--sondeo-segundos``) en que hay un PCAP cerrado no leido, o al vencer el
+  paso. Asi los tiempos de decision incluyen la cola de proceso. El coste se
+  mide en ESTA maquina: no es el del sensor (``--factor-cpu`` lo escala).
+
+``--retraso-cierre`` suma un retraso al cierre de cada fichero (prueba de
+ficheros retrasados): el fichero sigue sin leerse hasta que el reloj lo alcanza.
+
 Con ``--reiniciar-en`` el arnes corta el proceso simulado en ese instante y
 vuelve a llamar a main() con el mismo registro, como un reinicio del servicio.
 
@@ -41,8 +56,40 @@ import functools
 import importlib.util
 import json
 import sys
+import math
+import os
 import time as tiempo_real
 from pathlib import Path
+
+
+def memoria_mb() -> dict:
+    """Memoria del proceso (actual y pico), en MB. Windows: psapi; Linux: /proc y getrusage."""
+    try:
+        if os.name == "nt":
+            import ctypes
+            from ctypes import wintypes
+
+            class PMC(ctypes.Structure):
+                _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
+                            ("PeakWorkingSetSize", ctypes.c_size_t), ("WorkingSetSize", ctypes.c_size_t),
+                            ("QuotaPeakPagedPoolUsage", ctypes.c_size_t), ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                            ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                            ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                            ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t)]
+            c = PMC(); c.cb = ctypes.sizeof(PMC)
+            k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            k32.GetCurrentProcess.restype = wintypes.HANDLE
+            psapi = ctypes.WinDLL("psapi", use_last_error=True)
+            psapi.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(PMC), wintypes.DWORD]
+            psapi.GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb)
+            return {"rss_mb": round(c.WorkingSetSize / 2**20, 1), "pico_mb": round(c.PeakWorkingSetSize / 2**20, 1)}
+        import resource
+        pico = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+        with open("/proc/self/statm") as fh:
+            rss = int(fh.read().split()[1]) * os.sysconf("SC_PAGE_SIZE") / 2**20
+        return {"rss_mb": round(rss, 1), "pico_mb": round(pico, 1)}
+    except Exception:  # noqa: BLE001 - la medida nunca para el replay
+        return {}
 
 
 class _Fin(Exception):
@@ -104,9 +151,14 @@ class Simulacion:
         self.arranque = True
         self.desp: list[int] = []
         self.escrita: list[float] = []
+        # Hora de cierre de cada fichero: aparece el siguiente (+ retraso de prueba).
+        self.cierre = [t + a.retraso_cierre for t in self.t_ficheros[1:]] + [math.inf]
+        self.inicio_ciclo = self.ahora
 
     # --- reloj -------------------------------------------------------------
     def time(self) -> float:
+        if self.a.reloj == "coste":
+            return self.ahora + (tiempo_real.perf_counter() - self.t_inicio_ciclo) * self.a.factor_cpu
         return self.ahora
 
     def perf_counter(self) -> float:
@@ -124,12 +176,16 @@ class Simulacion:
             reg["etapas"] = etapas
             reg["llamadas"] = dict(self.llamadas)
             reg["resto_s"] = round(dur - sum(self.etapas.values()), 4)
+        reg.update(memoria_mb())
         self.salida_ciclos.write(json.dumps(reg) + "\n")
         self.salida_ciclos.flush()
         self.etapas.clear()
         self.llamadas.clear()
         self.arranque = False
-        self.ahora += self.a.paso
+        self._avanzar(self.ahora + self.a.paso)
+
+    def _avanzar(self, nuevo: float) -> None:
+        self.ahora = nuevo
         if self.ahora > self.a.hasta:
             raise _Fin()
         if self.reinicios and self.ahora >= self.reinicios[0]:
@@ -137,13 +193,44 @@ class Simulacion:
             raise _Reinicio()
         self.t_inicio_ciclo = tiempo_real.perf_counter()
 
+    # --- espera del motor con reloj de coste ------------------------------
+    def esperar_siguiente_ciclo(self, args, inicio_ciclo: float, ya_leidos) -> str:
+        fin = self.time()
+        dur = tiempo_real.perf_counter() - self.t_inicio_ciclo
+        reg = {"t": self.ahora, "hora": dt.datetime.fromtimestamp(self.ahora, dt.timezone.utc).strftime("%H:%M:%S"),
+               "dur_s": round(dur, 4), "fin_sim": round(fin, 4), "arranque": self.arranque}
+        reg.update(memoria_mb())
+        self.salida_ciclos.write(json.dumps(reg) + "\n")
+        self.salida_ciclos.flush()
+        self.etapas.clear()
+        self.llamadas.clear()
+        self.arranque = False
+        plazo = inicio_ciclo + args.step_seconds
+        if args.disparo == "periodico":
+            self._avanzar(max(fin + 0.5, plazo))
+            return "periodo"
+        # Primer cierre de un fichero aun no leido (el motor solo ve cerrados).
+        c_min = math.inf
+        for i, f in enumerate(self.ficheros):
+            if f.name not in ya_leidos and self.cierre[i] < c_min and self.ahora - self.cierre[i] <= args.history_seconds:
+                c_min = self.cierre[i]
+        objetivo = min(c_min, plazo)
+        sondeo = args.sondeo_segundos
+        k = max(1, math.ceil((objetivo - fin) / sondeo - 1e-9))
+        nuevo = fin + k * sondeo
+        motivo = "pcap_cerrado" if c_min <= nuevo and c_min <= plazo else "plazo"
+        self._avanzar(nuevo)
+        return motivo
+
     # --- anillo de PCAP ----------------------------------------------------
     def list_closed_pcap_files(self, capture_dir, pattern, max_age_seconds=None, now=None):
         ref = self.ahora if now is None else now
         n = bisect.bisect_right(self.t_ficheros, ref)  # ficheros que ya existen
         cerrados = []
         for i in range(max(0, n - 1)):
-            mtime = self.t_ficheros[i + 1]
+            mtime = self.cierre[i]
+            if mtime > ref:  # retrasado: aun no cerrado
+                continue
             if max_age_seconds is None or ref - mtime <= max_age_seconds:
                 cerrados.append(self.ficheros[i])
         return cerrados
@@ -204,6 +291,11 @@ def main() -> int:
     ap.add_argument("--paso", type=float, default=10.0)
     ap.add_argument("--reiniciar-en", type=epoch, action="append", default=[])
     ap.add_argument("--perfilar", action="store_true")
+    ap.add_argument("--reloj", choices=("reticula", "coste"), default="reticula")
+    ap.add_argument("--factor-cpu", type=float, default=1.0,
+                    help="multiplica el coste real de proceso (reloj coste)")
+    ap.add_argument("--retraso-cierre", type=float, default=0.0,
+                    help="segundos que se retrasa el cierre de cada PCAP (prueba)")
     ap.add_argument("--salida", required=True, type=Path)
     a, args_motor = ap.parse_known_args()
     if args_motor and args_motor[0] == "--":
@@ -220,6 +312,10 @@ def main() -> int:
     m.time = sim
     m.EveTail = sim.nueva_cola(sim)
     m.list_closed_pcap_files = sim.list_closed_pcap_files
+    if a.reloj == "coste":
+        if not hasattr(m, "esperar_siguiente_ciclo"):
+            raise SystemExit("--reloj coste necesita un motor con esperar_siguiente_ciclo (Etapa 2)")
+        m.esperar_siguiente_ciclo = sim.esperar_siguiente_ciclo
     if a.perfilar:
         ex, v3 = m.extractor, m.v3
         ex.attribute_packets = sim.cronometrar("atribucion", ex.attribute_packets)
@@ -252,6 +348,7 @@ def main() -> int:
         while True:
             sim.arranque = True
             sim.t_inicio_ciclo = tiempo_real.perf_counter()
+            print(json.dumps({"evento": "arranque_motor", "t": sim.ahora}), file=sys.stderr, flush=True)
             try:
                 m.main()
             except _Reinicio:
@@ -261,7 +358,8 @@ def main() -> int:
                 break
     finally:
         sim.salida_ciclos.close()
-    print(json.dumps({"evento": "fin", "s": round(tiempo_real.perf_counter() - t0, 1)}), file=sys.stderr, flush=True)
+    print(json.dumps({"evento": "fin", "s": round(tiempo_real.perf_counter() - t0, 1), **memoria_mb()}),
+          file=sys.stderr, flush=True)
     return 0
 
 

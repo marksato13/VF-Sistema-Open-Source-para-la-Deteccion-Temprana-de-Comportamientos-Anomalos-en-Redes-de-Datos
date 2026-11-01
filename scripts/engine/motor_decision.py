@@ -151,6 +151,24 @@ def parse_args() -> argparse.Namespace:
              "mismo que el motor original; no cambia ninguna decision",
     )
     parser.add_argument("--step-seconds", type=int, default=10)
+    parser.add_argument(
+        "--disparo",
+        choices=("periodico", "eventos"),
+        default="periodico",
+        help="periodico: un ciclo cada --step-seconds (comportamiento desplegado). "
+             "eventos: el ciclo empieza en cuanto se CIERRA un PCAP nuevo (sondeo del "
+             "directorio cada --sondeo-segundos) o, como tarde, a los --step-seconds. "
+             "No cambia las anclas de las ventanas (siguen cada --step-seconds), ni las "
+             "caracteristicas, ni el criterio de ventana completa: solo cuando se mira",
+    )
+    parser.add_argument("--sondeo-segundos", type=float, default=0.25)
+    parser.add_argument(
+        "--volcar-caracteristicas",
+        type=Path,
+        default=None,
+        help="SOLO para validar: escribe (entidad, ventana, 28 caracteristicas, score) "
+             "de cada ventana puntuada, para comparar configuraciones en el replay",
+    )
     parser.add_argument("--history-seconds", type=int, default=110)
     parser.add_argument(
         "--enforce",
@@ -271,6 +289,42 @@ def list_closed_pcap_files(
         except OSError:
             continue
     return fresh
+
+
+def hay_pcap_cerrado_nuevo(args, ya_leidos, ahora: float) -> bool:
+    """True si ya existe un PCAP CERRADO que el motor aun no ha leido.
+
+    Usa el mismo criterio de cierre que el ciclo (list_closed_pcap_files: nunca el
+    ultimo fichero, que tcpdump sigue escribiendo). Un fichero abierto no dispara.
+    """
+    for pcap in list_closed_pcap_files(args.capture_dir, args.capture_glob,
+                                       max_age_seconds=args.history_seconds, now=ahora):
+        if pcap.name not in ya_leidos:
+            return True
+    return False
+
+
+def esperar_siguiente_ciclo(args, inicio_ciclo: float, ya_leidos) -> str:
+    """Espera hasta el siguiente ciclo y devuelve el motivo del disparo.
+
+    periodico: igual que el motor desplegado (sleep hasta completar step_seconds,
+    minimo 0,5 s). eventos: sondea el directorio; dispara al aparecer un PCAP
+    cerrado no leido ('pcap_cerrado') o al vencer step_seconds desde el inicio del
+    ciclo anterior ('plazo'), para que las ventanas que solo dependen de EVE o de la
+    expiracion de pendientes sigan avanzando aunque la captura se pare.
+    """
+    if args.disparo == "periodico":
+        elapsed = time.time() - inicio_ciclo
+        time.sleep(max(0.5, args.step_seconds - elapsed))
+        return "periodo"
+    limite = inicio_ciclo + args.step_seconds
+    while True:
+        time.sleep(args.sondeo_segundos)
+        ahora = time.time()
+        if hay_pcap_cerrado_nuevo(args, ya_leidos, ahora):
+            return "pcap_cerrado"
+        if ahora >= limite:
+            return "plazo"
 
 
 def ventana_completa(window_end: float, marca_pcap: float | None) -> bool:
@@ -447,6 +501,10 @@ def main() -> int:
 
     verificacion = (args.verificar_equivalencia.open("a", encoding="utf-8")
                     if args.verificar_equivalencia else None)
+    volcado = (args.volcar_caracteristicas.open("a", encoding="utf-8")
+               if args.volcar_caracteristicas else None)
+    ciclo_n = 0
+    motivo_disparo = "arranque"
 
     startup_record = {
         "event": "motor_startup",
@@ -466,6 +524,8 @@ def main() -> int:
         # Mismas funciones congeladas; ver scripts/engine/motor_incremental.py.
         "procesamiento": "incremental",
         "ciclos_path": str(ciclos_path),
+        "disparo": args.disparo,
+        "sondeo_segundos": args.sondeo_segundos,
     }
     with args.log_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(startup_record, sort_keys=True) + "\n")
@@ -735,6 +795,13 @@ def main() -> int:
                 for row, valor in zip(con_paquetes, pipeline.score_samples(lote)):
                     puntuaciones[id(row)] = float(valor)
             cuenta["puntuadas"] = len(con_paquetes)
+            if volcado is not None and con_paquetes:
+                for row in con_paquetes:
+                    volcado.write(json.dumps({
+                        "entity_ip": row["entity_ip"], "window_end_utc": row["window_end_utc"],
+                        "x": [float(row[name]) for name in feature_names],
+                        "score": puntuaciones[id(row)]}, sort_keys=True) + "\n")
+                volcado.flush()
             t = cerrar_etapa("puntuacion", t)
 
             for row, pendiente_desde, excluidas_momento in decididas:
@@ -839,6 +906,8 @@ def main() -> int:
                     # intacta); lo consume publicar_feed.py para derivar LIMIT/BLOCK
                     # sin tocar el modelo. None si ningun heuristico dispara.
                     "heuristico": heuristicos.evaluar(row),
+                    # Todas las reglas que disparan (Etapa 2: destinos separados).
+                    "heuristicos": heuristicos.evaluar_todas(row),
                     # Disponibilidad de las fuentes al decidir. logged_at (lo pone
                     # escribir_registros) sigue siendo el instante de escritura; pendiente_desde (ciclo en que la ventana se vio
                     # por primera vez sin sus paquetes, o null) permite medir la espera.
@@ -846,6 +915,11 @@ def main() -> int:
                     "marca_pcap": marca_pcap,
                     "marca_eve": marca_eve,
                     "pendiente_desde": pendiente_desde,
+                    # Identificadores para la cadena por eventos (Etapa 2): la
+                    # decision es unica por (entidad, ventana); el ciclo la situa.
+                    "decision_id": "%s|%s" % (row["entity_ip"], row["window_end_utc"]),
+                    "ciclo_n": ciclo_n,
+                    "disparo": motivo_disparo,
                 }
                 # decision == "ALERT" solo ocurre por (modelo con pkts10>0) o
                 # (heuristico de fuerza bruta sobre L7); ambos son bloqueos
@@ -901,6 +975,8 @@ def main() -> int:
             with ciclos_path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps({
                     "event": "ciclo",
+                    "ciclo_n": ciclo_n,
+                    "disparo": motivo_disparo,
                     "inicio_ciclo": cycle_start,
                     "fin_ciclo": fin_ciclo,
                     "registro_escrito_en": registro_escrito_en,
@@ -925,8 +1001,8 @@ def main() -> int:
         except OSError:
             pass  # la instrumentacion nunca para el motor
 
-        elapsed = time.time() - cycle_start
-        time.sleep(max(0.5, args.step_seconds - elapsed))
+        motivo_disparo = esperar_siguiente_ciclo(args, cycle_start, parsed_pcaps)
+        ciclo_n += 1
 
 
 if __name__ == "__main__":
