@@ -1,0 +1,27 @@
+[Unit]
+Description=CyberFlow - agente v2 perfil dmz (srv-dmz): feed v2 firmado -> helper nft restringido
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=adminsrvdmz
+Group=adminsrvdmz
+# Proceso continuo: reacciona al cambio de feed.json/feed.sig (sondeo 0,5 s) y
+# relee los sets cada 5 s (retiradas y primer efecto). Sin --aplicar = sombra.
+ExecStart=/usr/bin/python3 /home/adminsrvdmz/enforce-v2/agente_enforce_v2.py \
+    --perfil dmz \
+    --feed /home/adminsrvdmz/enforce-v2/feed.json \
+    --firma /home/adminsrvdmz/enforce-v2/feed.sig \
+    --clave-publica /home/adminsrvdmz/enforce-v2/pub.pem \
+    --estado /home/adminsrvdmz/enforce-v2/estado.json \
+    --traza /home/adminsrvdmz/enforce-v2/traza.jsonl \
+    --helper "sudo -n /usr/local/sbin/cf-nft-helper" \
+    --seguir
+Restart=always
+RestartSec=2
+# Endurecimiento (ProtectSystem, PrivateTmp) pendiente de ensayo: sudo necesita
+# escribir su marca de tiempo y NoNewPrivileges lo romperia. No se activa sin probarlo.
+
+[Install]
+WantedBy=multi-user.target

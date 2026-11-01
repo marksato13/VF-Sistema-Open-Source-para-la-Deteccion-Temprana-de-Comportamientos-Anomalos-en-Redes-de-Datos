@@ -1,0 +1,10 @@
+# /etc/sudoers.d/cf-nft-helper  (0440 root:root; validar con: visudo -cf <fichero>)
+# Etapa 2 (candidato). Sustituye a la regla "NOPASSWD: /usr/sbin/nft" del agente v1.
+# El usuario del agente solo puede ejecutar el helper restringido y SIN argumentos
+# (las comillas vacias prohiben cualquier argumento). La peticion va por stdin y el
+# helper la valida: tabla, sets, IPs y caducidad fijos. No hay "nft -f -" libre.
+#
+# srv-dmz:
+adminsrvdmz ALL=(root) NOPASSWD: /usr/local/sbin/cf-nft-helper ""
+# DC1 (usuario dedicado sin privilegios, a crear en la instalacion; NO dcadmin):
+# cfagente ALL=(root) NOPASSWD: /usr/local/sbin/cf-nft-helper ""
