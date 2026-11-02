@@ -855,7 +855,7 @@ def main() -> int:
                 e = x.entity_ip
                 if e not in primera or x.timestamp < primera[e].timestamp:
                     primera[e] = x
-                if ancla - 30 < x.timestamp <= ancla:
+                if ancla - incremental.REGISTRO_S < x.timestamp <= ancla:
                     lp[e].append(x)
             for x in apps:
                 e = x.entity_ip
@@ -922,7 +922,7 @@ def main() -> int:
         if anclas:
             packets_pendientes = packets
         desde_p = ancla_hecha if ancla_hecha is not None else float("-inf")
-        nuevas_p = [x for x in packets_pendientes if x.timestamp > desde_p - 30]
+        nuevas_p = [x for x in packets_pendientes if x.timestamp > desde_p - incremental.REGISTRO_S]
         nuevas_a = [o for t_e, _, lista in eve_buffer if t_e > desde_p - 60 for o in lista]
         if nuevas_p or nuevas_a:
             ts_obs = [x.timestamp for x in packets_pendientes] + [x.timestamp for _, _, l in eve_buffer for x in l]

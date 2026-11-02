@@ -375,19 +375,24 @@ def filas_pendientes(build_rows: Callable, entidad: str, lp: list, la: list, pas
 # esten en el buffer no cambian ninguna observacion de (W-60, W].
 
 MARGEN_DEDUP_S = 0.005  # ventana de deduplicar_espejo: la copia de W puede llegar 5 ms despues
+# Una ventana (E, A) se registra si E tiene algun paquete o evento L7 en (A-60, A]. Los
+# paquetes de (A-60, A-30] no entran en ningun conteo de A (p10/p30): solo hacen que se
+# registre la ventana que sigue al ultimo paquete (vacia en 10/30 s, PERMIT), como hacia
+# el motor en vivo, y que los analisis que exigen la rejilla hasta fin+60 la encuentren.
+REGISTRO_S = 60
 
 
 def anclas_con_contenido(ts_paquetes: Iterable[float], ts_apps: Iterable[float], paso: int,
                          desde_excl: float, hasta_incl: float) -> list[int]:
-    """Anclas A en (desde, hasta] con algun paquete en (A-30, A] o evento L7 en (A-60, A].
+    """Anclas A en (desde, hasta] con algun paquete o evento L7 en (A-60, A] (REGISTRO_S).
 
-    Son las ventanas que ``build_rows`` llena con algo: las demas serian todo ceros
-    (PERMIT por ventana vacia) y no se generan.
+    Son las ventanas registrables: con contenido en 10/30/60 s, o vacias en 10/30 s pero
+    con paquetes de la entidad en los 60 s previos. Las demas no se generan.
     """
     k = set()
     for t in ts_paquetes:
-        if t > desde_excl - 30:
-            k.add((math.ceil(t / paso), 30))
+        if t > desde_excl - REGISTRO_S:
+            k.add((math.ceil(t / paso), REGISTRO_S))
     for t in ts_apps:
         if t > desde_excl - 60:
             k.add((math.ceil(t / paso), 60))
@@ -403,7 +408,8 @@ def anclas_con_contenido(ts_paquetes: Iterable[float], ts_apps: Iterable[float],
 
 
 def con_contenido(lp: list, la: list, ancla: float) -> bool:
-    return (any(ancla - 30 < p.timestamp <= ancla for p in lp)
+    """Ventana registrable (ver REGISTRO_S)."""
+    return (any(ancla - REGISTRO_S < p.timestamp <= ancla for p in lp)
             or any(ancla - 60 < a.timestamp <= ancla for a in la))
 
 
@@ -411,13 +417,14 @@ def fila_de_ancla(build_rows: Callable, lp: list, la: list, ancla: int, paso: in
                   capture_start: float, reemplazar: Callable, primera=None) -> dict | None:
     """La fila de ``build_rows`` para la ventana que termina en ``ancla``, o None si esta vacia.
 
-    Se le pasan solo las observaciones de (A-30, A] y (A-60, A], que son las que
-    entran en esa ventana, y el ``capture_start`` del horizonte. Si ninguna llega a
+    Se le pasan solo las observaciones de (A-60, A] (paquetes y L7), que son las que
+    hacen registrable la ventana (los paquetes de (A-60, A-30] no entran en sus conteos),
+    y el ``capture_start`` del horizonte. Si ninguna llega a
     (A-paso, A], ``build_rows`` terminaria su rango antes de A: se anade una copia de
     la ultima observacion con marca A+paso/2, fuera de toda ventana <= A, que solo
     extiende el rango de anclas (no entra en ningun conteo de la ventana A).
     """
-    rp = [p for p in lp if ancla - 30 < p.timestamp <= ancla]
+    rp = [p for p in lp if ancla - REGISTRO_S < p.timestamp <= ancla]
     ra = [a for a in la if ancla - 60 < a.timestamp <= ancla]
     if not rp and not ra:
         return None
