@@ -29,8 +29,23 @@ def main() -> int:
     for f in filas:
         g[(f["alternativa"], f["carga"])].append(f)
     res = {}
+
+    def tramo(s, a, b):
+        v = [x[b] - x[a] for x in s if x.get(a) is not None and x.get(b) is not None]
+        return [pct(v, .5), pct(v, .95), round(max(v), 3) if v else None]
+
     for (alt, carga), fs in sorted(g.items()):
         s = [f["s_desde_rafaga"] for f in fs]
+        # cierre Etapa 3: tramos por separado (p50 / p95 / máx)
+        tramos = {"evidencia_a_emision": tramo(s, "evidencia", "emitida"),
+                  "disponible_a_emision": tramo(s, "disponible", "emitida"),
+                  "emision_a_publicacion": tramo(s, "emitida", "publicada"),
+                  "publicacion_a_entrega": tramo(s, "publicada", "entregada"),
+                  "entrega_a_aplicacion": tramo(s, "entregada", "aplicada"),
+                  "aplicacion_a_confirmacion": tramo(s, "aplicada", "confirmada"),
+                  "aplicacion_a_primer_descarte": tramo(s, "aplicada", "primer_descarte_visto"),
+                  "primer_descarte_a_ultimo_syn": tramo(s, "primer_descarte_visto", "ultimo_syn")}
+        conf = sum(1 for x in s if x.get("confirmada") is not None)
         apl = [x["aplicada"] for x in s if x.get("aplicada") is not None]
         dsc = [x["primer_descarte_visto"] for x in s if x.get("primer_descarte_visto") is not None]
         disp = [x["disponible"] - x["evidencia"] for x in s if x.get("disponible") is not None and x.get("evidencia") is not None]
@@ -49,6 +64,9 @@ def main() -> int:
             "rele_publicada_entregada_p50_max": [pct(pub_ent, .5), round(max(pub_ent), 3) if pub_ent else None],
             "agente_entregada_recibida_p50_max": [pct(ent_rec, .5), round(max(ent_rec), 3) if ent_rec else None],
             "syn_tras_aplicacion_frac_min_p50": [round(min(frac), 3) if frac else None, pct(frac, .5)],
+            "confirmadas": "%d/%d" % (conf, len(fs)),
+            "vlan": sorted({f.get("vlan", "quitada") for f in fs}),
+            "tramos_p50_p95_max": tramos,
         }
     json.dump(res, open(sys.argv[2], "w"), indent=1)
     lineas = ["| Alternativa | Carga | n | Aplicada p50 / p95 / máx | 1.er descarte p50 / p95 / máx | Descarte antes del último SYN | Margen aplicada → último SYN mín / p50 | SYN tras aplicar (mín / p50) |",
