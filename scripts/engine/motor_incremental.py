@@ -413,6 +413,34 @@ def con_contenido(lp: list, la: list, ancla: float) -> bool:
             or any(ancla - 60 < a.timestamp <= ancla for a in la))
 
 
+def registro_cancelacion(window_key: tuple[str, str], ancla: float, corte: float, packets: list, apps: list,
+                         visto: float, origen: dict, inicio_ciclo: float, ahora: float) -> dict:
+    """Registro de una pendiente cancelada: la entidad no tiene contenido en (A-60, A] con el
+    horizonte propio de la ventana. Deja la evidencia (horizontes, observaciones y a que
+    entidades atribuye ese horizonte los paquetes de/hacia la entidad en (A-60, A])."""
+    ent = window_key[0]
+    propietarios: dict[str, int] = collections.Counter(
+        x.entity_ip for x in packets
+        if ancla - REGISTRO_S < x.timestamp <= ancla and x.peer_ip == ent and x.entity_ip != ent)
+    return {
+        "event": "pendiente_cancelada",
+        "motivo": "sin_contenido_en_su_horizonte",
+        "decidido_en": ahora,
+        "entity_ip": ent,
+        "window_end_utc": window_key[1],
+        "pendiente_desde": visto,
+        "corte_incorporacion": origen.get("corte_incorporacion"),
+        "obs_pcap_incorporacion": origen.get("obs_pcap_incorporacion"),
+        "obs_eve_incorporacion": origen.get("obs_eve_incorporacion"),
+        "corte_propio": corte,
+        "obs_pcap_propio": sum(1 for x in packets
+                               if x.entity_ip == ent and ancla - REGISTRO_S < x.timestamp <= ancla),
+        "obs_eve_propio": sum(1 for x in apps if x.entity_ip == ent and ancla - 60 < x.timestamp <= ancla),
+        "paquetes_atribuidos_a": dict(sorted(propietarios.items())),
+        "inicio_ciclo": inicio_ciclo,
+    }
+
+
 def fila_de_ancla(build_rows: Callable, lp: list, la: list, ancla: int, paso: int,
                   capture_start: float, reemplazar: Callable, primera=None) -> dict | None:
     """La fila de ``build_rows`` para la ventana que termina en ``ancla``, o None si esta vacia.

@@ -631,6 +631,10 @@ def main() -> int:
     # observando. Se fija una sola vez al arrancar, no se recalcula por ciclo.
     capture_epoch = time.time()
     packets_pendientes: list = []  # ultima atribucion, para la contabilidad de pendientes
+    corte_pendientes: float | None = None  # inicio del horizonte de esa atribucion
+    # Con que se dio de alta cada pendiente: horizonte y observaciones de la entidad en
+    # (A-60, A] segun esa atribucion (evidencia de las cancelaciones).
+    origen_pendiente: dict[tuple[str, str], dict] = {}
     # Marca de lectura de cada ciclo (paquete mas nuevo de PCAP cerrado / linea EVE mas nueva)
     # y el ciclo que la alcanzo: el primer ciclo que ya habia leido una observacion.
     lecturas = {"pcap": ([], []), "eve": ([], [])}
@@ -879,14 +883,36 @@ def main() -> int:
                 row = incremental.fila_de_ancla(extractor.build_rows, lp[entidad], la[entidad], ancla,
                                                 paso_s, capture_start, dataclasses.replace,
                                                 primera=primera.get(entidad))
+                # Ventana registrable (contenido en (A-60, A] con su horizonte) que no se
+                # puede decidir: se registra ya como no evaluada con su motivo, nunca en
+                # silencio ni como PERMIT. fila_no_generada: la primera observacion de la
+                # entidad en el horizonte cae justo en A y build_rows (congelado) empieza su
+                # rejilla en A+paso. no_elegible: historia < 60 s (eligible_training).
+                motivo_ne = None
                 if row is None:
-                    continue
-                filas_ancla[entidad] = row
-                cuenta["filas_construidas"] += 1
-                if window_key in scored_windows:
-                    continue
-                if not row["eligible_training"]:
-                    cuenta["no_elegibles"] += 1
+                    motivo_ne = "fila_no_generada"
+                else:
+                    filas_ancla[entidad] = row
+                    cuenta["filas_construidas"] += 1
+                    if window_key in scored_windows:
+                        continue
+                    if not row["eligible_training"]:
+                        cuenta["no_elegibles"] += 1
+                        motivo_ne = "no_elegible"
+                if motivo_ne is not None:
+                    if window_key not in scored_windows:
+                        scored_windows[window_key] = float(ancla)
+                        visto_ne = pendientes.pop(window_key, None)
+                        origen_pendiente.pop(window_key, None)
+                        cuenta["no_evaluadas"] += 1
+                        registros_ciclo.append({
+                            "event": "ventana_no_evaluada", "decidido_en": time.time(),
+                            "entity_ip": entidad, "window_end_utc": clave, "motivo": motivo_ne,
+                            "pendiente_desde": visto_ne, "inicio_ciclo": cycle_start,
+                            "marca_pcap": marca_pcap, "marca_eve": marca_eve,
+                            "pcaps_ilegibles": pcaps_ilegibles, "horizonte_s": horizonte_s,
+                            "historial_completo": completo,
+                        })
                     continue
                 # Espera: primer ciclo que ya tenia contenido de la ventana (registro de
                 # pendientes o marcas de lectura); None si se decide en ese mismo ciclo.
@@ -898,7 +924,23 @@ def main() -> int:
                 vistos = [v for v in vistos if v is not None and v < cycle_start]
                 pendiente_desde = min(vistos) if vistos else None
                 scored_windows[window_key] = float(ancla)
+                origen_pendiente.pop(window_key, None)
                 decididas.append((row, pendiente_desde, ventanas_excluidas, completo))
+            # Pendientes de esta ancla que no se decidieron. La regla causal se aplica con el
+            # horizonte PROPIO de la ventana ([A - horizonte, ...]): si la entidad no tiene ahi
+            # ningun paquete ni evento L7 en (A-60, A], la ventana no es registrable y la
+            # pendiente nunca debio existir (se dio de alta con la atribucion de otro
+            # horizonte, en el que el flujo tenia otro propietario). Se cancela con su
+            # evidencia, sin decision ni PERMIT. Si la entidad SI tiene contenido, la ventana
+            # era requerida y ya quedo decidida o no evaluada con su motivo (arriba).
+            for window_key in [k for k in pendientes if k[1] == clave]:
+                if window_key in scored_windows or window_key[0] in lp or window_key[0] in la:
+                    continue
+                visto = pendientes.pop(window_key)
+                origen = origen_pendiente.pop(window_key, {})
+                cuenta["pendientes_canceladas"] += 1
+                registros_ciclo.append(incremental.registro_cancelacion(
+                    window_key, ancla, corte, packets, apps, visto, origen, cycle_start, time.time()))
             if verificacion is not None:
                 verificacion.write(json.dumps(incremental.comprobar_ancla(
                     extractor, v3, ancla, horizonte_s, utiles, args.sin_deduplicar, paquetes, packets,
@@ -921,6 +963,7 @@ def main() -> int:
         # pendiente_desde se completa al decidir con las marcas de lectura (visto_en).
         if anclas:
             packets_pendientes = packets
+            corte_pendientes = anclas[-1] - horizonte_s
         desde_p = ancla_hecha if ancla_hecha is not None else float("-inf")
         nuevas_p = [x for x in packets_pendientes if x.timestamp > desde_p - incremental.REGISTRO_S]
         nuevas_a = [o for t_e, _, lista in eve_buffer if t_e > desde_p - 60 for o in lista]
@@ -939,6 +982,14 @@ def main() -> int:
                     window_key = (entidad, incremental.clave_ventana(ancla))
                     if window_key not in scored_windows and window_key not in pendientes:
                         pendientes[window_key] = cycle_start
+                        origen_pendiente[window_key] = {
+                            "corte_incorporacion": corte_pendientes,
+                            "obs_pcap_incorporacion": sum(
+                                ancla - incremental.REGISTRO_S < x.timestamp <= ancla
+                                for x in pp.get(entidad, ())),
+                            "obs_eve_incorporacion": sum(
+                                ancla - 60 < x.timestamp <= ancla for x in pa.get(entidad, ())),
+                        }
                         cuenta["pendientes_nuevas"] += 1
         t = cerrar_etapa("pendientes", t)
 
@@ -1109,12 +1160,19 @@ def main() -> int:
         for window_key, visto in list(pendientes.items()):
             if window_key in scored_windows:
                 del pendientes[window_key]
+                origen_pendiente.pop(window_key, None)
                 continue
             window_end = extractor.parse_eve_timestamp(window_key[1])
             tratada = ancla_hecha is not None and window_end <= ancla_hecha
             if not tratada and cycle_start - window_end <= limite_pendiente:
                 continue
             del pendientes[window_key]
+            origen = origen_pendiente.pop(window_key, {})
+            # Tras la cancelacion en su ancla, una pendiente tratada solo puede llegar aqui
+            # si la entidad tenia contenido y aun asi no hubo registro: seria un fallo real
+            # de regeneracion y se sigue registrando como tal (ventana_no_regenerada).
+            motivo = ("ventana_no_regenerada" if ventana_completa(window_end, marca_pcap)
+                      else "pcap_incompleto")
             scored_windows[window_key] = window_end
             cuenta["no_evaluadas"] += 1
             registros_ciclo.append({
@@ -1122,8 +1180,8 @@ def main() -> int:
                 "decidido_en": time.time(),
                 "entity_ip": window_key[0],
                 "window_end_utc": window_key[1],
-                "motivo": ("ventana_no_regenerada" if ventana_completa(window_end, marca_pcap)
-                           else "pcap_incompleto"),
+                "motivo": motivo,
+                "corte_incorporacion": origen.get("corte_incorporacion"),
                 "pendiente_desde": visto,
                 "inicio_ciclo": cycle_start,
                 "marca_pcap": marca_pcap,
@@ -1161,7 +1219,7 @@ def main() -> int:
                     "ventanas_pendientes": len(pendientes),
                     **{k: cuenta.get(k, 0) for k in (
                         "entidades", "filas_construidas", "decididas", "puntuadas",
-                        "pendientes_nuevas", "no_evaluadas", "no_elegibles",
+                        "pendientes_nuevas", "pendientes_canceladas", "no_evaluadas", "no_elegibles",
                         "excluidas_nuevas", "flujos_recalculados")},
                 }, sort_keys=True) + "\n")
         except OSError:

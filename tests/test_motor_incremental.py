@@ -467,8 +467,16 @@ class ExtremoAExtremo(unittest.TestCase):
                              "registros_escritos"} <= set(c) for c in ciclos))
         # tiempos de registro: decidir <= escribir <= disponible, y el ciclo cuenta lo que escribio
         self.assertTrue(all(r["decidido_en"] <= r["logged_at"] for r in decisiones + no_evaluadas))
+        # pendientes que nunca debieron existir: se cancelan con evidencia, no expiran como
+        # ventana_no_regenerada (el flujo largo cambia de propietario al podar su SYN)
+        canceladas = [r for r in registro if r["event"] == "pendiente_cancelada"]
+        self.assertFalse(any(r["motivo"] == "ventana_no_regenerada" for r in no_evaluadas))
+        self.assertTrue(canceladas)
+        for r in canceladas:
+            self.assertEqual((r["obs_pcap_propio"], r["obs_eve_propio"]), (0, 0))
+            self.assertNotIn((r["entity_ip"], r["window_end_utc"]), set(claves))
         por_ciclo = {}
-        for r in decisiones + no_evaluadas:
+        for r in decisiones + no_evaluadas + canceladas:
             por_ciclo.setdefault(r["inicio_ciclo"], []).append(r)
         for c in ciclos:
             escritos = por_ciclo.get(c["inicio_ciclo"], [])
@@ -551,6 +559,182 @@ class HorizontePorVentana(unittest.TestCase):
         tardias = [k for k, r in c[0].items() if r["historial_completo"] is False
                    and json.loads(json.dumps(k))[1] > "2026-10-29T08:01:40"]
         self.assertEqual(tardias, [])
+
+
+class ContabilidadPendientes(unittest.TestCase):
+    """Las 14 ventana_no_regenerada del replay completo del 3B (Etapa 2, pendiente 1).
+
+    Una pendiente se da de alta con la atribucion de la ULTIMA ancla tratada; su
+    ventana se decide con el horizonte PROPIO. Si un flujo cambia de propietario
+    entre ambos horizontes, la entidad puede no tener nada en su propia ventana: la
+    pendiente nunca debio existir y se cancela con evidencia. Estas pruebas
+    comprueban, con un calculo independiente del motor (las funciones congeladas
+    sobre la lista de paquetes del escenario), que:
+
+    - toda ventana registrable por la regla causal (contenido en (A-60, A] con el
+      horizonte [A-90, ...]) se decide o queda no evaluada con motivo, y ninguna se
+      cancela (sin perdidas ocultas);
+    - toda cancelacion corresponde a una ventana NO registrable con su horizonte
+      propio y SI con el de su alta (cambio de propietario);
+    - los limites temporales: un paquete justo en la reticula registra su ancla y
+      las 5 siguientes, nunca la de t+60;
+    - una entidad sin actividad reciente no deja ventanas, pendientes ni
+      cancelaciones mas alla de su ultimo paquete + 60 s.
+    """
+
+    T0 = 1_793_260_800
+    HORIZONTE = 90
+
+    def escenario(self, tmp: Path):
+        import datetime as dt
+        t0 = self.T0
+        paquetes: list = []
+        rnd = random.Random(11)
+
+        def pk(t, s, d, sp, dp, fl, proto=6, seq=1, pay=0):
+            paquetes.append(v2.ParsedPacket(timestamp=t, src_ip=s, dst_ip=d, ip_length=40 + pay, protocol=proto,
+                                            ttl=64, src_port=sp, dst_port=dp, tcp_flags=fl, tcp_seq=seq,
+                                            tcp_payload_length=pay))
+
+        # trafico de fondo: anclas con contenido en todo el escenario
+        for k in range(0, 420, 3):
+            t = t0 + k + rnd.uniform(0, 1)
+            pk(t, "10.10.20.21", "10.10.30.10", 41000 + k, 80, 0x02, seq=100)
+            pk(t + 0.01, "10.10.30.10", "10.10.20.21", 80, 41000 + k, 0x12, seq=500)
+        # cambio de propietario: el SYN de 10.10.20.22 sale del horizonte y el flujo pasa
+        # a ser de 10.10.30.11 (el servidor, que es quien sigue enviando)
+        pk(t0 + 20.0, "10.10.20.22", "10.10.30.11", 42000, 22, 0x02)
+        for k in range(30, 400, 4):
+            pk(t0 + k + 0.5, "10.10.30.11", "10.10.20.22", 22, 42000, 0x18, seq=1000 + k, pay=40)
+        # limites temporales: un paquete justo en la reticula
+        pk(t0 + 200.0, "10.10.20.25", "10.10.30.12", 5353, 53, 0, proto=17)
+        pk(t0 + 300.0, "10.10.20.26", "10.10.30.12", 5354, 53, 0, proto=17)
+        # sin actividad reciente: rafaga corta y silencio
+        for k in range(20):
+            pk(t0 + 150 + k * 0.25, "10.10.20.27", "10.10.30.12", 46000 + k, 443, 0x02)
+        paquetes.sort(key=lambda p: p.timestamp)
+        capt = tmp / "pcap"
+        capt.mkdir()
+        for i in range(29):
+            s = t0 + 15 * i
+            nombre = dt.datetime.fromtimestamp(s, dt.timezone.utc).strftime("live-%Y%m%d%H%M%S.pcap")
+            _escribir_pcap(capt / nombre, [(p.timestamp, _trama(p, 20, 1000 + j))
+                                           for j, p in enumerate(paquetes) if s <= p.timestamp < s + 15])
+        eve = tmp / "eve.json"
+        eve.write_bytes(b"")
+        return capt, eve, paquetes
+
+    def registrables(self, paquetes, ancla, corte):
+        """Entidades con contenido en (A-60, A] segun attribute_packets sobre [corte, A]."""
+        obs = v2.attribute_packets([p for p in paquetes if corte <= p.timestamp <= ancla], RED)
+        return {o.entity_ip for o in obs if ancla - inc.REGISTRO_S < o.timestamp <= ancla}
+
+    def correr(self, tmp, capt, eve, nombre, extra_arnes, extra_motor):
+        try:
+            import joblib
+            import numpy as np
+            from sklearn.ensemble import IsolationForest
+            from sklearn.pipeline import make_pipeline
+            from sklearn.preprocessing import StandardScaler
+        except ImportError:  # pragma: no cover
+            self.skipTest("sin scikit-learn")
+        import replay_motor
+        modelo = tmp / "m" / "modelo.joblib"
+        if not modelo.exists():
+            modelo.parent.mkdir()
+            pipe = make_pipeline(StandardScaler(), IsolationForest(n_estimators=50, random_state=0))
+            pipe.fit(np.random.default_rng(1).normal(size=(500, 28)))
+            joblib.dump(pipe, modelo)
+            (tmp / "m" / "manifest.json").write_text(json.dumps({"detectors": {"if_prueba": {"calibration": {
+                "comparison": "score < threshold", "threshold": -0.55}}}}), encoding="utf-8")
+        salida = tmp / nombre
+        sys.argv = ["replay_motor.py", "--motor", str(RAIZ / "scripts/engine/motor_decision.py"),
+                    "--pcap-dir", str(capt), "--eve", str(eve), "--desde", str(self.T0 + 10),
+                    "--hasta", str(self.T0 + 440), "--salida", str(salida), *extra_arnes, "--",
+                    "--model-path", str(modelo), "--manifest-path", str(tmp / "m" / "manifest.json"),
+                    "--detector-name", "if_prueba", "--entity-network", "10.10.0.0/16",
+                    "--step-seconds", "10", "--history-seconds", str(self.HORIZONTE), *extra_motor]
+        self.assertEqual(replay_motor.main(), 0)
+        return [json.loads(x) for x in (salida / "motor_decision.log").read_text(encoding="utf-8").splitlines()]
+
+    def test_cancelaciones_justificadas_y_sin_perdidas(self):
+        import datetime as dt
+        iso = lambda a: dt.datetime.fromtimestamp(a, dt.timezone.utc).isoformat()  # noqa: E731
+        epoch = lambda s: dt.datetime.fromisoformat(s).timestamp()  # noqa: E731
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            capt, eve, paquetes = self.escenario(tmp)
+            for nombre, extra_arnes, extra_motor in (
+                    ("eventos-retraso", ["--retraso-cierre", "3"], ["--disparo", "eventos"]),
+                    ("periodico", [], ["--disparo", "periodico"])):
+                registro = self.correr(tmp, capt, eve, nombre, extra_arnes, extra_motor)
+                with self.subTest(configuracion=nombre):
+                    self.comprobar(registro, paquetes, iso, epoch)
+
+    def comprobar(self, registro, paquetes, iso, epoch):
+        dec = {(r["entity_ip"], r["window_end_utc"]) for r in registro if r["event"] == "decision"}
+        noev = {(r["entity_ip"], r["window_end_utc"]): r for r in registro if r["event"] == "ventana_no_evaluada"}
+        canc = [r for r in registro if r["event"] == "pendiente_cancelada"]
+        self.assertFalse(any(r["motivo"] == "ventana_no_regenerada" for r in noev.values()))
+        # el escenario ejercita el cambio de propietario
+        self.assertTrue(any(r["entity_ip"] == "10.10.20.22" for r in canc), "sin cancelaciones del flujo largo")
+        # 1. cada cancelacion: no registrable con su horizonte propio, registrable con el de su alta
+        for r in canc:
+            a = epoch(r["window_end_utc"])
+            self.assertEqual(r["corte_propio"], a - self.HORIZONTE)
+            self.assertNotIn(r["entity_ip"], self.registrables(paquetes, a, a - self.HORIZONTE))
+            self.assertLess(r["corte_incorporacion"], r["corte_propio"])
+            self.assertIn(r["entity_ip"], self.registrables(paquetes, a, r["corte_incorporacion"]))
+            self.assertGreater(r["obs_pcap_incorporacion"], 0)
+            self.assertTrue(r["paquetes_atribuidos_a"], "los paquetes no se pierden: van al otro extremo")
+        # 2. ninguna ventana registrable se pierde ni se cancela (anclas con historia elegible)
+        canceladas = {(r["entity_ip"], r["window_end_utc"]) for r in canc}
+        for a in range(self.T0 + 90, self.T0 + 410, 10):
+            for ent in self.registrables(paquetes, a, a - self.HORIZONTE):
+                k = (ent, iso(a))
+                self.assertNotIn(k, canceladas)
+                self.assertTrue(k in dec or k in noev, "ventana registrable sin registro: %s" % (k,))
+        # 3. limites temporales: paquete justo en la reticula -> anclas t..t+50, nunca t+60
+        for ent, t in (("10.10.20.25", self.T0 + 200), ("10.10.20.26", self.T0 + 300)):
+            vistas = sorted(epoch(w) - t for e, w in dec | set(noev) if e == ent)
+            self.assertEqual(vistas, [0, 10, 20, 30, 40, 50], ent)
+        # 4. sin actividad reciente: nada mas alla del ultimo paquete + 60 s
+        ultimo = self.T0 + 150 + 19 * 0.25
+        tardias = [r for r in registro if r.get("entity_ip") == "10.10.20.27"
+                   and epoch(r["window_end_utc"]) >= ultimo + 60]
+        self.assertEqual(tardias, [])
+
+
+class ResolucionPendientesUnidad(unittest.TestCase):
+    """registro_cancelacion y los limites de la regla causal, sin el motor."""
+
+    def test_limites_de_la_regla_de_registro(self):
+        t = 1000.0  # en la reticula
+        self.assertEqual(inc.anclas_con_contenido([t], [], PASO, float("-inf"), float("inf")),
+                         [1000, 1010, 1020, 1030, 1040, 1050])
+        t = 1000.001
+        self.assertEqual(inc.anclas_con_contenido([t], [], PASO, float("-inf"), float("inf")),
+                         [1010, 1020, 1030, 1040, 1050, 1060])
+        p = type("P", (), {"timestamp": 1000.0})()
+        self.assertTrue(inc.con_contenido([p], [], 1000))
+        self.assertTrue(inc.con_contenido([p], [], 1050))
+        self.assertFalse(inc.con_contenido([p], [], 1060))
+        self.assertFalse(inc.con_contenido([p], [], 990))
+
+    def test_registro_de_cancelacion_con_evidencia(self):
+        rnd = random.Random(3)
+        a = 2000
+        obs = v2.attribute_packets(sorted([
+            paquete(rnd, a - 20, "10.10.30.11", "10.10.20.22", sport=22, dport=42000, flags=0x18),
+            paquete(rnd, a - 10, "10.10.30.11", "10.10.20.22", sport=22, dport=42000, flags=0x18)],
+            key=lambda p: p.timestamp), RED)
+        r = inc.registro_cancelacion(("10.10.20.22", inc.clave_ventana(a)), a, a - 230, obs, [], 1990.0,
+                                     {"corte_incorporacion": a - 240, "obs_pcap_incorporacion": 2,
+                                      "obs_eve_incorporacion": 0}, 1995.0, 1996.0)
+        self.assertEqual(r["event"], "pendiente_cancelada")
+        self.assertEqual((r["obs_pcap_propio"], r["obs_eve_propio"]), (0, 0))
+        self.assertEqual(r["paquetes_atribuidos_a"], {"10.10.30.11": 2})
+        self.assertEqual(r["corte_propio"], a - 230)
 
 
 if __name__ == "__main__":
