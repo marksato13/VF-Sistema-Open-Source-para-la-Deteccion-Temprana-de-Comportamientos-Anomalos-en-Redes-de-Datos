@@ -33,7 +33,8 @@ find "$TMP" -name '__pycache__' -prune -exec rm -rf {} +
 printf '%s\n' "candidato=$CAND" "herramientas=$(git rev-parse HEAD)" \
   "construido_utc=$(date -u +%FT%TZ)" > "$TMP/VERSION-ETAPA4"
 ( cd "$TMP" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
-tar --sort=name --owner=0 --group=0 --numeric-owner --mtime='2026-11-02 00:00Z' \
+# --force-local: en Git Bash una ruta "C:/..." se tomaría por host remoto
+tar --force-local --sort=name --owner=0 --group=0 --numeric-owner --mtime='2026-11-02 00:00Z' \
   -C "$TMP" -czf "$SALIDA/cyberflow-e4-ec78ca5.tar.gz" .
 cp "$TMP/SHA256SUMS" "$SALIDA/SHA256SUMS"
 ( cd "$SALIDA" && sha256sum cyberflow-e4-ec78ca5.tar.gz > cyberflow-e4-ec78ca5.tar.gz.sha256 )
