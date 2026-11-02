@@ -68,6 +68,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "features"))
 import extract_multilayer_v2 as extractor  # noqa: E402
 import extract_multilayer_v3 as v3  # noqa: E402  (capa 2 y deduplicacion)
 import heuristicos  # noqa: E402  (heuristicos deterministas para el feed de enforcement)
+import dns_heuristica  # noqa: E402  (vista DNS de los heuristicos, Etapa 3; no toca el IF)
 import motor_incremental as incremental  # noqa: E402  (mismo extractor congelado, sin trabajo repetido)
 
 try:
@@ -538,6 +539,8 @@ def main() -> int:
     # (hora del evento, linea, sus observaciones L7): las observaciones se
     # calculan con la funcion congelada una sola vez, cuando la linea llega.
     eve_buffer: collections.deque[tuple[float, str, list]] = collections.deque()
+    # Etapa 3: vista DNS para dns_entropy (sin copias del espejo ni reenvios de DC1/DC2).
+    vista_dns = dns_heuristica.VistaDns()
     scored_windows: dict[tuple[str, str], float] = claves_ya_registradas(args.log_path)
     # Horizonte por ventana (cierre de la Etapa 2): la ventana A se calcula con la
     # entrada [A - history_seconds, ...], sin depender de cuando se decide. Las anclas
@@ -692,6 +695,7 @@ def main() -> int:
                 event_time = extractor.parse_eve_timestamp(timestamp_raw)
             except ValueError:
                 continue
+            vista_dns.linea(raw_line)
             eve_buffer.append((event_time, raw_line,
                                incremental.observaciones_de_linea(extractor, raw_line, entity_network)))
             lineas_eve_nuevas += 1
@@ -703,6 +707,7 @@ def main() -> int:
                      cycle_start - horizonte_s - args.recuperacion_max_segundos)
         while eve_buffer and eve_buffer[0][0] < cutoff:
             eve_buffer.popleft()
+        vista_dns.podar(cutoff)
         # NO se poda scored_windows por antiguedad de reloj real: se
         # encontro en produccion que un PCAP viejo del anillo (tcpdump con
         # -G solo rota al llegar un paquete nuevo; en tramos ociosos un
@@ -1134,6 +1139,12 @@ def main() -> int:
                     decision = "ALERT"
                     detector_name = "auth_failure_heuristic"
 
+                # Etapa 3: los heuristicos leen una COPIA de la fila con la vista DNS; la
+                # fila del IF (y su puntuacion, ya calculada) no cambia.
+                campos_dns = vista_dns.campos(
+                    row["entity_ip"], extractor.parse_eve_timestamp(row["window_end_utc"]))
+                fila_h = dict(row)
+                fila_h.update(campos_dns)
                 record = {
                     "event": "decision",
                     "excluidas_acumulado": excluidas_momento,
@@ -1161,9 +1172,12 @@ def main() -> int:
                     # `decision` (que sigue siendo ALERT/PERMIT, calibracion
                     # intacta); lo consume publicar_feed.py para derivar LIMIT/BLOCK
                     # sin tocar el modelo. None si ningun heuristico dispara.
-                    "heuristico": heuristicos.evaluar(row),
+                    "heuristico": heuristicos.evaluar(fila_h),
                     # Todas las reglas que disparan (Etapa 2: destinos separados).
-                    "heuristicos": heuristicos.evaluar_todas(row),
+                    "heuristicos": heuristicos.evaluar_todas(fila_h),
+                    # Etapa 3: magnitudes de la vista DNS usadas por dns_entropy (no son entradas del IF).
+                    "dns_vista": campos_dns if (campos_dns["dnsh_consultas_60s"]
+                                                or campos_dns["dnsh_reenvios_excluidos_60s"]) else None,
                     # Disponibilidad de las fuentes al decidir. logged_at (lo pone
                     # escribir_registros) sigue siendo el instante de escritura; pendiente_desde (ciclo en que la ventana se vio
                     # por primera vez sin sus paquetes, o null) permite medir la espera.

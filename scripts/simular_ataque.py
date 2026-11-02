@@ -42,7 +42,10 @@ ATAQUES = {
         # modelo y LIMIT de la regla. Igual que en el sensor.
         "ip": "10.10.20.30", "delta": 0.16, "paquetes": 85,
         "fila": {"dns_query_count_60s": 82, "dns_nxdomain_ratio_60s": 0.62,
-                 "unique_dns_name_ratio_60s": 0.50},
+                 "unique_dns_name_ratio_60s": 0.50,
+                 # Etapa 3: la regla lee la vista DNS (sin copias del espejo ni reenvíos).
+                 "dnsh_consultas_60s": 41, "dnsh_nxdomain_ratio_60s": 0.0,
+                 "dnsh_nombres_unicos_ratio_60s": 1.0, "dnsh_reenvios_excluidos_60s": 0},
     },
     "fuerza-bruta": {
         "ip": "10.10.20.30", "delta": 0.13, "paquetes": 260,

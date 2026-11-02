@@ -25,7 +25,7 @@ from __future__ import annotations
 
 # Subir esta versión cada vez que cambien los umbrales; queda en el registro y en
 # el feed para poder reproducir por qué se tomó una decisión.
-VERSION_UMBRALES = "2026-10-06.2"
+VERSION_UMBRALES = "2026-11-02.1"
 # 2026-10-06.1: el espejo SPAN duplica cada trama, así que los ratios "todo único"
 # (puertos de un escaneo, nombres de un DGA) topan en ~0,5, no en 1,0. Los umbrales
 # de unicidad se bajan de 0,9/0,5 a 0,45. Validado: dns_entropy en el ataque, con
@@ -69,10 +69,14 @@ UMBRALES_POR_DEFECTO: dict[str, dict] = {
     # DNS de alta entropía (DGA / túnel): muchas consultas con casi todos los
     # nombres únicos o con mucho NXDOMAIN. Es el hueco donde el modelo sacó 0 %
     # (nota M). Ambiguo -> LIMIT.
+    # 2026-11-02.1 (Etapa 3): se evalúa sobre la VISTA DNS (dns_heuristica.py: sin copias
+    # del espejo y sin los reenvíos de DC1/DC2), no sobre las características del IF.
+    # 30 consultas/60 s = 1,6 x el peor cliente legítimo del 3B (19); los nombres únicos
+    # ya no topan en 0,5 (sin copias), de ahí 0,8. Sensibilidad 20-60 en el informe.
     "dns_entropy": {
-        "min_dns_query_60s": 20,
+        "min_consultas_60s": 30,
         "min_nxdomain_ratio_60s": 0.5,
-        "min_unique_dns_name_ratio_60s": 0.45,
+        "min_nombres_unicos_ratio_60s": 0.8,
         "accion": "LIMIT",
     },
 }
@@ -124,16 +128,17 @@ def _http_abuse(row: dict, u: dict) -> str | None:
 
 
 def _dns_entropy(row: dict, u: dict) -> str | None:
-    if _n(row, "dns_query_count_60s") >= u["min_dns_query_60s"] and (
-            _n(row, "dns_nxdomain_ratio_60s") >= u["min_nxdomain_ratio_60s"]
-            or _n(row, "unique_dns_name_ratio_60s") >= u["min_unique_dns_name_ratio_60s"]):
-        # Los ratios son por definicion <=1; el espejo SPAN puede duplicar
-        # respuestas y dejarlos rozando o pasando 1 (se vio "103% NXDOMAIN"),
-        # asi que se acotan a 100% para no mostrar un porcentaje incoherente.
-        return "%.0f consultas DNS/60s, %.0f%% NXDOMAIN, %.0f%% nombres únicos" % (
-            _n(row, "dns_query_count_60s"),
-            100 * min(1.0, _n(row, "dns_nxdomain_ratio_60s")),
-            100 * min(1.0, _n(row, "unique_dns_name_ratio_60s")))
+    # Solo la vista DNS (campos dnsh_*). Sin ella la regla NO dispara: no se vuelve en
+    # silencio a las características del IF, que llevan copias del espejo y reenvíos.
+    if "dnsh_consultas_60s" not in row:
+        return None
+    n = _n(row, "dnsh_consultas_60s")
+    nx = _n(row, "dnsh_nxdomain_ratio_60s")
+    un = _n(row, "dnsh_nombres_unicos_ratio_60s")
+    if n >= u["min_consultas_60s"] and (nx >= u["min_nxdomain_ratio_60s"]
+                                         or un >= u["min_nombres_unicos_ratio_60s"]):
+        return "%.0f consultas DNS propias/60s, %.0f%% NXDOMAIN, %.0f%% nombres únicos (%.0f reenvíos excluidos)" % (
+            n, 100 * nx, 100 * un, _n(row, "dnsh_reenvios_excluidos_60s"))
     return None
 
 
