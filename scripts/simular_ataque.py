@@ -49,11 +49,13 @@ ATAQUES = {
     },
     "fuerza-bruta": {
         "ip": "10.10.20.30", "delta": 0.13, "paquetes": 260,
-        "fila": {"http_request_count_60s": 240, "http_auth_failure_ratio_60s": 1.0},
+        "fila": {"http_request_count_60s": 240, "http_auth_failure_ratio_60s": 1.0,
+                 "httph_peticiones_60s": 240, "httph_fallo_auth_ratio_60s": 1.0, "httph_tardios_excluidos_60s": 0},
     },
     "http": {
         "ip": "10.10.20.34", "delta": -0.09, "paquetes": 1400,
-        "fila": {"http_request_count_60s": 410, "http_auth_failure_ratio_60s": 0.02},
+        "fila": {"http_request_count_60s": 4100, "http_auth_failure_ratio_60s": 0.02,
+                 "httph_peticiones_60s": 4100, "httph_fallo_auth_ratio_60s": 0.02, "httph_tardios_excluidos_60s": 0},
     },
     "modelo": {
         # Anomalia sin regla: solo el modelo la ve -> LIMIT.

@@ -69,6 +69,7 @@ import extract_multilayer_v2 as extractor  # noqa: E402
 import extract_multilayer_v3 as v3  # noqa: E402  (capa 2 y deduplicacion)
 import heuristicos  # noqa: E402  (heuristicos deterministas para el feed de enforcement)
 import dns_heuristica  # noqa: E402  (vista DNS de los heuristicos, Etapa 3; no toca el IF)
+import http_heuristica  # noqa: E402  (vista HTTP de los heuristicos, Etapa 3; no toca el IF)
 import motor_incremental as incremental  # noqa: E402  (mismo extractor congelado, sin trabajo repetido)
 
 try:
@@ -541,6 +542,10 @@ def main() -> int:
     eve_buffer: collections.deque[tuple[float, str, list]] = collections.deque()
     # Etapa 3: vista DNS para dns_entropy (sin copias del espejo ni reenvios de DC1/DC2).
     vista_dns = dns_heuristica.VistaDns()
+    # Etapa 3: vista HTTP (sin copias ni registros tardios de Suricata) y sus campos por
+    # (entidad, ventana), calculados con las tramas del horizonte de cada ancla.
+    vista_http = http_heuristica.VistaHttp()
+    campos_http: dict[tuple, dict] = {}
     scored_windows: dict[tuple[str, str], float] = claves_ya_registradas(args.log_path)
     # Horizonte por ventana (cierre de la Etapa 2): la ventana A se calcula con la
     # entrada [A - history_seconds, ...], sin depender de cuando se decide. Las anclas
@@ -696,6 +701,7 @@ def main() -> int:
             except ValueError:
                 continue
             vista_dns.linea(raw_line)
+            vista_http.linea(raw_line)
             eve_buffer.append((event_time, raw_line,
                                incremental.observaciones_de_linea(extractor, raw_line, entity_network)))
             lineas_eve_nuevas += 1
@@ -708,6 +714,7 @@ def main() -> int:
         while eve_buffer and eve_buffer[0][0] < cutoff:
             eve_buffer.popleft()
         vista_dns.podar(cutoff)
+        vista_http.podar(cutoff)
         # NO se poda scored_windows por antiguedad de reloj real: se
         # encontro en produccion que un PCAP viejo del anillo (tcpdump con
         # -G solo rota al llegar un paquete nuevo; en tramos ociosos un
@@ -910,6 +917,7 @@ def main() -> int:
                         return x
                 return None
             clave = incremental.clave_ventana(ancla)
+            http_ancla = vista_http.campos_por_entidad(float(ancla), paquetes)
             filas_ancla: dict[str, dict] = {}
             excluidas_ancla: set[str] = set()
             for entidad in sorted(set(lp) | set(la)):
@@ -967,6 +975,7 @@ def main() -> int:
                 pendiente_desde = min(vistos) if vistos else None
                 scored_windows[window_key] = float(ancla)
                 origen_pendiente.pop(window_key, None)
+                campos_http[window_key] = http_ancla.get(entidad, http_heuristica.CAMPOS_VACIOS)
                 decididas.append((row, pendiente_desde, ventanas_excluidas, completo))
             # Pendientes de esta ancla que no se decidieron. La regla causal se aplica con el
             # horizonte PROPIO de la ventana ([A - horizonte, ...]): si la entidad no tiene ahi
@@ -1145,6 +1154,8 @@ def main() -> int:
                     row["entity_ip"], extractor.parse_eve_timestamp(row["window_end_utc"]))
                 fila_h = dict(row)
                 fila_h.update(campos_dns)
+                fila_h.update(campos_http.pop((row["entity_ip"], row["window_end_utc"]),
+                                              http_heuristica.CAMPOS_VACIOS))
                 record = {
                     "event": "decision",
                     "excluidas_acumulado": excluidas_momento,
@@ -1176,6 +1187,8 @@ def main() -> int:
                     # Todas las reglas que disparan (Etapa 2: destinos separados).
                     "heuristicos": heuristicos.evaluar_todas(fila_h),
                     # Etapa 3: magnitudes de la vista DNS usadas por dns_entropy (no son entradas del IF).
+                    "http_vista": {k: fila_h[k] for k in http_heuristica.CAMPOS_VACIOS}
+                    if fila_h["httph_peticiones_60s"] or fila_h["httph_tardios_excluidos_60s"] else None,
                     "dns_vista": campos_dns if (campos_dns["dnsh_consultas_60s"]
                                                 or campos_dns["dnsh_reenvios_excluidos_60s"]) else None,
                     # Disponibilidad de las fuentes al decidir. logged_at (lo pone

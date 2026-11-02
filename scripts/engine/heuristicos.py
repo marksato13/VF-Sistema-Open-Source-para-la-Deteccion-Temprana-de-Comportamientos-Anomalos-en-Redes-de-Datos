@@ -56,13 +56,22 @@ UMBRALES_POR_DEFECTO: dict[str, dict] = {
         # unicidad, que el espejo distorsiona). Inequívocamente un escaneo.
         "min_flow_attempt_burst_30s": 200,
         "max_syn_completion_burst_10s": 0.1,
+        # 2026-11-02.1 (Etapa 3): la rama de ráfaga también exige puertos distintos. Sin
+        # esto, tras una inundación o fuerza bruta (miles de intentos a UN puerto) la
+        # ventana siguiente sin SYN tiene syn_completion_ratio_10s = 0 (división segura)
+        # y disparaba port_scan (17 ventanas en el 3B). Escaneo breve: ~0,5 (tope del
+        # espejo); inundación/fuerza bruta: ~0.
+        "min_unique_dst_port_ratio_burst_30s": 0.1,
         "accion": "BLOCK",
     },
     # Abuso HTTP (flood / scraping): volumen alto de peticiones SIN que sea fuerza
     # bruta (poca tasa de fallo de auth). Ambiguo (puede ser uso pesado legítimo)
     # -> LIMIT (degradar, no cortar).
+    # 2026-11-02.1 (Etapa 3): sobre la VISTA HTTP (http_heuristica.py: sin copias ni
+    # registros tardíos de Suricata). 600/60 s = 5,1 x el pico legítimo del 3B
+    # (10.10.20.26, 117), que con 100 recibía LIMIT; una inundación del 3B hace ~18 000.
     "http_abuse": {
-        "min_http_req_60s": 100,
+        "min_http_req_60s": 600,
         "max_auth_fail_ratio_60s": 0.8,
         "accion": "LIMIT",
     },
@@ -94,11 +103,14 @@ def _n(row: dict, clave: str) -> float:
 
 
 def _brute_force(row: dict, u: dict) -> str | None:
-    if (_n(row, "http_request_count_60s") >= u["min_http_req_60s"]
-            and _n(row, "http_auth_failure_ratio_60s") >= u["min_auth_fail_ratio_60s"]):
-        return "%.0f req HTTP/60s con %.0f%% de fallo de auth" % (
-            _n(row, "http_request_count_60s"),
-            100 * _n(row, "http_auth_failure_ratio_60s"))
+    # Etapa 3: solo la vista HTTP (campos httph_*); sin ella no dispara.
+    if "httph_peticiones_60s" not in row:
+        return None
+    if (_n(row, "httph_peticiones_60s") >= u["min_http_req_60s"]
+            and _n(row, "httph_fallo_auth_ratio_60s") >= u["min_auth_fail_ratio_60s"]):
+        return "%.0f req HTTP/60s con %.0f%% de fallo de auth (%.0f registros tardíos excluidos)" % (
+            _n(row, "httph_peticiones_60s"), 100 * _n(row, "httph_fallo_auth_ratio_60s"),
+            _n(row, "httph_tardios_excluidos_60s"))
     return None
 
 
@@ -113,17 +125,20 @@ def _port_scan(row: dict, u: dict) -> str | None:
     # Rama OR: ráfaga masiva de baja completitud. No depende del ratio de unicidad
     # (el espejo SPAN lo topa en ~0,5 y lo deja bordeando 0,45, de ahí el 1/3).
     rafaga = (fa >= u.get("min_flow_attempt_burst_30s", 200)
-              and sc <= u.get("max_syn_completion_burst_10s", 0.1))
+              and sc <= u.get("max_syn_completion_burst_10s", 0.1)
+              and up >= u.get("min_unique_dst_port_ratio_burst_30s", 0.0))
     if normal or rafaga:
         return "%.0f intentos/30s a muchos puertos, %.0f%% completados" % (fa, 100 * sc)
     return None
 
 
 def _http_abuse(row: dict, u: dict) -> str | None:
-    if (_n(row, "http_request_count_60s") >= u["min_http_req_60s"]
-            and _n(row, "http_auth_failure_ratio_60s") < u["max_auth_fail_ratio_60s"]):
+    if "httph_peticiones_60s" not in row:
+        return None
+    if (_n(row, "httph_peticiones_60s") >= u["min_http_req_60s"]
+            and _n(row, "httph_fallo_auth_ratio_60s") < u["max_auth_fail_ratio_60s"]):
         return "%.0f req HTTP/60s (volumen alto, sin patrón de fuerza bruta)" % (
-            _n(row, "http_request_count_60s"))
+            _n(row, "httph_peticiones_60s"))
     return None
 
 
