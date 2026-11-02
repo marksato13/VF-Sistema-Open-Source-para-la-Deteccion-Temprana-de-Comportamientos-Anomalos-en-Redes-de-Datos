@@ -40,7 +40,7 @@ VERSION = "2026-11-02.1"
 SYN, ACK, RST = 0x02, 0x10, 0x04
 
 # Parámetros por omisión. Justificación y sensibilidad: etapa3 / ESCANEO-BREVE.md.
-PARAMETROS_POR_OMISION = {"K": 10, "W": 2.0, "g": 0.1, "refractario_s": 60.0}
+PARAMETROS_POR_OMISION = {"K": 8, "W": 2.0, "g": 0.1, "refractario_s": 60.0}
 
 
 @dataclass

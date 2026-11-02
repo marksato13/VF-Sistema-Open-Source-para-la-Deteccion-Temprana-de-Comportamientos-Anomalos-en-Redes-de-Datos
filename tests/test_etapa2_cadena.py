@@ -187,7 +187,13 @@ def test_evento_nuevo_amplia_y_escala_por_destino():
     pub.incorporar([decision(heur=[H_SCAN])], st, pub.NUNCA_BLOQUEAR_V2)
     pub.incorporar([decision(w="2026-11-01T08:47:40+00:00", t=T0 + 10, heur=[H_SCAN])], st, pub.NUNCA_BLOQUEAR_V2)
     e = pub.entradas_vigentes(st, T0 + 11)[0]
-    assert e["hasta"] == round(T0 + 310) and e["nivel"] == 1  # mismo episodio (<120 s): no escala
+    # Etapa 3: la ventana siguiente (08:47:40) solapa su evidencia (08:47:10-08:47:40] con la
+    # de la vigente (08:47:00-08:47:30]: se MANTIENE, ya no amplia (antes: T0 + 310).
+    assert e["hasta"] == round(T0 + 300) and e["nivel"] == 1
+    # Evidencia posterior a la de la vigente (ventana 08:48:00: (08:47:30, 08:48:00]): renueva.
+    pub.incorporar([decision(w="2026-11-01T08:48:00+00:00", t=T0 + 30, heur=[H_SCAN])], st, pub.NUNCA_BLOQUEAR_V2)
+    e = pub.entradas_vigentes(st, T0 + 31)[0]
+    assert e["hasta"] == round(T0 + 330) and e["nivel"] == 1  # mismo episodio (<120 s): no escala
     pub.incorporar([decision(w="2026-11-01T09:00:00+00:00", t=T0 + 1000, heur=[H_SCAN])], st, pub.NUNCA_BLOQUEAR_V2)
     e = pub.entradas_vigentes(st, T0 + 1001)[0]
     assert e["nivel"] == 2 and e["hasta"] == round(T0 + 1000 + 1800)

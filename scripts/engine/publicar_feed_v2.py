@@ -20,6 +20,24 @@ Diferencias con el publicador desplegado:
    ``alcance``, ``id`` y ``evento_id`` firmados.
 6. 10.10.10.21 (DC2) en NUNCA_BLOQUEAR: no se restringe, pero sus ventanas se
    siguen evaluando (el motor no lo excluye; la lista solo actua aqui y en el agente).
+8. Etapa 3. Vía rápida de escaneo (``--senales-rapidas``): cada ``senal_rapida`` de
+   ``detector_rapido.py`` entra como una acción ``port_scan_temprano`` (BLOCK) cuyo
+   destino es el punto de aplicación que protege al HOST ESCANEADO
+   (``DESTINO_DE_OBJETIVO``); si el escaneado no tiene agente, se registra
+   ``sin_punto_de_aplicacion`` y no se restringe nada en otro sitio.
+9. Etapa 3. Renovación por evidencia reciente. Cada acción lleva su intervalo de
+   evidencia: (A − retrospectiva de la regla, A] en las reglas por ventanas y
+   (primer intento, disparo] en la vía rápida. Con una restricción vigente para el
+   mismo (ip, destino, alcance), una acción nueva:
+     - ESCALA si es más severa;
+     - RENUEVA (amplía ``hasta``) solo si su evidencia empieza cuando termina la
+       evidencia que justificó la vigente: actividad posterior, no la misma releída
+       desde otra ventana solapada;
+     - si no, se MANTIENE la vigente sin cambios: no amplía, no sube la escalera y
+       queda registrada con su motivo (``tipo`` en la traza).
+   Así la vía rápida y la regla por ventanas del mismo escaneo dan UNA restricción y
+   UN peldaño. No depende de ``score``: una decisión heurística sin score del IF
+   renueva igual si su evidencia es nueva.
 7. ``--seguir``: modo por eventos. Lee el registro del motor de forma incremental y
    publica en cuanto llega una decision que cambia el feed; ademas republica cada
    ``--refresco`` s para renovar ``expira``. Cada publicacion deja una linea en
@@ -57,6 +75,13 @@ _SEV = {"BLOCK": 2, "LIMIT": 1}
 UMBRALES_ALFA = {"0.05": -0.5694578968203694, "0.03": -0.5898535710336618,
                  "0.01": -0.6223889502095352}
 RETENCION_EVENTOS_S = 2 * 3600
+# Etapa 3: retrospectiva (s) de la evidencia de cada regla por ventanas: la ventana A usa
+# características de (A − r, A]. port_scan lee 10 y 30 s; el resto, 60 s.
+RETROSPECTIVA_S = {"port_scan": 30, "brute_force": 60, "http_abuse": 60, "dns_entropy": 60,
+                   "auth_failure_heuristic": 60}
+RETROSPECTIVA_POR_OMISION_S = 60
+# Etapa 3: punto de aplicación que protege a cada host escaneado (vía rápida).
+DESTINO_DE_OBJETIVO = {"10.10.30.10": ("srv-dmz", "todo")}
 
 
 def acciones_de(d: dict, politica: str = "if_senal") -> list[dict]:
@@ -80,7 +105,10 @@ def acciones_de(d: dict, politica: str = "if_senal") -> list[dict]:
             out.append({"regla": str(h.get("heuristico", "heuristico")), "accion": h["accion"],
                         "motivo": "%s: %s" % (h.get("heuristico", "?"), h.get("motivo", ""))})
     for a in out:
-        a["destino"], a["alcance"] = DESTINO_DE_REGLA.get(a["regla"], DESTINO_POR_OMISION)
+        if a["regla"] == "port_scan_temprano":
+            a["destino"], a["alcance"] = DESTINO_DE_OBJETIVO.get(str(d.get("objetivo")), (None, None))
+        else:
+            a["destino"], a["alcance"] = DESTINO_DE_REGLA.get(a["regla"], DESTINO_POR_OMISION)
     return out
 
 
@@ -95,6 +123,43 @@ def senal_if(d: dict) -> dict | None:
             "decision_desplegada": d.get("decision"), "logged_at": d.get("logged_at")}
 
 
+def _ts_iso(s) -> float | None:
+    if not s:
+        return None
+    import datetime as _dt
+    return _dt.datetime.fromisoformat(str(s).replace("Z", "+00:00")).timestamp()
+
+
+def evidencia_de(d: dict, regla: str) -> tuple[float, float]:
+    """Intervalo (desde, hasta] de la actividad que justifica la accion."""
+    ev = d.get("evidencia")
+    if isinstance(ev, (list, tuple)) and len(ev) == 2:
+        return float(ev[0]), float(ev[1])
+    a = _ts_iso(d.get("window_end_utc"))
+    if a is None:
+        t = float(d.get("logged_at") or 0)
+        return t, t
+    return a - RETROSPECTIVA_S.get(regla, RETROSPECTIVA_POR_OMISION_S), a
+
+
+def decision_de_senal_rapida(s: dict) -> dict | None:
+    """Convierte una ``senal_rapida`` en un registro con la forma de una decision."""
+    if s.get("event") != "senal_rapida" or not s.get("origen"):
+        return None
+    t = float(s.get("emitido_en") or s.get("t_evidencia"))
+    desde = s.get("primer_intento_ventana") or s.get("t_evidencia")
+    return {"event": "decision", "entity_ip": s["origen"], "decision_id": "rapida:%s" % s.get("id"),
+            "window_end_utc": None, "logged_at": t, "decidido_en": s.get("t_evidencia"),
+            "detector_name": "via_rapida", "decision": "PERMIT", "score": None,
+            "evidencia": [float(desde), float(s["t_evidencia"])], "objetivo": s.get("destino"),
+            "heuristicos": [{"heuristico": s.get("regla", "port_scan_temprano"), "accion": "BLOCK",
+                             "motivo": "%s puertos sin respuesta en %ss hacia %s" % (
+                                 s.get("puertos_fallidos"), (s.get("parametros") or {}).get("W"),
+                                 s.get("destino"))}],
+            "senal_rapida": {"id": s.get("id"), "t_evidencia": s.get("t_evidencia"),
+                             "disponible_en": s.get("disponible_en"), "emitido_en": s.get("emitido_en")}}
+
+
 def _evento_id(d: dict, regla: str) -> str:
     base = d.get("decision_id") or "%s|%s" % (d.get("entity_ip"), d.get("window_end_utc"))
     return "%s|%s" % (base, regla)
@@ -106,6 +171,8 @@ def incorporar(decisiones: list[dict], estado: dict, nunca: frozenset | set,
 
     estado = {"eventos": {evento_id: entrada}, "vigentes": {"ip|destino|alcance": entrada},
               "escalada": {...}, "secuencia": int}
+    Cada evento nuevo lleva ``tipo``: nueva | renovada | escalada | mantenida |
+    sin_punto_de_aplicacion (Etapa 3, punto 9 de la cabecera).
     """
     eventos = estado.setdefault("eventos", {})
     vigentes = estado.setdefault("vigentes", {})
@@ -120,26 +187,51 @@ def incorporar(decisiones: list[dict], estado: dict, nunca: frozenset | set,
             if eid in eventos:
                 continue  # mismo evento releido: no se renueva nada
             t_ev = float(d.get("logged_at") or d.get("decidido_en") or 0)
+            ev_desde, ev_hasta = evidencia_de(d, a["regla"])
+            base = {"evento_id": eid, "ip": ip, "destino": a["destino"], "regla": a["regla"],
+                    "decision_id": d.get("decision_id"), "window_end_utc": d.get("window_end_utc"),
+                    "decidido_en": d.get("decidido_en"), "logged_at": d.get("logged_at"),
+                    "leido_en": leido_en, "evidencia": [round(ev_desde, 3), round(ev_hasta, 3)]}
+            if d.get("senal_rapida"):
+                base["senal_rapida"] = d["senal_rapida"]
+            if a["destino"] is None:
+                eventos[eid] = {"tipo": "sin_punto_de_aplicacion", "hasta": t_ev, "objetivo": d.get("objetivo")}
+                nuevos.append(dict(base, tipo="sin_punto_de_aplicacion", objetivo=d.get("objetivo"),
+                                   accion=a["accion"], id=None, hasta=None))
+                continue
+            clave = "%s|%s|%s" % (ip, a["destino"], a["alcance"])
+            prev = vigentes.get(clave)
+            if prev is None or prev["hasta"] <= t_ev:
+                tipo = "nueva"
+            elif _SEV[a["accion"]] > _SEV[prev["accion"]]:
+                tipo = "escalada"
+            elif _SEV[a["accion"]] == _SEV[prev["accion"]] and ev_desde >= prev.get("evidencia_hasta", float("inf")):
+                tipo = "renovada"
+            else:
+                tipo = "mantenida"
+            if tipo == "mantenida":
+                eventos[eid] = {"tipo": "mantenida", "hasta": prev["hasta"], "vigente_id": prev["id"]}
+                nuevos.append(dict(base, tipo="mantenida", accion=prev["accion"], id=prev["id"],
+                                   hasta=prev["hasta"], motivo_mantenida=(
+                                       "evidencia solapada con la de la vigente" if _SEV[a["accion"]] == _SEV[prev["accion"]]
+                                       else "accion menos severa que la vigente")))
+                continue
             r = escalada.procesar(esc, "%s@%s" % (ip, a["destino"]), a["accion"], t_ev, evento_ts=t_ev)
+            hasta = round(t_ev + r["timeout_s"])
+            if tipo == "renovada":
+                hasta = max(hasta, prev["hasta"])
             entrada = {
                 "ip": ip, "destino": a["destino"], "alcance": a["alcance"], "accion": r["accion"],
-                "hasta": round(t_ev + r["timeout_s"]), "evento_id": eid,
+                "hasta": hasta, "evento_id": eid,
                 "motivo": a["motivo"][:160], "detector": a["regla"], "nivel": r["nivel"],
                 "revisar_humano": r["revisar_humano"],
+                "evidencia_desde": round(ev_desde, 3), "evidencia_hasta": round(ev_hasta, 3),
             }
             entrada["id"] = feed.id_entrada(ip, a["destino"], a["alcance"], entrada["accion"], eid)
             eventos[eid] = entrada
-            clave = "%s|%s|%s" % (ip, a["destino"], a["alcance"])
-            prev = vigentes.get(clave)
-            if (prev is None or prev["hasta"] <= t_ev
-                    or _SEV[entrada["accion"]] > _SEV[prev["accion"]]
-                    or (entrada["accion"] == prev["accion"] and entrada["hasta"] > prev["hasta"])):
-                vigentes[clave] = entrada
-            nuevos.append({"evento_id": eid, "id": entrada["id"], "ip": ip, "destino": a["destino"],
-                           "accion": entrada["accion"], "hasta": entrada["hasta"],
-                           "decision_id": d.get("decision_id"), "window_end_utc": d.get("window_end_utc"),
-                           "decidido_en": d.get("decidido_en"), "logged_at": d.get("logged_at"),
-                           "leido_en": leido_en})
+            vigentes[clave] = entrada
+            nuevos.append(dict(base, tipo=tipo, id=entrada["id"], accion=entrada["accion"], hasta=hasta,
+                               nivel=r["nivel"]))
     return nuevos
 
 
@@ -177,11 +269,13 @@ def publicar(estado: dict, ahora: float, vigencia_s: float, clave_privada: Path,
 class LectorRegistro:
     """Lee motor_decision.log de forma incremental (con deteccion de rotacion)."""
 
-    def __init__(self, ruta: Path, desde: float) -> None:
+    def __init__(self, ruta: Path, desde: float, evento: str = "decision", campo_t: str = "logged_at") -> None:
         self.ruta = ruta
         self.offset = 0
         self.inodo = None
         self.desde = desde
+        self.evento = evento
+        self.campo_t = campo_t
 
     def leer(self) -> list[dict]:
         try:
@@ -205,7 +299,7 @@ class LectorRegistro:
                 d = json.loads(linea)
             except ValueError:
                 continue
-            if d.get("event") == "decision" and float(d.get("logged_at", 0)) >= self.desde:
+            if d.get("event") == self.evento and float(d.get(self.campo_t) or 0) >= self.desde:
                 out.append(d)
         return out
 
@@ -224,6 +318,8 @@ def main(argv=None, reloj=time.time, dormir=time.sleep) -> int:
     p.add_argument("--salida-feed", type=Path, required=True)
     p.add_argument("--salida-firma", type=Path, required=True)
     p.add_argument("--senales", type=Path, default=None, help="jsonl de senales del IF (no restringen)")
+    p.add_argument("--senales-rapidas", type=Path, default=None,
+                   help="Etapa 3: jsonl de detector_rapido.py (via rapida de escaneo)")
     p.add_argument("--traza", type=Path, default=None, help="jsonl de publicaciones (instrumentacion)")
     p.add_argument("--politica", choices=("if_senal", "actual"), default="if_senal")
     p.add_argument("--ventana-segundos", type=int, default=120,
@@ -244,13 +340,19 @@ def main(argv=None, reloj=time.time, dormir=time.sleep) -> int:
         estado = {}
     ahora = reloj()
     lector = LectorRegistro(a.log, ahora - a.ventana_segundos)
+    lector_rapido = (LectorRegistro(a.senales_rapidas, ahora - a.ventana_segundos, evento="senal_rapida",
+                                    campo_t="emitido_en") if a.senales_rapidas else None)
     ultima_pub = None
     vistos_senal: set[str] = set()
     it = 0
     while True:
         leido_en = reloj()
         decisiones = lector.leer()
-        nuevos = incorporar(decisiones, estado, NUNCA_BLOQUEAR_V2, a.politica, leido_en)
+        if lector_rapido is not None:
+            rapidas = [x for x in map(decision_de_senal_rapida, lector_rapido.leer()) if x]
+        else:
+            rapidas = []
+        nuevos = incorporar(rapidas + decisiones, estado, NUNCA_BLOQUEAR_V2, a.politica, leido_en)
         if a.senales is not None:
             with a.senales.open("a", encoding="utf-8") as fh:
                 for d in decisiones:

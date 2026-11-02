@@ -168,7 +168,9 @@ class Proceso(unittest.TestCase):
             dr.main(["--ficheros", str(d), "--patron", "r-*.pcap", "--una-vez", "--salida", str(sal)])
             r = [json.loads(x) for x in sal.read_text().splitlines()]
             self.assertEqual(len(r), 1)
-            self.assertAlmostEqual(r[0]["t_evidencia"], t0 + 0.5 + 9 * 0.001 + 0.1, places=4)
+            k = et.PARAMETROS_POR_OMISION["K"]
+            self.assertAlmostEqual(r[0]["t_evidencia"], t0 + 0.5 + (k - 1) * 0.001 + 0.1, places=4)
+            self.assertEqual(r[0]["puertos_fallidos"], k)
             self.assertIn("disponible_en", r[0])
             self.assertIn("emitido_en", r[0])
 
