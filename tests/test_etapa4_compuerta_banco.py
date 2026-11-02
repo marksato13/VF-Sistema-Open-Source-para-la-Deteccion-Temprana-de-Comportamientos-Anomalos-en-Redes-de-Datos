@@ -30,7 +30,8 @@ import vigia_4c as vg  # noqa: E402
 CAMPANA = Path(os.environ.get("CAMPANA_DIR", RAIZ.parent / "orquestacion-limpio" / "03-entregables"
                               / "13-respuesta-observaciones-validacion-interna" / "seccion4-resultados"
                               / "campana-2026-10-26-deteccion-respuesta"))
-GEN = CAMPANA / "scripts" / "generar_campana.py"
+# el generador con compuerta (sha256 99e6bdae…) está en scripts-4c/, como en la Kali; scripts/ conserva c586d813
+GEN = CAMPANA / "scripts-4c" / "generar_campana.py"
 ESC = CAMPANA / "etapa4-preparacion-2026-11-02" / "escenarios-4c.json"
 pytestmark = pytest.mark.skipif(not GEN.exists() or not ESC.exists(), reason="repo de documentación no disponible")
 
