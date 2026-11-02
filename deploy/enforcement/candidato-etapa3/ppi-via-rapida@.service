@@ -15,8 +15,13 @@ WorkingDirectory=/home/m4rk/cyberflow
 AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
 # pipefail: si muere el detector o tcpdump, la unidad falla y systemd la reinicia.
+# Filtro (cierre Etapa 3, hallazgo 3): el espejo entrega 802.1Q. En captura en vivo en Linux
+# el kernel pasa la etiqueta a metadatos y "tcp" ya basta (banco: libpcap 1.10.5, kernel
+# 6.18); "tcp or (vlan and tcp)" da lo mismo en vivo y además acepta la etiqueta dentro de
+# la trama (lectura de ficheros, pilas que no la extraen). Antes de instalar: tcpdump -d
+# con este filtro en Sensor1 (PROCEDIMIENTO-ETAPA4, paso de comprobación del filtro).
 ExecStart=/bin/bash -c 'set -o pipefail; \
-  /usr/bin/tcpdump -i %i -n -U --immediate-mode -s 128 -w - tcp \
+  /usr/bin/tcpdump -i %i -n -U --immediate-mode -s 128 -w - "tcp or (vlan and tcp)" \
   | /home/m4rk/cyberflow/.venv/bin/python scripts/engine/detector_rapido.py --flujo \
       --salida /home/m4rk/feed-v2/senales-rapidas.jsonl \
       --resumen /home/m4rk/feed-v2/via-rapida-resumen.jsonl'

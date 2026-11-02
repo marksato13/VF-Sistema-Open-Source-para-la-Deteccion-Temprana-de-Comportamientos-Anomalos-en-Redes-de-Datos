@@ -1140,13 +1140,8 @@ def main() -> int:
                 # MVP anterior, 5 intentos en 60s), NO calibrados
                 # estadisticamente como el umbral del modelo -- documentado como
                 # tal, no se disfraza de rigor que no tiene.
-                if (
-                    decision == "PERMIT"
-                    and row["http_request_count_60s"] >= AUTH_FAILURE_MIN_REQUESTS
-                    and row["http_auth_failure_ratio_60s"] >= AUTH_FAILURE_MIN_RATIO
-                ):
-                    decision = "ALERT"
-                    detector_name = "auth_failure_heuristic"
+                # Clasificacion pura del IF (None si no se puntua), separada de la final.
+                decision_if = decision if score is not None else None
 
                 # Etapa 3: los heuristicos leen una COPIA de la fila con la vista DNS; la
                 # fila del IF (y su puntuacion, ya calculada) no cambia.
@@ -1156,6 +1151,20 @@ def main() -> int:
                 fila_h.update(campos_dns)
                 fila_h.update(campos_http.pop((row["entity_ip"], row["window_end_utc"]),
                                               http_heuristica.CAMPOS_VACIOS))
+
+                # Cierre Etapa 3 (hallazgo 2): las columnas http_* del IF cuentan tambien
+                # los registros HTTP tardios de Suricata (sin tramas del flujo a <= 2 s).
+                # Esa condicion se conserva como SENAL HISTORICA registrada, pero solo
+                # autoriza respuesta la misma condicion sobre la vista HTTP (httph_*),
+                # que descarta los tardios. Umbrales sin cambios (5 y 0,8).
+                auth_historico = (row["http_request_count_60s"] >= AUTH_FAILURE_MIN_REQUESTS
+                                  and row["http_auth_failure_ratio_60s"] >= AUTH_FAILURE_MIN_RATIO)
+                auth_vista = (fila_h["httph_peticiones_60s"] >= AUTH_FAILURE_MIN_REQUESTS
+                              and fila_h["httph_fallo_auth_ratio_60s"] >= AUTH_FAILURE_MIN_RATIO)
+                auth_autoriza = decision == "PERMIT" and auth_vista
+                if auth_autoriza:
+                    decision = "ALERT"
+                    detector_name = "auth_failure_heuristic"
                 record = {
                     "event": "decision",
                     "excluidas_acumulado": excluidas_momento,
@@ -1178,6 +1187,13 @@ def main() -> int:
                     "score": score,
                     "threshold": threshold,
                     "decision": decision,
+                    # Cierre Etapa 3: clasificacion pura del IF y la senal de fallos de
+                    # autenticacion separada en historica (columnas del IF, con tardios) y
+                    # vista (solo eventos con tramas); solo `autoriza` produce ALERT.
+                    "decision_if": decision_if,
+                    "auth_failure": {"historico": bool(auth_historico), "vista": bool(auth_vista),
+                                     "autoriza": bool(auth_autoriza)}
+                    if (auth_historico or auth_vista) else None,
                     # Veredicto de los heuristicos deterministas (brute-force,
                     # port-scan, http-abuse, dns-entropy). Es ADITIVO: no cambia
                     # `decision` (que sigue siendo ALERT/PERMIT, calibracion

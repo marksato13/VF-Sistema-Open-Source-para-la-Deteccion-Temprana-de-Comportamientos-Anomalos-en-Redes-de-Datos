@@ -56,19 +56,35 @@ def sh(*a, **kw):
     return subprocess.run(list(a), capture_output=True, text=True, **kw)
 
 
-def red() -> str:
+VLAN_SRV = 30   # VLAN de srv-dmz en el espejo (los SYN que pasan el pfSense)
+
+
+def red(conservar_vlan: bool = False) -> str:
+    """veth vA -> vB. Sin VLAN (modo de la batería): 10.10.30.10 en vB y todo lo reinyectado
+    llega a la pila. Con VLAN (cierre Etapa 3): la captura escucha en vB las tramas 802.1Q
+    como el sensor, y la pila de «srv-dmz» está en vB.30: solo recibe la copia de la VLAN 30,
+    que es lo que le llega a srv-dmz real tras el pfSense."""
     sh("ip", "link", "del", "vA")
     sh("ip", "link", "add", "vA", "type", "veth", "peer", "name", "vB")
     for i in ("vA", "vB"):
         sh("ip", "link", "set", i, "up")
-    sh("ip", "addr", "add", SRV + "/16", "dev", "vB")
-    for k in ("all", "default", "vB", "vA"):
+    pila = "vB"
+    if conservar_vlan:
+        pila = "vB.%d" % VLAN_SRV
+        sh("ip", "link", "add", "link", "vB", "name", pila, "type", "vlan", "id", str(VLAN_SRV))
+        sh("ip", "link", "set", pila, "up")
+    sh("ip", "addr", "add", SRV + "/16", "dev", pila)
+    for k in ("all", "default", "vB", "vA", pila):
         sh("sysctl", "-w", "net.ipv4.conf.%s.rp_filter=0" % k)
-    sh("sysctl", "-w", "net.ipv4.conf.vB.accept_local=1")
+    sh("sysctl", "-w", "net.ipv4.conf.%s.accept_local=1" % pila)
+    # Cierre Etapa 3: sin reenvío. Con ip_forward=1 (valor del contenedor) el banco reenviaba
+    # por vB unas 6 tramas por segmento que no son del escenario (la deduplicación las
+    # descartaba como copias del espejo; no cambiaban los disparos, pero no son del cable).
+    sh("sysctl", "-w", "net.ipv4.ip_forward=0")
     # el kernel del banco no debe contestar (srv-dmz real descarta en silencio)
     sh("nft", "-f", "-", input="destroy table inet banco\nadd table inet banco\n"
        "add chain inet banco salida { type filter hook output priority 0; policy accept; }\n"
-       "add rule inet banco salida oifname \"vB\" drop\n")
+       "add rule inet banco salida oifname { \"vB\", \"%s\" } drop\n" % pila)
     return Path("/sys/class/net/vB/address").read_text().strip()
 
 
@@ -203,7 +219,11 @@ def suricata(d: Path) -> subprocess.Popen:
     return p
 
 
-def una(seg: Path, alt: str, carga: bool, mac: str, salida: Path, rep: int) -> dict:
+FILTRO_UNIDAD = "tcp or (vlan and tcp)"   # = deploy/enforcement/candidato-etapa3/ppi-via-rapida@.service
+
+
+def una(seg: Path, alt: str, carga: bool, mac: str, salida: Path, rep: int, conservar_vlan: bool = False) -> dict:
+    vlan = [] if conservar_vlan else ["--enet-vlan=del"]
     d = Path(tempfile.mkdtemp(prefix="vr-"))
     procs = cadena(d)
     extra = []
@@ -221,7 +241,8 @@ def una(seg: Path, alt: str, carga: bool, mac: str, salida: Path, rep: int) -> d
                                        "--patron", "r-*.pcap", "--salida", str(d / "rapidas.jsonl"),
                                        "--resumen", str(d / "det-resumen.jsonl"), "--sondeo", "0.02"]))
     elif alt == "C":
-        tcpd = subprocess.Popen(["tcpdump", "-Z", "root", "-i", "vB", "-Q", "in", "-n", "-U", "--immediate-mode", "-w", "-", "tcp"],
+        tcpd = subprocess.Popen(["tcpdump", "-Z", "root", "-i", "vB", "-Q", "in", "-n", "-U", "--immediate-mode",
+                                 "-s", "128", "-w", "-", FILTRO_UNIDAD],
                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         extra.append(tcpd)
         extra.append(subprocess.Popen([PY, str(RAIZ / "scripts/engine/detector_rapido.py"), "--flujo",
@@ -232,7 +253,7 @@ def una(seg: Path, alt: str, carga: bool, mac: str, salida: Path, rep: int) -> d
         extra.append(subprocess.Popen([PY, str(RAIZ / "scripts/engine/suricata_a_senal.py"), "--eve",
                                        str(d / "suri" / "eve.json"), "--salida", str(d / "rapidas.jsonl")]))
     if carga:
-        extra.append(subprocess.Popen(["tcpreplay-edit", "--enet-vlan=del", "--enet-dmac=%s" % mac, "-i", "vA", "--loop=0",
+        extra.append(subprocess.Popen(["tcpreplay-edit", *vlan, "--enet-dmac=%s" % mac, "-i", "vA", "--loop=0",
                                        "--srcipmap=10.10.20.30/32:10.10.20.99/32",
                                        "--dstipmap=10.10.20.30/32:10.10.20.99/32", "--fixcsum",
                                        str(seg.parent / "carga-inundacion_http-r3.pcap")],
@@ -242,7 +263,7 @@ def una(seg: Path, alt: str, carga: bool, mac: str, salida: Path, rep: int) -> d
     sond = sondeo_descartes(d / "descartes.json", 40)
     time.sleep(2.5 + (random.uniform(0, R) if R else 0.0))
     t_rep = time.time()
-    sh("tcpreplay-edit", "--enet-vlan=del", "--enet-dmac=%s" % mac, "-i", "vA", str(seg))
+    sh("tcpreplay-edit", *vlan, "--enet-dmac=%s" % mac, "-i", "vA", str(seg))
     time.sleep(4)
     nft_final = sh("nft", "-j", "list", "set", "inet", "cyberflow_dmz", "bloqueados").stdout
     for p in extra + procs:
@@ -279,6 +300,7 @@ def una(seg: Path, alt: str, carga: bool, mac: str, salida: Path, rep: int) -> d
     t_drop = (desc.get(ATK) or {}).get("primer_descarte_visto")
     fila = {
         "alternativa": alt, "carga": carga, "repeticion": rep, "segmento": seg.stem,
+        "vlan": "conservada" if conservar_vlan else "quitada",
         "rafaga_s": round(ult - r0, 3) if r0 and ult else None, "puertos_capturados": lt["puertos"],
         "s_desde_rafaga": {
             "evidencia": rel_(s0.get("t_evidencia") if s0 else None),
@@ -316,15 +338,17 @@ def main() -> int:
     seg_dir, out = Path(sys.argv[1]), Path(sys.argv[2])
     alts = (sys.argv[3].split(",") if len(sys.argv) > 3 else ["A1", "A2", "C", "B"])
     reps = int(sys.argv[4]) if len(sys.argv) > 4 else 1
+    # quinto argumento (cierre Etapa 3): "quitar" (por omisión, como la batería) o "conservar"
+    conservar_vlan = len(sys.argv) > 5 and sys.argv[5] == "conservar"
     random.seed(20261102)
-    mac = red()
+    mac = red(conservar_vlan)
     salida = out / "ensayo-via-rapida.jsonl"
     segs = sorted(seg_dir.glob("escaneo_breve-r*.pcap"))
     for rep in range(reps):
         for carga in (False, True):
             for alt in alts:
                 for seg in segs:
-                    f = una(seg, alt, carga, mac, salida, rep)
+                    f = una(seg, alt, carga, mac, salida, rep, conservar_vlan)
                     print(json.dumps({k: f[k] for k in ("alternativa", "carga", "segmento", "s_desde_rafaga",
                                                          "margen_s_aplicada_a_ultimo_syn", "syn_tras_aplicacion",
                                                          "syn_escaneo_total")}), flush=True)

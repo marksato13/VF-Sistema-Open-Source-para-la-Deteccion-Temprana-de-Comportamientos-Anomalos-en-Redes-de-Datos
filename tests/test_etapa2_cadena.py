@@ -225,8 +225,19 @@ def test_registro_sin_heuristicos_lista_usa_heuristico():
 
 
 def test_legacy_auth_failure_heuristic_es_block_srv_dmz():
-    a = pub.acciones_de(decision(det="auth_failure_heuristic", dec="ALERT"))
+    # Cierre Etapa 3 (hallazgo 2): el BLOCK exige evidencia valida de la vista HTTP.
+    d = decision(det="auth_failure_heuristic", dec="ALERT")
+    d["http_vista"] = {"httph_peticiones_60s": 6, "httph_fallo_auth_ratio_60s": 1.0,
+                       "httph_tardios_excluidos_60s": 0}
+    a = pub.acciones_de(d)
     assert [(x["destino"], x["accion"]) for x in a] == [("srv-dmz", "BLOCK")]
+
+
+def test_legacy_auth_failure_heuristic_sin_vista_no_restringe():
+    # Antes (585da7b) esto era BLOCK: un registro sin vista no permite comprobar la evidencia.
+    rech = []
+    assert pub.acciones_de(decision(det="auth_failure_heuristic", dec="ALERT"), rechazadas=rech) == []
+    assert [r["regla"] for r in rech] == ["auth_failure_heuristic"]
 
 
 @pytest.mark.skipif(not HAY_OPENSSL, reason="sin openssl")

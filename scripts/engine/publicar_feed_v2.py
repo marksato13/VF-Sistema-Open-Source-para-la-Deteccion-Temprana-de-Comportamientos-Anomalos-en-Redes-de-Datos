@@ -84,16 +84,49 @@ RETROSPECTIVA_POR_OMISION_S = 60
 DESTINO_DE_OBJETIVO = {"10.10.30.10": ("srv-dmz", "todo")}
 
 
-def acciones_de(d: dict, politica: str = "if_senal") -> list[dict]:
-    """Acciones (destino, alcance, accion, regla, motivo) que propone una decision."""
+AUTH_MIN_PETICIONES_VISTA = 5      # = motor_decision.AUTH_FAILURE_MIN_REQUESTS
+AUTH_MIN_RATIO_VISTA = 0.8         # = motor_decision.AUTH_FAILURE_MIN_RATIO
+
+
+def rechazo_heuristico_motor(d: dict) -> str | None:
+    """Motivo por el que un ALERT de heuristico del motor NO autoriza respuesta (None = autoriza).
+
+    Cierre Etapa 3 (hallazgo 2): ninguna restriccion por fuerza bruta puede apoyarse solo en
+    registros HTTP que la vista descarto (tardios). Se exige la autorizacion del motor
+    corregido (auth_failure.autoriza) o, para registros sin ese campo, la vista HTTP con
+    peticiones validas suficientes. Sin vista no hay forma de comprobarlo: no se restringe.
+    """
+    af = d.get("auth_failure")
+    if isinstance(af, dict) and "autoriza" in af:
+        return None if af.get("autoriza") else "auth_failure sin autorizacion de la vista HTTP"
+    hv = d.get("http_vista")
+    if not isinstance(hv, dict):
+        return "sin vista HTTP: la senal solo consta en columnas que incluyen registros tardios"
+    if (float(hv.get("httph_peticiones_60s") or 0) >= AUTH_MIN_PETICIONES_VISTA
+            and float(hv.get("httph_fallo_auth_ratio_60s") or 0) >= AUTH_MIN_RATIO_VISTA):
+        return None
+    return "vista HTTP sin evidencia valida (%s peticiones validas, %s tardias descartadas)" % (
+        hv.get("httph_peticiones_60s"), hv.get("httph_tardios_excluidos_60s"))
+
+
+def acciones_de(d: dict, politica: str = "if_senal", rechazadas: list | None = None) -> list[dict]:
+    """Acciones (destino, alcance, accion, regla, motivo) que propone una decision.
+
+    ``rechazadas`` (opcional) recibe las acciones que la decision pedia y no se autorizan.
+    """
     out: list[dict] = []
     if d.get("event") != "decision":
         return out
     det = str(d.get("detector_name", ""))
     if d.get("decision") == "ALERT":
         if det.endswith("_heuristic"):
-            # ALERT de heuristico del propio motor (auth_failure_heuristic): fuerza bruta.
-            out.append({"regla": det, "accion": "BLOCK", "motivo": det})
+            # ALERT de heuristico del propio motor (auth_failure_heuristic): fuerza bruta,
+            # solo si la vista HTTP la respalda con evidencia valida.
+            motivo_rechazo = rechazo_heuristico_motor(d)
+            if motivo_rechazo is None:
+                out.append({"regla": det, "accion": "BLOCK", "motivo": det})
+            elif rechazadas is not None:
+                rechazadas.append({"regla": det, "accion": "BLOCK", "motivo_rechazo": motivo_rechazo})
         elif politica == "actual":
             out.append({"regla": "modelo:" + det, "accion": "LIMIT", "motivo": "modelo:" + det})
     lista = d.get("heuristicos")
@@ -172,7 +205,8 @@ def incorporar(decisiones: list[dict], estado: dict, nunca: frozenset | set,
     estado = {"eventos": {evento_id: entrada}, "vigentes": {"ip|destino|alcance": entrada},
               "escalada": {...}, "secuencia": int}
     Cada evento nuevo lleva ``tipo``: nueva | renovada | escalada | mantenida |
-    sin_punto_de_aplicacion (Etapa 3, punto 9 de la cabecera).
+    sin_punto_de_aplicacion (Etapa 3, punto 9 de la cabecera) | rechazada (cierre de la
+    Etapa 3: ALERT de heuristico del motor sin evidencia valida en la vista HTTP; sin efecto).
     """
     eventos = estado.setdefault("eventos", {})
     vigentes = estado.setdefault("vigentes", {})
@@ -182,7 +216,20 @@ def incorporar(decisiones: list[dict], estado: dict, nunca: frozenset | set,
         ip = str(d.get("entity_ip", ""))
         if not ip or ip in nunca:
             continue
-        for a in acciones_de(d, politica):
+        rechazadas: list[dict] = []
+        acciones = acciones_de(d, politica, rechazadas)
+        for a in rechazadas:
+            eid = _evento_id(d, a["regla"])
+            if eid in eventos:
+                continue
+            # Trazable y sin efecto: ni entrada nueva ni renovacion de una vigente.
+            eventos[eid] = {"tipo": "rechazada", "hasta": float(d.get("logged_at") or 0)}
+            nuevos.append({"evento_id": eid, "ip": ip, "regla": a["regla"], "tipo": "rechazada",
+                           "accion": a["accion"], "id": None, "hasta": None,
+                           "motivo_rechazo": a["motivo_rechazo"], "decision_id": d.get("decision_id"),
+                           "window_end_utc": d.get("window_end_utc"), "logged_at": d.get("logged_at"),
+                           "leido_en": leido_en})
+        for a in acciones:
             eid = _evento_id(d, a["regla"])
             if eid in eventos:
                 continue  # mismo evento releido: no se renueva nada

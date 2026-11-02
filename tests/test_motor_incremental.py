@@ -550,7 +550,14 @@ class ExtremoAExtremo(unittest.TestCase):
         # la entidad solo L7 se decide por el heuristico, nunca con el modelo sin paquetes
         l7 = [r for r in decisiones if r["entity_ip"] == "10.10.20.24"]
         self.assertTrue(l7 and all(r["score"] is None for r in l7))
-        self.assertTrue(any(r["detector_name"] == "auth_failure_heuristic" for r in l7))
+        # Cierre Etapa 3 (hallazgo 2): sus 401 no tienen tramas del flujo, la vista HTTP los
+        # descarta; la senal historica queda registrada pero NO autoriza ALERT/BLOCK.
+        self.assertFalse(any(r["detector_name"] == "auth_failure_heuristic" for r in l7))
+        self.assertTrue(all(r["decision"] == "PERMIT" and r["decision_if"] is None for r in l7))
+        historicas = [r for r in l7 if r["auth_failure"]]
+        self.assertTrue(historicas)
+        self.assertTrue(all(r["auth_failure"] == {"historico": True, "vista": False, "autoriza": False}
+                            for r in historicas))
         # la excluida no se decide pero se cuenta; la de fuera de la red no aparece
         self.assertFalse(any(r["entity_ip"] in ("10.10.60.11", "192.168.5.5") for r in decisiones))
         self.assertGreater(max(r["excluidas_acumulado"] for r in decisiones), 0)

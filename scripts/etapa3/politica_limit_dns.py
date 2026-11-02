@@ -5,7 +5,10 @@ Unidad: CONSULTA DNS por origen hacia los resolvedores internos. En UDP, una con
 un paquete (las respuestas no pasan por el hook input del DC en sentido cliente->DC); los
 reintentos del cliente (mismo id y puerto, > 5 ms) SÍ cuentan, porque nftables los ve
 como paquetes nuevos. En TCP, una consulta son varios paquetes; por eso la política
-limita UDP dport 53 y solo los SYN de TCP dport 53 (conexiones nuevas).
+candidata limita SOLO UDP dport 53 (cf_nft_helper.FILTRO_LIMIT["dns"]). TCP/53 queda fuera
+del LIMIT (hueco declarado; propuesta de evaluación por conexiones nuevas en
+etapa3-cierre-tecnico-2026-11-02/PROTOCOLO-OBSERVACION-DNS.md §4). Cierre Etapa 3: este
+comentario decía antes que también limitaba los SYN de TCP/53; el helper nunca lo hizo.
 
 Para cada origen legítimo calcula la ENVOLVENTE de cubeta de fichas: para cada tasa r,
 la ráfaga mínima b(r) tal que ninguna consulta suya se descartaría (count(Δ) <= b + r·Δ

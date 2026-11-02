@@ -27,9 +27,10 @@ import argparse
 import datetime as dt
 import json
 import os
-import select
+import queue
 import struct
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -161,33 +162,108 @@ def modo_ficheros(det, d: Path, salida, resumen, patron: str, una_vez: bool, son
         time.sleep(sondeo)
 
 
+class AnalizadorPcapIncremental:
+    """Analiza un pcap clásico a partir de trozos de bytes de cualquier tamaño.
+
+    No lee de ningún fichero: recibe los bytes con ``alimentar`` y devuelve todos los
+    registros COMPLETOS que ya contiene su búfer. Una cabecera o un paquete partido entre
+    varias escrituras queda a la espera del resto, sin bloquear nada.
+    """
+
+    def __init__(self) -> None:
+        self.buf = bytearray()
+        self.e: str | None = None
+        self.div = 1e6
+
+    def alimentar(self, datos: bytes) -> list[tuple[float, bytes]]:
+        self.buf += datos
+        if self.e is None:
+            if len(self.buf) < 24:
+                return []
+            magic = bytes(self.buf[:4])
+            if magic in (b"\xd4\xc3\xb2\xa1", b"\x4d\x3c\xb2\xa1"):
+                self.e, self.div = "<", (1e6 if magic == b"\xd4\xc3\xb2\xa1" else 1e9)
+            elif magic in (b"\xa1\xb2\xc3\xd4", b"\xa1\xb2\x3c\x4d"):
+                self.e, self.div = ">", (1e6 if magic == b"\xa1\xb2\xc3\xd4" else 1e9)
+            else:
+                raise ValueError("no es pcap clasico")
+            del self.buf[:24]
+        out: list[tuple[float, bytes]] = []
+        p = 0
+        while len(self.buf) - p >= 16:
+            s, us, incl, _ = struct.unpack_from(self.e + "IIII", self.buf, p)
+            if len(self.buf) - p - 16 < incl:
+                break
+            out.append((s + us / self.div, bytes(self.buf[p + 16:p + 16 + incl])))
+            p += 16 + incl
+        if p:
+            del self.buf[:p]
+        return out
+
+    @property
+    def pendientes(self) -> int:
+        return len(self.buf)
+
+
+def _hilo_lector(fd: int, cola: "queue.Queue") -> None:
+    """os.read devuelve en cuanto hay bytes en la tubería (aunque sean parciales); la marca
+    de llegada se toma aquí, al salir de la lectura. b"" = fin de la entrada."""
+    while True:
+        try:
+            datos = os.read(fd, 1 << 16)
+        except OSError:
+            datos = b""
+        cola.put((time.time(), datos))
+        if not datos:
+            return
+
+
 def modo_flujo(det, entrada, salida, resumen, tic: float) -> None:
-    fd = entrada.fileno()
-    lp = LectorPcap(entrada)
+    """Lectura continua sin depender del búfer de ``sys.stdin.buffer``.
+
+    Defecto corregido (585da7b): ``select`` miraba el descriptor, pero los paquetes ya
+    copiados al búfer interno de Python no lo vuelven «legible»; si una ráfaga llegaba en
+    una sola escritura, los paquetes posteriores al primero esperaban a otro byte o al
+    cierre. Ahora un hilo hace ``os.read`` sobre el descriptor y el bucle procesa TODOS los
+    registros completos recibidos. El reloj del detector sigue avanzando solo con marcas
+    de paquetes (causal); ``disponible_en`` es el instante de llegada del trozo de bytes
+    que completó la evidencia.
+    """
+    fd = entrada if isinstance(entrada, int) else entrada.fileno()
+    cola: queue.Queue = queue.Queue()
+    threading.Thread(target=_hilo_lector, args=(fd, cola), daemon=True).start()
+    an = AnalizadorPcapIncremental()
     ultimo_tic = time.time()
+    llegada = ultimo_tic
     c0 = time.process_time()
     n = 0
-    while True:
-        r, _, _ = select.select([fd], [], [], tic) if hasattr(select, "select") and os.name != "nt" else ([fd], [], [])
-        if r:
-            x = lp.siguiente()
-            if x is None:
-                break
-            t, frame = x
-            tcp = tcp_de_trama(frame)
-            if tcp is not None:
-                n += 1
-                for disp in det.observar(t, *tcp):
-                    _escribir(salida, disp, time.time())
+    fin = False
+    while not fin:
+        try:
+            llegada, datos = cola.get(timeout=tic)
+        except queue.Empty:
+            datos = None
+        if datos is not None:
+            if not datos:
+                fin = True
+            else:
+                for t, frame in an.alimentar(datos):
+                    tcp = tcp_de_trama(frame)
+                    if tcp is None:
+                        continue
+                    n += 1
+                    for disp in det.observar(t, *tcp):
+                        _escribir(salida, disp, llegada)
         ahora = time.time()
-        if ahora - ultimo_tic >= tic:
-            # sin datos nuevos: el reloj del detector avanza solo hasta lo visto (det.t)
+        if fin or ahora - ultimo_tic >= tic:
+            # el reloj del detector avanza solo hasta lo visto (det.t), nunca al de pared
             for disp in det.avanzar(det.t):
-                _escribir(salida, disp, ahora)
+                _escribir(salida, disp, llegada)
             det.podar(det.t)
             ultimo_tic = ahora
             if resumen is not None:
                 resumen.write(json.dumps({"bloque_hasta": round(ahora, 6), "paquetes_tcp": n,
+                                          "bytes_pendientes": an.pendientes,
                                           "cpu_s": round(time.process_time() - c0, 6)}) + "\n")
                 resumen.flush()
 
@@ -216,7 +292,7 @@ def main(argv=None) -> int:
         if a.ficheros:
             modo_ficheros(det, a.ficheros, salida, resumen, a.patron, a.una_vez, a.sondeo, a.hasta_vacio)
         else:
-            modo_flujo(det, sys.stdin.buffer, salida, resumen, a.tic)
+            modo_flujo(det, sys.stdin.fileno(), salida, resumen, a.tic)
     return 0
 
 
