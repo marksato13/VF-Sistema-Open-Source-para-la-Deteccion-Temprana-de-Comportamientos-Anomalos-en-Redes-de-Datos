@@ -5,23 +5,18 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=adminsrvdmz
-Group=adminsrvdmz
-# Proceso continuo: reacciona al cambio de feed.json/feed.sig (sondeo 0,5 s) y
-# relee los sets cada 5 s (retiradas y primer efecto). Sin --aplicar = sombra.
-ExecStart=/usr/bin/python3 /home/adminsrvdmz/enforce-v2/agente_enforce_v2.py \
-    --perfil dmz \
-    --feed /home/adminsrvdmz/enforce-v2/feed.json \
-    --firma /home/adminsrvdmz/enforce-v2/feed.sig \
-    --clave-publica /home/adminsrvdmz/enforce-v2/pub.pem \
-    --estado /home/adminsrvdmz/enforce-v2/estado.json \
-    --traza /home/adminsrvdmz/enforce-v2/traza.jsonl \
-    --helper "sudo -n /usr/local/sbin/cf-nft-helper" \
-    --seguir
+# Cuenta del agente: shell nologin, sin llaves SSH, solo sudo al helper sin argumentos.
+User=cfagente
+Group=cfagente
+# Codigo y clave publica: root:root en /opt (el agente no los puede modificar).
+# Feed: /var/lib/cyberflow/feed (lo escribe cffeed; cfagente solo lee, grupo).
+# Estado y traza: /var/lib/cyberflow/agente (cfagente 0700).
+# SIN --aplicar = SOMBRA (no llama al helper para cambiar reglas; solo lista si hay sets).
+ExecStart=/usr/bin/python3 -I /opt/cyberflow/agente-v2/agente_enforce_v2.py     --perfil dmz     --feed /var/lib/cyberflow/feed/feed.json     --firma /var/lib/cyberflow/feed/feed.sig     --clave-publica /opt/cyberflow/agente-v2/pub.pem     --estado /var/lib/cyberflow/agente/estado.json     --traza /var/lib/cyberflow/agente/traza.jsonl     --helper "sudo -n /usr/local/sbin/cf-nft-helper"     --seguir
 Restart=always
 RestartSec=2
-# Endurecimiento (ProtectSystem, PrivateTmp) pendiente de ensayo: sudo necesita
-# escribir su marca de tiempo y NoNewPrivileges lo romperia. No se activa sin probarlo.
+# Endurecimiento (ProtectSystem, PrivateTmp, NoNewPrivileges) pendiente de ensayo con
+# systemd real: sudo necesita escalar privilegios y NoNewPrivileges lo romperia.
 
 [Install]
 WantedBy=multi-user.target

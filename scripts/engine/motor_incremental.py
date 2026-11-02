@@ -359,3 +359,172 @@ def filas_pendientes(build_rows: Callable, entidad: str, lp: list, la: list, pas
     corte = clave_ventana(a_min)
     # window_end_utc en ISO con el mismo formato y zona: el orden de texto es el de tiempo.
     return [f for f in filas if f["window_end_utc"] >= corte], a_min
+
+
+# --- Horizonte de entrada fijado por ventana (Etapa 2, cierre) -----------------
+#
+# Hasta 2be5335 el anillo se podaba a ``history_seconds`` desde el paquete MAS
+# NUEVO leido. El inicio de cada flujo, su propietario, si un paquete cuenta
+# como ``flow_attempt`` y las secuencias ya vistas los fija ``attribute_packets``
+# sobre el conjunto que recibe, asi que la fila de una ventana dependia de
+# CUANDO se decidia (rotacion de 5 o 15 s, disponibilidad, retraso): r2 frente a
+# r4 dio 215 vectores distintos. Ahora la ventana W se calcula siempre con la
+# entrada [W - history_seconds, ...]: misma funcion congelada, misma formula, un
+# horizonte que solo depende de W. ``attribute_packets`` es causal (procesa por
+# timestamp y solo mira atras), asi que los paquetes posteriores a W que ya
+# esten en el buffer no cambian ninguna observacion de (W-60, W].
+
+MARGEN_DEDUP_S = 0.005  # ventana de deduplicar_espejo: la copia de W puede llegar 5 ms despues
+
+
+def anclas_con_contenido(ts_paquetes: Iterable[float], ts_apps: Iterable[float], paso: int,
+                         desde_excl: float, hasta_incl: float) -> list[int]:
+    """Anclas A en (desde, hasta] con algun paquete en (A-30, A] o evento L7 en (A-60, A].
+
+    Son las ventanas que ``build_rows`` llena con algo: las demas serian todo ceros
+    (PERMIT por ventana vacia) y no se generan.
+    """
+    k = set()
+    for t in ts_paquetes:
+        if t > desde_excl - 30:
+            k.add((math.ceil(t / paso), 30))
+    for t in ts_apps:
+        if t > desde_excl - 60:
+            k.add((math.ceil(t / paso), 60))
+    anclas = set()
+    for c, w in k:
+        # t en (A-w, A]  <=>  A en [t, t+w): con A = c*paso >= t, las anclas c..c+w/paso-1
+        # cubren [t, t+w) salvo cuando t cae justo en la reticula (entonces c*paso == t).
+        for j in range(w // paso):
+            a = (c + j) * paso
+            if desde_excl < a <= hasta_incl:
+                anclas.add(a)
+    return sorted(anclas)
+
+
+def con_contenido(lp: list, la: list, ancla: float) -> bool:
+    return (any(ancla - 30 < p.timestamp <= ancla for p in lp)
+            or any(ancla - 60 < a.timestamp <= ancla for a in la))
+
+
+def fila_de_ancla(build_rows: Callable, lp: list, la: list, ancla: int, paso: int,
+                  capture_start: float, reemplazar: Callable, primera=None) -> dict | None:
+    """La fila de ``build_rows`` para la ventana que termina en ``ancla``, o None si esta vacia.
+
+    Se le pasan solo las observaciones de (A-30, A] y (A-60, A], que son las que
+    entran en esa ventana, y el ``capture_start`` del horizonte. Si ninguna llega a
+    (A-paso, A], ``build_rows`` terminaria su rango antes de A: se anade una copia de
+    la ultima observacion con marca A+paso/2, fuera de toda ventana <= A, que solo
+    extiende el rango de anclas (no entra en ningun conteo de la ventana A).
+    """
+    rp = [p for p in lp if ancla - 30 < p.timestamp <= ancla]
+    ra = [a for a in la if ancla - 60 < a.timestamp <= ancla]
+    if not rp and not ra:
+        return None
+    # ``primera`` es la observacion mas antigua de la entidad en el horizonte: fija la
+    # primera ancla de build_rows. Si no es anterior a A, build_rows global no tiene
+    # la ventana A (su rango empieza en A+paso). Se anade a su lista: por ser la mas
+    # antigua y no estar ya en ella, cae fuera de toda ventana de A.
+    if primera is not None:
+        if primera.timestamp >= ancla:
+            return None
+        if not any(primera is x for x in rp) and not any(primera is x for x in ra):
+            if hasattr(primera, "kind"):
+                ra = [primera] + ra
+            else:
+                rp = [primera] + rp
+    ultima_p = max(rp, key=lambda x: x.timestamp) if rp else None
+    ultima_a = max(ra, key=lambda x: x.timestamp) if ra else None
+    t_max = max(x.timestamp for x in (ultima_p, ultima_a) if x is not None)
+    if t_max <= ancla - paso:
+        if ultima_p is not None:
+            rp = rp + [reemplazar(ultima_p, timestamp=ancla + paso / 2)]
+        else:
+            ra = ra + [reemplazar(ultima_a, timestamp=ancla + paso / 2)]
+    clave = clave_ventana(ancla)
+    for f in build_rows("motor-live", rp, ra, step_seconds=paso, capture_start=capture_start):
+        if f["window_end_utc"] == clave:
+            return f
+    raise RuntimeError("build_rows no genero la ventana %s" % clave)
+
+
+def comprobar_ancla(extractor, v3, ancla, horizonte, utiles, sin_deduplicar, paquetes, packets, apps,
+                    lineas_eve, ruta_volcado, red, paso, capture_start, filas, excluidas,
+                    puntuar=None, feature_names=()) -> dict:
+    """Recalcula la ventana ``ancla`` por la via global congelada y la compara con la incremental.
+
+    Referencia: deduplicar_espejo + attribute_packets sobre TODO el horizonte del
+    buffer, load_app_observations sobre el volcado de sus lineas EVE y build_rows
+    sobre TODAS las observaciones de la entidad en el horizonte (con la misma
+    extension de rango si la entidad no llega a la ancla). ``filas`` es
+    {"filas": {entidad: fila}, "excluidas": {entidad, ...}}.
+    """
+    from dataclasses import replace
+    r: dict[str, object] = {"ancla": clave_ventana(ancla), "horizonte_s": horizonte}
+    if sin_deduplicar:
+        ref_paq = [pk.packet for pk in utiles]
+        r["ok_dedup"] = True
+    else:
+        ref_paq, _ = v3.deduplicar_espejo(utiles)
+        r["ok_dedup"] = len(ref_paq) == len(paquetes) and all(a is b for a, b in zip(ref_paq, paquetes))
+    ref_obs = extractor.attribute_packets(ref_paq, red) if ref_paq else []
+    r["ok_atribucion"] = ref_obs == packets
+    if lineas_eve:
+        with ruta_volcado.open("w", encoding="utf-8") as fh:
+            for linea in lineas_eve:
+                fh.write(linea + "\n")
+        ref_apps = extractor.load_app_observations(ruta_volcado, red)
+    else:
+        ref_apps = []
+    r["ok_eve"] = ref_apps == apps
+    pp, pa = agrupar_por_entidad(ref_obs, ref_apps)
+    ok_filas = ok_cob = True
+    n_ref = 0
+    dif = []
+    for ent in sorted(set(pp) | set(pa)):
+        lp, la = pp.get(ent, []), pa.get(ent, [])
+        if not con_contenido(lp, la, ancla):
+            continue
+        n_ref += 1
+        if excluidas(ent):
+            if ent not in filas.get("excluidas", ()):
+                ok_cob = False
+                dif.append({"entidad": ent, "tipo": "excluida"})
+            continue
+        rp, ra = list(lp), list(la)
+        if max(x.timestamp for x in rp + ra) <= ancla - paso:
+            ult = max(rp + ra, key=lambda x: x.timestamp)
+            (rp if any(ult is x for x in rp) else ra).append(replace(ult, timestamp=ancla + paso / 2))
+        ref = [f for f in extractor.build_rows("motor-live", rp, ra, step_seconds=paso,
+                                               capture_start=capture_start)
+               if f["window_end_utc"] == clave_ventana(ancla)]
+        cand = filas.get("filas", {}).get(ent)
+        if not ref:
+            n_ref -= 1
+            if cand is not None:
+                ok_cob = False
+                dif.append({"entidad": ent, "tipo": "cobertura", "ref": False, "cand": True})
+            continue
+        if cand is None:
+            ok_cob = False
+            dif.append({"entidad": ent, "tipo": "cobertura", "ref": bool(ref), "cand": cand is not None})
+        elif ref[0] != cand:
+            ok_filas = False
+            dif.append({"entidad": ent, "tipo": "filas",
+                        "distintas": sorted(k for k in ref[0] if ref[0][k] != cand.get(k))[:6]})
+    n_cand = len(filas.get("filas", {})) + len(filas.get("excluidas", ()))
+    if n_cand != n_ref:
+        ok_cob = False
+    r.update({"ok_filas": ok_filas, "ok_cobertura": ok_cob, "entidades_ref": n_ref, "entidades_cand": n_cand,
+              "paquetes": len(ref_paq), "observaciones": len(ref_obs), "observaciones_l7": len(ref_apps)})
+    if puntuar is not None:
+        lista = [f for f in filas.get("filas", {}).values() if f["packet_count_10s"] != 0]
+        if lista:
+            X = [[float(f[n]) for n in feature_names] for f in lista]
+            r["ok_puntuacion_lote"] = [float(v) for v in puntuar(X)] == [float(puntuar([x])[0]) for x in X]
+        else:
+            r["ok_puntuacion_lote"] = True
+    r["ok"] = all(v for k, v in r.items() if k.startswith("ok_"))
+    if dif:
+        r["diferencias"] = dif[:6]
+    return r

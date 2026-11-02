@@ -21,6 +21,17 @@ Casos, cada uno con el helper restringido (cf_nft_helper.py) en el netns srv:
      (dos origenes limitados no comparten cubo).
   C7 agente_enforce_v2 completo: feed v2 firmado con destino dc1 -> aplica solo la
      entrada dc1; entrada srv-dmz de la misma ip queda como ajena.
+  C8 efecto del LIMIT, separado (cierre de la Etapa 2): regla confirmada (id en el
+     comentario del elemento), coincidencias (contador del elemento), descartes por
+     origen (set descartes_limite) y efecto medido en el cliente (respuestas). Por
+     debajo del limite: 0 descartes; por encima, dos origenes con contadores
+     separados y coincidencias = descartes + respondidas; renovacion (id nuevo,
+     contadores a cero) y caducidad nativa.
+  C9 perfil fijo: el helper del host dns rechaza una peticion dmz y viceversa.
+
+Cierre de la Etapa 2: el helper lee su perfil de un fichero protegido. En el banco
+se usa helper_banco.py con un fichero root:root 0644 por perfil (mismas
+comprobaciones que /etc/cyberflow/nft-helper.perfil).
 Salida: JSON con cada caso y PASA/FALLA; codigo != 0 si algo falla.
 """
 from __future__ import annotations
@@ -37,7 +48,32 @@ import time
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
-HELPER = [sys.executable, str(RAIZ / "scripts/enforce/cf_nft_helper.py")]
+PERFILES_BANCO = Path("/etc/cyberflow-banco")
+
+
+def orden_helper(perfil: str) -> list[str]:
+    return [sys.executable, str(RAIZ / "deploy/pruebas-aisladas/helper_banco.py"),
+            str(PERFILES_BANCO / perfil / "nft-helper.perfil")]
+
+
+def preparar_perfiles() -> None:
+    for perfil in ("dns", "dmz"):
+        d = PERFILES_BANCO / perfil
+        d.mkdir(parents=True, exist_ok=True)
+        os.chmod(PERFILES_BANCO, 0o755)
+        os.chmod(d, 0o755)
+        f = d / "nft-helper.perfil"
+        f.write_text(perfil + "\n")
+        os.chown(f, 0, 0)
+        os.chmod(f, 0o644)
+
+
+_N = [0]
+
+
+def id_nuevo() -> str:
+    _N[0] += 1
+    return "%016x" % (0xc0de0000 + _N[0])
 NS = {"srv": "10.10.10.99", "ata": "10.10.20.30", "leg": "10.10.20.40", "fwd": "10.10.40.9"}
 
 
@@ -118,14 +154,18 @@ def cliente(ns, destino, tasa, dur, modo="udp"):
     return json.loads(r.stdout)
 
 
-def helper(ns, perfil, ops):
-    r = nsx(ns, *HELPER, input=json.dumps({"perfil": perfil, "operaciones": ops}), check=False)
+def helper(ns, perfil, ops, host=None):
+    """Peticion al helper del host ``host`` (perfil fijado por su fichero; por omision, el mismo)."""
+    ops = [dict(o, id=id_nuevo()) if o["op"] == "anadir" and "id" not in o else o for o in ops]
+    r = nsx(ns, *orden_helper(host or perfil), input=json.dumps({"perfil": perfil, "operaciones": ops}),
+            check=False)
     return json.loads(r.stdout)
 
 
 def main() -> int:
     if os.geteuid() != 0:
         print("solo en el banco Docker como root"); return 2
+    preparar_perfiles()
     montar()
     procs = [subprocess.Popen(["ip", "netns", "exec", "srv", sys.executable, "-c", SERVIDOR, NS["srv"], "389"]),
              subprocess.Popen(["ip", "netns", "exec", "fwd", sys.executable, "-c", SERVIDOR, NS["fwd"]])]
@@ -190,6 +230,14 @@ def main() -> int:
                 lim["ata"]["enviadas"], lim["leg"]["enviadas"])}
 
         res["C7_agente_v2"] = ensayo_agente()
+        res["C8_efecto_limit_separado"] = ensayo_efecto_limit()
+        r_dmz_en_dns = helper("srv", "dmz", [{"op": "asegurar"}], host="dns")
+        r_dns_en_dmz = helper("srv", "dns", [{"op": "asegurar"}], host="dmz")
+        tablas = nsx("srv", "nft", "list", "tables").stdout
+        res["C9_perfil_fijo_por_host"] = {
+            "dmz_en_dc1": r_dmz_en_dns, "dns_en_srv": r_dns_en_dmz, "tablas": tablas,
+            "pasa": r_dmz_en_dns.get("rechazo") == "perfil_no_autorizado"
+            and r_dns_en_dmz.get("rechazo") == "perfil_no_autorizado" and "cyberflow" not in tablas}
     finally:
         for p in procs:
             p.kill()
@@ -215,7 +263,7 @@ def ensayo_agente() -> dict:
     r = nsx("srv", sys.executable, str(RAIZ / "scripts/enforce/agente_enforce_v2.py"), "--perfil", "dns",
             "--feed", str(d / "feed.json"), "--firma", str(d / "feed.sig"), "--clave-publica", str(d / "pub.pem"),
             "--estado", str(d / "st.json"), "--traza", str(d / "traza.jsonl"),
-            "--helper", " ".join(HELPER), "--aplicar", check=False)
+            "--helper", " ".join(orden_helper("dns")), "--aplicar", check=False)
     salida = json.loads(r.stdout)
     out = {"dns": cliente("ata", NS["srv"], 10, 1), "389": cliente("ata", NS["srv"], 10, 1, "tcp")}
     traza = [json.loads(x)["evento"] for x in (d / "traza.jsonl").read_text().splitlines()]
@@ -223,6 +271,67 @@ def ensayo_agente() -> dict:
     return {"salida": salida, "trafico": out, "traza": traza,
             "pasa": salida.get("ajenas") == 1 and out["dns"]["respondidas"] == 0
             and out["389"]["respondidas"] >= 9 and traza[:3] == ["recepcion", "aplicacion", "confirmacion"]}
+
+
+def elemento(est, s, ip):
+    return ((est.get("sets", {}).get(s) or {}).get(ip)) or {}
+
+
+def descartes(est, ip):
+    return (((est.get("descartes_limite") or {}).get(ip)) or {}).get("paquetes") or 0
+
+
+def ensayo_efecto_limit() -> dict:
+    """Regla, coincidencias, descartes por origen y efecto medido, por separado (perfil dns, 5/s rafaga 10)."""
+    S, A, L = NS["srv"], NS["ata"], NS["leg"]
+    out: dict = {}
+    helper("srv", "dns", [{"op": "asegurar"}])
+    id_a = id_nuevo()
+    r = helper("srv", "dns", [{"op": "anadir", "set": "limitados", "ip": A, "timeout": 120, "id": id_a}])
+    est = helper("srv", "dns", [{"op": "listar"}])["estado"]
+    out["regla"] = {"aplicada": r.get("ok"), "confirmada_id": elemento(est, "limitados", A).get("id") == id_a}
+    # 1) por debajo del limite: 3/s durante 4 s (12 <= rafaga 10 + 5/s * 4)
+    c = cliente("ata", S, 3, 4)
+    est = helper("srv", "dns", [{"op": "listar"}])["estado"]
+    coinc, desc = elemento(est, "limitados", A).get("paquetes") or 0, descartes(est, A)
+    out["por_debajo"] = {"cliente": c, "coincidencias": coinc, "descartes": desc,
+                         "pasa": desc == 0 and coinc == c["enviadas"] and c["respondidas"] == c["enviadas"]}
+    # 2) por encima, dos origenes limitados a la vez: cada uno con su cubo y sus contadores
+    id_l = id_nuevo()
+    helper("srv", "dns", [{"op": "anadir", "set": "limitados", "ip": L, "timeout": 120, "id": id_l}])
+    base_a = (coinc, desc)
+    res = {}
+    hilos = [threading.Thread(target=lambda ns=ns: res.__setitem__(ns, cliente(ns, S, 25, 5)))
+             for ns in ("ata", "leg")]
+    [h.start() for h in hilos]; [h.join() for h in hilos]
+    est = helper("srv", "dns", [{"op": "listar"}])["estado"]
+    por = {}
+    for ns, ip, base in (("ata", A, base_a), ("leg", L, (0, 0))):
+        co = (elemento(est, "limitados", ip).get("paquetes") or 0) - base[0]
+        de = descartes(est, ip) - base[1]
+        cl = res[ns]
+        por[ns] = {"cliente": cl, "coincidencias": co, "descartes": de,
+                   "pasados_medidos": cl["respondidas"], "pasados_por_contador": co - de,
+                   "tasa_efectiva_por_s": round(cl["respondidas"] / cl["dur"], 2),
+                   "pasa": co == cl["enviadas"] and de > 0 and co - de == cl["respondidas"]}
+    out["por_encima_dos_origenes"] = dict(por, pasa=all(v["pasa"] for v in por.values()))
+    # 3) renovacion: id nuevo -> contadores del elemento y descartes del origen a cero
+    id_a2 = id_nuevo()
+    helper("srv", "dns", [{"op": "anadir", "set": "limitados", "ip": A, "timeout": 4, "id": id_a2}])
+    est = helper("srv", "dns", [{"op": "listar"}])["estado"]
+    e = elemento(est, "limitados", A)
+    out["renovacion"] = {"id": e.get("id"), "paquetes": e.get("paquetes"), "descartes": descartes(est, A),
+                         "pasa": e.get("id") == id_a2 and (e.get("paquetes") or 0) == 0 and descartes(est, A) == 0}
+    # 4) caducidad nativa a los 4 s
+    time.sleep(5)
+    est = helper("srv", "dns", [{"op": "listar"}])["estado"]
+    c = cliente("ata", S, 20, 2)
+    out["caducidad"] = {"presente": bool(elemento(est, "limitados", A)), "cliente": c,
+                        "pasa": not elemento(est, "limitados", A) and c["respondidas"] == c["enviadas"]}
+    helper("srv", "dns", [{"op": "desinstalar"}])
+    out["pasa"] = all(v.get("pasa", True) for v in out.values() if isinstance(v, dict)) and \
+        out["regla"]["aplicada"] and out["regla"]["confirmada_id"]
+    return out
 
 
 if __name__ == "__main__":

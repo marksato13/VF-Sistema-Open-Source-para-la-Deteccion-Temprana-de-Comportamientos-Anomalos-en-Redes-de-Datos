@@ -32,6 +32,14 @@ HAY_OPENSSL = shutil.which("openssl") is not None
 NFT_REAL = hasattr(os, "geteuid") and os.geteuid() == 0 and shutil.which("nft") is not None
 
 
+def hx(pet, nft="/no/existe/nft", autorizado=None):
+    """helper.ejecutar con el perfil autorizado del host: el de la peticion si es valido,
+    o dns. Las pruebas de perfil cruzado pasan `autorizado` explicitamente."""
+    if autorizado is None:
+        autorizado = pet.get("perfil") if isinstance(pet, dict) and pet.get("perfil") in helper.TABLAS else "dns"
+    return helper.ejecutar(pet, autorizado, nft=nft)
+
+
 def entrada(ip="10.10.20.30", destino="srv-dmz", alcance="todo", accion="BLOCK", hasta=T0 + 300, ev="e1"):
     e = {"ip": ip, "destino": destino, "alcance": alcance, "accion": accion, "hasta": hasta, "evento_id": ev}
     e["id"] = feed.id_entrada(ip, destino, alcance, accion, ev)
@@ -241,9 +249,13 @@ def test_publicador_seguir_publica_por_evento_y_traza(tmp_path):
 # --- agente v2 con helper falso ---------------------------------------------
 
 class HelperFalso:
-    def __init__(self, reloj):
+    def __init__(self, reloj, perfil="dns"):
         self.sets = {"bloqueados": {}, "limitados": {}}
+        self.ids = {}         # (set, ip) -> id
+        self.contadores = {}  # (set, ip) -> paquetes (coincidencias en LIMIT, descartes en BLOCK)
+        self.descartes = {}   # ip -> descartes del LIMIT
         self.reloj = reloj
+        self.perfil = perfil
         self.llamadas = []
         self.fallar = False
 
@@ -252,20 +264,26 @@ class HelperFalso:
         if self.fallar:
             return {"ok": False, "error_nft": "simulado"}
         try:
-            helper.validar({"perfil": "dns", "operaciones": ops})
+            helper.validar({"perfil": self.perfil, "operaciones": ops}, self.perfil)
         except helper.Rechazo as exc:
             return {"ok": False, "rechazo": str(exc)}
         for o in ops:
             if o["op"] == "anadir":
                 self.sets[o["set"]][o["ip"]] = self.reloj() + o["timeout"]
+                self.ids[(o["set"], o["ip"])] = o["id"]
+                self.contadores[(o["set"], o["ip"])] = 0
+                if o["set"] == "limitados":
+                    self.descartes.pop(o["ip"], None)
             elif o["op"] == "quitar":
                 self.sets[o["set"]].pop(o["ip"], None)
         return {"ok": True}
 
     def listar(self):
         ahora = self.reloj()
-        return {"sets": {s: {ip: {"expira_s": int(h - ahora), "paquetes": 0}
-                             for ip, h in d.items() if h > ahora} for s, d in self.sets.items()}}
+        return {"sets": {s: {ip: {"expira_s": int(h - ahora), "paquetes": self.contadores.get((s, ip), 0),
+                                  "id": self.ids.get((s, ip))}
+                             for ip, h in d.items() if h > ahora} for s, d in self.sets.items()},
+                "descartes_limite": {ip: {"paquetes": n} for ip, n in self.descartes.items()}}
 
 
 class Reloj:
@@ -289,7 +307,7 @@ def agente(tmp_path, pubk, perfil="dns", reloj=None):
     reloj = reloj or Reloj(T0)
     a = argparse.Namespace(perfil=perfil, clave_publica=pubk, estado=tmp_path / ("st-%s.json" % perfil),
                            traza=tmp_path / ("traza-%s.jsonl" % perfil), helper="x", aplicar=True)
-    h = HelperFalso(reloj)
+    h = HelperFalso(reloj, perfil)
     return ag.Agente(a, helper=h, reloj=reloj), h, reloj
 
 
@@ -395,23 +413,23 @@ def test_agente_sin_feed_v1(tmp_path, claves):
     ({"perfil": "dns"}, "peticion_mal_formada"),
     ({"perfil": "x", "operaciones": [{"op": "asegurar"}]}, "perfil_desconocido"),
     ({"perfil": "dns", "operaciones": [{"op": "flush"}]}, "op_desconocida"),
-    ({"perfil": "dns", "operaciones": [{"op": "anadir", "set": "limitados", "ip": "10.10.20.30"}]},
+    ({"perfil": "dns", "operaciones": [{"op": "anadir", "id": "00000000000000a1", "set": "limitados", "ip": "10.10.20.30"}]},
      "campos_invalidos:anadir"),
-    ({"perfil": "dns", "operaciones": [{"op": "anadir", "set": "x; flush ruleset", "ip": "10.10.20.30",
+    ({"perfil": "dns", "operaciones": [{"op": "anadir", "id": "00000000000000a1", "set": "x; flush ruleset", "ip": "10.10.20.30",
                                          "timeout": 5}]}, "set_desconocido"),
-    ({"perfil": "dns", "operaciones": [{"op": "anadir", "set": "limitados", "ip": "10.10.20.30 }; flush ruleset",
+    ({"perfil": "dns", "operaciones": [{"op": "anadir", "id": "00000000000000a1", "set": "limitados", "ip": "10.10.20.30 }; flush ruleset",
                                          "timeout": 5}]}, "ip_invalida"),
-    ({"perfil": "dns", "operaciones": [{"op": "anadir", "set": "limitados", "ip": "10.10.20.030", "timeout": 5}]},
+    ({"perfil": "dns", "operaciones": [{"op": "anadir", "id": "00000000000000a1", "set": "limitados", "ip": "10.10.20.030", "timeout": 5}]},
      "ip_invalida"),
-    ({"perfil": "dns", "operaciones": [{"op": "anadir", "set": "limitados", "ip": "127.0.0.1", "timeout": 5}]},
+    ({"perfil": "dns", "operaciones": [{"op": "anadir", "id": "00000000000000a1", "set": "limitados", "ip": "127.0.0.1", "timeout": 5}]},
      "ip_especial"),
-    ({"perfil": "dns", "operaciones": [{"op": "anadir", "set": "limitados", "ip": "10.10.10.21", "timeout": 5}]},
+    ({"perfil": "dns", "operaciones": [{"op": "anadir", "id": "00000000000000a1", "set": "limitados", "ip": "10.10.10.21", "timeout": 5}]},
      "ip_nunca_bloquear"),
-    ({"perfil": "dns", "operaciones": [{"op": "anadir", "set": "limitados", "ip": "10.10.20.30", "timeout": 0}]},
+    ({"perfil": "dns", "operaciones": [{"op": "anadir", "id": "00000000000000a1", "set": "limitados", "ip": "10.10.20.30", "timeout": 0}]},
      "timeout_fuera_de_rango"),
-    ({"perfil": "dns", "operaciones": [{"op": "anadir", "set": "limitados", "ip": "10.10.20.30",
+    ({"perfil": "dns", "operaciones": [{"op": "anadir", "id": "00000000000000a1", "set": "limitados", "ip": "10.10.20.30",
                                          "timeout": 99999}]}, "timeout_fuera_de_rango"),
-    ({"perfil": "dns", "operaciones": [{"op": "anadir", "set": "limitados", "ip": "10.10.20.30",
+    ({"perfil": "dns", "operaciones": [{"op": "anadir", "id": "00000000000000a1", "set": "limitados", "ip": "10.10.20.30",
                                          "timeout": True}]}, "timeout_fuera_de_rango"),
     ({"perfil": "dns", "operaciones": [{"op": "listar"}, {"op": "asegurar"}]}, "listar_y_desinstalar_van_solos"),
     ({"perfil": "dns", "operaciones": []}, "operaciones_invalidas"),
@@ -419,19 +437,19 @@ def test_agente_sin_feed_v1(tmp_path, claves):
     ({"perfil": "dns", "operaciones": [{"op": "asegurar", "tabla": "filter"}]}, "campos_invalidos:asegurar"),
 ])
 def test_helper_rechaza(pet, motivo):
-    r = helper.ejecutar(pet, nft="/no/existe/nft")
+    r = hx(pet, nft="/no/existe/nft")
     assert r == {"ok": False, "rechazo": motivo}
 
 
 def test_helper_una_invalida_rechaza_todo_el_lote():
     pet = {"perfil": "dmz", "operaciones": [
-        {"op": "anadir", "set": "bloqueados", "ip": "10.10.20.30", "timeout": 60},
-        {"op": "anadir", "set": "bloqueados", "ip": "10.10.60.11", "timeout": 60}]}
-    assert helper.ejecutar(pet, nft="/no/existe")["rechazo"] == "ip_nunca_bloquear"
+        {"op": "anadir", "id": "00000000000000a1", "set": "bloqueados", "ip": "10.10.20.30", "timeout": 60},
+        {"op": "anadir", "id": "00000000000000a1", "set": "bloqueados", "ip": "10.10.60.11", "timeout": 60}]}
+    assert hx(pet, nft="/no/existe")["rechazo"] == "ip_nunca_bloquear"
 
 
 def test_helper_texto_solo_su_tabla():
-    t = helper.texto("dns", [{"op": "asegurar"}, {"op": "anadir", "set": "limitados", "ip": "10.10.20.30",
+    t = helper.texto("dns", [{"op": "asegurar"}, {"op": "anadir", "id": "00000000000000a1", "set": "limitados", "ip": "10.10.20.30",
                                                    "timeout": 60}])
     tablas = {l.split()[3] for l in t.splitlines() if l.startswith(("add ", "flush "))
               and l.split()[2] == "inet" or l.split()[1] in ("set", "chain", "rule", "element")}
@@ -451,24 +469,24 @@ def test_helper_cli_sin_argumentos():
 def test_helper_nft_real_ciclo_completo():
     nft = shutil.which("nft")
     subprocess.run([nft, "destroy", "table", "inet", "cyberflow_dns"], capture_output=True)
-    ops = [{"op": "asegurar"}, {"op": "anadir", "set": "limitados", "ip": "10.10.20.30", "timeout": 120},
-           {"op": "anadir", "set": "bloqueados", "ip": "10.10.20.31", "timeout": 2}]
-    assert helper.ejecutar({"perfil": "dns", "operaciones": ops}, nft=nft)["ok"]
-    est = helper.ejecutar({"perfil": "dns", "operaciones": [{"op": "listar"}]}, nft=nft)["estado"]
+    ops = [{"op": "asegurar"}, {"op": "anadir", "id": "00000000000000a1", "set": "limitados", "ip": "10.10.20.30", "timeout": 120},
+           {"op": "anadir", "id": "00000000000000a1", "set": "bloqueados", "ip": "10.10.20.31", "timeout": 2}]
+    assert hx({"perfil": "dns", "operaciones": ops}, nft=nft)["ok"]
+    est = hx({"perfil": "dns", "operaciones": [{"op": "listar"}]}, nft=nft)["estado"]
     assert set(est["sets"]["limitados"]) == {"10.10.20.30"} and len(est["reglas"]) == 2
     # Reaplicar 'asegurar' no duplica reglas ni vacia sets.
-    assert helper.ejecutar({"perfil": "dns", "operaciones": [{"op": "asegurar"}]}, nft=nft)["ok"]
-    est = helper.ejecutar({"perfil": "dns", "operaciones": [{"op": "listar"}]}, nft=nft)["estado"]
+    assert hx({"perfil": "dns", "operaciones": [{"op": "asegurar"}]}, nft=nft)["ok"]
+    est = hx({"perfil": "dns", "operaciones": [{"op": "listar"}]}, nft=nft)["estado"]
     assert len(est["reglas"]) == 2 and "10.10.20.30" in est["sets"]["limitados"]
     import time as _t
     _t.sleep(3)  # caducidad nativa
-    est = helper.ejecutar({"perfil": "dns", "operaciones": [{"op": "listar"}]}, nft=nft)["estado"]
+    est = hx({"perfil": "dns", "operaciones": [{"op": "listar"}]}, nft=nft)["estado"]
     assert "10.10.20.31" not in est["sets"]["bloqueados"]
-    assert helper.ejecutar({"perfil": "dns", "operaciones": [{"op": "retirar_origen", "ip": "10.10.20.30"}]},
+    assert hx({"perfil": "dns", "operaciones": [{"op": "retirar_origen", "ip": "10.10.20.30"}]},
                            nft=nft)["ok"]
-    est = helper.ejecutar({"perfil": "dns", "operaciones": [{"op": "listar"}]}, nft=nft)["estado"]
+    est = hx({"perfil": "dns", "operaciones": [{"op": "listar"}]}, nft=nft)["estado"]
     assert est["sets"]["limitados"] == {}
-    assert helper.ejecutar({"perfil": "dns", "operaciones": [{"op": "desinstalar"}]}, nft=nft)["ok"]
+    assert hx({"perfil": "dns", "operaciones": [{"op": "desinstalar"}]}, nft=nft)["ok"]
     r = subprocess.run([nft, "list", "tables"], capture_output=True, text=True)
     assert "cyberflow_dns" not in r.stdout
 
@@ -482,7 +500,7 @@ def test_rele_reenvia_solo_cambios_y_reintenta(tmp_path):
     (origen / "feed.json").write_bytes(b'{"secuencia": 1}\n'); (origen / "feed.sig").write_bytes(b"s1")
     r = rele.Rele({"dir": str(origen), "host": None, "identidad": None},
                   [{"nombre": "srv-dmz", "dir": str(d1)}, {"nombre": "dc1", "dir": str(d2)}],
-                  rele.TransporteLocal(), tmp_path / "t.jsonl")
+                  rele.TransporteLocal(), tmp_path / "t.jsonl", verificar=lambda d, f: True)
     reg = r.paso()
     assert reg["secuencia"] == 1 and "entregado_en" in reg["destinos"]["srv-dmz"]
     assert "error" in reg["destinos"]["dc1"]  # d2 no existe: fallo de comunicacion
@@ -540,19 +558,23 @@ def test_limpieza_rechaza_infraestructura(tmp_path):
 def test_limpieza_con_helper_real(tmp_path):
     nft = shutil.which("nft")
     for perfil in ("dmz", "dns"):
-        assert helper.ejecutar({"perfil": perfil, "operaciones": [
-            {"op": "asegurar"}, {"op": "anadir", "set": "bloqueados", "ip": "10.10.20.30", "timeout": 300},
-            {"op": "anadir", "set": "limitados", "ip": "10.10.20.40", "timeout": 300}]}, nft=nft)["ok"]
+        assert hx({"perfil": perfil, "operaciones": [
+            {"op": "asegurar"}, {"op": "anadir", "id": "00000000000000a1", "set": "bloqueados", "ip": "10.10.20.30", "timeout": 300},
+            {"op": "anadir", "id": "00000000000000a1", "set": "limitados", "ip": "10.10.20.40", "timeout": 300}]}, nft=nft)["ok"]
     est = tmp_path / "estado.json"
     est.write_text(json.dumps(_estado_mixto()), encoding="utf-8")
+    ordenes = []
+    for perfil in ("dmz", "dns"):
+        d = tmp_path / ("etc-" + perfil); d.mkdir(mode=0o755); (d / "perfil").write_text(perfil + "\n")
+        ordenes += ["--helper-orden", "%s=%s %s %s" % (perfil, sys.executable,
+                                                       RAIZ / "deploy/pruebas-aisladas/helper_banco.py", d / "perfil")]
     rc = limpiar.main(["--ip", "10.10.20.30", "--estado-publicador", str(est), "--respaldo", str(tmp_path / "r"),
-                       "--informe", str(tmp_path / "inf.json"),
-                       "--helper-orden", "%s %s" % (sys.executable, RAIZ / "scripts/enforce/cf_nft_helper.py")])
+                       "--informe", str(tmp_path / "inf.json")] + ordenes)
     assert rc == 0
     for perfil in ("dmz", "dns"):
-        e = helper.ejecutar({"perfil": perfil, "operaciones": [{"op": "listar"}]}, nft=nft)["estado"]["sets"]
+        e = hx({"perfil": perfil, "operaciones": [{"op": "listar"}]}, nft=nft)["estado"]["sets"]
         assert "10.10.20.30" not in e["bloqueados"] and "10.10.20.40" in e["limitados"]
-        helper.ejecutar({"perfil": perfil, "operaciones": [{"op": "desinstalar"}]}, nft=nft)
+        hx({"perfil": perfil, "operaciones": [{"op": "desinstalar"}]}, nft=nft)
 
 
 # --- comando forzado de las llaves del rele ---------------------------------------
@@ -568,8 +590,13 @@ def test_comando_forzado_rele(tmp_path):
         return subprocess.run(["sh", sc, modo, d], input=entrada, capture_output=True, env=env)
 
     assert correr("servir", "cat %s/feed.json" % d).stdout == b"F"
-    r = correr("recibir", "cat > %s/.feed.sig.tmp && mv -f %s/.feed.sig.tmp %s/feed.sig" % (d, d, d), b"S")
+    assert correr("recibir", "cat > %s/.feed.sig.tmp" % d, b"S").returncode == 0
+    assert correr("recibir", "cat > %s/.feed.json.tmp" % d, b"G").returncode == 0
+    assert (tmp_path / "feed.json").read_bytes() == b"F"  # nada visible hasta confirmar
+    r = correr("recibir", "mv -f %s/.feed.sig.tmp %s/feed.sig && mv -f %s/.feed.json.tmp %s/feed.json" % (d, d, d, d))
     assert r.returncode == 0 and (tmp_path / "feed.sig").read_bytes() == b"S"
+    assert (tmp_path / "feed.json").read_bytes() == b"G"
+    (tmp_path / "feed.json").write_bytes(b"F")
     for malo in ("cat /etc/shadow", "cat %s/feed.json; id" % d, "rm -rf %s" % d, ""):
         assert correr("servir", malo).returncode != 0
     assert correr("recibir", "cat > /tmp/x && mv -f /tmp/x %s/feed.json" % d, b"X").returncode != 0
@@ -586,9 +613,9 @@ def test_helper_dmz_no_toca_la_tabla_del_v1():
           "add element inet cyberflow cyberflow_bloqueados { 10.10.20.50 timeout 300s }\n")
     subprocess.run([nft, "-f", "-"], input=v1, text=True, check=True)
     antes = subprocess.run([nft, "list", "table", "inet", "cyberflow"], capture_output=True, text=True).stdout
-    assert helper.ejecutar({"perfil": "dmz", "operaciones": [
-        {"op": "asegurar"}, {"op": "anadir", "set": "bloqueados", "ip": "10.10.20.30", "timeout": 60}]}, nft=nft)["ok"]
-    assert helper.ejecutar({"perfil": "dmz", "operaciones": [{"op": "desinstalar"}]}, nft=nft)["ok"]
+    assert hx({"perfil": "dmz", "operaciones": [
+        {"op": "asegurar"}, {"op": "anadir", "id": "00000000000000a1", "set": "bloqueados", "ip": "10.10.20.30", "timeout": 60}]}, nft=nft)["ok"]
+    assert hx({"perfil": "dmz", "operaciones": [{"op": "desinstalar"}]}, nft=nft)["ok"]
     despues = subprocess.run([nft, "list", "table", "inet", "cyberflow"], capture_output=True, text=True).stdout
     quitar_exp = lambda s: "\n".join(l for l in s.splitlines() if "expires" not in l)  # noqa: E731
     assert quitar_exp(antes) == quitar_exp(despues) and "10.10.20.50" in despues

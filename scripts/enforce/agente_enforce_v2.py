@@ -16,11 +16,32 @@ Cadena por feed:
      limitados. Releer el mismo id no renueva: su `hasta` es fijo.
   4. Aplica con el helper root restringido (cf_nft_helper.py) via sudo: nunca
      ejecuta ``nft -f -`` con texto propio.
-  5. Confirma releyendo los sets (aplicacion confirmada) y vigila retiradas
-     (el elemento desaparecio) y primer efecto (contador del elemento > 0).
+  5. Confirma releyendo los sets (aplicacion confirmada: el elemento esta con SU id)
+     y vigila retiradas y contadores.
 
-Traza (``--traza``, jsonl): recepcion, rechazo, aplicacion, confirmacion,
-retirada, primer_efecto, con ``id``/``evento_id``/``secuencia`` y hora del host.
+Instrumentacion separada (Etapa 2, punto 7). Nunca se presenta como mitigacion lo
+que solo es coincidencia:
+  - ``aplicacion``/``confirmacion``: la regla esta puesta y releida (no dice nada
+    del trafico);
+  - ``primera_coincidencia`` (solo LIMIT): el origen envio trafico que casa con la
+    regla; NO implica descarte;
+  - ``primer_descarte``: paquetes descartados por ESA accion (BLOCK: contador del
+    elemento; LIMIT: contador por origen de ``descartes_limite``);
+  - ``contadores``: deltas por intervalo e ``id`` (coincidencias y descartes), para
+    interpretar cada intervalo sin mezclar acciones anteriores (cada ``anadir``
+    sustituye el elemento: contadores a cero con el id nuevo);
+  - el EFECTO sobre tasa, respuestas o transacciones no lo mide el agente: se mide
+    fuera (ensayo aislado o sensor) y se une por ``id``/ip/intervalo.
+Los ids viven en el comentario del elemento nft, asi que sobreviven al reinicio del
+agente.
+
+Reintento: si el helper falla, la secuencia no avanza y el MISMO feed se reintenta
+cada ``--reintento-segundos`` sin esperar a otra publicacion; el timeout se recalcula
+desde el ``hasta`` fijo de la entrada, asi que reintentar no amplia la caducidad.
+
+Traza (``--traza``, jsonl): recepcion, rechazo, aplicacion, confirmacion, retirada,
+primera_coincidencia, primer_descarte, contadores, reintento, con
+``id``/``evento_id``/``secuencia`` y hora del host.
 Estado (``--estado``): ultima secuencia aplicada y lo ya observado.
 """
 from __future__ import annotations
@@ -79,7 +100,7 @@ def planificar(des: dict[str, dict], actuales: dict[str, dict[str, float]], ahor
             continue  # nunca acortar; mismo hasta = nada que hacer
         if actual is not None:
             ops.append({"op": "quitar", "set": destino, "ip": ip})
-        ops.append({"op": "anadir", "set": destino, "ip": ip,
+        ops.append({"op": "anadir", "set": destino, "ip": ip, "id": e["id"],
                     "timeout": max(1, int(e["hasta"] - ahora))})
     return ops
 
@@ -122,8 +143,10 @@ class Agente:
             self.estado = {}
         self.estado.setdefault("secuencia", None)
         self.estado.setdefault("aplicadas", {})   # id -> {ip, set, hasta}
-        self.estado.setdefault("efecto", {})      # "set|ip" -> primera hora con contador > 0
-        self.estado.setdefault("presentes", {})   # set -> [ip] en la ultima observacion
+        self.estado.pop("efecto", None)            # formato anterior (primer_efecto): ya no se usa
+        self.estado.setdefault("presentes", {})   # set -> {ip: id} en la ultima observacion
+        self.estado.setdefault("intervalos", {})  # id -> {set, ip, coincidencias, descartes, ...}
+        self.estado.setdefault("ultimo_limit", {})  # ip -> id del ultimo LIMIT (descartes tras retirarse)
         self.asegurado = False
 
     def traza(self, evento: str, **datos) -> None:
@@ -137,25 +160,74 @@ class Agente:
         tmp.write_text(json.dumps(self.estado, sort_keys=True), encoding="utf-8")
         os.replace(tmp, self.a.estado)
 
+    def _intervalo(self, id_: str, s: str, ip: str) -> dict:
+        return self.estado["intervalos"].setdefault(id_, {"set": s, "ip": ip, "coincidencias": 0,
+                                                          "descartes": 0, "primera_coincidencia": None,
+                                                          "primer_descarte": None})
+
     def observar(self) -> dict | None:
-        """Relee los sets: retiradas y primer efecto. Devuelve el estado nft."""
+        """Relee los sets: retiradas, coincidencias y descartes por id. Devuelve el estado nft."""
         est = self.helper.listar()
         if est is None:
             return None
         ahora = self.reloj()
+        desc = est.get("descartes_limite") or {}
+        cambios = []
         for s in ("bloqueados", "limitados"):
             elems = (est.get("sets", {}).get(s)) or {}
-            antes = set(self.estado["presentes"].get(s, []))
-            for ip in sorted(antes - set(elems)):
-                self.traza("retirada", set=s, ip=ip)
-                self.estado["efecto"].pop("%s|%s" % (s, ip), None)
+            antes = self.estado["presentes"].get(s, {})
+            if isinstance(antes, list):  # formato anterior
+                antes = {ip: None for ip in antes}
+            for ip in sorted(set(antes) - set(elems)):
+                self.traza("retirada", set=s, ip=ip, id=antes.get(ip))
             for ip, v in elems.items():
-                k = "%s|%s" % (s, ip)
-                if (v.get("paquetes") or 0) > 0 and k not in self.estado["efecto"]:
-                    self.estado["efecto"][k] = ahora
-                    self.traza("primer_efecto", set=s, ip=ip, paquetes=v.get("paquetes"),
-                               bytes=v.get("bytes"))
-            self.estado["presentes"][s] = sorted(elems)
+                id_ = v.get("id")
+                if not id_:
+                    continue  # elemento sin id (no lo puso este agente): no se atribuye
+                it = self._intervalo(id_, s, ip)
+                n = int(v.get("paquetes") or 0)
+                if s == "bloqueados":
+                    nuevos_desc = n - it["descartes"]
+                    if n > it["descartes"]:
+                        if it["primer_descarte"] is None:
+                            it["primer_descarte"] = ahora
+                            self.traza("primer_descarte", set=s, ip=ip, id=id_, descartes=n)
+                        cambios.append({"id": id_, "set": s, "ip": ip, "d_descartes": nuevos_desc,
+                                        "descartes": n})
+                        it["descartes"] = n
+                else:
+                    self.estado["ultimo_limit"][ip] = id_
+                    if n > it["coincidencias"]:
+                        if it["primera_coincidencia"] is None:
+                            it["primera_coincidencia"] = ahora
+                            self.traza("primera_coincidencia", set=s, ip=ip, id=id_, coincidencias=n,
+                                       nota="coincidencia_no_implica_descarte")
+                        cambios.append({"id": id_, "set": s, "ip": ip, "d_coincidencias": n - it["coincidencias"],
+                                        "coincidencias": n})
+                        it["coincidencias"] = n
+            self.estado["presentes"][s] = {ip: v.get("id") for ip, v in elems.items()}
+        # Descartes del LIMIT por origen: se atribuyen al ultimo id de LIMIT de ese origen
+        # (el helper los pone a cero en cada anadir), tambien despues de que caduque.
+        for ip, v in desc.items():
+            id_ = self.estado["ultimo_limit"].get(ip)
+            if not id_:
+                continue
+            it = self._intervalo(id_, "limitados", ip)
+            n = int(v.get("paquetes") or 0)
+            if n > it["descartes"]:
+                if it["primer_descarte"] is None:
+                    it["primer_descarte"] = ahora
+                    self.traza("primer_descarte", set="limitados", ip=ip, id=id_, descartes=n)
+                cambios.append({"id": id_, "set": "limitados", "ip": ip, "d_descartes": n - it["descartes"],
+                                "descartes": n})
+                it["descartes"] = n
+        if cambios:
+            self.traza("contadores", observado_en=ahora, cambios=cambios)
+        for k in [k for k, x in self.estado["intervalos"].items()
+                  if x.get("primer_descarte") is None and x.get("primera_coincidencia") is None
+                  and k not in {i for d in self.estado["presentes"].values() for i in d.values()}
+                  and k not in self.estado["ultimo_limit"].values()]:
+            del self.estado["intervalos"][k]
         return est
 
     def procesar(self, datos: bytes, firma: bytes, mtime: float | None = None) -> dict:
@@ -192,7 +264,7 @@ class Agente:
             if not r.get("ok"):
                 self.traza("rechazo", motivo="helper", detalle=r)
                 resultado.update(estado="error_aplicacion", detalle=r)
-                return resultado  # no se avanza la secuencia: se reintenta con el siguiente feed
+                return resultado  # no se avanza la secuencia: main() reintenta el MISMO feed
             self.asegurado = True
             aplicado = self.reloj()
             nuevos = []
@@ -206,11 +278,11 @@ class Agente:
             self.traza("aplicacion", secuencia=v["secuencia"], aplicado_en=aplicado, nuevos=nuevos,
                        operaciones=ops)
             est2 = self.observar()
-            presentes = {(s, ip) for s in ("bloqueados", "limitados")
-                         for ip in ((est2 or {}).get("sets", {}).get(s) or {})}
+            presentes = {(s, ip, (x or {}).get("id")) for s in ("bloqueados", "limitados")
+                         for ip, x in (((est2 or {}).get("sets", {}).get(s)) or {}).items()}
             self.traza("confirmacion", secuencia=v["secuencia"], confirmado_en=self.reloj(),
-                       confirmadas=[n["id"] for n in nuevos if (n["set"], n["ip"]) in presentes],
-                       no_confirmadas=[n["id"] for n in nuevos if (n["set"], n["ip"]) not in presentes])
+                       confirmadas=[n["id"] for n in nuevos if (n["set"], n["ip"], n["id"]) in presentes],
+                       no_confirmadas=[n["id"] for n in nuevos if (n["set"], n["ip"], n["id"]) not in presentes])
         elif self.a.aplicar:
             self.asegurado = True
         self.estado["secuencia"] = v["secuencia"]
@@ -222,6 +294,11 @@ class Agente:
 
 def _leer(ruta: Path) -> bytes:
     return ruta.read_bytes()
+
+
+def _huella(ruta: Path) -> tuple:
+    st = ruta.stat()
+    return (st.st_ino, st.st_mtime_ns, st.st_size)
 
 
 def main(argv=None) -> int:
@@ -239,30 +316,42 @@ def main(argv=None) -> int:
     p.add_argument("--sondeo-segundos", type=float, default=0.5)
     p.add_argument("--observar-segundos", type=float, default=5.0,
                    help="--seguir: cada cuanto relee los sets (retiradas y primer efecto)")
+    p.add_argument("--reintento-segundos", type=float, default=5.0,
+                   help="--seguir: reintento del MISMO feed si el helper fallo (sin otra publicacion)")
     p.add_argument("--max-iteraciones", type=int, default=0)
     a = p.parse_args(argv)
     ag = Agente(a)
-    ultimo_mtime = None
+    ultima_huella = None
     ultima_obs = 0.0
+    reintento = None  # (datos, firma, mtime, cuando)
     it = 0
     while True:
-        # Se vigilan los DOS ficheros: si el feed llega antes que su firma, la
-        # primera lectura falla (fail-safe) y el cambio de la firma la repite.
+        # Se vigilan los DOS ficheros (inodo, mtime, tamano): el rele los renombra uno
+        # tras otro; si se lee una pareja a medias la firma falla (fail-safe) y el
+        # renombrado del otro cambia la huella y repite la lectura.
         try:
-            mt = (a.feed.stat().st_mtime_ns, a.firma.stat().st_mtime_ns)
+            mt = (_huella(a.feed), _huella(a.firma))
         except OSError:
             mt = None
-        if mt is not None and mt != ultimo_mtime:
+        if mt is not None and mt != ultima_huella:
             try:
                 datos, firma = _leer(a.feed), _leer(a.firma)
             except OSError as exc:
                 ag.traza("rechazo", motivo="sin_feed", detalle=str(exc)[:120])
             else:
-                ultimo_mtime = mt
-                res = ag.procesar(datos, firma, mt[0] / 1e9)
+                ultima_huella = mt
+                reintento = None
+                res = ag.procesar(datos, firma, mt[0][1] / 1e9)
+                if res["estado"] == "error_aplicacion":
+                    reintento = (datos, firma, mt[0][1] / 1e9, time.time() + a.reintento_segundos)
                 if not a.seguir:
                     print(json.dumps(res, sort_keys=True))
                     return 0 if res["estado"] in ("aceptado", "repetido") else 1
+        elif reintento is not None and time.time() >= reintento[3]:
+            ag.traza("reintento", motivo="helper")
+            res = ag.procesar(reintento[0], reintento[1], reintento[2])
+            reintento = ((reintento[0], reintento[1], reintento[2], time.time() + a.reintento_segundos)
+                         if res["estado"] == "error_aplicacion" else None)
         elif not a.seguir:
             print(json.dumps({"estado": "sin-feed"}))
             return 0

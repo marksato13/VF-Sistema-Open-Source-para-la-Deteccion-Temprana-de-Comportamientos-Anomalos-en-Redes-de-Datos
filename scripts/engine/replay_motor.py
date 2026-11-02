@@ -238,9 +238,18 @@ class Simulacion:
     # --- cola de EVE -------------------------------------------------------
     def nueva_cola(self, sim: "Simulacion"):
         class ColaEve:
-            def __init__(self, _path) -> None:
-                # Como EveTail: empieza al final de lo ya escrito.
+            HOLGURA_S = 30.0
+
+            def __init__(self, _path, desde=None, parse_ts=None, max_bytes=None) -> None:
+                # Como EveTail: empieza al final de lo ya escrito y, con ``desde``,
+                # retrocede hasta la primera linea con timestamp >= desde - HOLGURA_S.
                 self.i = bisect.bisect_right(sim.escrita, sim.ahora)
+                self.recuperacion = {"pedido_desde": desde, "completa": desde is None}
+                if desde is not None and self.i > 0:
+                    objetivo = desde - self.HOLGURA_S
+                    j = bisect.bisect_left(sim.escrita, objetivo, 0, self.i)
+                    self.recuperacion.update({"lineas": self.i - j, "completa": j > 0})
+                    self.i = j
 
             def poll(self) -> list[str]:
                 t0 = tiempo_real.perf_counter()

@@ -68,9 +68,17 @@ def main(argv=None) -> int:
     p.add_argument("--respaldo", type=Path, required=True, help="directorio del respaldo (se crea)")
     p.add_argument("--trabajo", type=Path, help="copia de trabajo en seco (por omision, en --respaldo)")
     p.add_argument("--escribir", action="store_true", help="modifica el estado ORIGINAL (no en esta etapa)")
-    p.add_argument("--helper-orden", default=None, help="SOLO banco aislado: orden del helper restringido")
+    p.add_argument("--helper-orden", action="append", default=[],
+                   help="perfil=orden del helper restringido (repetible). En cada host solo existe el "
+                        "helper de SU perfil (fijado por /etc/cyberflow/nft-helper.perfil)")
     p.add_argument("--informe", type=Path, required=True)
     a = p.parse_args(argv)
+    ordenes = {}
+    for x in a.helper_orden:
+        perfil, _, orden = x.partition("=")
+        if perfil not in ("dmz", "dns") or not orden:
+            raise SystemExit("--helper-orden debe ser dmz=<orden> o dns=<orden>")
+        ordenes[perfil] = orden
     ip = str(ipaddress.IPv4Address(a.ip))
     if ip in NUNCA:
         raise SystemExit("%s esta en NUNCA_BLOQUEAR: no es un origen de ensayo" % ip)
@@ -93,10 +101,11 @@ def main(argv=None) -> int:
     agentes = {}
     for perfil, pet in peticiones.items():
         x = {"peticion": pet}
-        if a.helper_orden:
-            r = subprocess.run(shlex.split(a.helper_orden), input=json.dumps(pet), capture_output=True, text=True)
+        orden = ordenes.get(perfil)
+        if orden:
+            r = subprocess.run(shlex.split(orden), input=json.dumps(pet), capture_output=True, text=True)
             x["respuesta"] = json.loads(r.stdout or "{}")
-            r = subprocess.run(shlex.split(a.helper_orden),
+            r = subprocess.run(shlex.split(orden),
                                input=json.dumps({"perfil": perfil, "operaciones": [{"op": "listar"}]}),
                                capture_output=True, text=True)
             est = json.loads(r.stdout or "{}").get("estado", {})
@@ -106,10 +115,10 @@ def main(argv=None) -> int:
 
     releido = json.loads(destino.read_text(encoding="utf-8"))
     ok = not presente(releido, ip) and all(not v.get("sigue_en_sets") for v in agentes.values())
-    if a.helper_orden:
-        ok = ok and all(v.get("respuesta", {}).get("ok") for v in agentes.values())
+    if ordenes:
+        ok = ok and all(v.get("respuesta", {}).get("ok") for k, v in agentes.items() if k in ordenes)
     inf["pasos"]["5_comprobacion"] = {"origen_ausente_en_estado": not presente(releido, ip),
-                                      "agentes_comprobados": bool(a.helper_orden), "ok": ok}
+                                      "agentes_comprobados": sorted(ordenes), "ok": ok}
     inf["original_intacto"] = a.escribir or sha(a.estado_publicador) == inf["pasos"]["1_respaldo"]["sha256"]
     a.informe.write_text(json.dumps(inf, indent=1, sort_keys=True), encoding="utf-8")
     print(json.dumps({"ok": ok, "modo": inf["modo"], "original_intacto": inf["original_intacto"]}))

@@ -52,6 +52,8 @@ from __future__ import annotations
 
 import argparse
 import collections
+import bisect
+import dataclasses
 import json
 import subprocess
 import sys
@@ -171,6 +173,15 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--history-seconds", type=int, default=110)
     parser.add_argument(
+        "--recuperacion-max-segundos",
+        type=float,
+        default=600.0,
+        help="al arrancar, cuanto se retrocede como maximo (ademas de --history-seconds) "
+             "para reconstruir el horizonte de la primera ventana no decidida a partir del "
+             "anillo de PCAP y de eve.json. Mas alla, las ventanas se marcan "
+             "historial_completo=false",
+    )
+    parser.add_argument(
         "--enforce",
         action="store_true",
         help="invocar sudo -n /usr/local/sbin/ppi-enforce block <ip> <timeout> en cada ALERT real",
@@ -219,13 +230,19 @@ def load_threshold(manifest_path: Path, detector_name: str) -> float:
 class EveTail:
     """Tail incremental de eve.json con deteccion de rotacion/truncamiento."""
 
-    def __init__(self, path: Path) -> None:
+    BLOQUE = 4 * 1024 * 1024
+    HOLGURA_S = 30.0  # eve.json no esta estrictamente ordenado por timestamp
+
+    def __init__(self, path: Path, desde: float | None = None, parse_ts=None,
+                 max_bytes: int = 512 * 1024 * 1024) -> None:
         self.path = path
-        # Arranca en el final del archivo (como "tail -f"), no en el byte 0.
-        # eve.json de Suricata es un unico archivo continuo que puede llevar
-        # horas/dias acumulando lineas; empezar en offset 0 releeria todo su
-        # historial en el primer ciclo (costoso e irrelevante, ya que
-        # build_rows solo usa la ventana reciente igualmente).
+        # Arranca en el final del archivo (como "tail -f"), no en el byte 0:
+        # eve.json puede llevar dias acumulando lineas. Con ``desde`` (cierre de
+        # la Etapa 2) retrocede hasta la primera linea con timestamp >= desde -
+        # HOLGURA_S, para que tras un reinicio las variables L7 de 60 s tengan su
+        # historia (antes el motor arrancaba sin ella y cambiaba ~50 s de
+        # decisiones, r7). Nunca retrocede mas de ``max_bytes``.
+        self.recuperacion: dict[str, object] = {"pedido_desde": desde, "completa": desde is None}
         try:
             stat_result = path.stat()
             self._offset = stat_result.st_size
@@ -234,6 +251,55 @@ class EveTail:
             self._offset = 0
             self._inode = None
         self._partial = b""
+        if desde is not None and parse_ts is not None and self._offset > 0:
+            self._rebobinar(desde - self.HOLGURA_S, parse_ts, max_bytes)
+
+    @staticmethod
+    def _ts_linea(linea: bytes, parse_ts) -> float | None:
+        i = linea.find(b'"timestamp"')
+        if i < 0:
+            return None
+        a = linea.find(b'"', i + 11)
+        b = linea.find(b'"', a + 1)
+        try:
+            return parse_ts(linea[a + 1:b].decode("ascii"))
+        except (ValueError, UnicodeDecodeError):
+            return None
+
+    def _rebobinar(self, objetivo: float, parse_ts, max_bytes: int) -> None:
+        fin = self._offset
+        pos = fin
+        alcanzado = False
+        with self.path.open("rb") as handle:
+            # 1) Hacia atras por bloques hasta un bloque cuya primera linea completa es anterior al objetivo.
+            while pos > 0 and fin - pos < max_bytes:
+                inicio = max(0, pos - self.BLOQUE)
+                handle.seek(inicio)
+                datos = handle.read(pos - inicio)
+                j = 0 if inicio == 0 else datos.find(b"\n") + 1
+                k = datos.find(b"\n", j)
+                ts = self._ts_linea(datos[j:k if k >= 0 else len(datos)], parse_ts)
+                pos = inicio + j if inicio > 0 else 0
+                if ts is not None and ts < objetivo:
+                    alcanzado = True
+                    break
+                if inicio == 0:
+                    break
+            # 2) Hacia delante desde ahi hasta la primera linea >= objetivo.
+            handle.seek(pos)
+            offset = pos
+            primera = None
+            for linea in handle:
+                if offset >= fin:
+                    break
+                ts = self._ts_linea(linea, parse_ts)
+                if ts is not None and ts >= objetivo:
+                    primera = ts
+                    break
+                offset += len(linea)
+        self._offset = offset
+        self.recuperacion.update({"offset": offset, "bytes": fin - offset, "primera_linea": primera,
+                                  "completa": alcanzado})
 
     def poll(self) -> list[str]:
         try:
@@ -463,11 +529,31 @@ def main() -> int:
 
     args.log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    tail = EveTail(args.eve_path)
     # (hora del evento, linea, sus observaciones L7): las observaciones se
     # calculan con la funcion congelada una sola vez, cuando la linea llega.
     eve_buffer: collections.deque[tuple[float, str, list]] = collections.deque()
     scored_windows: dict[tuple[str, str], float] = claves_ya_registradas(args.log_path)
+    # Horizonte por ventana (cierre de la Etapa 2): la ventana A se calcula con la
+    # entrada [A - history_seconds, ...], sin depender de cuando se decide. Las anclas
+    # se procesan en orden; ancla_hecha es la ultima ya tratada. Tras un reinicio se
+    # continua desde la ultima ventana registrada y se relee su horizonte del anillo
+    # de PCAP y de eve.json (si sigue ahi: --recuperacion-max-segundos).
+    paso_s = args.step_seconds
+    horizonte_s = args.history_seconds
+    arranque_s = time.time()
+    ancla_hecha: float | None = None
+    hueco_arranque = None
+    if scored_windows:
+        ultima_registrada = max(scored_windows.values())
+        if arranque_s - ultima_registrada <= horizonte_s + args.recuperacion_max_segundos:
+            ancla_hecha = ultima_registrada
+        else:
+            hueco_arranque = {"ultima_registrada": ultima_registrada, "arranque": arranque_s}
+    desde_recuperacion = ((ancla_hecha + paso_s) if ancla_hecha is not None else arranque_s) - horizonte_s
+    tail = EveTail(args.eve_path, desde=desde_recuperacion, parse_ts=extractor.parse_eve_timestamp)
+    # Desde cuando hay historia COMPLETA de las dos fuentes en este proceso (se fija
+    # en el primer ciclo): una ventana A tiene historial completo si A - horizonte >= esto.
+    inicio_historial: float | None = None
     # Ventanas vistas pero aun sin sus paquetes en ficheros cerrados: clave -> primer ciclo en que se vio.
     pendientes: collections.OrderedDict[tuple[str, str], float] = collections.OrderedDict()
     marca_pcap: float | None = None   # paquete mas nuevo leido de un PCAP cerrado
@@ -521,6 +607,10 @@ def main() -> int:
         "step_seconds": args.step_seconds,
         "history_seconds": args.history_seconds,
         "claves_previas_cargadas": len(scored_windows),
+        "horizonte": "por_ventana",
+        "ancla_reanudada": ancla_hecha,
+        "hueco_arranque": hueco_arranque,
+        "recuperacion_eve": tail.recuperacion,
         # Mismas funciones congeladas; ver scripts/engine/motor_incremental.py.
         "procesamiento": "incremental",
         "ciclos_path": str(ciclos_path),
@@ -540,6 +630,26 @@ def main() -> int:
     # despues de un periodo sin trafico -- aunque el motor llevara minutos
     # observando. Se fija una sola vez al arrancar, no se recalcula por ciclo.
     capture_epoch = time.time()
+    packets_pendientes: list = []  # ultima atribucion, para la contabilidad de pendientes
+    # Marca de lectura de cada ciclo (paquete mas nuevo de PCAP cerrado / linea EVE mas nueva)
+    # y el ciclo que la alcanzo: el primer ciclo que ya habia leido una observacion.
+    lecturas = {"pcap": ([], []), "eve": ([], [])}
+
+    def anotar_lectura(fuente: str, marca, ciclo: float) -> None:
+        marcas, ciclos = lecturas[fuente]
+        if marca is not None and (not marcas or marca > marcas[-1]):
+            marcas.append(marca)
+            ciclos.append(ciclo)
+
+    def visto_en(fuente: str, ts: float):
+        marcas, ciclos = lecturas[fuente]
+        i = bisect.bisect_left(marcas, ts)
+        return ciclos[i] if i < len(ciclos) else None
+
+    def podar_lecturas(hasta: float) -> None:
+        for marcas, ciclos in lecturas.values():
+            i = bisect.bisect_left(marcas, hasta)
+            del marcas[:i], ciclos[:i]
 
     while True:
         cycle_start = time.time()
@@ -572,7 +682,9 @@ def main() -> int:
             marca_eve = event_time if marca_eve is None else max(marca_eve, event_time)
         t = cerrar_etapa("eve_lectura", t)
 
-        cutoff = cycle_start - args.history_seconds
+        base_horizonte = (ancla_hecha + paso_s) if ancla_hecha is not None else cycle_start
+        cutoff = max(min(base_horizonte, cycle_start) - horizonte_s,
+                     cycle_start - horizonte_s - args.recuperacion_max_segundos)
         while eve_buffer and eve_buffer[0][0] < cutoff:
             eve_buffer.popleft()
         # NO se poda scored_windows por antiguedad de reloj real: se
@@ -592,12 +704,20 @@ def main() -> int:
             del scored_windows[oldest_key]
         t = cerrar_etapa("eve_poda", t)
 
+        edad_max = min(max(float(horizonte_s), cycle_start - (base_horizonte - horizonte_s)),
+                       horizonte_s + args.recuperacion_max_segundos)
         pcap_files = list_closed_pcap_files(
             args.capture_dir,
             args.capture_glob,
-            max_age_seconds=args.history_seconds,
+            max_age_seconds=edad_max,
             now=cycle_start,
         )
+        if inicio_historial is None:
+            # Si hay ficheros cerrados mas viejos que los leidos, todo lo posterior a
+            # cycle_start - edad_max esta en los leidos; si no, la historia empieza en
+            # el primer paquete leido (no se puede saber si hubo antes).
+            hay_anteriores = len(list_closed_pcap_files(args.capture_dir, args.capture_glob)) > len(pcap_files)
+            inicio_pcap = (cycle_start - edad_max) if hay_anteriores else None
         # Parseo INCREMENTAL: decodifica de disco solo los PCAP no vistos antes.
         # Equivalente exacto a re-parsear todo el anillo porque
         # attribute_packets() ordena por timestamp internamente.
@@ -629,6 +749,14 @@ def main() -> int:
             parsed_pcaps[pcap.name] = None
         while len(parsed_pcaps) > MAX_PARSED_PCAP_NAMES:
             parsed_pcaps.popitem(last=False)
+        if inicio_historial is None and (packet_buffer or eve_buffer):
+            if inicio_pcap is None:
+                inicio_pcap = min((pk.packet.timestamp for pk in packet_buffer), default=cycle_start)
+            if tail.recuperacion.get("completa"):
+                inicio_eve = tail.recuperacion["pedido_desde"]
+            else:
+                inicio_eve = min((x[0] for x in eve_buffer), default=cycle_start)
+            inicio_historial = max(inicio_pcap, inicio_eve)
         t = cerrar_etapa("pcap_parseo", t)
         # Poda por TIEMPO DEL DATO (no del reloj de pared): se conserva
         # history_seconds hacia atras desde el paquete mas nuevo del buffer.
@@ -639,7 +767,8 @@ def main() -> int:
         # el motor todavia debe digerir, y drena cuando la carga cesa.
         if packet_buffer:
             newest_data = max(pk.packet.timestamp for pk in packet_buffer)
-            data_cutoff = newest_data - args.history_seconds
+            # El horizonte de la siguiente ancla por tratar, nunca mas alla del dato mas nuevo.
+            data_cutoff = min(newest_data, base_horizonte) - args.history_seconds
             if packet_buffer[0].packet.timestamp < data_cutoff:
                 for pk in packet_buffer:
                     if pk.packet.timestamp < data_cutoff:
@@ -674,13 +803,6 @@ def main() -> int:
         # que con CARP y pfsync.
         # Misma entrada y mismo resultado que v3.deduplicar_espejo(paquetes_utiles):
         # solo se vuelven a deduplicar las claves que cambiaron en este ciclo.
-        if args.sin_deduplicar:
-            paquetes = sorted((pk.packet for pk in paquetes_utiles), key=orden_paquete)
-        else:
-            paquetes, quitados = deduplicador.actualizar(paquetes_utiles, llegada)
-            duplicados_espejo += quitados
-        t = cerrar_etapa("deduplicacion", t)
-
         # Registros del ciclo, escritos juntos al final (escribir_registros). Tiempos:
         #   decidido_en  momento en que el motor tomo la decision o expiro la ventana;
         #   logged_at    instante de escritura, asignado justo antes del write, igual que
@@ -690,105 +812,142 @@ def main() -> int:
         #                registro ya es visible para los consumidores (cota superior).
         registros_ciclo: list[dict] = []
         cuenta = collections.Counter()
+        paquetes: list = []
         packets: list = []
         apps: list = []
-        if paquetes or eve_buffer:
-            # Misma lista que extractor.attribute_packets(paquetes, entity_network):
-            # solo se vuelven a atribuir los flujos que ganaron o perdieron paquetes.
-            packets = (
-                atribuidor.actualizar(paquetes, entity_network, orden_paquete)
-                if paquetes
-                else []
-            )
-            cuenta["flujos_recalculados"] = atribuidor.flujos_recalculados if paquetes else 0
-            t = cerrar_etapa("atribucion", t)
-            # Misma lista que load_app_observations(volcado del buffer): cada linea
-            # trae sus observaciones calculadas al llegar.
-            apps = (
-                [obs for _, _, lista in eve_buffer for obs in lista]
-                if eve_buffer
-                else []
-            )
-            t = cerrar_etapa("eve_observaciones", t)
-            observation_timestamps = [item.timestamp for item in packets] + [
-                item.timestamp for item in apps
-            ]
-            # Por entidad, en el mismo orden que build_rows (IP ordenada):
-            # ("filas", filas desde su primera ancla no puntuada) o, para una
-            # entidad excluida, ("excluida", entidad, anclas sin puntuar), que es
-            # todo lo que el motor hace con sus ventanas.
-            items: list[tuple] = []
-            if observation_timestamps:
-                # capture_epoch es un piso fijo (arranque del proceso), pero el
-                # anillo de captura sigue corriendo aunque el motor se
-                # reinicie -- puede haber paquetes reales mas viejos que ese
-                # piso. build_rows() exige capture_start <= primera
-                # observacion real; usar el minimo respeta esa invariante Y
-                # aprovecha historia genuina ya existente en vez de
-                # descartarla en cada reinicio del proceso de scoring.
-                effective_capture_start = min(capture_epoch, min(observation_timestamps))
-                por_paquetes, por_apps = incremental.agrupar_por_entidad(packets, apps)
-                for entidad in sorted(set(por_paquetes) | set(por_apps)):
-                    cuenta["entidades"] += 1
-                    if entidad_excluida(entidad):
-                        items.append(("excluida", entidad, incremental.anclas_sin_puntuar(
-                            entidad, por_paquetes[entidad], por_apps[entidad],
-                            args.step_seconds, scored_windows)))
-                        continue
-                    filas, _ = incremental.filas_pendientes(
-                        extractor.build_rows, entidad, por_paquetes[entidad], por_apps[entidad],
-                        args.step_seconds, effective_capture_start, scored_windows)
-                    cuenta["filas_construidas"] += len(filas)
-                    items.append(("filas", filas))
-            t = cerrar_etapa("filas", t)
+        decididas: list[tuple] = []
 
-            if verificacion is not None:
-                verificacion.write(json.dumps(incremental.comprobar_equivalencia(
-                    extractor, v3, cycle_start, paquetes_utiles, args.sin_deduplicar,
-                    paquetes, packets, apps, eve_buffer, eve_slice_path, entity_network,
-                    args.step_seconds, observation_timestamps, capture_epoch, items,
-                    scored_windows, entidad_excluida, puntuar=pipeline.score_samples,
-                    feature_names=feature_names)) + "\n")
-                verificacion.flush()
-                t = cerrar_etapa("verificacion", t)
+        def entrada_horizonte(corte: float):
+            """Deduplicacion y atribucion (incrementales) sobre [corte, ...] del buffer, y su L7."""
+            utiles = [pk for pk in paquetes_utiles if pk.packet.timestamp >= corte]
+            quitados = 0
+            if args.sin_deduplicar:
+                paq = sorted((pk.packet for pk in utiles), key=orden_paquete)
+            else:
+                paq, quitados = deduplicador.actualizar(utiles, llegada)
+            obs = atribuidor.actualizar(paq, entity_network, orden_paquete) if paq else []
+            lineas = [x for x in eve_buffer if x[0] >= corte]
+            l7 = [o for _, _, lista in lineas for o in lista]
+            return utiles, paq, obs, lineas, l7, quitados
 
-            # 1) Las mismas reglas y en el mismo orden que el bucle original: que
-            #    ventanas se deciden, cuales quedan pendientes, cuales se marcan
-            #    por exclusion. 2) Puntuacion en un solo lote. 3) Registros.
-            decididas: list[tuple] = []
-            for item in items:
-                if item[0] == "excluida":
-                    _, entidad, anclas = item
-                    for ancla in anclas:
-                        window_key = (entidad, incremental.clave_ventana(ancla))
-                        if window_key in scored_windows:
-                            continue
+        # Anclas completas por tratar: con contenido, posteriores a ancla_hecha y cubiertas
+        # por los PCAP cerrados (mas el margen de la deduplicacion del espejo).
+        anclas: list[int] = []
+        if marca_pcap is not None and (paquetes_utiles or eve_buffer):
+            anclas = incremental.anclas_con_contenido(
+                (pk.packet.timestamp for pk in paquetes_utiles), (x[0] for x in eve_buffer), paso_s,
+                ancla_hecha if ancla_hecha is not None else float("-inf"),
+                marca_pcap - incremental.MARGEN_DEDUP_S)
+        anotar_lectura("pcap", marca_pcap, cycle_start)
+        anotar_lectura("eve", marca_eve, cycle_start)
+        quitados = 0
+        for ancla in anclas:
+            corte = ancla - horizonte_s
+            utiles, paquetes, packets, lineas, apps, quitados = entrada_horizonte(corte)
+            cuenta["flujos_recalculados"] += atribuidor.flujos_recalculados if paquetes else 0
+            ts_obs = [x.timestamp for x in packets] + [x.timestamp for x in apps]
+            capture_start = min(capture_epoch, min(ts_obs)) if ts_obs else capture_epoch
+            completo = inicio_historial is not None and corte >= inicio_historial
+            lp: dict[str, list] = collections.defaultdict(list)
+            la: dict[str, list] = collections.defaultdict(list)
+            primera: dict[str, object] = {}
+            for x in packets:
+                e = x.entity_ip
+                if e not in primera or x.timestamp < primera[e].timestamp:
+                    primera[e] = x
+                if ancla - 30 < x.timestamp <= ancla:
+                    lp[e].append(x)
+            for x in apps:
+                e = x.entity_ip
+                if e not in primera or x.timestamp < primera[e].timestamp:
+                    primera[e] = x
+                if ancla - 60 < x.timestamp <= ancla:
+                    la[e].append(x)
+            clave = incremental.clave_ventana(ancla)
+            filas_ancla: dict[str, dict] = {}
+            excluidas_ancla: set[str] = set()
+            for entidad in sorted(set(lp) | set(la)):
+                window_key = (entidad, clave)
+                cuenta["entidades"] += 1
+                if entidad_excluida(entidad):
+                    excluidas_ancla.add(entidad)
+                    if window_key not in scored_windows:
                         ventanas_excluidas += 1
                         cuenta["excluidas_nuevas"] += 1
-                        scored_windows[window_key] = extractor.parse_eve_timestamp(window_key[1])
+                        scored_windows[window_key] = float(ancla)
                     continue
-                for row in item[1]:
-                    window_key = (str(row["entity_ip"]), str(row["window_end_utc"]))
-                    if window_key in scored_windows:
+                row = incremental.fila_de_ancla(extractor.build_rows, lp[entidad], la[entidad], ancla,
+                                                paso_s, capture_start, dataclasses.replace,
+                                                primera=primera.get(entidad))
+                if row is None:
+                    continue
+                filas_ancla[entidad] = row
+                cuenta["filas_construidas"] += 1
+                if window_key in scored_windows:
+                    continue
+                if not row["eligible_training"]:
+                    cuenta["no_elegibles"] += 1
+                    continue
+                # Espera: primer ciclo que ya tenia contenido de la ventana (registro de
+                # pendientes o marcas de lectura); None si se decide en ese mismo ciclo.
+                vistos = [pendientes.pop(window_key, None)]
+                if lp[entidad]:
+                    vistos.append(visto_en("pcap", min(x.timestamp for x in lp[entidad])))
+                if la[entidad]:
+                    vistos.append(visto_en("eve", min(x.timestamp for x in la[entidad])))
+                vistos = [v for v in vistos if v is not None and v < cycle_start]
+                pendiente_desde = min(vistos) if vistos else None
+                scored_windows[window_key] = float(ancla)
+                decididas.append((row, pendiente_desde, ventanas_excluidas, completo))
+            if verificacion is not None:
+                verificacion.write(json.dumps(incremental.comprobar_ancla(
+                    extractor, v3, ancla, horizonte_s, utiles, args.sin_deduplicar, paquetes, packets,
+                    apps, [x[1] for x in lineas], eve_slice_path, entity_network, paso_s, capture_start,
+                    {"filas": filas_ancla, "excluidas": excluidas_ancla}, entidad_excluida,
+                    puntuar=pipeline.score_samples, feature_names=feature_names)) + "\n")
+                verificacion.flush()
+            ancla_hecha = float(ancla)
+        duplicados_espejo += quitados
+        if ancla_hecha is not None:
+            podar_lecturas(ancla_hecha - 60 - paso_s)
+        t = cerrar_etapa("ventanas_por_ancla", t)
+
+        # Ventanas que ya tienen datos pero cuyos PCAP aun no estan cerrados: quedan
+        # pendientes (pendiente_desde mide la espera; expiran como no evaluadas).
+        # Solo contabilidad (no cambia ninguna fila ni decision). No se atribuye de nuevo:
+        # se usan las observaciones de la ultima atribucion (la de la ultima ancla tratada)
+        # y las L7 del buffer, que no necesitan atribucion; cada entidad se recorre una vez.
+        # La espera de las ventanas solo de paquetes vistas en ciclos sin anclas no se pierde:
+        # pendiente_desde se completa al decidir con las marcas de lectura (visto_en).
+        if anclas:
+            packets_pendientes = packets
+        desde_p = ancla_hecha if ancla_hecha is not None else float("-inf")
+        nuevas_p = [x for x in packets_pendientes if x.timestamp > desde_p - 30]
+        nuevas_a = [o for t_e, _, lista in eve_buffer if t_e > desde_p - 60 for o in lista]
+        if nuevas_p or nuevas_a:
+            ts_obs = [x.timestamp for x in packets_pendientes] + [x.timestamp for _, _, l in eve_buffer for x in l]
+            cs = min(capture_epoch, min(ts_obs)) if ts_obs else capture_epoch
+            pp, pa = incremental.agrupar_por_entidad(nuevas_p, nuevas_a)
+            for entidad in set(pp) | set(pa):
+                if entidad_excluida(entidad):
+                    continue
+                for ancla in incremental.anclas_con_contenido(
+                        (x.timestamp for x in pp.get(entidad, ())), (x.timestamp for x in pa.get(entidad, ())),
+                        paso_s, desde_p, float("inf")):
+                    if ancla - cs < 60:
                         continue
-                    if not row["eligible_training"]:
-                        cuenta["no_elegibles"] += 1
-                        continue
-                    window_end = extractor.parse_eve_timestamp(row["window_end_utc"])
-                    if not ventana_completa(window_end, marca_pcap):
-                        if window_key not in pendientes:
-                            cuenta["pendientes_nuevas"] += 1
-                        pendientes.setdefault(window_key, cycle_start)
-                        continue
-                    pendiente_desde = pendientes.pop(window_key, None)
-                    scored_windows[window_key] = window_end
-                    decididas.append((row, pendiente_desde, ventanas_excluidas))
-            t = cerrar_etapa("seleccion", t)
+                    window_key = (entidad, incremental.clave_ventana(ancla))
+                    if window_key not in scored_windows and window_key not in pendientes:
+                        pendientes[window_key] = cycle_start
+                        cuenta["pendientes_nuevas"] += 1
+        t = cerrar_etapa("pendientes", t)
+
+        if decididas:
 
             # score_samples puntua cada fila por separado: el lote da los mismos
             # valores que una llamada por fila (comprobado bit a bit en
             # --verificar-equivalencia y en tests/test_motor_incremental.py).
-            con_paquetes = [row for row, _, _ in decididas if row["packet_count_10s"] != 0]
+            con_paquetes = [row for row, _, _, _ in decididas if row["packet_count_10s"] != 0]
             puntuaciones: dict[int, float] = {}
             if con_paquetes:
                 lote = [[float(row[name]) for name in feature_names] for row in con_paquetes]
@@ -804,7 +963,7 @@ def main() -> int:
                 volcado.flush()
             t = cerrar_etapa("puntuacion", t)
 
-            for row, pendiente_desde, excluidas_momento in decididas:
+            for row, pendiente_desde, excluidas_momento, historial_completo in decididas:
 
                 # Heuristico explicito, no un ajuste silencioso del modelo
                 # congelado: ocsvm_scaled nunca vio ventanas "todo ceros" en
@@ -895,6 +1054,12 @@ def main() -> int:
                     "entity_ip": row["entity_ip"],
                     "window_end_utc": row["window_end_utc"],
                     "history_coverage_s": row["history_coverage_s"],
+                    # Horizonte de entrada fijado por ventana (cierre de la Etapa 2): la
+                    # fila usa [ventana - horizonte_s, ventana]. historial_completo=false si
+                    # ese horizonte empieza antes de que el proceso tuviera historia
+                    # completa de PCAP y EVE (arranque sin recuperacion posible).
+                    "horizonte_s": horizonte_s,
+                    "historial_completo": historial_completo,
                     "packet_count_10s": row["packet_count_10s"],
                     "detector_name": detector_name,
                     "score": score,
@@ -946,7 +1111,8 @@ def main() -> int:
                 del pendientes[window_key]
                 continue
             window_end = extractor.parse_eve_timestamp(window_key[1])
-            if cycle_start - window_end <= limite_pendiente:
+            tratada = ancla_hecha is not None and window_end <= ancla_hecha
+            if not tratada and cycle_start - window_end <= limite_pendiente:
                 continue
             del pendientes[window_key]
             scored_windows[window_key] = window_end

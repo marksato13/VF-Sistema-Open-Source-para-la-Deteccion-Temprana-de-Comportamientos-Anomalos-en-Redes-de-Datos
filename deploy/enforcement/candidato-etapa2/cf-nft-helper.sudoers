@@ -1,10 +1,8 @@
 # /etc/sudoers.d/cf-nft-helper  (0440 root:root; validar con: visudo -cf <fichero>)
 # Etapa 2 (candidato). Sustituye a la regla "NOPASSWD: /usr/sbin/nft" del agente v1.
-# El usuario del agente solo puede ejecutar el helper restringido y SIN argumentos
-# (las comillas vacias prohiben cualquier argumento). La peticion va por stdin y el
-# helper la valida: tabla, sets, IPs y caducidad fijos. No hay "nft -f -" libre.
-#
-# srv-dmz:
-adminsrvdmz ALL=(root) NOPASSWD: /usr/local/sbin/cf-nft-helper ""
-# DC1 (usuario dedicado sin privilegios, a crear en la instalacion; NO dcadmin):
-# cfagente ALL=(root) NOPASSWD: /usr/local/sbin/cf-nft-helper ""
+# La cuenta del agente (cfagente, shell nologin, sin llaves SSH) solo puede ejecutar el
+# helper restringido y SIN argumentos (las comillas vacias prohiben cualquier
+# argumento). La peticion va por stdin; el helper la valida y el PERFIL lo fija el
+# host en /etc/cyberflow/nft-helper.perfil (root:root 0644): dns en DC1, dmz en srv-dmz.
+# Misma linea en srv-dmz y en DC1. La cuenta de transporte (cffeed) NO tiene sudo.
+cfagente ALL=(root) NOPASSWD: /usr/local/sbin/cf-nft-helper ""

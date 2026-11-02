@@ -50,7 +50,15 @@ def main() -> int:
     feed.generar_claves(str(d / "priv.pem"), str(d / "pub.pem"))
     log = d / "motor_decision.log"
     log.write_text("")
-    helper = "%s %s" % (PY, RAIZ / "scripts/enforce/cf_nft_helper.py")
+    for perfil in ("dmz", "dns"):
+        pd = d / ("etc-" + perfil)
+        pd.mkdir(mode=0o755)
+        os.chmod(d, 0o755)
+        (pd / "perfil").write_text(perfil + "\n")
+        os.chmod(pd / "perfil", 0o644)
+
+    def helper(perfil):
+        return "%s %s %s" % (PY, RAIZ / "deploy/pruebas-aisladas/helper_banco.py", d / ("etc-" + perfil) / "perfil")
     for t in ("cyberflow_dmz", "cyberflow_dns"):
         subprocess.run(["nft", "destroy", "table", "inet", t], capture_output=True)
     pub = subprocess.Popen([PY, str(RAIZ / "scripts/engine/publicar_feed_v2.py"), "--log", str(log),
@@ -61,14 +69,14 @@ def main() -> int:
     rele = subprocess.Popen([PY, str(RAIZ / "deploy/enforcement/relay_eventos.py"), "--transporte", "local",
                              "--origen", str(d / "sensor"), "--destino", "srv-dmz=%s" % (d / "dmz"),
                              "--destino", "dc1=%s" % (d / "dns-ausente"), "--traza", str(d / "rele.jsonl"),
-                             "--sondeo-segundos", "1"])
+                             "--clave-publica", str(d / "pub.pem"), "--sondeo-segundos", "1"])
 
     def agente(perfil, sub):
         shutil.copy(d / "pub.pem", d / sub / "pub.pem")
         return subprocess.Popen([PY, str(RAIZ / "scripts/enforce/agente_enforce_v2.py"), "--perfil", perfil,
                                  "--feed", str(d / sub / "feed.json"), "--firma", str(d / sub / "feed.sig"),
                                  "--clave-publica", str(d / sub / "pub.pem"), "--estado", str(d / sub / "estado.json"),
-                                 "--traza", str(d / sub / "traza.jsonl"), "--helper", helper, "--aplicar",
+                                 "--traza", str(d / sub / "traza.jsonl"), "--helper", helper(perfil), "--aplicar",
                                  "--seguir", "--sondeo-segundos", "0.5", "--observar-segundos", "5"])
     ag = {"dmz": agente("dmz", "dmz"), "dns": agente("dns", "dns")}
     procs = [pub, rele]

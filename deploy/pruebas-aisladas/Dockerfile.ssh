@@ -1,0 +1,6 @@
+# Banco :3 (cierre de la Etapa 2): banco :2 + OpenSSH y systemd (solo systemd-analyze, sin arrancarlo).
+# Construir: docker build -t cyberflow-etapa2-banco:3 -f deploy/pruebas-aisladas/Dockerfile.ssh deploy/pruebas-aisladas
+# Usar SIEMPRE con --network none: sshd escucha solo en 127.0.0.1 dentro del contenedor.
+FROM cyberflow-etapa2-banco:2
+RUN apt-get update && apt-get install -y --no-install-recommends openssh-server openssh-client systemd \
+    && rm -rf /var/lib/apt/lists/* && mkdir -p /run/sshd && ssh-keygen -A

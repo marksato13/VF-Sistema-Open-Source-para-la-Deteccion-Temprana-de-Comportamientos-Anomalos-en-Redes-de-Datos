@@ -6,10 +6,13 @@ After=network-online.target
 Type=simple
 User=gadmin
 Group=gadmin
-ExecStart=/usr/bin/python3 /home/gadmin/relay-v2/relay_eventos.py \
+# Codigo, feed.py y clave PUBLICA del sensor en /opt/cyberflow/relay-v2 (root:root).
+# El rele verifica cada pareja feed/firma antes de entregarla; no puede firmar.
+ExecStart=/usr/bin/python3 -I /opt/cyberflow/relay-v2/relay_eventos.py \
     --origen m4rk@10.10.60.11:/home/m4rk/feed-v2,/home/gadmin/.ssh/cyberflow-to-sensor \
-    --destino srv-dmz=adminsrvdmz@10.10.30.10:/home/adminsrvdmz/enforce-v2,/home/gadmin/.ssh/cyberflow-to-srv \
-    --destino dc1=cfagente@10.10.10.20:/home/cfagente/enforce-v2,/home/gadmin/.ssh/cyberflow-to-dc1 \
+    --destino srv-dmz=cffeed@10.10.30.10:/var/lib/cyberflow/feed,/home/gadmin/.ssh/cyberflow-to-srv-v2 \
+    --destino dc1=cffeed@10.10.10.20:/var/lib/cyberflow/feed,/home/gadmin/.ssh/cyberflow-to-dc1 \
+    --clave-publica /opt/cyberflow/relay-v2/pub.pem \
     --traza /home/gadmin/relay-v2/traza.jsonl --sondeo-segundos 1
 Restart=always
 RestartSec=2

@@ -452,9 +452,16 @@ class ExtremoAExtremo(unittest.TestCase):
         # el servidor del flujo largo aparece como entidad cuando la poda cambia el propietario
         self.assertTrue(any(r["entity_ip"] == "10.10.30.10" for r in decisiones))
         # instrumentacion: un registro por ciclo con sus etapas y conteos
-        self.assertEqual(len(ciclos), len(comprobaciones) + sum(1 for c in ciclos if c["entidades"] == 0
-                                                                and c["observaciones_l7"] == 0
-                                                                and c["paquetes_deduplicados"] == 0))
+        # horizonte por ventana: una comprobacion por ancla tratada, en orden y sin repetir
+        # (tambien a traves del reinicio, que reanuda desde la ultima ventana registrada)
+        anclas = [c["ancla"] for c in comprobaciones]
+        self.assertEqual(anclas, sorted(set(anclas)))
+        self.assertTrue(all(c["horizonte_s"] == 90 for c in comprobaciones))
+        self.assertTrue(all("historial_completo" in r and r["horizonte_s"] == 90 for r in decisiones))
+        # tras el reinicio el horizonte se recupera del anillo y de eve.json
+        arranques = [r for r in registro if r["event"] == "motor_startup"]
+        self.assertIsNotNone(arranques[1]["ancla_reanudada"])
+        self.assertGreater(arranques[1]["recuperacion_eve"].get("lineas", 0), 0)
         self.assertTrue(all({"inicio_ciclo", "fin_ciclo", "duracion_s", "etapas_s", "marca_pcap", "marca_eve",
                              "decididas", "ventanas_pendientes", "no_evaluadas", "registro_escrito_en",
                              "registros_escritos"} <= set(c) for c in ciclos))
@@ -470,6 +477,80 @@ class ExtremoAExtremo(unittest.TestCase):
                 self.assertGreaterEqual(c["registro_escrito_en"], max(r["logged_at"] for r in escritos))
             else:
                 self.assertIsNone(c["registro_escrito_en"])
+
+
+class HorizontePorVentana(unittest.TestCase):
+    """Cierre de la Etapa 2: la fila de una ventana no depende de cuando se decide.
+
+    Mismo escenario con tres formas de mirar: periodico cada 10 s; por eventos con
+    sondeo de 0,25 s y cierres retrasados 3 s; y por eventos con dos reinicios del
+    motor. Toda ventana decidida en dos configuraciones tiene el mismo vector, el
+    mismo score y la misma decision; ninguna se decide dos veces.
+    """
+
+    def correr(self, tmp, capt, eve, modelo, nombre, extra_arnes, disparo):
+        import replay_motor
+        salida = tmp / nombre
+        sys.argv = ["replay_motor.py", "--motor", str(RAIZ / "scripts/engine/motor_decision.py"),
+                    "--pcap-dir", str(capt), "--eve", str(eve), "--desde", str(self.t0 + 10),
+                    "--hasta", str(self.t0 + 440), "--salida", str(salida), *extra_arnes, "--",
+                    "--model-path", str(modelo), "--manifest-path", str(tmp / "m" / "manifest.json"),
+                    "--detector-name", "if_prueba", "--entity-network", "10.10.0.0/16",
+                    "--excluir", "10.10.60.11/32", "--excluir-protocolos", "112,240",
+                    "--step-seconds", "10", "--history-seconds", "90", "--disparo", disparo,
+                    "--volcar-caracteristicas", str(salida / "x.jsonl")]
+        self.assertEqual(replay_motor.main(), 0)
+        dec = {}
+        claves = []
+        for linea in (salida / "motor_decision.log").read_text(encoding="utf-8").splitlines():
+            r = json.loads(linea)
+            if r["event"] in ("decision", "ventana_no_evaluada"):
+                claves.append((r["entity_ip"], r["window_end_utc"]))
+            if r["event"] == "decision":
+                dec[(r["entity_ip"], r["window_end_utc"])] = r
+        x = {}
+        for linea in (salida / "x.jsonl").read_text(encoding="utf-8").splitlines():
+            r = json.loads(linea)
+            x[(r["entity_ip"], r["window_end_utc"])] = (r["x"], r["score"])
+        self.assertEqual(len(claves), len(set(claves)), nombre + ": decisiones duplicadas")
+        return dec, x
+
+    def test_misma_fila_con_cualquier_cadencia_retraso_o_reinicio(self):
+        try:
+            import joblib
+            import numpy as np
+            from sklearn.ensemble import IsolationForest
+            from sklearn.pipeline import make_pipeline
+            from sklearn.preprocessing import StandardScaler
+        except ImportError:  # pragma: no cover
+            self.skipTest("sin scikit-learn")
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            self.t0 = 1_793_260_800
+            capt, eve = escenario(tmp, self.t0)
+            pipe = make_pipeline(StandardScaler(), IsolationForest(n_estimators=50, random_state=0))
+            pipe.fit(np.random.default_rng(1).normal(size=(500, 28)))
+            modelo = tmp / "m" / "modelo.joblib"
+            modelo.parent.mkdir()
+            joblib.dump(pipe, modelo)
+            (tmp / "m" / "manifest.json").write_text(json.dumps({"detectors": {"if_prueba": {"calibration": {
+                "comparison": "score < threshold", "threshold": -0.55}}}}), encoding="utf-8")
+            a = self.correr(tmp, capt, eve, modelo, "periodico", [], "periodico")
+            b = self.correr(tmp, capt, eve, modelo, "eventos-retraso", ["--retraso-cierre", "3"], "eventos")
+            c = self.correr(tmp, capt, eve, modelo, "eventos-reinicios",
+                            ["--reiniciar-en", str(self.t0 + 150), "--reiniciar-en", str(self.t0 + 330)], "eventos")
+        for nombre, (dec, x) in (("eventos-retraso", b), ("eventos-reinicios", c)):
+            comunes = set(a[0]) & set(dec)
+            self.assertGreater(len(comunes), 0.9 * len(a[0]), nombre)
+            distintas = [k for k in comunes if (a[0][k]["decision"], a[0][k]["score"], a[0][k]["detector_name"])
+                         != (dec[k]["decision"], dec[k]["score"], dec[k]["detector_name"])
+                         or a[1].get(k) != x.get(k)]
+            self.assertEqual(distintas, [], nombre)
+        # tras cada reinicio el horizonte se recupera: ninguna ventana posterior al primer
+        # arranque queda con historial incompleto
+        tardias = [k for k, r in c[0].items() if r["historial_completo"] is False
+                   and json.loads(json.dumps(k))[1] > "2026-10-29T08:01:40"]
+        self.assertEqual(tardias, [])
 
 
 if __name__ == "__main__":
