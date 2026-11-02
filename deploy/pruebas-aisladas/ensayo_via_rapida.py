@@ -178,6 +178,8 @@ while time.time() < fin:
                 c = (el.get("counter") or {}) if isinstance(el, dict) else {}
                 if ip and ip not in prim and c.get("packets", 0) > 0:
                     prim[ip] = {"primer_descarte_visto": t, "paquetes": c.get("packets")}
+                if ip and ip in prim:
+                    prim[ip]["paquetes_ultimo_sondeo"] = c.get("packets", 0)
                 if ip and "presente_" + ip not in prim:
                     prim["presente_" + ip] = t
     time.sleep(0.02)
@@ -293,7 +295,9 @@ def una(seg: Path, alt: str, carga: bool, mac: str, salida: Path, rep: int) -> d
         "margen_s_aplicada_a_ultimo_syn": round(ult - t_apl, 3) if ult and t_apl else None,
         "syn_escaneo_total": len(lt["syn"]),
         "syn_tras_aplicacion": sum(1 for t, _ in lt["syn"] if t_apl and t > t_apl),
+        # contador del elemento del atacante en el primer sondeo con descartes, y en el último sondeo
         "paquetes_descartados_contador": (desc.get(ATK) or {}).get("paquetes"),
+        "paquetes_descartados_final": (desc.get(ATK) or {}).get("paquetes_ultimo_sondeo"),
         "senales": len(senales), "tipo_publicacion": nuevo.get("tipo") if nuevo else None,
         "det_resumen_cpu_max_s": max((x.get("cpu_s", 0) for x in leer(d / "det-resumen.jsonl")), default=None),
         "t_inicio_replay": t_rep,

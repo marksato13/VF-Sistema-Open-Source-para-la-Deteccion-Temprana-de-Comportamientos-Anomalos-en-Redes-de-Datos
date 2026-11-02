@@ -1,0 +1,26 @@
+[Unit]
+# Etapa 3, candidato; NO desplegado. Igual que candidato-etapa2/ppi-publicar-feed-v2.service
+# mas --senales-rapidas (salida de ppi-via-rapida@<ifaz>).
+Description=CyberFlow - publicador v2 por eventos (if_senal, destinos separados, feed v2, via rapida)
+After=ppi-motor.service
+
+[Service]
+Type=simple
+User=m4rk
+Group=m4rk
+WorkingDirectory=/home/m4rk/cyberflow
+ExecStart=/home/m4rk/cyberflow/.venv/bin/python scripts/engine/publicar_feed_v2.py \
+    --log logs/motor_decision.log \
+    --estado /home/m4rk/feed-v2/estado.json \
+    --clave-privada artifacts/feed-keys/priv.pem \
+    --salida-feed /home/m4rk/feed-v2/feed.json \
+    --salida-firma /home/m4rk/feed-v2/feed.sig \
+    --senales /home/m4rk/feed-v2/senales-if.jsonl \
+    --senales-rapidas /home/m4rk/feed-v2/senales-rapidas.jsonl \
+    --traza /home/m4rk/feed-v2/traza.jsonl \
+    --politica if_senal --vigencia-segundos 60 --refresco-segundos 20 --seguir
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

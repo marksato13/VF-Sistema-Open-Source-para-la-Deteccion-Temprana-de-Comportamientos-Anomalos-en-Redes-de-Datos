@@ -1,0 +1,27 @@
+[Unit]
+# Etapa 3, candidato; NO desplegado. Plantilla: la instancia es la interfaz de captura
+# del espejo (la misma que usa Suricata en af-packet), p. ej. ppi-via-rapida@ens37.
+Description=CyberFlow - via rapida de escaneo (alternativa C: flujo continuo) en %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=m4rk
+Group=m4rk
+WorkingDirectory=/home/m4rk/cyberflow
+# tcpdump necesita CAP_NET_RAW (socket) y CAP_NET_ADMIN (modo promiscuo si Suricata no lo
+# hubiera activado ya); solo esas capacidades, sin root.
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+# pipefail: si muere el detector o tcpdump, la unidad falla y systemd la reinicia.
+ExecStart=/bin/bash -c 'set -o pipefail; \
+  /usr/bin/tcpdump -i %i -n -U --immediate-mode -s 128 -w - tcp \
+  | /home/m4rk/cyberflow/.venv/bin/python scripts/engine/detector_rapido.py --flujo \
+      --salida /home/m4rk/feed-v2/senales-rapidas.jsonl \
+      --resumen /home/m4rk/feed-v2/via-rapida-resumen.jsonl'
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

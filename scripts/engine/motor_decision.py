@@ -1186,7 +1186,8 @@ def main() -> int:
                     "heuristico": heuristicos.evaluar(fila_h),
                     # Todas las reglas que disparan (Etapa 2: destinos separados).
                     "heuristicos": heuristicos.evaluar_todas(fila_h),
-                    # Etapa 3: magnitudes de la vista DNS usadas por dns_entropy (no son entradas del IF).
+                    # Etapa 3: magnitudes de las vistas HTTP y DNS que leen brute_force/http_abuse y
+                    # dns_entropy (no son entradas del IF); null si la entidad no tuvo actividad.
                     "http_vista": {k: fila_h[k] for k in http_heuristica.CAMPOS_VACIOS}
                     if fila_h["httph_peticiones_60s"] or fila_h["httph_tardios_excluidos_60s"] else None,
                     "dns_vista": campos_dns if (campos_dns["dnsh_consultas_60s"]
