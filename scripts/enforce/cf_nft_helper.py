@@ -62,10 +62,16 @@ TIMEOUT_MAX_S = 3600 + 120
 MAX_OPERACIONES = 512
 MAX_BYTES_PETICION = 256 * 1024
 # Tasa del LIMIT por perfil (paquetes/s por origen). dmz = valor desplegado.
-# dns: 5/s NO recorta el escenario DNS del 3B (2,3 consultas/s): valor PENDIENTE de
-# desarrollo y validacion (Etapa 3), no es una respuesta efectiva. Ver el informe.
-TASA = {"dmz": "100/second", "dns": "5/second"}
-RAFAGA = {"dmz": 100, "dns": 10}
+# dns (Etapa 3, candidata NO aprobada): unidad = consulta UDP/53 por origen (en UDP una
+# consulta es un paquete; los reintentos cuentan). 30/minuto (0,5/s) con rafaga 18 =
+# 2 x la envolvente de cubeta del peor origen legitimo del 3B (b ~ 9 a 0,5/s), que no
+# perderia ninguna consulta aunque se le limitara por error; al origen del escenario
+# dns_inusual (2,3 consultas/s) le descarta ~68 % mientras esta limitado (simulado).
+# El 5/s anterior no recortaba nada. TCP/53 no se limita (una consulta son varios
+# paquetes; 0 consultas TCP en el 3B): lo cubre BLOCK. Ver politica_limit_dns.py.
+TASA = {"dmz": "100/second", "dns": "30/minute"}
+RAFAGA = {"dmz": 100, "dns": 18}
+FILTRO_LIMIT = {"dmz": "", "dns": "udp dport 53 "}
 # Infraestructura que el helper rechaza aunque se lo pidan (defensa en profundidad:
 # el agente ya la filtra, pero el helper no confia en el agente).
 NUNCA = frozenset({
@@ -187,7 +193,7 @@ def texto_asegurar(perfil: str) -> list[str]:
         "add rule inet %s entrada %sip saddr @bloqueados counter drop" % (t, filtro),
         ("add rule inet %s entrada %sip saddr @limitados update @tasa_origen "
          "{ ip saddr limit rate over %s burst %d packets } update @descartes_limite { ip saddr } counter drop")
-        % (t, filtro, TASA[perfil], RAFAGA[perfil]),
+        % (t, FILTRO_LIMIT[perfil], TASA[perfil], RAFAGA[perfil]),
     ]
 
 

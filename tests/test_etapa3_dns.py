@@ -126,3 +126,18 @@ class Regla(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Helper(unittest.TestCase):
+    def test_limit_dns_solo_udp_con_la_tasa_de_la_politica(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "enforce"))
+        import cf_nft_helper as h
+        reglas = h.texto_asegurar("dns")
+        lim = [r for r in reglas if "@limitados" in r]
+        blo = [r for r in reglas if "@bloqueados" in r]
+        self.assertEqual(len(lim), 1)
+        self.assertIn("udp dport 53 ", lim[0])
+        self.assertNotIn("tcp", lim[0])
+        self.assertIn("limit rate over 30/minute burst 18 packets", lim[0])
+        self.assertIn("meta l4proto { udp, tcp } th dport 53", blo[0])   # BLOCK sigue cubriendo TCP
+        self.assertIn("100/second burst 100", [r for r in h.texto_asegurar("dmz") if "@limitados" in r][0])
