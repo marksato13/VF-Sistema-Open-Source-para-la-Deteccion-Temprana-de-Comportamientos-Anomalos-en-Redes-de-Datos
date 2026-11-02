@@ -52,7 +52,7 @@ import sys
 import time
 from pathlib import Path
 
-VERSION = "2026-11-02.1"
+VERSION = "2026-11-02.2"  # .2: cobertura SIGUSR1 completa (huecos, extremos, PID, contadores); antes bastaban 2 lecturas
 
 # ---------------------------------------------------------------- lectura de fuentes
 
@@ -406,7 +406,74 @@ CRITERIOS = {
     "tolerancia_rotacion_s": 2.0,      # salto entre inicios > rotación + tolerancia = hueco de anillo
     "motor_retraso_max_s": 25.0,       # Etapa 2, R2: máximo de logged_at − window_end
     "via_antiguedad_max_s": 2.0,       # resumen de la vía rápida sin avanzar > 2 s con tic de 0,05 s
+    # Estadísticas SIGUSR1 de tcpdump (SALUD-CAPTURA §2.1): una lectura cada 30 s; la lectura que acota el inicio
+    # a <= 30 s antes, la que acota el fin a <= 30 s después y, entre ellas, lecturas consecutivas del MISMO PID.
+    "tcpdump_periodo_s": 30.0,
+    # Tolerancia de PLANIFICACIÓN (declarada el 2-nov, antes de cualquier medida en vivo): el timer lleva
+    # AccuracySec=1s (dispara en [:00, :01] y [:30, :31]) y entre la señal y la marca del journal pasa < 1 s.
+    # Sin ella, un disparo a :00,9 seguido de otro a :30,2 + escritura daría 30,x s y un C3 falso.
+    "tcpdump_tolerancia_s": 2.0,
 }
+
+
+def cobertura_tcpdump(lecturas: list[dict], desde: float, hasta: float, crit: dict) -> dict:
+    """Cobertura de las estadísticas SIGUSR1 de UN tcpdump (anillo o vía rápida, nunca mezclados) en [desde, hasta].
+
+    Devuelve {"ok": bool, "motivos_c3": [...], "descartados_kernel": int|None, ...}. ok=False => C3.
+    Exige (criterio publicado + tolerancia declarada, lim = periodo + tolerancia):
+      - lectura a <= lim antes de desde y lectura a <= lim después de hasta;
+      - entre ellas, ningún hueco > lim entre lecturas consecutivas;
+      - un solo PID en todo el tramo (otro PID = reinicio de tcpdump o fuentes mezcladas);
+      - contadores válidos: enteros >= 0, capturados <= recibidos, y no decrecientes dentro del PID.
+    Lecturas sin hora o sin PID no cuentan (se informan)."""
+    lim = crit["tcpdump_periodo_s"] + crit["tcpdump_tolerancia_s"]
+    validas, sin_id = [], 0
+    for r in lecturas:
+        if r.get("t") is None or r.get("pid") is None:
+            sin_id += 1
+            continue
+        validas.append(r)
+    validas.sort(key=lambda r: r["t"])
+    res = {"ok": False, "motivos_c3": [], "descartados_kernel": None, "lecturas_sin_hora_o_pid": sin_id,
+           "limite_s": lim}
+    if not validas:
+        res["motivos_c3"].append("tcpdump sin lecturas SIGUSR1")
+        return res
+    a = [r for r in validas if r["t"] <= desde]
+    b = [r for r in validas if r["t"] >= hasta]
+    if not a or not b:
+        res["motivos_c3"].append("tcpdump sin lecturas SIGUSR1 que acoten el periodo"
+                                 + (" (ninguna anterior o igual al inicio)" if not a else "")
+                                 + (" (ninguna posterior o igual al fin)" if not b else ""))
+        return res
+    ra, rb = a[-1], b[0]
+    tramo = [r for r in validas if ra["t"] <= r["t"] <= rb["t"]]
+    res.update({"desde": ra["t"], "hasta": rb["t"], "lecturas": len(tramo),
+                "pids": sorted({r["pid"] for r in tramo})})
+    mot = res["motivos_c3"]
+    if desde - ra["t"] > lim:
+        mot.append(f"tcpdump: la lectura que acota el inicio está {round(desde - ra['t'], 1)} s antes (> {lim} s)")
+    if rb["t"] - hasta > lim:
+        mot.append(f"tcpdump: la lectura que acota el fin está {round(rb['t'] - hasta, 1)} s después (> {lim} s)")
+    if len(res["pids"]) > 1:
+        mot.append("tcpdump: varios PID en el periodo " + str(res["pids"])
+                   + " (reinicio del proceso o lecturas de dos capturas mezcladas)")
+    huecos = [(y["t"] - x["t"], x["t"]) for x, y in zip(tramo, tramo[1:]) if y["t"] - x["t"] > lim]
+    if huecos:
+        h, t0 = max(huecos)
+        mot.append(f"tcpdump: {len(huecos)} hueco(s) entre lecturas SIGUSR1 > {lim} s (máximo {round(h, 1)} s desde {t0})")
+    campos = ("capturados", "recibidos_filtro", "descartados_kernel")
+    invalidas = [r for r in tramo if any(not isinstance(r.get(c), int) or r[c] < 0 for c in campos)
+                 or r["capturados"] > r["recibidos_filtro"]]
+    if invalidas:
+        mot.append(f"tcpdump: {len(invalidas)} lectura(s) con contadores inválidos")
+    elif len(res["pids"]) == 1 and any(y[c] < x[c] for x, y in zip(tramo, tramo[1:]) for c in campos):
+        mot.append("tcpdump: contador acumulado que decrece sin cambio de PID (lectura inválida)")
+    if not mot:
+        res["ok"] = True
+        res["descartados_kernel"] = rb["descartados_kernel"] - ra["descartados_kernel"]
+        res["pid"] = ra["pid"]
+    return res
 
 
 def clasificar(incs: list[dict], tcpdump: list[dict], desde: float, hasta: float, crit: dict) -> dict:
@@ -462,24 +529,14 @@ def clasificar(incs: list[dict], tcpdump: list[dict], desde: float, hasta: float
     vr = [i["via_rapida"] for i in tramo if "via_rapida" in i]
     info["via_rapida"] = {"medida": bool(vr) and all(v.get("ok") for v in vr),
                           "antiguedad_max_s": max((v.get("antiguedad_s") or 0) for v in vr) if vr else None}
-    # tcpdump: lecturas SIGUSR1 que acoten el periodo, por PID
-    porpid: dict = {}
-    for r in tcpdump:
-        if r["t"] is not None and r["pid"] is not None:
-            porpid.setdefault(r["pid"], []).append(r)
-    td_info = {}
-    for pid, rs in porpid.items():
-        rs.sort(key=lambda r: r["t"])
-        a = [r for r in rs if r["t"] <= desde]
-        b = [r for r in rs if r["t"] >= hasta]
-        if a and b:
-            d = b[0]["descartados_kernel"] - a[-1]["descartados_kernel"]
-            td_info[str(pid)] = {"descartados_kernel": d, "desde": a[-1]["t"], "hasta": b[0]["t"]}
-            if d > 0:
-                motivos_c2.append(f"tcpdump PID {pid}: {d} descartados por el kernel")
-    info["tcpdump"] = td_info or None
-    if not td_info:
-        motivos_c3.append("tcpdump sin lecturas SIGUSR1 que acoten el periodo")
+    # tcpdump: cobertura SIGUSR1 completa de UNA captura (§2.1). Antes (2026-11-02.1) bastaba una lectura <= desde
+    # y otra >= hasta de cualquier PID, aunque estuvieran a horas y faltaran todas las intermedias: daba C0.
+    cob = cobertura_tcpdump(tcpdump, desde, hasta, crit)
+    info["tcpdump"] = cob
+    if not cob["ok"]:
+        motivos_c3.extend(cob["motivos_c3"])
+    elif cob["descartados_kernel"] > 0:
+        motivos_c2.append(f"tcpdump PID {cob['pid']}: {cob['descartados_kernel']} descartados por el kernel")
     if motivos_c3:
         clase = "C3"
     elif motivos_c2:
@@ -560,6 +617,13 @@ def main(argv=None) -> int:
         print(f"{len(incs)} incrementos; con reinicio: {sum(1 for x in incs if x['reinicios'])}")
         return 0
     crit = dict(CRITERIOS, rotacion_s=a.rotacion)
+    if a.hasta <= a.desde:
+        print("error: --hasta debe ser posterior a --desde", file=sys.stderr)
+        return 2
+    for f in a.tcpdump_log:
+        if not f.is_file():  # un journal que no se pudo exportar no es "cero lecturas": se para
+            print(f"error: --tcpdump-log no legible: {f}", file=sys.stderr)
+            return 2
     td = [r for f in a.tcpdump_log for r in leer_tcpdump_log(f)]
     res = clasificar(_leer_jsonl(a.incrementos), td, a.desde, a.hasta, crit)
     res["criterios"] = crit

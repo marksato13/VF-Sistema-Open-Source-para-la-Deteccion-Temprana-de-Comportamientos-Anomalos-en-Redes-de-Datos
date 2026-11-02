@@ -117,16 +117,18 @@ def _td(t, d, pid=1375):
 
 
 def test_clasificar_c0_c1_c2_c3():
+    # 2026-11-02.2: las lecturas SIGUSR1 van cada 30 s, como el timer. La versión .1 de esta prueba usaba solo
+    # t=0 y t=65 y esperaba C0: era justo el defecto (faltaban las lecturas intermedias).
     crit = dict(sc.CRITERIOS)
     ms = [_m(t, 100 * t, 0, t) for t in range(0, 70, 10)]
     incs = sc.incrementos(ms)
-    td = [_td(0, 0), _td(65, 0)]
+    td = [_td(0, 0), _td(30, 0), _td(60, 0)]
     assert sc.clasificar(incs, td, 5, 55, crit)["clase"] == "C0"
     ms1 = [_m(t, 100 * t, (1 if t >= 30 else 0), t) for t in range(0, 70, 10)]
     assert sc.clasificar(sc.incrementos(ms1), td, 5, 55, crit)["clase"] == "C1"
-    assert sc.clasificar(incs, [_td(0, 0), _td(65, 4)], 5, 55, crit)["clase"] == "C2"
+    assert sc.clasificar(incs, [_td(0, 0), _td(30, 2), _td(60, 4)], 5, 55, crit)["clase"] == "C2"
     # sin lecturas de tcpdump que acoten el periodo: no se presume C0
-    r = sc.clasificar(incs, [_td(10, 0), _td(65, 0)], 5, 55, crit)
+    r = sc.clasificar(incs, [_td(10, 0), _td(40, 0), _td(65, 0)], 5, 55, crit)
     assert r["clase"] == "C3" and any("tcpdump" in x for x in r["motivos"])
     # hueco en el anillo
     ms2 = [_m(t, 100 * t, 0, t, salto=(20.0 if t == 40 else 5.0)) for t in range(0, 70, 10)]

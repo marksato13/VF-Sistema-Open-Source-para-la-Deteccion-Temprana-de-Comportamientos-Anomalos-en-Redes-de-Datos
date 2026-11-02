@@ -13,9 +13,17 @@ en el repositorio de documentación:
 | `laptop/` | `paquete_candidata.sh`: tar de ec78ca5 + herramientas, con `SHA256SUMS` |
 | `sensor1/` | `respaldo_sensor1.sh`, `instalar_sensor1_sombra.sh` (fases 0–5 y `llave-rele`), `comprobar_importaciones.sh`, `verificar_sensor1.sh`, `revertir_sensor1.sh` |
 | `bastion/` | `respaldo_bastion.sh`, `instalar_bastion_sombra.sh` (`llaves`, `instalar`), `verificar_bastion.sh`, `revertir_bastion.sh` |
-| `srvdmz/` | `respaldo_srvdmz.sh`, `instalar_srvdmz_sombra.sh`, `verificar_srvdmz.sh`, `revertir_srvdmz.sh` |
+| `srvdmz/` | `respaldo_srvdmz.sh`, `instalar_srvdmz_sombra.sh`, `verificar_srvdmz.sh`, `revertir_srvdmz.sh`; `estado_sombra.py` (2026-11-02): identifica los agentes por ejecutable y argumentos, excluye la propia comprobación y sus envoltorios, y da `sombra` (0) / `aplicando` (1) / `desconocido` (2) / `sombra_no_conforme` (3); una lectura fallida nunca cuenta como cero |
 | `unidades/` | drop-ins de `ppi-motor` (candidato, `--disparo eventos`, `_state-e4`) y `ppi-motor-capture` (`-G 5`); `ppi-publicar-feed-v2`, `ppi-via-rapida@`, `cf-tcpdump-estadisticas` (.service/.timer), logrotate; relé sin DC1; agente v2 dmz sin `--aplicar` |
-| `banco/` | `ensayo_tcpdump_estadisticas.sh` (SIGUSR1 sin parar la captura), `ensayo_unidades_importaciones.sh` (systemd-analyze y origen de los módulos), `observado-sensor1/` (copia literal de las unidades base leídas el 2026-11-02) |
+| `banco/` | `ensayo_tcpdump_estadisticas.sh` (SIGUSR1 sin parar la captura), `ensayo_unidades_importaciones.sh` (systemd-analyze y origen de los módulos), `ensayo_estado_sombra.sh` (procesos reales, `sh -c`/`bash -c`, SSH simulado y SSH real a localhost), `observado-sensor1/` (copia literal de las unidades base leídas el 2026-11-02) |
+
+`scripts/etapa4/vigia_4c.py` (2026-11-02): vigilancia **efectiva** de la batería 4C. Evalúa P1–P5 y X1–X3 cada minuto
+(`sensor` en Sensor1, solo lectura; `bucle` en el bastión) y escribe el permiso que el generador de la Kali exige
+antes de cada episodio (`generar_campana.py --permiso --nonce`, repositorio de documentación). Fallo cerrado: sin
+lectura, pausa; sin canal, el permiso caduca y el generador se para solo.
+
+`scripts/etapa4/salud_captura.py` 2026-11-02.2: la clasificación exige cobertura SIGUSR1 completa del periodo
+(extremos y huecos ≤ 30 + 2 s, un único PID, contadores válidos); una cobertura insuficiente es C3, nunca C0.
 
 Sensor1 **no** tiene checkout de git: `~/cyberflow` es el despliegue anterior (motor 24f8a80; publicador,
 escalada y panel de f57ca00). La candidata se instala al lado, en `/home/m4rk/cyberflow-e4/ec78ca5`, y la
