@@ -1,0 +1,27 @@
+[Unit]
+# Etapa 4 (SOMBRA). Igual que deploy/enforcement/candidato-etapa2/ppi-enforce-agent-v2-dmz.service.
+# SIN --aplicar: verifica la firma, valida el feed v2 y LISTA los sets por el helper; no llama al
+# helper para añadir ni quitar nada (agente_enforce_v2.py: "if self.a.aplicar and ops").
+# verificar_srvdmz.sh comprueba en la traza que no hay ningún evento "aplicacion".
+Description=CyberFlow - agente v2 perfil dmz (srv-dmz), SOMBRA (Etapa 4)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cfagente
+Group=cfagente
+ExecStart=/usr/bin/python3 -I /opt/cyberflow/agente-v2/agente_enforce_v2.py \
+    --perfil dmz \
+    --feed /var/lib/cyberflow/feed/feed.json \
+    --firma /var/lib/cyberflow/feed/feed.sig \
+    --clave-publica /opt/cyberflow/agente-v2/pub.pem \
+    --estado /var/lib/cyberflow/agente/estado.json \
+    --traza /var/lib/cyberflow/agente/traza.jsonl \
+    --helper "sudo -n /usr/local/sbin/cf-nft-helper" \
+    --seguir
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

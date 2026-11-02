@@ -1,0 +1,11 @@
+[Unit]
+# Cada 30 s (reloj de pared; OnCalendar como el resto de timers del laboratorio, que con
+# OnUnitActiveSec se quedaban sin próximo disparo). 30 s = resolución de la clasificación de salud.
+Description=CyberFlow - estadisticas de tcpdump del anillo cada 30 s
+
+[Timer]
+OnCalendar=*-*-* *:*:00/30
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

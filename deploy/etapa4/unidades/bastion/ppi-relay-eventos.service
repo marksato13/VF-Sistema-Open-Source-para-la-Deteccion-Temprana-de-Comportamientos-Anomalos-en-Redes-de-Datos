@@ -1,0 +1,24 @@
+[Unit]
+# Etapa 4 (SOMBRA). Igual que deploy/enforcement/candidato-etapa2/ppi-relay-eventos.service SIN el
+# destino dc1: en DC1 no se instala nada (norma vigente; el LIMIT DNS sigue sin aprobar).
+# Llaves NUEVAS y exclusivas del relé v2 (no se reutilizan cyberflow-to-sensor ni cyberflow-to-srv,
+# que siguen sirviendo al relé v1 y a las lecturas):
+#   cyberflow-feed-v2-sensor  -> m4rk@Sensor1 con command="cf-feed-ssh.sh servir /home/m4rk/feed-v2",restrict
+#   cyberflow-feed-v2-srv     -> cffeed@srv-dmz con command="cf-feed-ssh.sh recibir /var/lib/cyberflow/feed",restrict
+Description=CyberFlow - rele por eventos del feed v2 (sensor -> srv-dmz), via bastion (Etapa 4)
+After=network-online.target
+
+[Service]
+Type=simple
+User=gadmin
+Group=gadmin
+ExecStart=/usr/bin/python3 -I /opt/cyberflow/relay-v2/relay_eventos.py \
+    --origen m4rk@10.10.60.11:/home/m4rk/feed-v2,/home/gadmin/.ssh/cyberflow-feed-v2-sensor \
+    --destino srv-dmz=cffeed@10.10.30.10:/var/lib/cyberflow/feed,/home/gadmin/.ssh/cyberflow-feed-v2-srv \
+    --clave-publica /opt/cyberflow/relay-v2/pub.pem \
+    --traza /home/gadmin/relay-v2/traza.jsonl --sondeo-segundos 1
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
