@@ -54,7 +54,9 @@ import argparse
 import collections
 import bisect
 import dataclasses
+import functools
 import json
+import math
 import subprocess
 import sys
 import time
@@ -198,6 +200,10 @@ def parse_args() -> argparse.Namespace:
         help="expiracion nativa nftables del bloqueo; se renueva si el ALERT se repite",
     )
     return parser.parse_args()
+
+
+def _ts(observacion) -> float:
+    return observacion.timestamp
 
 
 def apply_enforcement(enforce_command: str, ip: str, timeout_seconds: int) -> dict[str, object]:
@@ -571,6 +577,12 @@ def main() -> int:
     # archivo se lee de disco UNA vez; la atribucion de flujo se recalcula
     # sobre el buffer en memoria. Corrige el atraso bajo carga (F6 #12).
     packet_buffer: collections.deque = collections.deque()
+    # Via por deltas (pendiente 2): contextos llegados (sin plano de control) que el
+    # Deduplicador aun no ha recibido, y el corte de la ultima poda EJECUTADA del buffer
+    # (la poda quita todo lo anterior a su corte; asi el buffer es exactamente lo llegado
+    # con timestamp >= poda_hecha).
+    llegados_dedup: list = []
+    poda_hecha = float("-inf")
     parsed_pcaps: collections.OrderedDict[str, None] = collections.OrderedDict()
     MAX_PARSED_PCAP_NAMES = 4000
     # Orden de llegada al anillo de cada trama (y de su paquete). Las funciones
@@ -737,6 +749,7 @@ def main() -> int:
                     llegada_paquete[id(pk.packet)] = siguiente_llegada
                     siguiente_llegada += 1
                 packet_buffer.extend(nuevos)
+                llegados_dedup.extend(pk for pk in nuevos if pk.packet.protocol not in protocolos_excluidos)
                 if nuevos:
                     mas_nuevo = max(pk.packet.timestamp for pk in nuevos)
                     marca_pcap = mas_nuevo if marca_pcap is None else max(marca_pcap, mas_nuevo)
@@ -770,7 +783,8 @@ def main() -> int:
         # relativo al dato mas nuevo mantiene la ventana deslizante sobre lo que
         # el motor todavia debe digerir, y drena cuando la carga cesa.
         if packet_buffer:
-            newest_data = max(pk.packet.timestamp for pk in packet_buffer)
+            # El paquete mas nuevo del buffer es marca_pcap (el mas nuevo leido: nunca se poda).
+            newest_data = marca_pcap
             # El horizonte de la siguiente ancla por tratar, nunca mas alla del dato mas nuevo.
             data_cutoff = min(newest_data, base_horizonte) - args.history_seconds
             if packet_buffer[0].packet.timestamp < data_cutoff:
@@ -781,6 +795,7 @@ def main() -> int:
                 packet_buffer = collections.deque(
                     pk for pk in packet_buffer if pk.packet.timestamp >= data_cutoff
                 )
+                poda_hecha = max(poda_hecha, data_cutoff)
         t = cerrar_etapa("pcap_poda", t)
 
         # El plano de control se descarta ANTES de atribuir: un anuncio CARP
@@ -822,14 +837,28 @@ def main() -> int:
         decididas: list[tuple] = []
 
         def entrada_horizonte(corte: float):
-            """Deduplicacion y atribucion (incrementales) sobre [corte, ...] del buffer, y su L7."""
-            utiles = [pk for pk in paquetes_utiles if pk.packet.timestamp >= corte]
+            """Deduplicacion y atribucion (incrementales) sobre [corte, ...] del buffer, y su L7.
+
+            Por omision, por deltas: el horizonte [max(corte, poda_hecha), ...] del buffer son
+            los presentes de la llamada anterior con timestamp >= ese corte mas lo llegado
+            desde entonces (Deduplicador.deslizar). Mismo resultado que filtrar todo el buffer
+            (tests: test_deslizar_igual_a_la_global_con_atribucion). Con --sin-deduplicar o
+            --verificar-equivalencia se usa la via por conjunto completo."""
+            nonlocal llegados_dedup
             quitados = 0
-            if args.sin_deduplicar:
-                paq = sorted((pk.packet for pk in utiles), key=orden_paquete)
+            if args.sin_deduplicar or verificacion is not None:
+                utiles = [pk for pk in paquetes_utiles if pk.packet.timestamp >= corte]
+                if args.sin_deduplicar:
+                    paq = sorted((pk.packet for pk in utiles), key=orden_paquete)
+                else:
+                    paq, quitados = deduplicador.actualizar(utiles, llegada)
+                obs = atribuidor.actualizar(paq, entity_network, orden_paquete) if paq else []
             else:
-                paq, quitados = deduplicador.actualizar(utiles, llegada)
-            obs = atribuidor.actualizar(paq, entity_network, orden_paquete) if paq else []
+                utiles = None
+                paq, quitados, entran, salen = deduplicador.deslizar(
+                    max(corte, poda_hecha), llegados_dedup, llegada)
+                llegados_dedup = []
+                obs = atribuidor.deslizar(paq, entran, salen, entity_network, orden_paquete)
             lineas = [x for x in eve_buffer if x[0] >= corte]
             l7 = [o for _, _, lista in lineas for o in lista]
             return utiles, paq, obs, lineas, l7, quitados
@@ -849,24 +878,32 @@ def main() -> int:
             corte = ancla - horizonte_s
             utiles, paquetes, packets, lineas, apps, quitados = entrada_horizonte(corte)
             cuenta["flujos_recalculados"] += atribuidor.flujos_recalculados if paquetes else 0
-            ts_obs = [x.timestamp for x in packets] + [x.timestamp for x in apps]
-            capture_start = min(capture_epoch, min(ts_obs)) if ts_obs else capture_epoch
+            # ``packets`` sale de attribute_packets en orden de tiempo (ordena por timestamp de
+            # forma estable): su minimo es el primero y (A-60, A] es un tramo contiguo.
+            t_min_obs = min(packets[0].timestamp if packets else math.inf,
+                            min((x.timestamp for x in apps), default=math.inf))
+            capture_start = min(capture_epoch, t_min_obs) if (packets or apps) else capture_epoch
             completo = inicio_historial is not None and corte >= inicio_historial
             lp: dict[str, list] = collections.defaultdict(list)
             la: dict[str, list] = collections.defaultdict(list)
-            primera: dict[str, object] = {}
-            for x in packets:
-                e = x.entity_ip
-                if e not in primera or x.timestamp < primera[e].timestamp:
-                    primera[e] = x
-                if ancla - incremental.REGISTRO_S < x.timestamp <= ancla:
-                    lp[e].append(x)
+            i0 = bisect.bisect_right(packets, ancla - incremental.REGISTRO_S, key=_ts)
+            i1 = bisect.bisect_right(packets, ancla, lo=i0, key=_ts)
+            for x in packets[i0:i1]:
+                lp[x.entity_ip].append(x)
             for x in apps:
-                e = x.entity_ip
-                if e not in primera or x.timestamp < primera[e].timestamp:
-                    primera[e] = x
                 if ancla - 60 < x.timestamp <= ancla:
-                    la[e].append(x)
+                    la[x.entity_ip].append(x)
+
+            def anterior_en_horizonte(entidad: str, packets=packets, apps=apps, i0=i0, ancla=ancla):
+                """Una observacion de la entidad anterior a A en el horizonte (solo se busca si
+                todo su contenido de (A-60, A] cae justo en A: caso limite de fila_de_ancla)."""
+                for x in packets[:i0]:
+                    if x.entity_ip == entidad:
+                        return x
+                for x in apps:
+                    if x.entity_ip == entidad and x.timestamp < ancla:
+                        return x
+                return None
             clave = incremental.clave_ventana(ancla)
             filas_ancla: dict[str, dict] = {}
             excluidas_ancla: set[str] = set()
@@ -882,7 +919,7 @@ def main() -> int:
                     continue
                 row = incremental.fila_de_ancla(extractor.build_rows, lp[entidad], la[entidad], ancla,
                                                 paso_s, capture_start, dataclasses.replace,
-                                                primera=primera.get(entidad))
+                                                buscar_anterior=functools.partial(anterior_en_horizonte, entidad))
                 # Ventana registrable (contenido en (A-60, A] con su horizonte) que no se
                 # puede decidir: se registra ya como no evaluada con su motivo, nunca en
                 # silencio ni como PERMIT. fila_no_generada: la primera observacion de la
@@ -965,11 +1002,14 @@ def main() -> int:
             packets_pendientes = packets
             corte_pendientes = anclas[-1] - horizonte_s
         desde_p = ancla_hecha if ancla_hecha is not None else float("-inf")
-        nuevas_p = [x for x in packets_pendientes if x.timestamp > desde_p - incremental.REGISTRO_S]
+        # packets_pendientes esta en orden de tiempo (ver arriba): tramo final por biseccion.
+        nuevas_p = packets_pendientes[bisect.bisect_right(packets_pendientes, desde_p - incremental.REGISTRO_S,
+                                                          key=_ts):]
         nuevas_a = [o for t_e, _, lista in eve_buffer if t_e > desde_p - 60 for o in lista]
         if nuevas_p or nuevas_a:
-            ts_obs = [x.timestamp for x in packets_pendientes] + [x.timestamp for _, _, l in eve_buffer for x in l]
-            cs = min(capture_epoch, min(ts_obs)) if ts_obs else capture_epoch
+            t_min_p = min(packets_pendientes[0].timestamp if packets_pendientes else math.inf,
+                          min((x.timestamp for _, _, l in eve_buffer for x in l), default=math.inf))
+            cs = min(capture_epoch, t_min_p) if t_min_p != math.inf else capture_epoch
             pp, pa = incremental.agrupar_por_entidad(nuevas_p, nuevas_a)
             for entidad in set(pp) | set(pa):
                 if entidad_excluida(entidad):

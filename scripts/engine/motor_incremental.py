@@ -41,7 +41,9 @@ estable por timestamp de las funciones congeladas equivale a ordenar por
 
 from __future__ import annotations
 
+import bisect
 import collections
+import heapq
 import io
 import math
 from datetime import datetime, timezone
@@ -90,7 +92,19 @@ def clave_espejo(contexto) -> tuple:
 
 
 class Deduplicador:
-    """Mantiene el resultado de ``deduplicar_espejo`` sobre un anillo que cambia por los bordes."""
+    """Mantiene el resultado de ``deduplicar_espejo`` sobre un anillo que cambia por los bordes.
+
+    Dos entradas con el mismo resultado:
+
+    - ``actualizar(utiles)``: el conjunto completo; los cambios se obtienen por diferencia.
+    - ``deslizar(corte, llegados)``: el horizonte solo avanza ([corte, ...]) y solo entran los
+      contextos llegados desde la llamada anterior. Los que salen son el prefijo de los
+      presentes con timestamp < corte (estan en orden (timestamp, llegada)). Evita recorrer
+      todo el horizonte para saber que cambio (pendiente 2 de la Etapa 2).
+
+    ``deslizar`` devuelve ademas que paquetes entran y salen del conjunto conservado (para
+    ``Atribuidor.deslizar``), incluidos los que cambian de estado en los grupos tocados.
+    """
 
     def __init__(self, deduplicar: Callable) -> None:
         self._deduplicar = deduplicar
@@ -98,27 +112,36 @@ class Deduplicador:
         self._grupo: dict[tuple, dict[int, object]] = {}  # clave -> {id: contexto}
         self._descartadas: set[int] = set()            # id(contexto) descartados
         self._presentes: set[int] = set()
+        # Los presentes en orden (timestamp, llegada).
+        self._orden: list = []
 
-    def actualizar(self, utiles: list, orden_llegada: dict[int, int]) -> tuple[list, int]:
-        """``utiles`` en el orden del anillo; devuelve (paquetes conservados en orden, descartados)."""
-        actuales = {id(c): c for c in utiles}
-        ids = set(actuales)
-        nuevos = ids - self._presentes
-        salientes = self._presentes - ids
+    def _aplicar(self, entran: list, salen: list, orden_llegada: dict[int, int]) -> tuple[list, list]:
+        """Aplica los cambios; devuelve (paquetes que entran, paquetes que salen) del conjunto conservado."""
+        def clave(c):
+            return c.packet.timestamp, orden_llegada[id(c)]
+        conservado_antes: dict[int, bool] = {}
         tocadas = set()
-        for i in salientes:
+        sale_p, entra_p = [], []
+        for c in salen:
+            i = id(c)
+            if i not in self._descartadas:
+                sale_p.append(c.packet)
             k = self._clave.pop(i)
             grupo = self._grupo[k]
             del grupo[i]
             if not grupo:
                 del self._grupo[k]
             self._descartadas.discard(i)
+            self._presentes.discard(i)
             tocadas.add(k)
-        for i in nuevos:
-            c = actuales[i]
+        nuevos = set()
+        for c in entran:
+            i = id(c)
             k = clave_espejo(c)
             self._clave[i] = k
             self._grupo.setdefault(k, {})[i] = c
+            self._presentes.add(i)
+            nuevos.add(i)
             tocadas.add(k)
         if tocadas:
             # Una sola llamada con todas las tramas de los grupos tocados: la
@@ -126,24 +149,69 @@ class Deduplicador:
             # Entrada en orden (timestamp, llegada), el mismo orden relativo que
             # tienen esas tramas dentro de la llamada global.
             lote = [c for k in tocadas if k in self._grupo for c in self._grupo[k].values()]
-            lote.sort(key=lambda c: (c.packet.timestamp, orden_llegada[id(c)]))
+            lote.sort(key=clave)
+            for c in lote:
+                if id(c) not in nuevos:
+                    conservado_antes[id(c)] = id(c) not in self._descartadas
             conservados, _ = self._deduplicar(lote)
             vivos = {id(p) for p in conservados}
             for c in lote:
-                if id(c.packet) in vivos:
-                    self._descartadas.discard(id(c))
+                i = id(c)
+                ahora = id(c.packet) in vivos
+                if ahora:
+                    self._descartadas.discard(i)
                 else:
-                    self._descartadas.add(id(c))
-        self._presentes = ids
-        orden = sorted(utiles, key=lambda c: (c.packet.timestamp, orden_llegada[id(c)]))
+                    self._descartadas.add(i)
+                antes = conservado_antes.get(i, False)
+                if ahora and not antes:
+                    entra_p.append(c.packet)
+                elif antes and not ahora:
+                    sale_p.append(c.packet)
+        # Orden: quitar los que salen e intercalar los que entran (clave unica por contexto).
+        if salen:
+            fuera = {id(c) for c in salen}
+            self._orden = [c for c in self._orden if id(c) not in fuera]
+        if entran:
+            nuevos_ord = sorted(entran, key=clave)
+            if self._orden and clave(nuevos_ord[0]) < clave(self._orden[-1]):
+                self._orden = list(heapq.merge(self._orden, nuevos_ord, key=clave))
+            else:
+                self._orden.extend(nuevos_ord)
+        return entra_p, sale_p
+
+    def _resultado(self) -> tuple[list, int]:
         descartadas = self._descartadas
-        return [c.packet for c in orden if id(c) not in descartadas], len(descartadas)
+        return [c.packet for c in self._orden if id(c) not in descartadas], len(descartadas)
+
+    def actualizar(self, utiles: list, orden_llegada: dict[int, int]) -> tuple[list, int]:
+        """``utiles`` en el orden del anillo; devuelve (paquetes conservados en orden, descartados)."""
+        actuales = {id(c): c for c in utiles}
+        ids = set(actuales)
+        entran = [actuales[i] for i in ids - self._presentes]
+        salen = [c for c in self._orden if id(c) not in ids]
+        self._aplicar(entran, salen, orden_llegada)
+        return self._resultado()
+
+    def deslizar(self, corte: float, llegados: list, orden_llegada: dict[int, int]) -> tuple[list, int, list, list]:
+        """Horizonte [corte, ...]: salen los presentes con timestamp < corte y entran los
+        ``llegados`` con timestamp >= corte. Devuelve (conservados en orden, descartados,
+        paquetes que entran, paquetes que salen del conjunto conservado)."""
+        j = bisect.bisect_left(self._orden, corte, key=lambda c: c.packet.timestamp)
+        salen = self._orden[:j]
+        entran = [c for c in llegados if c.packet.timestamp >= corte and id(c) not in self._presentes]
+        entra_p, sale_p = self._aplicar(entran, salen, orden_llegada)
+        paq, n = self._resultado()
+        return paq, n, entra_p, sale_p
 
 
 # --- Atribucion de flujos ----------------------------------------------------
 
 class Atribuidor:
-    """Mantiene el resultado de ``attribute_packets`` recalculando solo los flujos que cambian."""
+    """Mantiene el resultado de ``attribute_packets`` recalculando solo los flujos que cambian.
+
+    ``actualizar(paquetes)`` obtiene los cambios por diferencia de conjuntos;
+    ``deslizar(paquetes, entran, salen)`` los recibe de ``Deduplicador.deslizar``.
+    """
 
     def __init__(self, atribuir: Callable, clave_flujo: Callable) -> None:
         self._atribuir = atribuir
@@ -155,26 +223,24 @@ class Atribuidor:
         self.flujos_recalculados = 0
         self.paquetes_recalculados = 0
 
-    def actualizar(self, paquetes: list, red, orden: Callable[[object], tuple]) -> list:
-        """``paquetes`` ya en el orden de ``attribute_packets``; devuelve la misma lista de observaciones."""
-        actuales = {id(p): p for p in paquetes}
-        ids = set(actuales)
-        nuevos = ids - self._presentes
-        salientes = self._presentes - ids
+    def _aplicar(self, entran: list, salen: list, red, orden: Callable[[object], tuple]) -> None:
         tocados = set()
-        for i in salientes:
+        for p in salen:
+            i = id(p)
             f = self._flujo.pop(i)
             miembros = self._miembros[f]
             del miembros[i]
             if not miembros:
                 del self._miembros[f]
             self._obs.pop(i, None)
+            self._presentes.discard(i)
             tocados.add(f)
-        for i in nuevos:
-            p = actuales[i]
+        for p in entran:
+            i = id(p)
             f = self._clave_flujo(p)
             self._flujo[i] = f
             self._miembros.setdefault(f, {})[i] = p
+            self._presentes.add(i)
             tocados.add(f)
         self.flujos_recalculados = 0
         self.paquetes_recalculados = 0
@@ -194,7 +260,20 @@ class Atribuidor:
                     self._obs[id(p)] = (p, o)
             else:  # imposible si el propietario es unico por flujo: se falla en voz alta
                 raise RuntimeError(f"atribucion parcial de un flujo: {len(obs)} de {len(lista)} paquetes")
-        self._presentes = ids
+
+    def actualizar(self, paquetes: list, red, orden: Callable[[object], tuple]) -> list:
+        """``paquetes`` ya en el orden de ``attribute_packets``; devuelve la misma lista de observaciones."""
+        actuales = {id(p): p for p in paquetes}
+        ids = set(actuales)
+        entran = [actuales[i] for i in ids - self._presentes]
+        salen = [self._miembros[self._flujo[i]][i] for i in self._presentes - ids]
+        self._aplicar(entran, salen, red, orden)
+        res = self._obs
+        return [res[id(p)][1] for p in paquetes if id(p) in res]
+
+    def deslizar(self, paquetes: list, entran: list, salen: list, red, orden: Callable[[object], tuple]) -> list:
+        """Como ``actualizar`` con los cambios ya conocidos (``entran``/``salen`` del conjunto)."""
+        self._aplicar(entran, salen, red, orden)
         res = self._obs
         return [res[id(p)][1] for p in paquetes if id(p) in res]
 
@@ -442,32 +521,46 @@ def registro_cancelacion(window_key: tuple[str, str], ancla: float, corte: float
 
 
 def fila_de_ancla(build_rows: Callable, lp: list, la: list, ancla: int, paso: int,
-                  capture_start: float, reemplazar: Callable, primera=None) -> dict | None:
-    """La fila de ``build_rows`` para la ventana que termina en ``ancla``, o None si esta vacia.
+                  capture_start: float, reemplazar: Callable, primera=None,
+                  buscar_anterior: Callable | None = None) -> dict | None:
+    """La fila de ``build_rows`` para la ventana que termina en ``ancla``, o None si no existe.
 
-    Se le pasan solo las observaciones de (A-60, A] (paquetes y L7), que son las que
-    hacen registrable la ventana (los paquetes de (A-60, A-30] no entran en sus conteos),
-    y el ``capture_start`` del horizonte. Si ninguna llega a
-    (A-paso, A], ``build_rows`` terminaria su rango antes de A: se anade una copia de
-    la ultima observacion con marca A+paso/2, fuera de toda ventana <= A, que solo
-    extiende el rango de anclas (no entra en ningun conteo de la ventana A).
+    La ventana es registrable si la entidad tiene paquetes o L7 en (A-60, A] (REGISTRO_S).
+    La fila A de ``build_rows`` solo lee los paquetes de (A-30, A] (p10 y p30), los
+    eventos L7 de (A-60, A], la ancla y ``capture_start``: el resto de observaciones solo
+    fija el rango de anclas que ``build_rows`` recorre. Por eso se le pasan solo esas, en
+    su orden (mismos conteos, mismas sumas y mismo orden de flujos que la llamada global).
+
+    Rango de anclas: la global sobre el horizonte genera A si la observacion mas antigua
+    de la entidad (``primera``) es anterior a A. Si ninguna de las pasadas lo es, se
+    antepone una copia de ``primera`` con marca A-30 (paquete) o A-60 (L7): fuera de
+    todo conteo de A (las ventanas son (A-w, A]) y no anterior a ``capture_start``. Si
+    ninguna llega a (A-paso, A], se anade una copia de la ultima con marca A+paso/2, que
+    solo extiende el rango. Asi ``build_rows`` recorre a lo sumo las anclas de (A-60, A]
+    en lugar de todas las del horizonte (hasta 23 con 230 s), con listas de 30 s y no de
+    60 s: la fila A es identica (``tests/test_motor_incremental.py``).
     """
-    rp = [p for p in lp if ancla - REGISTRO_S < p.timestamp <= ancla]
-    ra = [a for a in la if ancla - 60 < a.timestamp <= ancla]
-    if not rp and not ra:
+    if not any(ancla - REGISTRO_S < p.timestamp <= ancla for p in lp) and \
+            not any(ancla - 60 < a.timestamp <= ancla for a in la):
         return None
-    # ``primera`` es la observacion mas antigua de la entidad en el horizonte: fija la
-    # primera ancla de build_rows. Si no es anterior a A, build_rows global no tiene
-    # la ventana A (su rango empieza en A+paso). Se anade a su lista: por ser la mas
-    # antigua y no estar ya en ella, cae fuera de toda ventana de A.
-    if primera is not None:
-        if primera.timestamp >= ancla:
-            return None
-        if not any(primera is x for x in rp) and not any(primera is x for x in ra):
-            if hasattr(primera, "kind"):
-                ra = [primera] + ra
-            else:
-                rp = [primera] + rp
+    # ``base``: una observacion de la entidad anterior a A en su horizonte, si existe.
+    # ``primera`` (la mas antigua del horizonte) o, en el motor, la mas antigua de
+    # (A-60, A] y, solo si todo cae justo en A, ``buscar_anterior()`` sobre el horizonte.
+    base = primera
+    if base is None:
+        base = min((x for x in list(lp) + list(la) if ancla - REGISTRO_S < x.timestamp <= ancla),
+                   key=lambda x: x.timestamp)
+        if base.timestamp >= ancla and buscar_anterior is not None:
+            base = buscar_anterior() or base
+    if base.timestamp >= ancla:
+        return None  # la global empieza su rango en A+paso: no hay ventana A
+    rp = [p for p in lp if ancla - 30 < p.timestamp <= ancla]
+    ra = [a for a in la if ancla - 60 < a.timestamp <= ancla]
+    if min((x.timestamp for x in rp + ra), default=math.inf) >= ancla:
+        if hasattr(base, "kind"):
+            ra = [reemplazar(base, timestamp=ancla - 60)] + ra
+        else:
+            rp = [reemplazar(base, timestamp=ancla - 30)] + rp
     ultima_p = max(rp, key=lambda x: x.timestamp) if rp else None
     ultima_a = max(ra, key=lambda x: x.timestamp) if ra else None
     t_max = max(x.timestamp for x in (ultima_p, ultima_a) if x is not None)

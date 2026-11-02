@@ -12,6 +12,7 @@ entidades excluidas, ventanas que expiran sin sus PCAP y reinicios.
 from __future__ import annotations
 
 import ipaddress
+import math
 import json
 import random
 import struct
@@ -89,6 +90,58 @@ class Deduplicacion(unittest.TestCase):
                 got, got_q = d.actualizar(anillo, llegada)
                 self.assertEqual(got_q, ref_q, f"semilla {semilla} ciclo {ciclo}")
                 self.assertEqual([id(p) for p in got], [id(p) for p in ref], f"semilla {semilla} ciclo {ciclo}")
+
+    def test_deslizar_igual_a_la_global_con_atribucion(self):
+        """Via por deltas (pendiente 2): Deduplicador.deslizar + Atribuidor.deslizar dan lo mismo
+        que deduplicar_espejo + attribute_packets sobre todo el horizonte [corte, ...], con copias
+        del espejo, tramas desordenadas, llegadas tardias (anteriores a lo ya presente), varias
+        anclas por ciclo sin llegadas y llegadas ya fuera del horizonte."""
+        for semilla in range(40):
+            rnd = random.Random(500 + semilla)
+            d = inc.Deduplicador(v3.deduplicar_espejo)
+            at = inc.Atribuidor(v2.attribute_packets, v2.canonical_flow_key)
+            buffer, llegada, llegada_p, n = [], {}, {}, 0
+            pendientes_llegar: list = []
+            diferidas: list = []
+            corte = -1e9
+            for ciclo in range(14):
+                nuevas = sorted(trafico(rnd, ciclo * 5.0, ciclo * 5.0 + 5.0, 50), key=lambda c: c.packet.timestamp)
+                if len(nuevas) > 3 and rnd.random() < 0.5:
+                    nuevas[1], nuevas[2] = nuevas[2], nuevas[1]
+                # copia del espejo que llega en el fichero SIGUIENTE: la de TTL 63 se conserva
+                # hasta que llega la de TTL 64 y entonces pasa a descartada (cambio de estado)
+                nuevas += diferidas
+                diferidas = []
+                for c in rnd.sample(nuevas, min(4, len(nuevas))):
+                    p = c.packet
+                    a63 = v3.FrameContext(v2.ParsedPacket(**{**p.__dict__, "ttl": 63}), 30, 777 + ciclo)
+                    b64 = v3.FrameContext(v2.ParsedPacket(**{**p.__dict__, "ttl": 64,
+                                                             "timestamp": p.timestamp + 0.0002}), 20, 777 + ciclo)
+                    nuevas.append(a63)
+                    diferidas.append(b64)
+                if rnd.random() < 0.3:  # fichero retrasado: tramas de hace 8-12 s
+                    nuevas += trafico(rnd, ciclo * 5.0 - 12.0, ciclo * 5.0 - 8.0, 10)
+                for c in nuevas:
+                    llegada[id(c)] = n
+                    llegada_p[id(c.packet)] = n
+                    n += 1
+                buffer.extend(nuevas)
+                pendientes_llegar.extend(nuevas)
+                for _ in range(rnd.choice([1, 1, 2, 3])):  # anclas del ciclo
+                    corte = max(corte, ciclo * 5.0 - 20.0 + rnd.uniform(0, 4))
+                    horizonte = [c for c in buffer if c.packet.timestamp >= corte]
+                    ref_paq, ref_q = v3.deduplicar_espejo(horizonte)
+                    ref_obs = v2.attribute_packets(ref_paq, RED)
+                    paq, q, entran, salen = d.deslizar(corte, pendientes_llegar, llegada)
+                    pendientes_llegar = []
+                    obs = at.deslizar(paq, entran, salen, RED, lambda p: (p.timestamp, llegada_p[id(p)]))
+                    msg = f"semilla {semilla} ciclo {ciclo}"
+                    self.assertEqual(q, ref_q, msg)
+                    self.assertEqual([id(p) for p in paq], [id(p) for p in ref_paq], msg)
+                    self.assertEqual(obs, ref_obs, msg)
+                    # las observaciones salen en orden de tiempo (el motor biseca sobre ellas)
+                    self.assertEqual([o.timestamp for o in obs], sorted(o.timestamp for o in obs), msg)
+                buffer = [c for c in buffer if c.packet.timestamp >= corte - rnd.uniform(0, 3)]
 
     def test_copia_que_llega_en_el_fichero_siguiente(self):
         # La primera copia (TTL 63) queda conservada mientras la segunda no ha llegado;
@@ -197,6 +250,60 @@ class FilasPendientes(unittest.TestCase):
                 self.assertEqual(filas, [f for f in ref if f["window_end_utc"] >= corte], f"semilla {semilla} {e}")
                 self.assertTrue(all(f in filas for f in necesarias), f"semilla {semilla} {e}")
                 self.assertEqual(necesarias[0]["window_end_utc"], corte)
+
+    def test_fila_de_ancla_igual_a_build_rows_global_del_horizonte(self):
+        """Optimizacion de fila_de_ancla (pendiente 2): la fila A es identica a la de build_rows
+        sobre TODO el horizonte [A-230, ...] de la entidad, en todos los casos limite: solo
+        paquetes en (A-60, A-30], contenido justo en A, solo L7, primera justo en A, huecos."""
+        from dataclasses import replace
+        H = 230
+        n = 0
+        for semilla in range(80):
+            rnd = random.Random(1000 + semilla)
+            t0 = 1_793_000_000 + rnd.choice([0.0, rnd.uniform(0, 10)])
+            e = "10.10.20.21"
+            lp, la = [], []
+            for _ in range(rnd.randint(1, 4)):  # rafagas separadas por huecos
+                a = t0 + rnd.uniform(0, 400)
+                p_, a_ = observaciones(rnd, e, a, a + rnd.choice([0.5, 5, 40]), rnd.choice([0, 1, 30]),
+                                       rnd.choice([0, 0, 1, 8]))
+                lp += p_
+                la += a_
+            # marcas justo en la reticula
+            for x in rnd.sample(lp, min(3, len(lp))):
+                lp.append(replace(x, timestamp=float(math.ceil(x.timestamp / PASO) * PASO)))
+            if not lp and not la:
+                continue
+            lp.sort(key=lambda o: o.timestamp)
+            ts = [o.timestamp for o in lp + la]
+            for ancla in range(int(math.floor(min(ts) / PASO)) * PASO, int(math.ceil(max(ts) / PASO)) * PASO + 70, PASO):
+                hp = [o for o in lp if o.timestamp >= ancla - H]
+                ha = [o for o in la if o.timestamp >= ancla - H]
+                if not hp and not ha:
+                    continue
+                primera = min(hp + ha, key=lambda o: o.timestamp)
+                cs = primera.timestamp - rnd.choice([0.0, 30.0, 300.0])
+                lp60 = [o for o in hp if ancla - inc.REGISTRO_S < o.timestamp <= ancla]
+                la60 = [o for o in ha if ancla - 60 < o.timestamp <= ancla]
+                fila = inc.fila_de_ancla(v2.build_rows, lp60, la60, ancla, PASO, cs, replace, primera=primera)
+                # via del motor: sin primera; solo si todo cae justo en A busca una anterior
+                anterior = next((o for o in hp if o.timestamp <= ancla - inc.REGISTRO_S),
+                                next((o for o in ha if o.timestamp < ancla), None))
+                fila_motor = inc.fila_de_ancla(v2.build_rows, lp60, la60, ancla, PASO, cs, replace,
+                                               buscar_anterior=lambda: anterior)
+                self.assertEqual(fila_motor, fila, f"via del motor: semilla {semilla} ancla {ancla}")
+                if not lp60 and not la60:
+                    self.assertIsNone(fila)
+                    continue
+                rp, ra = list(hp), list(ha)
+                if max(o.timestamp for o in rp + ra) <= ancla - PASO:
+                    ult = max(rp + ra, key=lambda o: o.timestamp)
+                    (rp if any(ult is o for o in rp) else ra).append(replace(ult, timestamp=ancla + PASO / 2))
+                ref = [f for f in v2.build_rows("motor-live", rp, ra, step_seconds=PASO, capture_start=cs)
+                       if f["window_end_utc"] == inc.clave_ventana(ancla)]
+                self.assertEqual(fila, ref[0] if ref else None, f"semilla {semilla} ancla {ancla}")
+                n += 1
+        self.assertGreater(n, 500)
 
     def test_anclas_de_entidad_excluida(self):
         rnd = random.Random(3)
