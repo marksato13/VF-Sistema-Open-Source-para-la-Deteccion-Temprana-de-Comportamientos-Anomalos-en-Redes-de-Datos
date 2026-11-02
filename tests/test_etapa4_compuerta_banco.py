@@ -107,7 +107,16 @@ class Lab:
                 return 255, "", "ssh: connect to host kali port 22: Connection timed out", t0, time.time()
             tmpf = self.permiso.with_suffix(".tmp")
             tmpf.write_text(entrada, encoding="utf-8")
-            os.replace(tmpf, self.permiso)
+            # En Windows, sustituir el fichero mientras el generador lo lee da PermissionError (en la Kali, Linux,
+            # mv -f es atómico). Se reintenta; si no se puede, el canal «falla» (rc 1) y el permiso no se renueva.
+            for _ in range(20):
+                try:
+                    os.replace(tmpf, self.permiso)
+                    break
+                except PermissionError:
+                    time.sleep(0.01)
+            else:
+                return 1, "", "no se pudo instalar el permiso", t0, time.time()
             n = int(orden.split()[-1])
             lineas = [json.dumps(m) for m in marcas(self.tmp)][n - 1:]
             return 0, f"{time.time()}\n" + "".join(l + "\n" for l in lineas), "", t0, time.time()
@@ -116,7 +125,9 @@ class Lab:
 
 def crit_banco():
     c = dict(vg.CRIT)
-    c.update(intervalo_s=0.1, validez_s=1.0, reanudar_limpio_s=1.0, historia_motor_s=0.5, cada_srvdmz_s=0.3)
+    # validez 3 s (30 rondas): con 1 s, una ronda lenta por carga de la máquina dejaba caducar el permiso y el
+    # generador pausaba por «caducado» (correcto, fallo cerrado), lo que hacía la prueba dependiente de la carga
+    c.update(intervalo_s=0.1, validez_s=3.0, reanudar_limpio_s=1.0, historia_motor_s=0.5, cada_srvdmz_s=0.3)
     return c
 
 
@@ -164,8 +175,14 @@ def test_pausa_impide_el_siguiente_y_reanudar_mantiene_el_orden(tmp_path):
     # la causa P1 dura una ronda; después el permiso sigue en pausa por la regla de reanudación (5 min, a escala)
     rondas = [json.loads(l) for l in (tmp_path / "vigia" / "vigia.jsonl").read_text(encoding="utf-8").splitlines()]
     assert any(c.startswith("P1") for r in rondas if r.get("evento") == "ronda" for c in r["permiso"]["causas"])
-    assert all("P1" in p["motivo"] or "reanudación" in p["motivo"] or "historia del motor" in p["motivo"]
-               for p in pausas)
+    # además, al arrancar, el generador rechaza el permiso que el vigía emitió antes de su arranque, y en Windows
+    # una lectura que coincide con la sustitución del fichero da «permiso ilegible»: las dos son pausas de fallo
+    # cerrado, no permisos concedidos
+    transitorios = ("antes del arranque", "permiso ilegible")
+    assert all(any(k in p["motivo"] for k in ("P1", "reanudación", "historia del motor") + transitorios)
+               for p in pausas), [p["motivo"] for p in pausas]
+    pausas = [p for p in pausas if not any(k in p["motivo"] for k in transitorios)]
+    assert pausas
     # entre la primera pausa y su reanudación no se lanzó ningún episodio
     i_p = ms.index(pausas[0])
     i_r = next(i for i, m in enumerate(ms) if m.get("evento") == "reanudacion" and i > i_p)
