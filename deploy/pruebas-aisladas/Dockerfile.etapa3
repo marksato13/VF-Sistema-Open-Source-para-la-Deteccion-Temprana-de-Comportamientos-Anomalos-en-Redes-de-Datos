@@ -1,0 +1,8 @@
+# Banco de la Etapa 3: banco :3 + captura y reproducción (tcpdump, tcpreplay) y Suricata,
+# para medir offline y en tiempo real (sobre una veth del contenedor) las vías rápidas de
+# detección de escaneo. Sin red del laboratorio: usar con --network none (las veth se
+# crean dentro del contenedor con --privileged o --cap-add NET_ADMIN).
+# Construir: docker build -t cyberflow-etapa3-banco:1 -f deploy/pruebas-aisladas/Dockerfile.etapa3 deploy/pruebas-aisladas
+FROM cyberflow-etapa2-banco:3
+RUN apt-get update && apt-get install -y --no-install-recommends tcpdump tcpreplay suricata \
+    && rm -rf /var/lib/apt/lists/*
