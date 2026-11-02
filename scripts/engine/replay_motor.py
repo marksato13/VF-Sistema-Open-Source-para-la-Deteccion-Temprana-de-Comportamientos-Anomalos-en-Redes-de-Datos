@@ -82,7 +82,8 @@ def memoria_mb() -> dict:
             psapi = ctypes.WinDLL("psapi", use_last_error=True)
             psapi.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(PMC), wintypes.DWORD]
             psapi.GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb)
-            return {"rss_mb": round(c.WorkingSetSize / 2**20, 1), "pico_mb": round(c.PeakWorkingSetSize / 2**20, 1)}
+            return {"rss_mb": round(c.WorkingSetSize / 2**20, 1), "pico_mb": round(c.PeakWorkingSetSize / 2**20, 1),
+                    "privada_mb": round(c.PagefileUsage / 2**20, 1), "fallos_pagina": c.PageFaultCount}
         import resource
         pico = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
         with open("/proc/self/statm") as fh:
@@ -90,6 +91,64 @@ def memoria_mb() -> dict:
         return {"rss_mb": round(rss, 1), "pico_mb": round(pico, 1)}
     except Exception:  # noqa: BLE001 - la medida nunca para el replay
         return {}
+
+
+class _Sistema:
+    """Carga del equipo durante el replay (Windows): CPU ocupada de TODO el sistema entre dos
+    lecturas, memoria fisica disponible, carga de memoria y confirmacion (memoria virtual,
+    incluido el fichero de paginacion). En otros sistemas, loadavg y /proc/meminfo."""
+
+    def __init__(self) -> None:
+        self._prev = self._tiempos()
+
+    @staticmethod
+    def _tiempos():
+        try:
+            if os.name == "nt":
+                import ctypes
+                from ctypes import wintypes
+                i, k, u = wintypes.FILETIME(), wintypes.FILETIME(), wintypes.FILETIME()
+                ctypes.windll.kernel32.GetSystemTimes(ctypes.byref(i), ctypes.byref(k), ctypes.byref(u))
+                f = lambda x: (x.dwHighDateTime << 32) | x.dwLowDateTime  # noqa: E731
+                return f(i), f(k), f(u)  # kernel incluye idle
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+
+    def leer(self) -> dict:
+        r: dict = {}
+        try:
+            if os.name == "nt":
+                import ctypes
+                from ctypes import wintypes
+                act = self._tiempos()
+                if act and self._prev:
+                    di, dk, du = (a - b for a, b in zip(act, self._prev))
+                    total = dk + du
+                    if total > 0:
+                        r["cpu_sistema_pct"] = round(100.0 * (total - di) / total, 1)
+                self._prev = act
+
+                class MS(ctypes.Structure):
+                    _fields_ = [("dwLength", wintypes.DWORD), ("dwMemoryLoad", wintypes.DWORD),
+                                ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                                ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                                ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                                ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+                m = MS(); m.dwLength = ctypes.sizeof(MS)
+                ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m))
+                r.update({"mem_carga_pct": m.dwMemoryLoad, "mem_disponible_mb": round(m.ullAvailPhys / 2**20),
+                          "confirmada_mb": round((m.ullTotalPageFile - m.ullAvailPageFile) / 2**20),
+                          "limite_confirmacion_mb": round(m.ullTotalPageFile / 2**20)})
+            else:
+                r["loadavg_1m"] = os.getloadavg()[0]
+                with open("/proc/meminfo") as fh:
+                    mi = {l.split(":")[0]: int(l.split()[1]) for l in fh}
+                r.update({"mem_disponible_mb": mi["MemAvailable"] // 1024,
+                          "swap_usada_mb": (mi["SwapTotal"] - mi["SwapFree"]) // 1024})
+        except Exception:  # noqa: BLE001 - la medida nunca para el replay
+            pass
+        return r
 
 
 class _Fin(Exception):
@@ -148,6 +207,8 @@ class Simulacion:
         self.etapas: collections.Counter = collections.Counter()
         self.llamadas: collections.Counter = collections.Counter()
         self.t_inicio_ciclo = tiempo_real.perf_counter()
+        self.cpu_inicio_ciclo = tiempo_real.process_time()
+        self.sistema = _Sistema()
         self.arranque = True
         self.desp: list[int] = []
         self.escrita: list[float] = []
@@ -171,12 +232,14 @@ class Simulacion:
         dur = tiempo_real.perf_counter() - self.t_inicio_ciclo
         etapas = {k: round(v, 4) for k, v in self.etapas.items()}
         reg = {"t": self.ahora, "hora": dt.datetime.fromtimestamp(self.ahora, dt.timezone.utc).strftime("%H:%M:%S"),
-               "dur_s": round(dur, 4), "arranque": self.arranque}
+               "dur_s": round(dur, 4), "cpu_s": round(tiempo_real.process_time() - self.cpu_inicio_ciclo, 4),
+               "arranque": self.arranque}
         if self.a.perfilar:
             reg["etapas"] = etapas
             reg["llamadas"] = dict(self.llamadas)
             reg["resto_s"] = round(dur - sum(self.etapas.values()), 4)
         reg.update(memoria_mb())
+        reg.update(self.sistema.leer())
         self.salida_ciclos.write(json.dumps(reg) + "\n")
         self.salida_ciclos.flush()
         self.etapas.clear()
@@ -192,14 +255,20 @@ class Simulacion:
             self.reinicios.pop(0)
             raise _Reinicio()
         self.t_inicio_ciclo = tiempo_real.perf_counter()
+        self.cpu_inicio_ciclo = tiempo_real.process_time()
 
     # --- espera del motor con reloj de coste ------------------------------
     def esperar_siguiente_ciclo(self, args, inicio_ciclo: float, ya_leidos) -> str:
         fin = self.time()
         dur = tiempo_real.perf_counter() - self.t_inicio_ciclo
         reg = {"t": self.ahora, "hora": dt.datetime.fromtimestamp(self.ahora, dt.timezone.utc).strftime("%H:%M:%S"),
-               "dur_s": round(dur, 4), "fin_sim": round(fin, 4), "arranque": self.arranque}
+               "dur_s": round(dur, 4), "cpu_s": round(tiempo_real.process_time() - self.cpu_inicio_ciclo, 4),
+               "fin_sim": round(fin, 4), "arranque": self.arranque}
+        if self.a.perfilar:
+            reg["etapas"] = {k: round(v, 4) for k, v in self.etapas.items()}
+            reg["llamadas"] = dict(self.llamadas)
         reg.update(memoria_mb())
+        reg.update(self.sistema.leer())
         self.salida_ciclos.write(json.dumps(reg) + "\n")
         self.salida_ciclos.flush()
         self.etapas.clear()
@@ -357,6 +426,7 @@ def main() -> int:
         while True:
             sim.arranque = True
             sim.t_inicio_ciclo = tiempo_real.perf_counter()
+            sim.cpu_inicio_ciclo = tiempo_real.process_time()
             print(json.dumps({"evento": "arranque_motor", "t": sim.ahora}), file=sys.stderr, flush=True)
             try:
                 m.main()
