@@ -166,8 +166,11 @@ class RutasClasificadas(unittest.TestCase):
 
         # /api/acciones: el historial de LIMIT/BLOCK. Lo ve tambien el lector,
         # porque es la misma informacion de «IPs bloqueadas» y de las decisiones.
+        # /api/escenario: las decisiones y la entrada del feed de UNA IP; es un
+        # subconjunto de /api/decisions y /api/status, asi que tambien es operativa.
         operativas = {"/", "/login", "/api/status", "/api/decisions",
-                      "/api/activity", "/api/score-histogram", "/api/acciones"}
+                      "/api/activity", "/api/score-histogram", "/api/acciones",
+                      "/api/escenario"}
         sin_clasificar = rutas - dash.RUTAS_ADMIN - operativas
         self.assertEqual(sin_clasificar, set(),
                          "rutas sin decidir quien las ve: %s" % sin_clasificar)

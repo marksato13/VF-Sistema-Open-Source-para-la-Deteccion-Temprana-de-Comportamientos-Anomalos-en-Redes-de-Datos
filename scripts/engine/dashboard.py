@@ -22,6 +22,7 @@ import argparse
 import base64
 import hashlib
 import hmac
+import ipaddress
 import json
 import secrets
 import ssl
@@ -774,6 +775,52 @@ HTML = """<!doctype html>
   @media (max-width: 900px) { .act-cols { grid-template-columns: 1fr; } }
   .act-h { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin: 0 0 0.45rem; font-weight: 600; }
 
+  /* --- Escenario en vivo: un ataque por capa seguido de punta a punta --- */
+  .esc-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.6rem; margin: 0.8rem 0 1rem; }
+  .esc-card { text-align: left; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.7rem 0.8rem; color: var(--text); cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; font: inherit; }
+  .esc-card:hover { border-color: var(--accent); }
+  .esc-card.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .esc-card b { font-size: 14px; }
+  .esc-card small { color: var(--text-dim); font-size: 12px; }
+  .esc-capa { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+  .esc-card.fp .esc-capa { color: var(--amber); }
+  .esc-det { display: grid; grid-template-columns: 1.3fr 1fr; gap: 0.8rem; }
+  @media (max-width: 900px) { .esc-det { grid-template-columns: 1fr; } }
+  .esc-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; }
+  .esc-box h3 { margin: 0 0 0.4rem; font-size: 14px; }
+  .esc-box p { margin: 0.3rem 0; font-size: 13.5px; }
+  .esc-box .k { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .esc-cmd { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0.4rem 0; }
+  .esc-cmd code { flex: 1; white-space: pre-wrap; word-break: break-all; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.45rem 0.6rem; font-family: var(--mono); font-size: 12.5px; }
+  .esc-guion ol { margin: 0.2rem 0 0 1.1rem; padding: 0; font-size: 13.5px; }
+  .esc-guion li { margin: 0.3rem 0; }
+  .esc-ctl { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 1rem 0 0.6rem; }
+  .esc-ctl label { font-size: 13px; color: var(--text-dim); display: flex; gap: 0.4rem; align-items: center; }
+  .esc-reloj { font-family: var(--mono); font-size: 22px; color: var(--accent); margin-left: auto; }
+  .esc-estado { font-size: 13px; color: var(--text-dim); }
+  .esc-pasos { list-style: none; margin: 0.4rem 0 1rem; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; }
+  @media (max-width: 1100px) { .esc-pasos { grid-template-columns: 1fr; } }
+  .esc-paso { background: var(--surface-2); border: 1px solid var(--border); border-top: 4px solid var(--border);
+    border-radius: 10px; padding: 0.6rem 0.7rem; font-size: 13px; min-height: 120px; }
+  .esc-paso h4 { margin: 0 0 0.3rem; font-size: 13.5px; display: flex; justify-content: space-between; gap: 0.4rem; }
+  .esc-paso .n { font-family: var(--mono); color: var(--text-dim); font-size: 11px; }
+  .esc-paso .t { font-family: var(--mono); color: var(--text-dim); font-size: 12px; display: block; margin-top: 0.3rem; }
+  .esc-paso .dnd { display: block; margin-top: 0.35rem; font-size: 11.5px; color: var(--text-dim); }
+  .esc-paso.ok { border-top-color: var(--ok); }
+  .esc-paso.espera { border-top-color: var(--amber); animation: escPulso 1.6s ease-in-out infinite; }
+  .esc-paso.ext { border-top-color: var(--accent); border-style: dashed; }
+  .esc-paso.inactivo { opacity: 0.6; }
+  @keyframes escPulso { 50% { box-shadow: 0 0 0 3px var(--amber-soft); } }
+  .esc-filas { display: flex; flex-direction: column; gap: 0.3rem; max-height: 360px; overflow: auto; }
+  .esc-fila { display: grid; grid-template-columns: 78px 72px 74px 1fr; gap: 0.5rem; align-items: center; font-size: 12.5px;
+    padding: 0.3rem 0.5rem; border-radius: 6px; background: var(--surface-2); }
+  .esc-fila .hora { font-family: var(--mono); color: var(--text-dim); }
+  .esc-fila.nueva { animation: escNueva 2s ease-out; }
+  @keyframes escNueva { from { background: #134e4a; } }
+  .tag-marg { font-size: 10.5px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 4px; padding: 0 0.3rem; margin-left: 0.3rem; }
+  @media (prefers-reduced-motion: reduce) { .esc-paso.espera, .esc-fila.nueva { animation: none; } }
   /* Alertas flotantes: una por IP y accion, apiladas arriba a la derecha. */
   .toasts { position: fixed; top: 16px; right: 16px; z-index: 400; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
   .toast { pointer-events: auto; background: var(--surface-2); border: 1px solid var(--border); border-left: 5px solid var(--amber);
@@ -947,6 +994,7 @@ HTML = """<!doctype html>
   <nav id="nav">
     <div class="nav-grupo">Operación</div>
     <a href="#s-salud" data-sec="s-salud"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>Resumen</a>
+    <a href="#s-escenario" data-sec="s-escenario"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10,8 16,12 10,16"/></svg>Escenario en vivo</a>
     <a href="#s-actividad" data-sec="s-actividad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg>Actividad</a>
     <a href="#s-alertas" data-sec="s-alertas"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>Alertas<span class="pill" id="navAlertPill" hidden></span></a>
     <a href="#s-decisiones" data-sec="s-decisiones"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>Decisiones</a>
@@ -1002,6 +1050,24 @@ HTML = """<!doctype html>
       <div class="grid" id="health"></div>
     </details>
   </section>
+
+  <section id="s-escenario">
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10,8 16,12 10,16"/></svg><h2>Escenario en vivo</h2></div>
+    <p class="lede-small">Elige un escenario, lanza su comando y pulsa «Iniciar». El panel sigue a esa IP de la detección a la publicación.</p>
+    <div class="esc-cards" id="escCards"></div>
+    <div class="esc-det" id="escDet"></div>
+    <div class="esc-ctl">
+      <label>IP a seguir <input type="text" id="escIp" class="ip-filter" autocomplete="off" spellcheck="false"></label>
+      <button type="button" class="btn-sec" id="escIniciar">Iniciar seguimiento</button>
+      <button type="button" class="btn-sec neutro" id="escParar" hidden>Terminar</button>
+      <span class="esc-estado" id="escEstado"></span>
+      <span class="esc-reloj" id="escReloj"></span>
+    </div>
+    <ol class="esc-pasos" id="escPasos"></ol>
+    <p class="act-h">Ventanas de la IP <span class="th-sub" id="escFilasSub">en vivo, cada 3 s</span></p>
+    <div class="esc-filas" id="escFilas"></div>
+  </section>
+
 
   <!--ADMIN-->
   <section id="s-topologia">
@@ -1323,6 +1389,7 @@ HTML = """<!doctype html>
         </span></label>
       <input type="text" id="alertasIp" class="ip-filter" placeholder="Filtrar por IP..." aria-label="Filtrar alertas por IP">
       <button type="button" class="btn-sec neutro" id="alertasLimpiar">Limpiar filtros</button>
+      <button type="button" class="btn-sec neutro" id="alertasMarg" aria-pressed="false" title="Anomalías solo del modelo con el score a menos de 0,02 del umbral">Marginales: ocultas</button>
     </div>
     <div class="alertas-lista" id="alertasLista"></div>
   </section>
@@ -1575,6 +1642,248 @@ function markSeenAndCountNewAlerts(decisions) {
   }
 }
 
+// ---- Anomalias marginales ------------------------------------------------
+// Una anomalia SOLO del modelo cuyo score queda a menos de MARGEN_MARGINAL por
+// debajo del umbral. Es real (esta en el registro y su LIMIT se publica), pero
+// es ruido de borde: no se avisa con tarjeta flotante y Alertas la agrupa,
+// diciendo siempre cuantas hay. Una regla disparada nunca es marginal.
+const MARGEN_MARGINAL = 0.02;
+function esMarginal(d) {
+  if (!d || d.decision !== 'ALERT' || String(d.detector_name || '').endsWith('_heuristic')) return false;
+  if (d.heuristico && (d.heuristico.accion === 'BLOCK' || d.heuristico.accion === 'LIMIT')) return false;
+  if (d.score == null || d.threshold == null) return false;
+  return d.score >= d.threshold - MARGEN_MARGINAL;
+}
+let verMarginales = false;
+
+// ---- Escenario en vivo -------------------------------------------------------
+// Un escenario por capa (y uno de falso positivo). El panel NO ejecuta nada:
+// muestra el comando y sigue a la IP con /api/escenario cada 3 s. La aplicacion
+// en el host no se afirma: el panel no lee el nftables del servidor.
+const ESC_CATALOGO = [
+  { id: 'l3', capa: 'L3 · Red', tipo: 'ataque', nombre: 'Inundación ICMP',
+    simula: 'Un equipo comprometido satura al servidor con pings: denegación de servicio a nivel de red, sin puertos ni aplicación.',
+    desde: 'Kali · 10.10.20.30 (pide la contraseña de sudo)', ip: '10.10.20.30',
+    comando: 'sudo hping3 --icmp -i u2000 -c 30000 10.10.30.10',
+    espera: 'No hay regla de capa 3: solo el modelo puede verlo, por el volumen de paquetes. Si lo marca, la acción es LIMIT. Es el caso que se mide hoy.',
+    guion: ['Empezamos por la capa de red: un torrente de ICMP contra el servidor.',
+            'Aquí no hay regla que lo reconozca. Si se detecta, es el modelo quien lo ve.',
+            'Miren el score de cada ventana frente al umbral: a la izquierda, anómalo.'] },
+  { id: 'l4', capa: 'L4 · Transporte', tipo: 'ataque', nombre: 'Escaneo de puertos',
+    simula: 'Reconocimiento: el atacante prueba miles de puertos TCP del servidor para ver cuáles están abiertos.',
+    desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
+    comando: 'nmap -sT -T4 --max-retries 1 -p 1-3000 --open 10.10.30.10',
+    espera: 'Regla port_scan → BLOCK (5 min la primera vez). El modelo suele coincidir: «modelo y regla».',
+    guion: ['Capa de transporte: un escaneo de puertos, el primer paso de casi cualquier intrusión.',
+            'La regla reconoce el patrón: muchos intentos y casi ninguna conexión completa.',
+            'La acción es BLOCK, con caducidad. El sensor la publica; quien corta es el servidor.'] },
+  { id: 'l7', capa: 'L7 · Aplicación', tipo: 'ataque', nombre: 'Abuso HTTP (flood)',
+    simula: 'Cientos de peticiones web en segundos desde una sola IP, como un bot que satura la aplicación.',
+    desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
+    comando: 'seq 1 250 | xargs -P10 -I{} curl -s -o /dev/null http://10.10.30.10/',
+    espera: 'Regla http_abuse → LIMIT: degrada la tasa, no corta.',
+    guion: ['Capa de aplicación: el mismo servidor web, pero ahora abusado con peticiones legítimas en forma.',
+            'Cada petición es válida; lo anómalo es la tasa. La regla http_abuse lo reconoce.',
+            'La respuesta es LIMIT: se frena a la IP sin cortarla.'] },
+  { id: 'l7dns', capa: 'L7 · Aplicación', tipo: 'ataque', nombre: 'DNS de alta entropía (DGA)',
+    simula: 'Malware que busca su servidor de control consultando nombres aleatorios que no existen.',
+    desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
+    comando: 'for i in $(seq 1 80); do r=$(head -c6 /dev/urandom | od -An -tx1 | tr -d " \\n"); dig +short ${r}.francos-sac.com @10.10.10.20 >/dev/null 2>&1; sleep 0.5; done',
+    espera: 'Regla dns_entropy → LIMIT. El modelo suele verlo normal: por eso hay reglas además del modelo. También puede aparecer el resolutor 10.10.10.20.',
+    guion: ['Otra forma de capa 7: nombres de dominio aleatorios, la huella de un malware que busca a su controlador.',
+            'El modelo lo ve casi normal. La regla de entropía DNS, no.',
+            'Modelo y reglas se complementan: ninguno de los dos ve todo.'] },
+  { id: 'fp', capa: 'L7 · Aplicación', tipo: 'falso positivo', nombre: 'Ráfaga legítima de un cliente',
+    simula: 'Un usuario real que sincroniza o descarga mucho de golpe. No es un ataque, pero se parece a uno.',
+    desde: 'VM clientes · 10.10.20.21', ip: '10.10.20.21',
+    comando: 'seq 1 250 | xargs -P10 -I{} curl -s -o /dev/null --interface 10.10.20.21 http://10.10.30.10/',
+    espera: 'Puede recibir LIMIT: es un falso positivo. Por eso LIMIT no corta, caduca solo a los 5 min y nunca es indefinido.',
+    guion: ['Ahora un caso honesto: tráfico de un usuario legítimo, solo que intenso.',
+            'Si el sistema lo marca, es un falso positivo. Lo mostramos a propósito.',
+            'Por diseño la respuesta es proporcional: LIMIT temporal, no un corte permanente.'] },
+];
+
+let esc = null;                  // {id, ip, t0} mientras hay seguimiento
+try { esc = JSON.parse(localStorage.getItem('cf_escenario') || 'null'); } catch (e) { esc = null; }
+let escSel = (esc && esc.id) || 'l4';
+let escDatos = null, escFeedVisto = null, escVistas = new Set(), escError = '';
+function escActivo() { return !!(esc && esc.t0 && esc.ip); }
+function escGuardar() { try { localStorage.setItem('cf_escenario', JSON.stringify(esc)); } catch (e) { /* sin persistir */ } }
+function escMmss(s) { s = Math.max(0, Math.round(s)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+function escDelta(t) { return escActivo() && t ? ' · +' + escMmss(t - esc.t0) : ''; }
+
+function renderEscCards() {
+  const cont = document.getElementById('escCards');
+  if (!cont) return;
+  cont.innerHTML = ESC_CATALOGO.map(s => '<button type="button" class="esc-card' + (s.id === escSel ? ' sel' : '')
+    + (s.tipo === 'falso positivo' ? ' fp' : '') + '" data-esc="' + s.id + '">'
+    + '<span class="esc-capa">' + varEsc(s.capa) + '</span><b>' + varEsc(s.nombre) + '</b>'
+    + '<small>' + (s.tipo === 'falso positivo' ? 'escenario de falso positivo' : 'ataque simulado') + '</small></button>').join('');
+}
+
+function renderEscDetalle() {
+  const det = document.getElementById('escDet');
+  const s = ESC_CATALOGO.find(x => x.id === escSel);
+  if (!det || !s) return;
+  det.innerHTML = '<div class="esc-box"><span class="k">' + varEsc(s.capa) + ' · ' + varEsc(s.tipo) + '</span>'
+    + '<h3>' + varEsc(s.nombre) + '</h3><p>' + varEsc(s.simula) + '</p>'
+    + '<p><span class="k">Desde</span> ' + varEsc(s.desde) + '</p>'
+    + '<div class="esc-cmd"><code>' + varEsc(s.comando) + '</code>'
+    + '<button type="button" class="btn-sec neutro esc-copiar" data-cmd="' + varEsc(s.comando) + '">copiar</button></div>'
+    + '<p><span class="k">Qué esperamos</span> ' + varEsc(s.espera) + '</p></div>'
+    + '<div class="esc-box esc-guion"><span class="k">Guion</span><ol>'
+    + s.guion.map(g => '<li>«' + varEsc(g) + '»</li>').join('') + '</ol></div>';
+  const ip = document.getElementById('escIp');
+  if (ip && !escActivo()) ip.value = s.ip;
+}
+
+function escPaso(n, titulo, estado, cuerpo, hora, donde) {
+  return '<li class="esc-paso ' + estado + '"><h4><span>' + titulo + '</span><span class="n">' + n + '</span></h4>'
+    + cuerpo + (hora ? '<span class="t">' + hora + '</span>' : '') + (donde ? '<span class="dnd">' + donde + '</span>' : '') + '</li>';
+}
+
+function renderEscPasos() {
+  const ol = document.getElementById('escPasos');
+  if (!ol) return;
+  const D = escDatos;
+  const activo = escActivo();
+  const ahora = Date.now() / 1000;
+  const filas = (D && D.decisiones) || [];
+  const conAccion = filas.filter(f => f.accion !== 'PERMIT');
+  const claras = conAccion.filter(f => !f.marginal);
+  // 1. Llegan datos
+  let p1;
+  if (!D) p1 = escPaso('1', 'Llegan datos', 'espera', 'Consultando el motor…');
+  else {
+    const edad = D.ultima_decision ? ahora - D.ultima_decision : null;
+    const vivo = edad != null && edad < 30;
+    p1 = escPaso('1', 'Llegan datos', vivo ? 'ok' : 'espera',
+      vivo ? 'Sí: ' + D.decisiones_60s + ' ventanas analizadas en el último minuto, de ' + D.ips_60s + ' IP.'
+           : 'No hay decisiones recientes del motor.',
+      edad != null ? 'última ventana hace ' + Math.round(edad) + ' s' : '', 'Resumen · Actividad');
+  }
+  // 2. Deteccion
+  let p2;
+  if (!activo) p2 = escPaso('2', 'Detección', 'inactivo', 'Pulsa «Iniciar seguimiento» al lanzar el comando.');
+  else if (!filas.length) p2 = escPaso('2', 'Detección', 'espera', 'La IP ' + varEsc(esc.ip) + ' aún no aparece en las ventanas.');
+  else if (!conAccion.length) p2 = escPaso('2', 'Detección', 'espera', filas.length + ' ventana(s) de la IP analizadas; todas normales por ahora.', 'primera ventana ' + fmtTime(filas[filas.length - 1].logged_at) + escDelta(filas[filas.length - 1].logged_at), 'Actividad');
+  else {
+    const pr = (claras.length ? claras : conAccion).reduce((a, b) => (a.logged_at < b.logged_at ? a : b));
+    p2 = escPaso('2', 'Detección', 'ok', 'Detectada: ' + conAccion.length + ' de ' + filas.length + ' ventanas con acción'
+      + (claras.length ? '' : ' (todas marginales)') + '.', 'primera ' + fmtTime(pr.logged_at) + escDelta(pr.logged_at), 'Actividad · Alertas');
+  }
+  // 3. Decision: quien y que
+  let p3;
+  if (!activo || !conAccion.length) p3 = escPaso('3', 'Decisión', activo ? 'espera' : 'inactivo', activo ? 'Esperando una ventana con acción.' : '—');
+  else {
+    const sev = { BLOCK: 2, LIMIT: 1 };
+    const peor = conAccion.reduce((a, b) => ((sev[b.accion] || 0) > (sev[a.accion] || 0) ? b : a));
+    const hayModelo = conAccion.some(f => f.decision === 'ALERT');
+    const hayRegla = conAccion.some(f => f.heuristico && f.heuristico.heuristico);
+    const quien = hayModelo && hayRegla ? 'modelo y regla' : (hayRegla ? 'regla' : 'modelo');
+    const conScore = filas.filter(f => f.score != null);
+    const minimo = conScore.length ? conScore.reduce((a, b) => (a.score < b.score ? a : b)) : null;
+    const regla = conAccion.find(f => f.heuristico && f.heuristico.heuristico);
+    p3 = escPaso('3', 'Decisión', 'ok', '<span class="badge acc-' + peor.accion.toLowerCase() + '">' + peor.accion + '</span> por <b>' + quien + '</b>'
+      + (regla ? '<br>' + varEsc(regla.heuristico.heuristico) + ': ' + varEsc(regla.heuristico.motivo || '') : '')
+      + (minimo ? '<br>score mínimo ' + minimo.score.toFixed(3) + ' · umbral ' + Number(minimo.threshold).toFixed(3) : ''),
+      fmtTime(peor.logged_at) + escDelta(peor.logged_at), 'Alertas · Decisiones');
+  }
+  // 4. Publicacion en el feed firmado
+  let p4;
+  const ent = D && D.feed && D.feed.entrada;
+  if (ent && activo && !escFeedVisto) escFeedVisto = ahora;
+  if (!activo) p4 = escPaso('4', 'Publicación', 'inactivo', '—');
+  else if (ent) p4 = escPaso('4', 'Publicación', 'ok', 'En el feed firmado: <b>' + varEsc(ent.accion) + '</b> · ' + varEsc(ent.motivo || '')
+      + '<br>caduca ' + fmtTime(ent.hasta) + ' · nivel ' + (ent.nivel == null ? '—' : ent.nivel),
+      'feed de las ' + fmtTime(D.feed.generado) + (escFeedVisto ? escDelta(escFeedVisto) : ''), 'Respuestas');
+  else if (D && D.vigente) p4 = escPaso('4', 'Publicación', 'espera', 'Registrada (' + varEsc(D.vigente.accion) + '); esperando el próximo feed (cada 10 s).', '', 'Respuestas');
+  else p4 = escPaso('4', 'Publicación', activo && conAccion.length ? 'espera' : 'inactivo', 'Aún no está en el feed.', D && D.feed ? 'feed de las ' + fmtTime(D.feed.generado) : '');
+  // 5. Aplicacion: fuera del panel, a proposito
+  const p5 = escPaso('5', 'Aplicación en el host', 'ext',
+    ent ? 'El agente del servidor la recoge en ≤ 10 s y la aplica en nftables. El panel no lo afirma: se comprueba en el host.'
+        : 'Solo el agente del servidor sabe si aplicó. El panel no lee su nftables.',
+    '', 'srv-dmz: registro del agente · Kali: nmap → filtered');
+  ol.innerHTML = p1 + p2 + p3 + p4 + p5;
+}
+
+function renderEscFilas() {
+  const cont = document.getElementById('escFilas');
+  const sub = document.getElementById('escFilasSub');
+  if (!cont) return;
+  const filas = (escDatos && escDatos.decisiones) || [];
+  if (sub) sub.textContent = escActivo() ? 'de ' + esc.ip + ' desde ' + fmtTime(esc.t0) + ' · en vivo, cada 3 s'
+    : 'de ' + ((document.getElementById('escIp') || {}).value || '') + ' en los últimos 2 min';
+  if (escError) { cont.innerHTML = '<p class="estado-vacio">No se pudo consultar: ' + varEsc(escError) + '</p>'; return; }
+  if (!filas.length) { cont.innerHTML = '<p class="estado-vacio">Sin ventanas de esta IP en el periodo.</p>'; return; }
+  cont.innerHTML = filas.slice(0, 40).map(f => {
+    const k = f.logged_at + '|' + f.window_end_utc;
+    const nueva = !escVistas.has(k);
+    escVistas.add(k);
+    const mot = f.heuristico && f.heuristico.heuristico ? varEsc(f.heuristico.heuristico) + ': ' + varEsc(f.heuristico.motivo || '')
+      : (f.decision === 'ALERT' ? 'anomalía del modelo' : (f.score == null ? 'sin score (poco tráfico)' : 'normal para el modelo'));
+    return '<div class="esc-fila' + (nueva ? ' nueva' : '') + '"><span class="hora">' + fmtTime(f.logged_at) + '</span>'
+      + '<span><span class="badge acc-' + String(f.accion).toLowerCase() + '">' + f.accion + '</span></span>'
+      + '<span>' + miniBarraScore(f.score) + '</span>'
+      + '<span>' + mot + (f.marginal ? '<span class="tag-marg">marginal</span>' : '') + '</span></div>';
+  }).join('');
+}
+
+function renderEscReloj() {
+  const r = document.getElementById('escReloj');
+  const e = document.getElementById('escEstado');
+  if (r) r.textContent = escActivo() ? escMmss(Date.now() / 1000 - esc.t0) : '';
+  if (e) e.textContent = escActivo() ? 'Siguiendo ' + esc.ip + ' desde las ' + fmtTime(esc.t0) : '';
+  const bI = document.getElementById('escIniciar'), bP = document.getElementById('escParar');
+  if (bI) bI.textContent = escActivo() ? 'Reiniciar' : 'Iniciar seguimiento';
+  if (bP) bP.hidden = !escActivo();
+}
+
+async function escConsultar() {
+  const sec = document.getElementById('s-escenario');
+  const visible = sec && sec.classList.contains('pag-activa');
+  if (!visible && !escActivo()) return;
+  const ip = escActivo() ? esc.ip : ((document.getElementById('escIp') || {}).value || '').trim();
+  if (!ip) return;
+  const desde = escActivo() ? esc.t0 - 5 : Date.now() / 1000 - 120;
+  try {
+    const r = await fetch('/api/escenario?ip=' + encodeURIComponent(ip) + '&desde=' + desde.toFixed(0));
+    const d = await r.json();
+    if (d.error) { escError = d.error; } else { escError = ''; escDatos = d; }
+  } catch (e) { escError = 'sin conexión con el panel'; }
+  renderEscPasos();
+  renderEscFilas();
+}
+
+function escIniciar() {
+  const ip = ((document.getElementById('escIp') || {}).value || '').trim();
+  if (!/^\\d{1,3}(\\.\\d{1,3}){3}$/.test(ip)) { const e = document.getElementById('escEstado'); if (e) e.textContent = 'Escribe una IP válida.'; return; }
+  esc = { id: escSel, ip: ip, t0: Date.now() / 1000 };
+  escFeedVisto = null; escDatos = null; escVistas = new Set();
+  escGuardar(); renderEscReloj(); renderEscPasos(); escConsultar();
+}
+
+on('escCards', 'click', (ev) => {
+  const b = ev.target.closest('.esc-card');
+  if (!b) return;
+  escSel = b.dataset.esc;
+  renderEscCards(); renderEscDetalle();
+  if (!escActivo()) { escDatos = null; escVistas = new Set(); escConsultar(); }
+});
+on('escDet', 'click', async (ev) => {
+  const b = ev.target.closest('.esc-copiar');
+  if (!b) return;
+  try { await navigator.clipboard.writeText(b.dataset.cmd); b.textContent = 'copiado ✓'; }
+  catch (e) { b.textContent = 'copia manual'; }
+  setTimeout(() => { b.textContent = 'copiar'; }, 1500);
+});
+on('escIniciar', 'click', escIniciar);
+on('escParar', 'click', () => { esc = null; escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas(); });
+renderEscCards(); renderEscDetalle(); renderEscReloj(); renderEscPasos();
+if (escActivo()) { const ip = document.getElementById('escIp'); if (ip) ip.value = esc.ip; }
+setInterval(renderEscReloj, 1000);
+setInterval(escConsultar, 3000);
+
 // ---- Alertas flotantes ---------------------------------------------------
 // Una tarjeta por IP y accion, con el motivo. BLOCK se queda hasta cerrarla (o
 // 45 s); LIMIT se va sola a los 15 s. Pulsarla filtra Decisiones por esa IP.
@@ -1614,6 +1923,9 @@ function motivoDeDecision(d) {
 
 function avisar(nuevas) {
   if (!avisosOn) return;
+  nuevas = (nuevas || []).filter(d => !esMarginal(d));
+  if (escActivo()) nuevas = nuevas.filter(d => d.entity_ip === esc.ip);
+  if (!nuevas.length) return;
   const cont = document.getElementById('toasts');
   if (!cont) return;
   const grupos = new Map();
@@ -2328,6 +2640,18 @@ function alertaTipos(d) {
   if (!regla && d.decision === 'ALERT' && esHeur) regla = det.replace(/_heuristic$/, '');
   return { modelo, regla };
 }
+function pintarBotonMarg() {
+  const b = document.getElementById('alertasMarg');
+  if (!b) return;
+  b.textContent = verMarginales ? 'Marginales: visibles' : 'Marginales: ocultas';
+  b.setAttribute('aria-pressed', verMarginales ? 'true' : 'false');
+}
+document.addEventListener('click', (ev) => {
+  if (!ev.target.closest('#alertasMarg, [data-al-marg]')) return;
+  verMarginales = !verMarginales;
+  pintarBotonMarg();
+  renderAlertas();
+});
 function renderAlertas() {
   const lista = document.getElementById('alertasLista');
   const resumen = document.getElementById('alertasResumen');
@@ -2344,9 +2668,13 @@ function renderAlertas() {
   const totalHora = hayCont ? (c.block || 0) + (c.limit || 0) : h.length;
   const nMod = (c.alert_model != null) ? c.alert_model : h.filter(d => alertaTipos(d).modelo).length;
   const nReg = hayCont ? Math.max(0, totalHora - nMod) : h.filter(d => alertaTipos(d).regla).length;
-  resumen.innerHTML = `<div class="al-num ${totalHora ? 'hay' : ''}">${totalHora}</div>`
-    + `<div class="al-num-t">alerta(s) en la última hora`
-    + `<small>${nReg} por reglas · ${nMod} anomalía(s) del modelo · ${h.length} disponible(s) en la lista cargada`
+  const nMargH = (c.alert_model_marginal != null) ? c.alert_model_marginal : h.filter(esMarginal).length;
+  const relev = Math.max(0, totalHora - nMargH);
+  const nRegla = (c.acciones_regla != null) ? c.acciones_regla : h.filter(d => alertaTipos(d).regla).length;
+  resumen.innerHTML = `<div class="al-num ${relev ? 'hay' : ''}">${relev}</div>`
+    + `<div class="al-num-t">alerta(s) relevantes en la última hora`
+    + `<small>${nRegla} con regla · ${Math.max(0, relev - nRegla)} solo del modelo · `
+    + `${nMargH} marginal(es) ${verMarginales ? 'visibles' : 'agrupadas'} (score a menos de 0,02 del umbral)`
     + `</small></div>`;
   // Estados vacios: dependen de por que no hay filas. Una lista filtrada vacia
   // NUNCA permite concluir que el sistema este en PERMIT.
@@ -2361,6 +2689,8 @@ function renderAlertas() {
   if (!(lastDecisions || []).length) { vacio('Todavía no se han recibido registros del motor.'); return; }
   const ipQ = ((document.getElementById('alertasIp') || {}).value || '').trim();
   let rows = todas;
+  const nMargLista = rows.filter(esMarginal).length;
+  if (!verMarginales) rows = rows.filter(d => !esMarginal(d));
   if (alertasFiltro === 'modelo') rows = rows.filter(d => alertaTipos(d).modelo);
   if (alertasFiltro === 'regla') rows = rows.filter(d => alertaTipos(d).regla);
   if (alertasAccion !== 'todas') rows = rows.filter(d => accionDeDecision(d) === alertasAccion);
@@ -2368,7 +2698,8 @@ function renderAlertas() {
   rows = rows.slice(0, 80);
   if (!rows.length) {
     const limpiar = ' <button type="button" class="btn-sec neutro" data-al-limpiar="1">Limpiar filtros</button>';
-    if (ipQ) vacio('No encontramos alertas para esta IP en la lista cargada.', limpiar);
+    if (!verMarginales && nMargLista) vacio('Ahora solo hay anomalías marginales del modelo (' + nMargLista + '): score a menos de 0,02 del umbral.', ' <button type="button" class="btn-sec neutro" data-al-marg="1">Mostrarlas</button>');
+    else if (ipQ) vacio('No encontramos alertas para esta IP en la lista cargada.', limpiar);
     else if (alertasFiltro === 'regla') vacio('No hay alertas de reglas en los registros cargados. Puede haber anomalías del modelo; consulta «Todas».', limpiar);
     else if (alertasFiltro === 'modelo') vacio('No hay anomalías del modelo en los registros cargados. Puede haber alertas de reglas; consulta «Todas».', limpiar);
     else if (alertasAccion !== 'todas') vacio('No hay alertas con ' + alertasAccion + ' en los registros cargados.', limpiar);
@@ -5488,7 +5819,8 @@ function renderSidebar(status) {
   document.getElementById('sideStateText').textContent = texto;
 
   const c = status.counters || {};
-  const alertas = (c.alert_model || 0) + (c.alert_auth_heuristic || 0);
+  const alertas = (c.acciones_relevantes != null) ? c.acciones_relevantes
+    : (c.alert_model || 0) + (c.alert_auth_heuristic || 0);
   const pill = document.getElementById('navAlertPill');
   pill.hidden = alertas === 0;
   pill.textContent = alertas;
@@ -5510,6 +5842,7 @@ const SEC_TITULO = new Map([...seccionesPag.entries()].map(([id, s]) => {
 // Pensado para que desde cualquier vista se salte a la que uno suele querer ver
 // despues. Solo se muestran las que existen y no estan ocultas por el modo.
 const RELACIONES = {
+  's-escenario':   ['s-alertas', 's-decisiones', 's-bloqueos'],
   's-salud':       ['s-alertas', 's-actividad', 's-decisiones'],
   's-actividad':   ['s-alertas', 's-decisiones', 's-bloqueos'],
   's-alertas':     ['s-decisiones', 's-bloqueos', 's-scores'],
@@ -5546,6 +5879,7 @@ function primeraVisible() {
 // Frase de contexto bajo el titulo de cada seccion (la cabecera nombra la
 // seccion; «solo lectura» ya lo dice una vez la barra lateral).
 const SEC_SUB = {
+  's-escenario': 'Un ataque por capa, o un falso positivo, seguido de la detección a la aplicación',
   's-salud': 'Estado general, cifras de la última hora y pulso de la ingesta',
   's-actividad': 'Volumen analizado y acciones por minuto u hora',
   's-alertas': 'Anomalías del modelo y alertas de reglas, con su acción',
@@ -6676,6 +7010,11 @@ def compute_counters(decisions: list[dict], window_seconds: int = 3600,
         "block": sum(1 for a in acciones if a and a[0] == "BLOCK"),
         "limit": sum(1 for a in acciones if a and a[0] == "LIMIT"),
         "ips_con_accion": len({d.get("entity_ip") for d, a in zip(recent, acciones) if a}),
+        # Las anomalias marginales cuentan aparte: el panel las agrupa, no las borra.
+        "alert_model_marginal": sum(1 for d in recent if es_marginal(d)),
+        "acciones_relevantes": sum(1 for d, a in zip(recent, acciones) if a and not es_marginal(d)),
+        "acciones_regla": sum(1 for d in recent if isinstance(d.get("heuristico"), dict)
+                              and d["heuristico"].get("accion") in SEVERIDAD_ACCION),
         "alert_model": alert_ocsvm,
         "alert_auth_heuristic": alert_auth_heuristic,
         "permit_model": permit_model,
@@ -6951,6 +7290,81 @@ def accion_de(d: dict) -> tuple[str, str, str] | None:
         return None
     # A igual severidad gana la regla: su motivo dice mas que «anomalia del modelo».
     return max(candidatos, key=lambda c: (SEVERIDAD_ACCION[c[0]], c[2] != "modelo"))
+
+
+
+MARGEN_MARGINAL = 0.02   # misma cifra que el navegador (MARGEN_MARGINAL en el JS)
+
+
+def es_marginal(d: dict, margen: float = MARGEN_MARGINAL) -> bool:
+    """ALERT solo del modelo con el score a menos de `margen` por debajo del umbral.
+
+    Es una anomalia real y su LIMIT se publica; el panel solo la agrupa para que
+    no tape las detecciones claras. Una regla disparada nunca es marginal.
+    """
+    if d.get("decision") != "ALERT" or str(d.get("detector_name", "")).endswith("_heuristic"):
+        return False
+    h = d.get("heuristico")
+    if isinstance(h, dict) and h.get("accion") in SEVERIDAD_ACCION:
+        return False
+    s, u = d.get("score"), d.get("threshold")
+    if not isinstance(s, (int, float)) or not isinstance(u, (int, float)):
+        return False
+    return s >= u - margen
+
+
+def estado_escenario(log_path: Path, ip: str, desde: str, ahora: float,
+                     feed_path: Path | None, estado_path: Path | None) -> dict:
+    """Lo que la seccion «Escenario en vivo» necesita de una IP desde un instante.
+
+    Solo lectura y acotado: la cola del registro (4 MiB), las decisiones de esa
+    IP, su entrada del feed firmado y su respuesta vigente. La aplicacion en el
+    host no esta aqui porque el sensor no la ve.
+    """
+    try:
+        ip = str(ipaddress.ip_address(ip.strip()))
+    except ValueError:
+        return {"error": "IP no válida"}
+    try:
+        t0 = float(desde)
+    except (TypeError, ValueError):
+        t0 = ahora - 120
+    t0 = max(t0, ahora - 3 * 3600)
+    decisiones = read_decisions(log_path, limit=50_000, max_bytes=4_194_304)
+    horas = [float(d["logged_at"]) for d in decisiones if isinstance(d.get("logged_at"), (int, float))]
+    recientes = [d for d in decisiones if float(d.get("logged_at", 0)) >= ahora - 60]
+    filas = []
+    for d in decisiones:
+        if d.get("entity_ip") != ip or float(d.get("logged_at", 0)) < t0:
+            continue
+        a = accion_de(d)
+        filas.append({
+            "logged_at": d.get("logged_at"), "window_end_utc": d.get("window_end_utc"),
+            "decision": d.get("decision"), "score": d.get("score"), "threshold": d.get("threshold"),
+            "detector_name": d.get("detector_name"), "heuristico": d.get("heuristico"),
+            "accion": a[0] if a else "PERMIT", "motivo": a[1] if a else "",
+            "origen": a[2] if a else "", "marginal": es_marginal(d),
+        })
+        if len(filas) >= 400:
+            break
+    feed = None
+    if feed_path is not None:
+        try:
+            f = json.loads(Path(feed_path).read_text(encoding="utf-8"))
+            entradas = f.get("entradas") or []
+            feed = {"generado": f.get("generado"), "entradas": len(entradas),
+                    "entrada": next((e for e in entradas if e.get("ip") == ip), None)}
+        except (OSError, ValueError, AttributeError):
+            feed = None
+    vig = [v for v in acciones_vigentes(decisiones, ahora, feed_path, estado_path) if v.get("ip") == ip]
+    return {
+        "ahora": ahora, "ip": ip, "desde": t0,
+        "ultima_decision": max(horas) if horas else None,
+        "decisiones_60s": len(recientes),
+        "ips_60s": len({d.get("entity_ip") for d in recientes if d.get("entity_ip")}),
+        "decisiones": filas, "feed": feed, "vigente": vig[0] if vig else None,
+        "margen_marginal": MARGEN_MARGINAL,
+    }
 
 
 def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | None = None,
@@ -8500,6 +8914,14 @@ def main() -> int:
                         "calibracion": calibr,
                     }
                 )
+                return
+            if path == "/api/escenario":
+                params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+                self._send_json(estado_escenario(
+                    args.log_path, urllib.parse.unquote(params.get("ip", "")),
+                    params.get("desde", ""), time.time(),
+                    None if args.demo else args.feed_path,
+                    None if args.demo else args.feed_estado))
                 return
             if path == "/api/acciones":
                 self._send_json(historial_acciones(args.log_path, time.time()))
