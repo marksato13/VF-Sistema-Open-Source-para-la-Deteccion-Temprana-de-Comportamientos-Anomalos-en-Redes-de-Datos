@@ -1048,6 +1048,42 @@ HTML = """<!doctype html>
   .desp-comp .c-n .hace { display: block; font-size: 0.72rem; }
   .desp-comp .c-u { text-align: right; }
   .dec-chart[hidden] { display: none; }
+  /* G2 · Alertas activas en el Resumen: cada IP limitada o bloqueada, a un clic
+     de su respuesta y de su decision. Las nuevas (menos de 60 s) laten. */
+  .aa { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 1rem 0.6rem; margin: 0 0 1rem; }
+  .aa.con-activas { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
+  .aa-cab { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.45rem; }
+  .aa-cab h3 { margin: 0; font-size: 0.95rem; }
+  .aa-cab .n { font: 700 0.8rem var(--mono); padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--surface-2); color: var(--text-dim); }
+  .aa.con-activas .aa-cab .n { background: var(--danger); color: #fff; }
+  .aa-cab .th-sub { margin-left: auto; }
+  .aa table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .aa th { text-align: left; font-weight: 600; color: var(--text-dim); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--border); }
+  .aa td { padding: 0.38rem 0.5rem; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); vertical-align: middle; }
+  .aa td.ip { font-family: var(--mono); font-weight: 600; }
+  .aa td .hace { display: block; color: var(--text-dim); font-size: 0.74rem; }
+  .aa td.ir { text-align: right; white-space: nowrap; }
+  .aa td.ir .btn-sec { margin-left: 0.3rem; }
+  .aa tr.caducada td { opacity: 0.62; }
+  .aa tr.aa-nueva td { animation: aaLatido 1.6s ease-in-out infinite; }
+  .aa .aa-sep td { color: var(--text-dim); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; padding-top: 0.6rem; border-bottom: none; }
+  .aa .aa-vacio { color: var(--text-dim); font-size: 0.86rem; margin: 0.2rem 0 0.3rem; }
+  .aa .nueva-tag { font: 700 0.66rem var(--mono); color: #fff; background: var(--danger); border-radius: 4px; padding: 0.05rem 0.3rem; margin-left: 0.35rem; }
+  @keyframes aaLatido { 0%, 100% { background: transparent; } 50% { background: color-mix(in srgb, var(--danger) 16%, transparent); } }
+  @media (prefers-reduced-motion: reduce) { .aa tr.aa-nueva td { animation: none; background: color-mix(in srgb, var(--danger) 12%, transparent); } }
+  @media (max-width: 760px) { .aa .col-ext { display: none; } }
+  /* G3 · Flujo de una IP sobre el Mapa: el camino origen -> agente se resalta
+     con el color de su accion y el resto del diagrama se atenua. */
+  .flujo-bar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--flujo, var(--accent)); border-radius: 10px; padding: 0.5rem 0.8rem; margin: 0 0 0.8rem; font-size: 0.86rem; }
+  .flujo-bar .ip { font-family: var(--mono); font-weight: 700; }
+  .flujo-bar select { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0.2rem 0.4rem; font: inherit; }
+  .flujo-bar .pasos { color: var(--text-dim); font-family: var(--mono); font-size: 0.76rem; }
+  svg.con-flujo .topo-node:not(.en-flujo), svg.con-flujo .topo-edge:not(.flujo), svg.con-flujo .topo-edge-label { opacity: 0.28; }
+  svg.con-flujo .topo-pkt { display: none; }
+  .topo-node.en-flujo .box { stroke: var(--flujo, var(--accent)); stroke-width: 2.6; }
+  .topo-node.en-flujo .ico { color: var(--flujo, var(--accent)); }
+  .topo-edge.flujo { stroke: var(--flujo, var(--accent)); stroke-width: 3; stroke-dasharray: 7 5; animation: flow 0.9s linear infinite; opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .topo-edge.flujo { animation: none; } }
 </style>
 
 <div class="shell">
@@ -1124,6 +1160,7 @@ HTML = """<!doctype html>
   <section id="s-salud">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><circle cx="7" cy="7" r="0.9" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg><h2>Resumen</h2></div>
     <div class="healthbar" id="healthbar"></div>
+    <div class="aa" id="alertasActivas" aria-live="polite"></div>
     <div class="kpi-row" id="kpis"></div>
     <div class="pulso" id="pulso" aria-label="Pulso de la ingesta"></div>
     <details class="diag">
@@ -1159,6 +1196,7 @@ HTML = """<!doctype html>
   <section id="s-topologia">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg><h2>Mapa del sistema</h2></div>
     <p class="lede-small">Pulsa un componente para ver su detalle.</p>
+    <div class="flujo-bar" id="flujoBar" hidden></div>
     <div class="topo-wrap" id="topoWrap">
       <div class="topo-canvas" id="topoCanvas">
         <div class="topo-bar">
@@ -1858,6 +1896,13 @@ const ESC_CATALOGO = [
 
 let esc = null;                  // {id, ip, t0} mientras hay seguimiento
 try { esc = JSON.parse(localStorage.getItem('cf_escenario') || 'null'); } catch (e) { esc = null; }
+// Un seguimiento de demo dura minutos. Si el guardado tiene mas de 30 min es de
+// otra sesion (p.ej. 314:54 en el Resumen): se descarta en vez de mostrarlo.
+const ESC_CADUCA_S = 1800;
+if (esc && esc.t0 && Date.now() / 1000 - esc.t0 > ESC_CADUCA_S) {
+  esc = null;
+  try { localStorage.removeItem('cf_escenario'); } catch (e) { /* sin persistir */ }
+}
 let escSel = (esc && esc.id) || 'l4';
 let escDatos = null, escFeedVisto = null, escVistas = new Set(), escError = '';
 function escActivo() { return !!(esc && esc.t0 && esc.ip); }
@@ -2800,6 +2845,8 @@ async function refresh() {
 
     ACUSES = status.acuses || [];
     renderVigentes(status.vigentes || [], status.blocked || []);
+    AA_VIG = status.vigentes || [];
+    try { renderAlertasActivas(); } catch (e) { console.warn('alertas activas', e); }
 
     const c = status.counters;
     ultimosCounters = c;
@@ -3225,10 +3272,175 @@ function renderHistorial(d) {
 }
 async function cargarHistorial() {
   if (!document.getElementById('histChart')) return;
-  try { renderHistorial(await (await fetch('/api/acciones')).json()); } catch (e) { /* se reintenta en el siguiente ciclo */ }
+  try {
+    const d = await (await fetch('/api/acciones')).json();
+    renderHistorial(d);
+    AA_EPS = (d && d.episodios) || [];
+    renderAlertasActivas();
+  } catch (e) { /* se reintenta en el siguiente ciclo */ }
 }
 cargarHistorial();
 setInterval(cargarHistorial, 30000);
+
+// ---- G2 · Alertas activas en el Resumen (validacion externa, R3) -----------
+// Cada IP limitada o bloqueada AHORA, con su regla, accion, desde y caducidad,
+// a un clic de su respuesta, de su decision y de su flujo en el Mapa. Sale de
+// status.vigentes (cada 5 s), asi que un ataque aparece sin cambiar de seccion.
+// Debajo, las ultimas respuestas ya caducadas, atenuadas. `var` y no `let`:
+// refresh() llama aqui antes de que este bloque se evalue.
+// Sin inicializador: un `var x = []` evaluado despues borraria lo ya recibido.
+var AA_VIG, AA_EPS, aaVistas, aaListo;   // aaVistas: ip|accion -> cuando la vio este navegador
+var AA_NUEVA_S = 60;
+
+function aaEsNueva(v, ahora) {
+  const k = v.ip + '|' + v.accion, vista = aaVistas.get(k);
+  return (v.desde && ahora - v.desde < 60) || (vista && ahora - vista < 60);
+}
+
+function renderAlertasActivas() {
+  const caja = document.getElementById('alertasActivas');
+  if (!caja) return;
+  AA_VIG = AA_VIG || []; AA_EPS = AA_EPS || []; aaVistas = aaVistas || new Map();
+  const aaPrimera = !aaListo; aaListo = true;   // en la primera pintada nada cuenta como «nueva»
+  const ahora = Date.now() / 1000;
+  const vig = AA_VIG.filter(v => !NUNCA_BLOQUEAR_JS.has(String(v.ip)));
+  const claves = new Set(vig.map(v => v.ip + '|' + v.accion));
+  for (const k of claves) if (!aaVistas.has(k)) aaVistas.set(k, aaPrimera ? 0 : ahora);
+  for (const k of [...aaVistas.keys()]) if (!claves.has(k)) aaVistas.delete(k);
+  const vigIps = new Set(vig.map(v => v.ip));
+  const cad = AA_EPS.filter(e => !e.vigente && !vigIps.has(e.ip) && !NUNCA_BLOQUEAR_JS.has(String(e.ip))).slice(0, 3);
+  const regla = (o, m) => (o && o !== 'modelo' ? '<span class="badge heur">' + varEsc(o) + '</span> ' : (o ? 'modelo · ' : '')) + varEsc(m || '');
+  const botones = ip => `<button type="button" class="btn-sec" data-aa-resp="${varEsc(ip)}">Respuesta &rarr;</button>`
+    + `<button type="button" class="btn-sec" data-aa-dec="${varEsc(ip)}">Decisión &rarr;</button>`
+    + (document.getElementById('topo') ? `<button type="button" class="btn-sec" data-aa-mapa="${varEsc(ip)}">Mapa &rarr;</button>` : '');
+  const filas = vig.map(v => {
+    const nueva = aaEsNueva(v, ahora), a = String(v.accion || '').toLowerCase();
+    return `<tr class="row-${a}${nueva ? ' aa-nueva' : ''}"><td class="ip">${varEsc(v.ip)}${nueva ? '<span class="nueva-tag">NUEVA</span>' : ''}</td>`
+      + `<td><span class="badge acc-${a}">${varEsc(v.accion)}</span></td>`
+      + `<td class="why"><span class="clamp">${regla(v.origen, v.motivo)}</span></td>`
+      + `<td class="num col-ext">${v.desde ? fmtTime(v.desde) + '<span class="hace">' + haceTexto(v.desde) + '</span>' : '—'}</td>`
+      + `<td class="num col-ext">${fmtTime(ahora + (v.expira_s || 0))}<span class="hace">en ${duracionTexto(Math.round(v.expira_s || 0))}</span></td>`
+      + `<td class="ir">${botones(v.ip)}</td></tr>`;
+  });
+  const filasCad = cad.map(e => {
+    const a = String(e.accion || '').toLowerCase();
+    return `<tr class="row-${a} caducada"><td class="ip">${varEsc(e.ip)}</td>`
+      + `<td><span class="badge acc-${a}">${varEsc(e.accion)}</span></td>`
+      + `<td class="why"><span class="clamp">${regla(e.origen, e.motivo)}</span></td>`
+      + `<td class="num col-ext">${fmtTime(e.inicio)}<span class="hace">${haceTexto(e.inicio)}</span></td>`
+      + `<td class="num col-ext">${e.caduca ? 'caducó ' + fmtTime(e.caduca) + '<span class="hace">' + haceTexto(e.caduca) + '</span>' : 'caducada'}</td>`
+      + `<td class="ir">${botones(e.ip)}</td></tr>`;
+  });
+  caja.classList.toggle('con-activas', vig.length > 0);
+  const cab = `<div class="aa-cab"><h3>Alertas activas</h3><span class="n">${vig.length}</span>`
+    + `<span class="th-sub">IPs limitadas o bloqueadas ahora · se actualiza cada 5 s</span></div>`;
+  const vacio = vig.length ? '' : '<p class="aa-vacio">Ninguna IP limitada ni bloqueada en este momento.</p>';
+  const tabla = (filas.length || filasCad.length)
+    ? '<table><thead><tr><th>IP</th><th>Acción</th><th>Regla y motivo</th><th class="col-ext">Desde</th><th class="col-ext">Caduca</th><th></th></tr></thead><tbody>'
+      + filas.join('') + (filasCad.length ? '<tr class="aa-sep"><td colspan="6">Últimas respuestas, ya caducadas</td></tr>' + filasCad.join('') : '')
+      + '</tbody></table>'
+    : '';
+  caja.innerHTML = cab + vacio + tabla;
+  try { renderFlujoBar(); } catch (e) { /* el Mapa aun no esta listo: el siguiente ciclo */ }
+}
+
+function irARespuesta(ip) {
+  mostrarSeccion('s-bloqueos');
+  setTimeout(() => {
+    const tr = [...document.querySelectorAll('#blocked tr, #histTabla tr')].find(t => t.textContent.includes(ip));
+    if (tr && typeof rgResaltar === 'function') rgResaltar(tr);
+  }, 150);
+}
+on('alertasActivas', 'click', (ev) => {
+  const b = ev.target.closest('button');
+  if (!b) return;
+  if (b.dataset.aaResp) irARespuesta(b.dataset.aaResp);
+  else if (b.dataset.aaDec) abrirDecision(b.dataset.aaDec, null);
+  else if (b.dataset.aaMapa) {
+    flujoIp = b.dataset.aaMapa;
+    if (topoVista !== 'completa') {
+      topoVista = 'completa';
+      document.querySelectorAll('#topoVista button').forEach(x => x.classList.toggle('active', x.dataset.vista === 'completa'));
+      topoZoom = null;
+    }
+    flujoFirma = '';
+    mostrarSeccion('s-topologia');
+    if (topoUltimo) renderTopologia(topoUltimo);
+  }
+});
+
+// ---- G3 · Flujo origen -> servidor sobre el Mapa (validacion externa, R2) ---
+// Resalta en la vista «2 · Operacional» el camino que siguio la IP: origen ->
+// red -> SPAN -> interfaz -> captura (L3/L4) o Suricata (L7) -> variables ->
+// modelo o heuristico -> decision -> feed -> relay -> agente (nftables), con el
+// color de su accion. La IP sale de: la elegida, una respuesta vigente, el
+// escenario en curso o el ultimo episodio (caducado). No inventa tramos: si no
+// hubo LIMIT/BLOCK, el flujo termina en la decision.
+var flujoIp;                   // undefined/null = automatico · '' = sin resaltar · ip = elegida
+var flujoFirma;
+// Reglas que leen eventos L7 de Suricata; el resto sale de los PCAP (L3/L4).
+function flujoEsL7(origen) { return ['http_abuse', 'dns_entropy', 'brute_force'].indexOf(origen) >= 0; }
+
+function flujoCandidatas() {
+  AA_VIG = AA_VIG || []; AA_EPS = AA_EPS || [];
+  const out = [];
+  const add = (ip, accion, origen, motivo, fuente) => {
+    if (!ip || NUNCA_BLOQUEAR_JS.has(String(ip)) || out.some(o => o.ip === ip)) return;
+    out.push({ ip: ip, accion: accion || null, origen: origen || null, motivo: motivo || '', fuente: fuente });
+  };
+  AA_VIG.forEach(v => add(v.ip, v.accion, v.origen, v.motivo, 'respuesta vigente'));
+  if (typeof escActivo === 'function' && escActivo()) {
+    const e = AA_EPS.find(x => x.ip === esc.ip && x.inicio >= esc.t0 - 60);
+    add(esc.ip, e && e.accion, e && e.origen, e && e.motivo, 'escenario en curso');
+  }
+  AA_EPS.forEach(e => add(e.ip, e.accion, e.origen, e.motivo, 'último episodio · ' + haceTexto(e.inicio)));
+  return out;
+}
+function flujoActual() {
+  if (flujoIp === '') return null;
+  const c = flujoCandidatas();
+  return (flujoIp && c.find(x => x.ip === flujoIp)) || c[0] || null;
+}
+function flujoNodos(f) {
+  const origen = f.ip === '10.10.20.30' ? 'atacante' : (/^10\.10\.20\.2[1-6]$/.test(f.ip) ? 'clientes' : null);
+  const l7 = flujoEsL7(f.origen);
+  const n = [origen, 'red', 'span', 'nic'].concat(l7 ? ['suricata', 'eve', 'parser_eve'] : ['captura', 'pcap', 'motor']);
+  n.push('variables', f.origen && f.origen !== 'modelo' ? 'heuristicos' : 'modelo', 'control');
+  if (f.accion === 'LIMIT' || f.accion === 'BLOCK') n.push('feed', 'relay', 'agente');
+  return n.filter(Boolean);
+}
+function flujoColor(f) {
+  return !f ? 'var(--accent)' : f.accion === 'BLOCK' ? 'var(--danger)' : f.accion === 'LIMIT' ? 'var(--amber)' : 'var(--accent)';
+}
+function renderFlujoBar() {
+  const bar = document.getElementById('flujoBar');
+  if (!bar) return;
+  const c = flujoCandidatas(), f = flujoActual();
+  const firma = JSON.stringify([c, f && f.ip, topoVista]);
+  if (firma === flujoFirma) return;     // no repintar el <select> mientras se usa
+  flujoFirma = firma;
+  bar.hidden = false;
+  bar.style.setProperty('--flujo', flujoColor(f));
+  if (!c.length) {
+    bar.innerHTML = '<span>Sin IP que seguir: el flujo se resalta cuando hay un escenario en curso o una respuesta reciente.</span>';
+    return;
+  }
+  const titulo = id => ((TOPO_VISTAS.completa.nodos.find(n => n.id === id) || {}).titulo || id);
+  const opts = c.map(x => `<option value="${varEsc(x.ip)}"${f && f.ip === x.ip ? ' selected' : ''}>${varEsc(x.ip)} · ${varEsc(x.accion || 'sin acción')} · ${varEsc(x.fuente)}</option>`).join('')
+    + `<option value=""${f ? '' : ' selected'}>— sin resaltar —</option>`;
+  const acc = f && f.accion ? `<span class="badge acc-${f.accion.toLowerCase()}">${varEsc(f.accion)}</span>` : '';
+  bar.innerHTML = `<b>Flujo de</b><select id="flujoSel" aria-label="IP cuyo flujo se resalta">${opts}</select>${acc}`
+    + (f ? `<span>${f.origen ? varEsc(f.origen) + (f.motivo ? ' · ' : '') : ''}${varEsc(f.motivo || '')}</span>`
+      + `<span class="pasos">${flujoNodos(f).map(titulo).join(' → ')}</span>` : '')
+    + (f && topoVista !== 'completa' ? '<span class="pasos">(se dibuja en la vista 2 · Operacional)</span>' : '');
+}
+document.addEventListener('change', (ev) => {
+  if (!ev.target || ev.target.id !== 'flujoSel') return;
+  flujoIp = ev.target.value;
+  flujoFirma = '';
+  renderFlujoBar();
+  if (topoUltimo) renderTopologia(topoUltimo);
+});
 
 // Despliegue: la cadena sensor -> relay -> host protegido. La topologia se
 // declara (el panel no tiene credenciales de los otros hosts); la vivacidad del
@@ -5018,9 +5230,17 @@ function renderTopologia(status) {
   // que no apaga la arista; solo un servicio caido lo hace. La rama de
   // descarte nunca se anima: no es el camino del dato, es donde se queda.
   const PUNTA = ' marker-end="url(#topoPunta)"';
+  // G3: el flujo de la IP seguida (solo en la vista Operacional, la que tiene
+  // origen, sensor y agente en un mismo dibujo).
+  let fl = null;
+  try { fl = topoVista === 'completa' ? flujoActual() : null; } catch (e) { fl = null; }
+  const flSet = fl ? new Set(flujoNodos(fl)) : null;
   const aristas = v.aristas.map(e => {
     const label = e.etiqueta
       ? `<text class="topo-edge-label" x="${e.ex}" y="${e.ey}" text-anchor="middle">${e.etiqueta}</text>` : '';
+    if (flSet && flSet.has(e.desde) && flSet.has(e.hasta) && e.tipo !== 'descarte' && e.tipo !== 'previsto') {
+      return `<path class="topo-edge flujo" d="${e.d}"${PUNTA}/>` + label;
+    }
     // Con tipo, el conector dice su naturaleza (copia, previsto, persona...) y
     // no depende del estado vivo. Un enlace fisico no lleva punta.
     if (e.tipo) {
@@ -5088,6 +5308,12 @@ function renderTopologia(status) {
   // La punta de flecha toma el color de su conector (context-stroke).
   const defs = '<defs><marker id="topoPunta" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse"><path d="M0,0.8 L9.5,5 L0,9.2 Z" fill="context-stroke" stroke="none"/></marker></defs>';
   svg.innerHTML = defs + grupos + aristas + packet + hosts + nodos;
+  svg.classList.toggle('con-flujo', !!flSet);
+  if (flSet) {
+    svg.style.setProperty('--flujo', flujoColor(fl));
+    svg.querySelectorAll('.topo-node').forEach(g => g.classList.toggle('en-flujo', flSet.has(g.dataset.node)));
+  } else svg.style.removeProperty('--flujo');
+  try { renderFlujoBar(); } catch (e) { /* sin datos aun */ }
   aplicarZoom();
   renderTopoDetalle();
 }
@@ -6233,6 +6459,7 @@ function mostrarSeccion(id, subir) {
   if (!sec || sec.hidden) id = primeraVisible();
   seccionesPag.forEach((s, k) => s.classList.toggle('pag-activa', k === id));
   enlaces.forEach((a, k) => a.classList.toggle('active', k === id));
+  if (id === 's-topologia' && typeof renderFlujoBar === 'function') renderFlujoBar();
   const ht = document.getElementById('hTitulo'), hs = document.getElementById('hSub');
   if (ht) ht.textContent = SEC_TITULO.get(id) || 'CyberFlow';
   if (hs) hs.textContent = 'CyberFlow · ' + (SEC_SUB[id] || 'motor en vivo');
@@ -7215,7 +7442,14 @@ if (document.getElementById('aprDefensas')) {
 const SESION = JSON.parse(document.getElementById('datosSesion').textContent);
 // Alcance NO esta aqui: explica que observa y que no confirma el panel, y eso
 // lo necesita quien opera, no solo quien desarrolla.
-const DEV_SECS = ['s-topologia', 's-variables', 's-vivo', 's-modelo', 's-comparacion', 's-simulacion', 's-aprendizaje'];
+// G1 (validacion externa, D5): el Mapa pasa a la vista operativa, porque es
+// donde se sigue el flujo de una IP.
+const DEV_SECS = ['s-variables', 's-vivo', 's-modelo', 's-comparacion', 's-simulacion', 's-aprendizaje'];
+// G1: en operativo el MENU se queda en cinco entradas (Resumen, Escenario,
+// Alertas, Respuestas, Mapa). Estas secciones NO se ocultan: el recorrido
+// guiado, «Ver Actividad →», «Ver decisiones →» y las vistas relacionadas
+// siguen llevando a ellas. Solo dejan de ocupar sitio en el menu.
+const OPS_FUERA_DEL_MENU = ['s-actividad', 's-decisiones', 's-scores', 's-despliegue'];
 
 // Un encabezado de grupo sin enlaces visibles debajo se oculta (p.ej. DATOS,
 // MODELO y EVALUACION en el modo operativo).
@@ -7234,6 +7468,10 @@ function aplicarModo(modo) {
   for (const id of DEV_SECS) {
     const sec = document.getElementById(id);
     if (sec) sec.hidden = !dev;
+    const enlace = document.querySelector('#nav a[data-sec="' + id + '"]');
+    if (enlace) enlace.hidden = !dev;
+  }
+  for (const id of OPS_FUERA_DEL_MENU) {
     const enlace = document.querySelector('#nav a[data-sec="' + id + '"]');
     if (enlace) enlace.hidden = !dev;
   }
