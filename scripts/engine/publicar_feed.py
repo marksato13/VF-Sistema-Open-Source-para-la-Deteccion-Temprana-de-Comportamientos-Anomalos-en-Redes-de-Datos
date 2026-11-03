@@ -38,6 +38,27 @@ NUNCA_BLOQUEAR_POR_DEFECTO = {
 
 _SEVERIDAD = {"BLOCK": 2, "LIMIT": 1}
 
+# Política del modelo (3-nov). El modelo solo, sin regla que lo confirme, actúa
+# cuando la anomalía es CLARA y SOSTENIDA:
+#  - clara: score por debajo de umbral - MARGEN_MARGINAL. Las marginales (a menos
+#    de 0,05 del umbral) se registran y se ven en el panel, pero no se publican;
+#  - sostenida: al menos MIN_VENTANAS_MODELO ventanas claras de la misma IP en el
+#    tramo que lee el feed (120 s). Una o dos ventanas sueltas no bastan.
+# Medido sobre 30 h del registro (3-nov, 02:25): con 0,05 y 3 ventanas, ninguna IP
+# legitima (.21, .24, DNS 10.10.10.20, 50.51/52...) llega a un episodio y la Kali
+# .30 conserva sus 6. Con 0,02 y 2 ventanas, .21 tenia 5 y el DNS 29: en la corrida
+# 3 de la demo .21 recibio un LIMIT del modelo (margen 0,051, dos ventanas).
+# Las reglas (port_scan, http_abuse...) no cambian: actúan desde la 1.a ventana.
+MARGEN_MARGINAL = 0.05
+MIN_VENTANAS_MODELO = 3
+
+
+def _modelo_claro(d: dict, margen: float = MARGEN_MARGINAL) -> bool:
+    s, u = d.get("score"), d.get("threshold")
+    if not isinstance(s, (int, float)) or not isinstance(u, (int, float)):
+        return True          # sin score no se puede llamar marginal: se respeta
+    return s < u - margen
+
 
 def _verdicto_de(d: dict) -> tuple[str, str, str] | None:
     """Veredicto (accion, motivo, detector) de una decisión, o None.
@@ -62,7 +83,9 @@ def _verdicto_de(d: dict) -> tuple[str, str, str] | None:
                            str(h.get("heuristico", "heuristico"))))
     if not candidatos:
         return None
-    return max(candidatos, key=lambda c: _SEVERIDAD[c[0]])
+    # A igual severidad gana la regla: dice el motivo y no depende de la política
+    # de persistencia del modelo.
+    return max(candidatos, key=lambda c: (_SEVERIDAD[c[0]], not c[1].startswith("modelo:")))
 
 
 def decisiones_a_entradas(decisiones: list[dict], estado: dict, ahora: float,
@@ -71,6 +94,15 @@ def decisiones_a_entradas(decisiones: list[dict], estado: dict, ahora: float,
 
     Devuelve la lista de entradas del feed. Muta `estado` (para persistir).
     """
+    # Ventanas del modelo claras por IP (para exigir que la anomalía se sostenga).
+    claras: dict[str, int] = {}
+    for d in decisiones:
+        if (d.get("decision") == "ALERT"
+                and not str(d.get("detector_name", "")).endswith("_heuristic")
+                and _modelo_claro(d)):
+            ip = str(d.get("entity_ip", ""))
+            claras[ip] = claras.get(ip, 0) + 1
+
     # Veredicto más severo por IP dentro del lote.
     por_ip: dict[str, dict] = {}
     for d in decisiones:
@@ -81,6 +113,10 @@ def decisiones_a_entradas(decisiones: list[dict], estado: dict, ahora: float,
         if v is None:
             continue
         accion, motivo, detector = v
+        solo_modelo = motivo.startswith("modelo:")
+        if solo_modelo and (not _modelo_claro(d)
+                            or claras.get(ip, 0) < MIN_VENTANAS_MODELO):
+            continue         # marginal o suelta: se registra, no se publica
         evento_ts = float(d.get("logged_at", 0))
         prev = por_ip.get(ip)
         if (prev is None

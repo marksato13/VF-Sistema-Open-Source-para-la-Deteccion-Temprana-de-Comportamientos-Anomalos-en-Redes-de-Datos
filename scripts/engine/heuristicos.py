@@ -25,7 +25,17 @@ from __future__ import annotations
 
 # Subir esta versión cada vez que cambien los umbrales; queda en el registro y en
 # el feed para poder reproducir por qué se tomó una decisión.
-VERSION_UMBRALES = "2026-10-06.2"
+VERSION_UMBRALES = "2026-11-03.1"
+# 2026-11-03.1: la rama de ráfaga de port_scan bloqueaba a un cliente legítimo
+# (250 descargas HTTP al puerto 80 en 30 s): el espejo SPAN no atribuye el
+# SYN-ACK, así que «0 % completados» sale también en tráfico web sano. Un escaneo
+# toca MUCHOS puertos (ratio ~0,45 por el espejo); una ráfaga web, uno (~0,004).
+# La rama exige ahora un mínimo de variedad de puertos (0,2), con margen de sobra
+# bajo el 0,45 del escaneo. Medido 3-nov: 9 BLOCK falsos a 10.10.20.21 -> 0.
+# Además, http_abuse contaba doble: el espejo entrega cada evento HTTP dos veces
+# (VLAN 20 y 30). Un cliente a 1 petición/s (60/min reales) daba 111-122 «req/60s»
+# y recibía LIMIT. El umbral se expresa ahora en eventos del espejo: 200 = 100
+# peticiones reales por minuto. El flood de la demo (250 en ~10 s) cuenta ~470.
 # 2026-10-06.1: el espejo SPAN duplica cada trama, así que los ratios "todo único"
 # (puertos de un escaneo, nombres de un DGA) topan en ~0,5, no en 1,0. Los umbrales
 # de unicidad se bajan de 0,9/0,5 a 0,45. Validado: dns_entropy en el ataque, con
@@ -56,13 +66,14 @@ UMBRALES_POR_DEFECTO: dict[str, dict] = {
         # unicidad, que el espejo distorsiona). Inequívocamente un escaneo.
         "min_flow_attempt_burst_30s": 200,
         "max_syn_completion_burst_10s": 0.1,
+        "min_unique_dst_port_ratio_burst_30s": 0.2,
         "accion": "BLOCK",
     },
     # Abuso HTTP (flood / scraping): volumen alto de peticiones SIN que sea fuerza
     # bruta (poca tasa de fallo de auth). Ambiguo (puede ser uso pesado legítimo)
     # -> LIMIT (degradar, no cortar).
     "http_abuse": {
-        "min_http_req_60s": 100,
+        "min_http_req_60s": 200,          # eventos del espejo = 100 peticiones reales/min
         "max_auth_fail_ratio_60s": 0.8,
         "accion": "LIMIT",
     },
@@ -108,10 +119,14 @@ def _port_scan(row: dict, u: dict) -> str | None:
               and sc <= u["max_syn_completion_ratio_10s"])
     # Rama OR: ráfaga masiva de baja completitud. No depende del ratio de unicidad
     # (el espejo SPAN lo topa en ~0,5 y lo deja bordeando 0,45, de ahí el 1/3).
+    # Exige variedad de puertos: cientos de conexiones al MISMO puerto (descargas
+    # web) no son un escaneo aunque el espejo las vea «sin completar».
     rafaga = (fa >= u.get("min_flow_attempt_burst_30s", 200)
-              and sc <= u.get("max_syn_completion_burst_10s", 0.1))
+              and sc <= u.get("max_syn_completion_burst_10s", 0.1)
+              and up >= u.get("min_unique_dst_port_ratio_burst_30s", 0.2))
     if normal or rafaga:
-        return "%.0f intentos/30s a muchos puertos, %.0f%% completados" % (fa, 100 * sc)
+        return "%.0f intentos/30s a %.0f puertos distintos, %.0f%% completados" % (
+            fa, round(fa * up), 100 * sc)
     return None
 
 

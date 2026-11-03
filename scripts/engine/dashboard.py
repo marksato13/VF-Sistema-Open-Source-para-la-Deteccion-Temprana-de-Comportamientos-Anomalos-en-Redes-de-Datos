@@ -45,16 +45,18 @@ HTML = """<!doctype html>
 <link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%235eead4'/%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #0a0f1a;
-    --surface: #121a2b;
-    --surface-2: #1a2338;
-    --border: #253150;
-    --text: #dbe4f2;
+    /* 3-nov: fondo mas profundo y superficies con mas escalon entre si, para
+       que tarjetas, tablas y la barra del recorrido se separen al proyectar. */
+    --bg: #070b15;
+    --surface: #0f1729;
+    --surface-2: #17213a;
+    --border: #233152;
+    --text: #e3eaf6;
     /* 13-oct: subido de #7c8bad a #8d9cbd. El anterior daba 4,59:1 sobre las
        tarjetas (AA justo, sin margen) y se perdia proyectado; este da 5,68:1
        y sigue 2,3x mas tenue que --text, asi que la jerarquia se mantiene. */
-    --text-dim: #8d9cbd;
-    --accent: #5eead4;
+    --text-dim: #94a3c4;
+    --accent: #45dfc9;
     --ok: #4ade80; --ok-soft: #12271c;
     --amber: #f0b429; --amber-soft: #332508;
     --danger: #f87171; --danger-soft: #351515;
@@ -80,7 +82,10 @@ HTML = """<!doctype html>
   ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); background-clip: content-box; }
   ::-webkit-scrollbar-corner { background: transparent; }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
+    margin: 0; color: var(--text);
+    background: radial-gradient(1200px 600px at 85% -10%, rgba(69,223,201,.07), transparent 60%),
+                radial-gradient(900px 500px at -10% 110%, rgba(57,135,229,.06), transparent 60%), var(--bg);
+    background-attachment: fixed;
     font-family: var(--sans); font-size: 15px; line-height: 1.5;
   }
 
@@ -765,8 +770,36 @@ HTML = """<!doctype html>
   .vig-barra i { display: block; height: 100%; }
   .vig-fuente { font-size: 0.74rem; color: var(--text-dim); font-family: var(--mono); }
   .sec-sub { color: var(--text-dim); font-size: 0.82rem; margin: -0.3rem 0 0.7rem; }
-  .cmp-fig { background: #0f1722; border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; margin-bottom: 0.9rem; }
-  .cmp-fig svg { width: 100%; height: auto; display: block; }
+  .cmp-lede { font-size: 15px; margin: 0 0 1rem; max-width: 72rem; }
+  .cmp-como { list-style: none; padding: 0; margin: 0 0 0.6rem; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .cmp-como li { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+  .cmp-como li .n { width: 24px; height: 24px; border-radius: 50%; background: #10283a; color: var(--accent); display: grid; place-items: center; font-family: var(--mono); font-weight: 700; font-size: 12px; }
+  .cmp-como li b { font-size: 14px; }
+  .cmp-como li small { color: var(--text-dim); font-size: 12.5px; line-height: 1.4; }
+  .cmp-como li code { margin-top: auto; font-family: var(--mono); font-size: 11px; color: #9fd0ff; background: #0b1322; border: 1px solid #1d2a44; border-radius: 6px; padding: 4px 6px; word-break: break-word; }
+  .cmp-run { color: var(--text-dim); font-size: 13px; margin: 0 0 1.2rem; }
+  .cmp-run code { font-family: var(--mono); color: #ffd58a; }
+  .cmp-h { font-size: 15px; margin: 0 0 0.6rem; }
+  .cmp-vivo { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 12px; margin-bottom: 1rem; }
+  .cmp-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .cmp-card header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+  .cmp-card header b { font-size: 14px; }
+  .cmp-card header .ip { font-family: var(--mono); color: var(--text-dim); font-size: 12.5px; }
+  .cmp-card header .cuando { margin-left: auto; font-family: var(--mono); color: var(--text-dim); font-size: 12px; }
+  .cmp-dos { display: grid; grid-template-columns: 1fr 1fr; }
+  .cmp-lado { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .cmp-lado + .cmp-lado { border-left: 1px solid var(--border); }
+  .cmp-lado .quien { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); font-weight: 600; }
+  .cmp-lado .cifra { font-family: var(--mono); font-size: 26px; font-weight: 700; line-height: 1.1; }
+  .cmp-lado .cifra small { font-size: 12px; font-weight: 500; color: var(--text-dim); margin-left: 6px; font-family: var(--sans); }
+  .cmp-lado ul { margin: 0; padding-left: 1rem; font-size: 12.5px; color: var(--text-dim); }
+  .cmp-lado ul li b { color: var(--text); font-family: var(--mono); font-weight: 600; margin-right: 4px; }
+  .cmp-lado .ev { margin-top: auto; font-family: var(--mono); font-size: 11px; color: #7f90b3; }
+  .cmp-card footer { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 13px; }
+  .cmp-card footer.bien { background: rgba(74,222,128,.07); }
+  .cmp-card footer.neutro { background: rgba(148,163,196,.06); }
+  .cmp-bateria { margin: 0.4rem 0 0.8rem; }
+  @media (max-width: 1100px) { .cmp-como { grid-template-columns: 1fr 1fr; } .cmp-vivo { grid-template-columns: 1fr; } }
   .cmp-notas { margin: 0.5rem 0 0; padding-left: 1.1rem; color: var(--text-dim); font-size: 0.8rem; line-height: 1.5; }
   td.cmp-bien { color: var(--ok); } td.cmp-mal { color: var(--danger); } td.cmp-nm { color: var(--text-dim); font-style: italic; }
   tr.cmp-total td { font-weight: 600; border-top: 2px solid var(--border); }
@@ -1040,6 +1073,24 @@ HTML = """<!doctype html>
 
   <div class="toasts" id="toasts" aria-live="polite"></div>
 
+  <!-- Recorrido guiado de la demo: aparece mientras se sigue un escenario. Cada
+       paso lleva a su seccion con la IP filtrada y resaltada; el ultimo dice que
+       mirar en la consola (Herdr). El panel no ejecuta nada. -->
+  <div class="rg" id="rg" hidden>
+    <div class="rg-cab">
+      <span class="rg-esc" id="rgEsc"></span>
+      <span class="rg-reloj" id="rgReloj"></span>
+      <button type="button" class="rg-x" id="rgCerrar" title="Ocultar el recorrido" aria-label="Ocultar el recorrido">&times;</button>
+    </div>
+    <ol class="rg-pasos" id="rgPasos"></ol>
+    <div class="rg-pie">
+      <p class="rg-frase" id="rgFrase"></p>
+      <span class="rg-cli" id="rgCli"></span>
+      <button type="button" class="rg-sig" id="rgSig">Siguiente &rarr;</button>
+    </div>
+  </div>
+  <button type="button" class="rg-abrir" id="rgAbrir" hidden>Recorrido de la demo</button>
+
   <!-- El resumen (KPIs, barra de salud y pulso) vive en la pagina Salud, no
        como franja repetida en todas: antes se veia identico en cada seccion y
        daba sensacion de que "todo mostraba lo mismo". El estado sigue siempre a
@@ -1219,45 +1270,24 @@ HTML = """<!doctype html>
   </section>
 
   <section id="s-comparacion">
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg><h2>Comparación con Suricata</h2></div>
-    <p class="lede-small"><b>Por qué Suricata:</b> es el IDS de firmas de referencia, el estándar con el que contrastar. <b>Cómo se comparó:</b> el MISMO PCAP de cada episodio se reprodujo a los dos con el reloj del paquete y la configuración congelada (Suricata con ET Open, 53 013 reglas); qué es un ataque lo fija la REFERENCIA —el orquestador que lanzó el ataque—, no las alertas de ninguno. <b>Qué se mide:</b> detección por episodio, no bloqueo, porque en el espejo SPAN Suricata es IDS (ve una copia, no está en línea). <b>Resultado:</b> Suricata detecta lo que tiene firma (Nikto); CyberFlow detecta además lo que NO la tiene (escaneo, flood, DNS: 0 para Suricata) y encima BLOQUEA, que Suricata en SPAN no puede. No lo reemplaza: lo complementa.</p>
-    <div class="cmp-fig">
-      <svg viewBox="0 0 900 250" role="img" aria-label="Protocolo: entrada común y referencia independiente, cuatro condiciones, evaluación por episodio">
-        <defs><marker id="cmpFl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8aa0b4"/></marker></defs>
-        <g font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="13" fill="#dce8f5">
-          <rect x="10" y="30" width="190" height="72" rx="10" fill="#15202c" stroke="#3a5169"/>
-          <text x="105" y="60" text-anchor="middle" font-weight="600">Entrada común</text>
-          <text x="105" y="80" text-anchor="middle" fill="#9fb2c4" font-size="12">ataques · Nikto · tramo normal</text>
-          <rect x="10" y="150" width="190" height="72" rx="10" fill="#2a1d12" stroke="#b5741b"/>
-          <text x="105" y="180" text-anchor="middle" font-weight="600">Referencia</text>
-          <text x="105" y="200" text-anchor="middle" fill="#e8c9a4" font-size="12">guion y orquestador</text>
-          <rect x="290" y="10" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
-          <text x="415" y="37" text-anchor="middle">Suricata · firmas</text>
-          <rect x="290" y="66" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
-          <text x="415" y="93" text-anchor="middle">Solo modelo · score</text>
-          <rect x="290" y="122" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
-          <text x="415" y="149" text-anchor="middle">Solo heurísticos · eventos EVE</text>
-          <rect x="290" y="178" width="250" height="44" rx="9" fill="#0e3b3a" stroke="#5eead4"/>
-          <text x="415" y="205" text-anchor="middle" font-weight="600">CyberFlow · combinado</text>
-          <rect x="640" y="60" width="250" height="130" rx="10" fill="#15202c" stroke="#3a5169"/>
-          <text x="765" y="92" text-anchor="middle" font-weight="600">Evaluación por episodio</text>
-          <text x="765" y="116" text-anchor="middle" fill="#9fb2c4" font-size="12">detección por familia</text>
-          <text x="765" y="136" text-anchor="middle" fill="#9fb2c4" font-size="12">latencia desde el inicio</text>
-          <text x="765" y="156" text-anchor="middle" fill="#9fb2c4" font-size="12">falsos positivos aparte</text>
-        </g>
-        <g stroke="#8aa0b4" stroke-width="1.6" fill="none" marker-end="url(#cmpFl)">
-          <path d="M200,66 L288,32"/><path d="M200,66 L288,88"/><path d="M200,66 L288,144"/><path d="M200,66 L288,200"/>
-          <path d="M540,32 L638,110"/><path d="M540,88 L638,118"/><path d="M540,144 L638,128"/><path d="M540,200 L638,136"/>
-        </g>
-        <path d="M105,222 L105,242 L765,242 L765,194" stroke="#b5741b" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#cmpFl)"/>
-      </svg>
-    </div>
-    <div class="tbl-wrap"><table><thead><tr><th>Familia</th><th class="r">Suricata</th><th class="r">Solo modelo</th><th class="r">Solo heurísticos</th><th class="r">CyberFlow</th></tr></thead><tbody id="cmpTabla"></tbody></table></div>
-    <p class="toolbar-hint">Celda: episodios detectados / medidos · latencia mediana [mín–máx]. CyberFlow lee eventos de EVE, no alertas de Suricata. En SPAN, Suricata es IDS: se compara detección, no bloqueo.</p>
-    <p class="toolbar-hint"><span class="badge heur">ejecutada</span> Batería N=3 por familia, con el mismo PCAP y la configuración fija. <span class="badge">propuesta</span> Campaña C3: N=5 por familia, fuerza bruta, tráfico legítimo intenso y 2 h de tráfico normal con los falsos positivos de Suricata medidos.</p>
-    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Suricata NO está apagada:</strong> corre EN VIVO en el sensor y CyberFlow <strong>consume sus eventos</strong> (http/dns/tls) para las variables de capa 7 &mdash; es una <em>fuente</em> del sistema. Lo que se midió por <strong>replay</strong> (mismo PCAP a los dos, anclado al reloj del paquete) es su <strong>detección</strong>, no sus alertas en vivo: así los dos ven exactamente la misma entrada y la comparación de detección es limpia.</span></div>
-    <div class="note"><span><strong>Alcance de Suricata.</strong> El ensayo benigno del 14-oct es histórico (~4 min), no una tasa generalizable. En el replay del 23-oct sobre 9 470 paquetes, ET Open cargó 53 013 reglas y generó 55 alertas: 54 STREAM y una ET INFO por uso de curl. No corresponde afirmar cero alertas ni atribuir la alerta informativa a flood sin criterio previo. Nikto y la batería final siguen pendientes. El FPR 4,53&#8239;% del IF offline no es el FPR del sistema completo; LIMIT también tiene costo sobre tráfico legítimo.</span></div>
-    <ul class="cmp-notas" id="cmpNotas"></ul>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg><h2>CyberFlow frente a Suricata</h2></div>
+    <p class="cmp-lede"><b>Mismo tráfico, dos sistemas.</b> Suricata 7 con ET Open es el IDS de firmas de referencia. Se compara la <b>detección</b>; responder (LIMIT/BLOCK en el host) solo lo hace CyberFlow.</p>
+    <ol class="cmp-como">
+      <li><span class="n">1</span><b>Recortar el tráfico</b><small>Del anillo PCAP del espejo (Sensor1), solo la IP y el intervalo del ataque.</small><code>tcpdump -r live-*.pcap "host IP" · recortar_pcap.py desde hasta</code></li>
+      <li><span class="n">2</span><b>Llevarlo a Suricata</b><small>A una VM aparte (10.10.60.13): Suricata no comparte nada con el sensor.</small><code>ssh suricata · ~/cf-demo/cmp-AAAAMMDD-HHMMSS/pcap</code></li>
+      <li><span class="n">3</span><b>Suricata analiza</b><small>Offline, con todas las firmas ET Open activas. Su salida es fast.log.</small><code>suricata -r pcap -S suricata.rules -k none</code></li>
+      <li><span class="n">4</span><b>CyberFlow, misma ventana</b><small>Las decisiones del motor para esa IP e intervalo, y el acuse del host.</small><code>motor_decision.log · acuses/srv-dmz.json</code></li>
+    </ol>
+    <p class="cmp-run">Lo ejecuta el director al final de cada escenario, o a mano en el bastión: <code>~/cf-demo/comparar-suricata.sh IP desde hasta</code></p>
+    <h3 class="cmp-h">Comparaciones de la demo <span class="th-sub" id="cmpVivoSub"></span></h3>
+    <div class="cmp-vivo" id="cmpVivo"><p class="estado-vacio">Cargando…</p></div>
+    <details class="plegable cmp-bateria">
+      <summary>Medición previa: replay de la batería N=3 por familia</summary>
+      <div class="tbl-wrap"><table><thead><tr><th>Familia</th><th class="r">Suricata</th><th class="r">Solo modelo</th><th class="r">Solo reglas</th><th class="r">CyberFlow</th></tr></thead><tbody id="cmpTabla"></tbody></table></div>
+      <p class="toolbar-hint">Celda: episodios detectados / medidos · latencia mediana [mín–máx]. Mismo PCAP a los dos, con el reloj del paquete.</p>
+      <ul class="cmp-notas" id="cmpNotas"></ul>
+    </details>
+    <p class="toolbar-hint">Suricata del sensor corre sin firmas: solo aporta los eventos HTTP/DNS/TLS que CyberFlow usa como variables de capa 7. Las firmas se evalúan aquí, en la VM aparte.</p>
   </section>
 
   <section id="s-alcance" hidden>
@@ -1469,6 +1499,44 @@ HTML = """<!doctype html>
 </div>
 
 <style>
+/* ---- Recorrido guiado de la demo ---------------------------------------- */
+.rg{position:fixed;left:calc(224px + 24px);right:24px;bottom:16px;z-index:150;background:linear-gradient(180deg,rgba(18,27,46,.97),rgba(12,19,34,.97));border:1px solid #2c3d63;border-radius:14px;box-shadow:0 18px 48px rgba(0,0,0,.55),0 0 0 1px rgba(94,234,212,.06);padding:10px 14px 10px;backdrop-filter:blur(6px)}
+.rg[hidden]{display:none}
+.rg-cab{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.rg-esc{font-weight:650;font-size:13.5px;color:var(--text)}
+.rg-esc .k{color:var(--accent);font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;margin-right:8px}
+.rg-esc .ip{font-family:var(--mono);color:var(--text-dim);margin-left:8px;font-weight:500}
+.rg-reloj{margin-left:auto;font-family:var(--mono);color:var(--accent);font-size:15px;font-weight:600}
+.rg-x{background:none;border:none;color:var(--text-dim);font-size:20px;line-height:1;cursor:pointer;padding:0 2px}
+.rg-x:hover{color:var(--text)}
+.rg-pasos{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;counter-reset:tp}
+.rg-pasos li{position:relative}
+.rg-pasos button{width:100%;display:flex;align-items:center;gap:8px;background:#121b2e;border:1px solid #26334f;border-radius:10px;padding:7px 10px;color:var(--text-dim);font:inherit;font-size:13px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
+.rg-pasos button:hover{border-color:#3a5179;color:var(--text)}
+.rg-pasos .num{flex:0 0 22px;height:22px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:700;background:#1c2742;color:var(--text-dim)}
+.rg-pasos .lbl{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.rg-pasos .lbl b{color:var(--text);font-weight:600;font-size:13px}
+.rg-pasos .lbl small{font-size:11px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rg-pasos li.ok .num{background:var(--ok);color:#06210f}
+.rg-pasos li.alerta .num{background:var(--danger);color:#2a0606}
+.rg-pasos li.limit .num{background:var(--amber);color:#2a1d02}
+.rg-pasos li.actual button{border-color:var(--accent);background:#10283a;box-shadow:0 0 0 1px rgba(94,234,212,.25) inset}
+.rg-pasos li:not(:last-child)::after{content:"";position:absolute;right:-6px;top:50%;width:6px;height:1px;background:#2c3d63}
+.rg-pie{display:flex;align-items:center;gap:12px;margin-top:8px}
+.rg-frase{margin:0;flex:1;font-size:14px;color:var(--text)}
+.rg-cli{font-family:var(--mono);font-size:12px;color:#ffd58a;background:#2a2109;border:1px solid #5b4511;border-radius:8px;padding:4px 8px;white-space:nowrap;max-width:46%;overflow:hidden;text-overflow:ellipsis}
+.rg-cli:empty{display:none}
+.rg-cli .h{color:#c9a65a;margin-right:6px}
+.rg-sig{background:var(--accent);color:#04201c;border:none;border-radius:9px;padding:7px 14px;font-weight:700;font-size:13px;cursor:pointer}
+.rg-sig:hover{filter:brightness(1.08)}
+.rg-abrir{position:fixed;right:24px;bottom:16px;z-index:150;background:#10283a;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:7px 14px;font-weight:650;font-size:13px;cursor:pointer}
+.rg-abrir[hidden]{display:none}
+body.con-rg .wrap{padding-bottom:150px}
+body.con-rg .toasts{bottom:150px}
+.rg-foco{outline:2px solid var(--accent)!important;outline-offset:2px;animation:rgPulso 1.2s ease-in-out 4;border-radius:8px}
+tr.rg-foco td{background:rgba(94,234,212,.10)!important}
+@keyframes rgPulso{0%,100%{box-shadow:0 0 0 0 rgba(94,234,212,.0)}50%{box-shadow:0 0 0 6px rgba(94,234,212,.28)}}
+@media (max-width:1100px){.rg{left:16px;right:16px}.rg-pasos .lbl small{display:none}}
 .ver-codigo{margin-top:6px;background:#15202c;border:1px solid #2b3a4a;color:#9fd0ff;border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer}
 .ver-codigo:hover{background:#1b2a39;border-color:#3a5169}
 .code-modal{position:fixed;inset:0;background:rgba(2,6,12,.72);z-index:300;display:flex;align-items:center;justify-content:center;padding:22px}
@@ -1651,7 +1719,7 @@ function markSeenAndCountNewAlerts(decisions) {
 // debajo del umbral. Es real (esta en el registro y su LIMIT se publica), pero
 // es ruido de borde: no se avisa con tarjeta flotante y Alertas la agrupa,
 // diciendo siempre cuantas hay. Una regla disparada nunca es marginal.
-const MARGEN_MARGINAL = 0.02;
+const MARGEN_MARGINAL = 0.05;
 function esMarginal(d) {
   if (!d || d.decision !== 'ALERT' || String(d.detector_name || '').endsWith('_heuristic')) return false;
   if (d.heuristico && (d.heuristico.accion === 'BLOCK' || d.heuristico.accion === 'LIMIT')) return false;
@@ -1665,46 +1733,71 @@ let verMarginales = false;
 // muestra el comando y sigue a la IP con /api/escenario cada 3 s. La aplicacion
 // en el host no se afirma: el panel no lee el nftables del servidor.
 const ESC_CATALOGO = [
-  { id: 'l3', capa: 'L3 · Red', tipo: 'ataque', nombre: 'Inundación ICMP',
-    simula: 'Un equipo comprometido satura al servidor con pings: denegación de servicio a nivel de red, sin puertos ni aplicación.',
-    desde: 'Kali · 10.10.20.30 (sin sudo)', ip: '10.10.20.30',
-    comando: 'for k in 1 2 3 4; do ping -q -i 0.002 -s 1200 -w 60 10.10.30.10 >/dev/null & done; wait',
-    espera: 'No hay regla de capa 3: solo el modelo puede verlo, por el volumen (≈ 2000 paquetes/s). Medido el 3-nov: LIMIT por el modelo en ≈ 40 s.',
-    guion: ['Empezamos por la capa de red: un torrente de ICMP contra el servidor.',
-            'Aquí no hay regla que lo reconozca. Si se detecta, es el modelo quien lo ve.',
-            'Miren el score de cada ventana frente al umbral: a la izquierda, anómalo.'] },
   { id: 'l4', capa: 'L4 · Transporte', tipo: 'ataque', nombre: 'Escaneo de puertos',
-    simula: 'Reconocimiento: el atacante prueba miles de puertos TCP del servidor para ver cuáles están abiertos.',
+    simula: 'Reconocimiento: prueba miles de puertos TCP para ver cuáles están abiertos.',
     desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
     comando: 'nmap -sT -T4 --max-retries 1 -p 1-3000 --open 10.10.30.10',
-    espera: 'Regla port_scan → BLOCK (5 min la primera vez). El modelo suele coincidir: «modelo y regla».',
-    guion: ['Capa de transporte: un escaneo de puertos, el primer paso de casi cualquier intrusión.',
-            'La regla reconoce el patrón: muchos intentos y casi ninguna conexión completa.',
-            'La acción es BLOCK, con caducidad. El sensor la publica; quien corta es el servidor.'] },
+    espera: 'Regla port_scan + modelo → BLOCK con caducidad.',
+    guion: ['Primer paso de casi cualquier intrusión: descubrir puertos abiertos.',
+            'Regla y modelo coinciden: muchos puertos distintos, casi ninguna conexión completa.',
+            'BLOCK con caducidad. El sensor publica; el servidor corta.'],
+    tour: { ataque: 'nmap prueba 3000 puertos TCP del servidor.',
+            actividad: 'La Kali sube arriba con BLOCK.',
+            decisiones: 'Regla port_scan y score bajo el umbral, ventana a ventana.',
+            respuestas: 'BLOCK firmado, con caducidad · srv-dmz lo confirma.',
+            host: 'nmap a 80/443 sale «filtered»: el servidor ya no contesta.' } },
   { id: 'l7', capa: 'L7 · Aplicación', tipo: 'ataque', nombre: 'Abuso HTTP (flood)',
-    simula: 'Cientos de peticiones web en segundos desde una sola IP, como un bot que satura la aplicación.',
+    simula: 'Cientos de peticiones web en segundos desde una IP, como un bot.',
     desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
     comando: 'seq 1 250 | xargs -P10 -I{} curl -s -o /dev/null http://10.10.30.10/',
-    espera: 'Regla http_abuse → LIMIT: degrada la tasa, no corta. Ojo: la regla port_scan puede escalarlo a BLOCK (las 250 conexiones cortas se parecen a un escaneo).',
-    guion: ['Capa de aplicación: el mismo servidor web, pero ahora abusado con peticiones legítimas en forma.',
-            'Cada petición es válida; lo anómalo es la tasa. La regla http_abuse lo reconoce.',
-            'La respuesta es LIMIT: se frena a la IP sin cortarla.'] },
+    espera: 'Regla http_abuse → LIMIT: frena la tasa, no corta.',
+    guion: ['Cada petición es válida; lo anómalo es la tasa.',
+            'La regla http_abuse cuenta peticiones por minuto de una sola IP.',
+            'LIMIT: respuesta proporcional, temporal y reversible.'],
+    tour: { ataque: '250 peticiones web en paralelo contra el servidor.',
+            actividad: 'La Kali aparece con LIMIT.',
+            decisiones: 'http_abuse: cientos de peticiones en 60 s.',
+            respuestas: 'LIMIT firmado, 5 min · srv-dmz lo confirma.',
+            host: 'Ping a 250/s: solo pasan 100/s mientras dura el LIMIT.' } },
+  { id: 'l3', capa: 'L3 · Red', tipo: 'ataque', nombre: 'Inundación ICMP',
+    simula: 'Un equipo satura al servidor con pings: denegación de servicio en capa de red.',
+    desde: 'Kali · 10.10.20.30 (sin sudo)', ip: '10.10.20.30',
+    comando: 'for k in 1 2 3 4; do ping -q -i 0.002 -s 1200 -w 60 10.10.30.10 >/dev/null & done; wait',
+    espera: 'Sin regla de capa 3: lo ve el modelo (anomalía clara y sostenida) → LIMIT.',
+    guion: ['Capa de red: ≈ 2000 paquetes ICMP por segundo.',
+            'No hay regla para esto: lo detecta el modelo por el volumen.',
+            'El score cae bajo el umbral varias ventanas seguidas → LIMIT.'],
+    tour: { ataque: '4 pings en paralelo: ≈ 2000 paquetes/s de ICMP.',
+            actividad: 'La Kali aparece con LIMIT, sin regla.',
+            decisiones: 'Solo el modelo: score bajo el umbral, sostenido.',
+            respuestas: 'LIMIT por el modelo · srv-dmz lo confirma.',
+            host: 'Ping a 250/s: pierde lo que pasa de 100/s.' } },
   { id: 'l7dns', capa: 'L7 · Aplicación', tipo: 'ataque', nombre: 'DNS de alta entropía (DGA)',
-    simula: 'Malware que busca su servidor de control consultando nombres aleatorios que no existen.',
+    simula: 'Malware que busca su servidor de control con nombres aleatorios.',
     desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
     comando: 'for i in $(seq 1 80); do r=$(head -c6 /dev/urandom | od -An -tx1 | tr -d " \\n"); dig +short ${r}.francos-sac.com @10.10.10.20 >/dev/null 2>&1; sleep 0.5; done',
-    espera: 'Regla dns_entropy → LIMIT. El modelo suele verlo normal: por eso hay reglas además del modelo. También puede aparecer el resolutor 10.10.10.20.',
-    guion: ['Otra forma de capa 7: nombres de dominio aleatorios, la huella de un malware que busca a su controlador.',
-            'El modelo lo ve casi normal. La regla de entropía DNS, no.',
-            'Modelo y reglas se complementan: ninguno de los dos ve todo.'] },
-  { id: 'fp', capa: 'L7 · Aplicación', tipo: 'falso positivo', nombre: 'Ráfaga legítima de un cliente',
-    simula: 'Un usuario real que sincroniza o descarga mucho de golpe. No es un ataque, pero se parece a uno.',
+    espera: 'Regla dns_entropy → LIMIT. El modelo lo ve casi normal.',
+    guion: ['Nombres de dominio aleatorios: la huella de un DGA.',
+            'El modelo lo ve casi normal; la regla de entropía DNS, no.',
+            'Modelo y reglas se complementan.'],
+    tour: { ataque: '80 consultas DNS a nombres aleatorios.',
+            actividad: 'La Kali aparece con LIMIT por regla.',
+            decisiones: 'dns_entropy: NXDOMAIN y nombres únicos.',
+            respuestas: 'LIMIT firmado · srv-dmz lo confirma.',
+            host: 'En srv-dmz la IP está en el set de limitados.' } },
+  { id: 'fp', capa: 'L7 · Aplicación', tipo: 'tráfico legítimo', nombre: 'Cliente legítimo intenso',
+    simula: 'Un usuario real navegando sin parar: una página cada 2 s durante 2 minutos.',
     desde: 'VM clientes · 10.10.20.21', ip: '10.10.20.21',
-    comando: 'seq 1 250 | xargs -P10 -I{} curl -s -o /dev/null --interface 10.10.20.21 http://10.10.30.10/',
-    espera: 'Medido el 3-nov: LIMIT por http_abuse y luego BLOCK por port_scan. Es un falso positivo: caduca solo y un humano lo libera con un comando.',
-    guion: ['Ahora un caso honesto: tráfico de un usuario legítimo, solo que intenso.',
-            'El sistema lo marca: es un falso positivo y lo mostramos a propósito.',
-            'Toda respuesta caduca y un humano la libera con un comando; la regla port_scan es la que hay que afinar.'] },
+    comando: 'for i in $(seq 1 60); do curl -s -o /dev/null --interface 10.10.20.21 http://10.10.30.10/; sleep 2; done',
+    espera: 'PERMIT de principio a fin: ninguna regla, el modelo no lo sostiene. No se toca al usuario.',
+    guion: ['Tráfico legítimo, pero intenso: el caso que más falsos positivos da.',
+            'Ninguna regla salta y el modelo no ve una anomalía sostenida.',
+            'PERMIT: el usuario sigue trabajando. Antes esto se bloqueaba; se corrigió y se midió.'],
+    tour: { ataque: 'Navegación continua: 1 página cada 2 s, 2 minutos.',
+            actividad: 'La IP .21 NO aparece con acción.',
+            decisiones: 'Todas sus ventanas: PERMIT (marginales sin acción).',
+            respuestas: 'Sin respuesta para .21: nada que caducar.',
+            host: 'En srv-dmz: «sin regla» para .21; el ping pasa 0 % de pérdida.' } },
 ];
 
 let esc = null;                  // {id, ip, t0} mientras hay seguimiento
@@ -1720,9 +1813,9 @@ function renderEscCards() {
   const cont = document.getElementById('escCards');
   if (!cont) return;
   cont.innerHTML = ESC_CATALOGO.map(s => '<button type="button" class="esc-card' + (s.id === escSel ? ' sel' : '')
-    + (s.tipo === 'falso positivo' ? ' fp' : '') + '" data-esc="' + s.id + '">'
+    + (s.tipo === 'tráfico legítimo' ? ' fp' : '') + '" data-esc="' + s.id + '">'
     + '<span class="esc-capa">' + varEsc(s.capa) + '</span><b>' + varEsc(s.nombre) + '</b>'
-    + '<small>' + (s.tipo === 'falso positivo' ? 'escenario de falso positivo' : 'ataque simulado') + '</small></button>').join('');
+    + '<small>' + (s.tipo === 'tráfico legítimo' ? 'debe quedar en PERMIT' : 'ataque simulado') + '</small></button>').join('');
 }
 
 function renderEscDetalle() {
@@ -1755,6 +1848,7 @@ function renderEscPasos() {
   const filas = (D && D.decisiones) || [];
   const conAccion = filas.filter(f => f.accion !== 'PERMIT');
   const claras = conAccion.filter(f => !f.marginal);
+  const legit = activo && (ESC_CATALOGO.find(x => x.id === esc.id) || {}).tipo === 'tráfico legítimo';
   // 1. Llegan datos
   let p1;
   if (!D) p1 = escPaso('1', 'Llegan datos', 'espera', 'Consultando el motor…');
@@ -1792,7 +1886,7 @@ function renderEscPasos() {
       : conAccion.find(f => f.heuristico && f.heuristico.heuristico);
     const prim = conAccion.reduce((a, b) => (a.logged_at < b.logged_at ? a : b));
     const escalo = prim.accion !== peor.accion;
-    p3 = escPaso('3', 'Decisión', 'ok', '<span class="badge acc-' + peor.accion.toLowerCase() + '">' + peor.accion + '</span> por <b>' + quien + '</b>'
+    p3 = escPaso('3', 'Decisión', 'ok', '<span class="badge acc-' + peor.accion.toLowerCase() + '">' + peor.accion + '</span> por <b>' + quien + '</b> <span class="esc-hist">(la más severa del seguimiento)</span>'
       + (escalo ? '<br><span class="esc-hist">escaló de ' + prim.accion + ' (' + fmtTime(prim.logged_at) + ') a ' + peor.accion + '</span>' : '')
       + (regla ? '<br>' + varEsc(regla.heuristico.heuristico) + ': ' + varEsc(regla.heuristico.motivo || '') : '')
       + (minimo ? '<br>score mínimo ' + minimo.score.toFixed(3) + ' · umbral ' + Number(minimo.threshold).toFixed(3) : ''),
@@ -1807,10 +1901,27 @@ function renderEscPasos() {
       + '<br>caduca ' + fmtTime(ent.hasta)
       + (ent.nivel > 1 ? '<br><span class="esc-hist">reincidencia nivel ' + ent.nivel + ': la IP ya tuvo episodios en las últimas 24 h, por eso dura más</span>' : ''),
       'feed de las ' + fmtTime(D.feed.generado) + (escFeedVisto ? escDelta(escFeedVisto) : ''), 'Respuestas');
-  else if (D && D.vigente && conAccion.length) p4 = escPaso('4', 'Publicación', 'espera', 'Registrada (' + varEsc(D.vigente.accion) + '); esperando el próximo feed (cada 10 s).', '', 'Respuestas');
+  else if (D && conAccion.length) {
+    // La accion de ESTE seguimiento (no la vigente del historial de 24 h, que puede ser otra).
+    const accEsc = conAccion.some(f => f.accion === 'BLOCK') ? 'BLOCK' : 'LIMIT';
+    const libEsc = ((D.aplicacion) || []).some(a => (a.eventos || []).some(e => e.evento === 'liberada'));
+    p4 = libEsc
+      ? escPaso('4', 'Publicación', 'ok', 'La orden <b>' + accEsc + '</b> se publicó y ya salió del feed: la IP fue liberada por revisión humana (paso 5).', '', 'Respuestas')
+      : escPaso('4', 'Publicación', 'espera', 'Decidida (' + accEsc + '); esperando el próximo feed (cada 10 s).', '', 'Respuestas');
+  }
   else p4 = escPaso('4', 'Publicación', activo && conAccion.length ? 'espera' : 'inactivo', 'Aún no está en el feed.', D && D.feed ? 'feed de las ' + fmtTime(D.feed.generado) : '');
   // 5. Aplicacion: lo que el host dice tener en nftables (acuse que trae el relay)
-  const p5 = escPaso5(D, activo, ent);
+  let p5 = escPaso5(D, activo, ent);
+  // Trafico legitimo: el exito es que NO pase nada. Verde cuando hay ventanas
+  // de la IP y ninguna pide accion.
+  if (legit && filas.length && !conAccion.length) {
+    const marg = filas.filter(f => f.politica_modelo === 'marginal' || f.politica_modelo === 'suelta').length;
+    p2 = escPaso('2', 'Detección', 'ok', '<b>Sin detección</b>: ' + filas.length + ' ventanas, todas PERMIT.', 'correcto: es un usuario legítimo', 'Actividad');
+    p3 = escPaso('3', 'Decisión', 'ok', '<span class="badge acc-permit">PERMIT</span> ninguna regla salta'
+      + (marg ? '<br><span class="esc-hist">' + marg + ' anomalía(s) marginal/suelta del modelo: se registran, no actúan</span>' : '<br>el modelo lo ve normal'), '', 'Decisiones');
+    p4 = escPaso('4', 'Publicación', 'ok', 'Nada que publicar: la IP no está en el feed.', D && D.feed ? 'feed de las ' + fmtTime(D.feed.generado) : '', 'Respuestas');
+    p5 = escPaso('5', 'Aplicación en el host', 'ok', '<b>srv-dmz: sin regla</b> para ' + varEsc(esc.ip) + '. El usuario no se ve afectado.', '', 'según el host · relay cada 10 s');
+  }
   ol.innerHTML = p1 + p2 + p3 + p4 + p5;
 }
 
@@ -1877,7 +1988,7 @@ function renderEscFilas() {
   const grupos = [];
   for (const f of filas.slice(0, 120)) {
     const mot = f.heuristico && f.heuristico.heuristico ? varEsc(f.heuristico.heuristico) + ': ' + varEsc(f.heuristico.motivo || '')
-      : (f.decision === 'ALERT' ? 'anomalía del modelo' : (f.score == null ? 'sin score (poco tráfico)' : 'normal para el modelo'));
+      : (f.decision === 'ALERT' ? (f.politica_modelo === 'marginal' ? 'anomalía marginal del modelo · sin acción' : (f.politica_modelo === 'suelta' ? 'anomalía suelta del modelo · sin acción' : 'anomalía sostenida del modelo')) : (f.score == null ? 'sin score (poco tráfico)' : 'normal para el modelo'));
     const clave = fmtTime(f.logged_at) + '|' + f.accion + '|' + mot + '|' + (f.marginal ? 1 : 0);
     const ult = grupos[grupos.length - 1];
     if (ult && ult.clave === clave) { ult.n += 1; ult.keys.push(f.logged_at + '|' + f.window_end_utc); continue; }
@@ -1944,6 +2055,7 @@ function escIniciar() {
   const ip = ((document.getElementById('escIp') || {}).value || '').trim();
   if (!/^\\d{1,3}(\\.\\d{1,3}){3}$/.test(ip)) { const e = document.getElementById('escEstado'); if (e) e.textContent = 'Escribe una IP válida.'; return; }
   esc = { id: escSel, ip: ip, t0: Date.now() / 1000 };
+  if (typeof rgPaso !== 'undefined') { rgPaso = 0; rgOculto = false; }
   escFeedVisto = null; escDatos = null; escVistas = new Set();
   escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas(); escConsultar();
 }
@@ -2710,7 +2822,9 @@ function accionDeDecision(d) {
   const sev = { BLOCK: 2, LIMIT: 1, PERMIT: 0 };
   let acc = 'PERMIT';
   if (d.decision === 'ALERT') {
-    acc = String(d.detector_name || '').endsWith('_heuristic') ? 'BLOCK' : 'LIMIT';
+    // = publicar_feed: el modelo solo actua con anomalia clara y sostenida
+    if (String(d.detector_name || '').endsWith('_heuristic')) acc = 'BLOCK';
+    else if (!d.politica_modelo || d.politica_modelo === 'sostenida') acc = 'LIMIT';
   }
   if (d.heuristico && sev[d.heuristico.accion] > sev[acc]) acc = d.heuristico.accion;
   return acc;
@@ -6287,20 +6401,71 @@ function cmpCelda(c) {
   return '<td class="num r ' + cls + '">' + t + '</td>';
 }
 
+const CMP_ESC = { l4: 'L4 · Escaneo de puertos', l7: 'L7 · Abuso HTTP', l3: 'L3 · Inundación ICMP',
+                 l7dns: 'L7 · DNS de alta entropía', fp: 'Cliente legítimo intenso' };
+function cmpTarjeta(c) {
+  const s = c.suricata || {}, f = c.cyberflow || {};
+  const titulo = CMP_ESC[c.escenario] || (c.escenario || 'Comparación');
+  const top = (s.top || []).slice(0, 3).map(x => '<li><b>' + x.n + '</b>' + varEsc(x.firma) + '</li>').join('');
+  const desg = (f.desglose || []).map(x => '<li><b>' + varEsc(x.n) + '</b>ventanas ' + varEsc(x.accion) + ' · ' + varEsc(x.origen) + '</li>').join('');
+  const legit = c.escenario === 'fp';
+  // «SURICATA STREAM/HTTP/DECODER…» son eventos del propio motor de Suricata (anomalías de flujo o
+  // de protocolo), no firmas de ataque; las de ET Open/GPL sí describen una amenaza.
+  const topS = s.top || [];
+  // ET INFO / GPL INFO tampoco describen un ataque: son avisos informativos (p. ej. «Web Crawl using Curl»).
+  const deMotor = topS.filter(x => /^SURICATA |^(ET|GPL) INFO /.test(x.firma)).reduce((a, x) => a + x.n, 0);
+  const soloMotor = topS.length > 0 && deMotor === topS.reduce((a, x) => a + x.n, 0);
+  let veredicto, clase;
+  if (legit) {
+    veredicto = f.con_accion ? 'CyberFlow actuó sobre tráfico legítimo: falso positivo.' : 'Tráfico legítimo: CyberFlow <b>no actúa</b>'
+      + (s.alertas ? '; Suricata emite ' + s.alertas + ' alerta(s) que alguien tendría que revisar' + (soloMotor ? ' (de flujo e informativas, ninguna de ataque).' : '.') : '; Suricata tampoco alerta.');
+    clase = f.con_accion ? '' : 'bien';
+  } else if (f.con_accion && (!s.alertas || soloMotor)) {
+    veredicto = (s.alertas ? 'Suricata no tiene <b>ninguna firma de ataque</b> para esto: solo eventos de flujo (SURICATA STREAM/HTTP) e informativos (ET INFO). '
+                           : 'Suricata <b>no tiene firma</b> para esto. ')
+      + 'CyberFlow lo identifica y <b>responde</b>' + (f.aplicada ? ' (' + varEsc(f.aplicada.accion) + ' aplicado en srv-dmz a las ' + varEsc(f.aplicada.hora) + ')' : '') + '.';
+    clase = 'bien';
+  } else if (f.con_accion && s.alertas > 50 * Math.max(1, f.con_accion)) {
+    veredicto = 'Los dos lo ven. Suricata emite <b>' + s.alertas.toLocaleString('es') + ' alertas</b> (una por paquete) que alguien tiene que leer; '
+      + 'CyberFlow lo resume en ' + f.con_accion + ' ventanas y <b>responde</b>' + (f.aplicada ? ' (' + varEsc(f.aplicada.accion) + ' aplicado a las ' + varEsc(f.aplicada.hora) + ')' : '') + '.';
+    clase = 'bien';
+  } else if (f.con_accion) {
+    veredicto = 'Los dos lo ven. Suricata solo alerta; CyberFlow además <b>responde</b>' + (f.aplicada ? ' (' + varEsc(f.aplicada.accion) + ' aplicado en srv-dmz a las ' + varEsc(f.aplicada.hora) + ')' : '') + '.'; clase = 'bien';
+  } else {
+    veredicto = 'CyberFlow no actuó en este intervalo.'; clase = 'neutro';
+  }
+  return '<article class="cmp-card"><header><b>' + varEsc(titulo) + '</b><span class="ip">' + varEsc(c.ip) + '</span>'
+    + '<span class="cuando">' + fmtTime(c.desde) + '–' + fmtTime(c.hasta) + (c.pcap && c.pcap.paquetes != null ? ' · ' + c.pcap.paquetes + ' paquetes' : '') + '</span></header>'
+    + '<div class="cmp-dos"><div class="cmp-lado"><span class="quien">Suricata ' + varEsc(s.version || '') + ' · ' + (s.firmas ? s.firmas.toLocaleString('es') + ' firmas' : '') + '</span>'
+    + '<span class="cifra">' + (s.alertas || 0) + '<small>alertas · ' + (s.firmas_distintas || 0) + ' firmas distintas</small></span>'
+    + (top ? '<ul>' + top + '</ul>' : '<ul><li>ninguna firma disparó</li></ul>')
+    + '<span class="ev">' + varEsc(s.evidencia || '') + '</span></div>'
+    + '<div class="cmp-lado"><span class="quien">CyberFlow · modelo + reglas</span>'
+    + '<span class="cifra">' + (f.con_accion || 0) + '<small>de ' + (f.ventanas || 0) + ' ventanas con acción</small></span>'
+    + '<ul>' + (f.primera ? '<li><b>' + varEsc(f.primera.hora) + '</b>primera: ' + varEsc(f.primera.accion) + ' · ' + varEsc([f.primera.modelo, f.primera.regla].filter(Boolean).join(' + ')) + '</li>' : '<li>ninguna ventana pidió acción</li>')
+    + desg + (f.aplicada ? '<li><b>' + varEsc(f.aplicada.hora) + '</b>' + varEsc(f.aplicada.accion) + ' aplicado en srv-dmz (acuse)</li>' : '') + '</ul>'
+    + '<span class="ev">' + varEsc(f.evidencia || '') + '</span></div></div>'
+    + '<footer class="' + clase + '">' + veredicto + '</footer></article>';
+}
+
 async function cargarComparacion() {
   const tb = document.getElementById('cmpTabla');
+  const vivo = document.getElementById('cmpVivo');
   if (!tb) return;
   try {
     const r = await (await fetch('/api/comparacion')).json();
+    const lista = r.en_vivo || [];
+    if (vivo) {
+      vivo.innerHTML = lista.length ? lista.map(cmpTarjeta).join('')
+        : '<p class="estado-vacio">Aún no hay comparaciones. Se generan al final de cada escenario de la demo.</p>';
+      const sub = document.getElementById('cmpVivoSub');
+      if (sub) sub.textContent = lista.length ? lista.length + ' · la más reciente primero · evidencia en Sensor1 ~/feed/comparaciones/' : '';
+    }
     if (r.error) { tb.innerHTML = '<tr class="empty-row"><td colspan="5">' + varEsc(r.error) + '</td></tr>'; return; }
     const conds = ['suricata', 'modelo', 'heuristicos', 'combinado'];
     let html = r.por_familia.map(f => '<tr><td>' + varEsc(f.nombre) + (f.con_firma ? ' <span class="badge heur">con firma</span>' : '') + '</td>'
       + conds.map(c => cmpCelda(f[c])).join('') + '</tr>').join('');
     html += '<tr class="cmp-total"><td>Total sin firma</td>' + conds.map(c => cmpCelda(r.sin_firma[c])).join('') + '</tr>';
-    const fp = r.falsos_positivos;
-    const fpTxt = (x) => x.valor === 'no medido' ? '<td class="cmp-nm">no medido</td>'
-      : '<td class="num">' + x.valor + (x.de ? ' / ' + x.de : '') + '</td>';
-    html += '<tr><td>Falsos positivos <span class="hace">ventanas normales con acción</span></td>' + conds.map(c => fpTxt(fp[c])).join('') + '</tr>';
     tb.innerHTML = html;
     document.getElementById('cmpNotas').innerHTML = (r.notas || []).map(n => '<li>' + varEsc(n) + '</li>').join('');
   } catch (e) {
@@ -6308,6 +6473,7 @@ async function cargarComparacion() {
   }
 }
 cargarComparacion();
+setInterval(() => { const s = document.getElementById('s-comparacion'); if (s && s.classList.contains('pag-activa')) cargarComparacion(); }, 15000);
 
 // ---- Datos en vivo -------------------------------------------------------
 // Captura en vivo al estilo de Wireshark. Tres llamadas, todas solo admin:
@@ -6992,6 +7158,136 @@ if (SESION.rol === 'admin') {
 }
 
 setInterval(refresh, 5000);
+
+// ---- Recorrido guiado de la demo -------------------------------------------
+// El mismo orden que se defiende en la sustentación: el ataque (Kali) -> la IP
+// aparece en Actividad -> su porqué en Decisiones -> la orden firmada en
+// Respuestas -> la prueba en el host (consola Herdr SRV-DMZ). Cada paso se pone
+// en verde (o en su color de acción) cuando ocurre, con datos de /api/escenario.
+const RG_PASOS = [
+  { k: 'ataque', t: 'Ataque', sec: 's-escenario', cli: 'Herdr · ORIGEN' },
+  { k: 'actividad', t: 'Actividad', sec: 's-actividad', cli: '' },
+  { k: 'decisiones', t: 'Decisiones', sec: 's-decisiones', cli: 'Herdr · SENSOR1: mira-motor.sh' },
+  { k: 'respuestas', t: 'Respuestas', sec: 's-bloqueos', cli: '' },
+  { k: 'host', t: 'Host (CLI)', sec: null, cli: 'Herdr · SRV-DMZ' },
+];
+let rgPaso = 0, rgOculto = false;
+try { rgOculto = sessionStorage.getItem('cf_rg_oculto') === '1'; } catch (e) { /* sin persistir */ }
+
+function rgEstado() {
+  // Estado de cada paso: '' pendiente, 'ok' hecho, 'limit'/'alerta' hecho con acción.
+  const D = escDatos, s = ESC_CATALOGO.find(x => x.id === (esc && esc.id)) || {};
+  const legit = s.tipo === 'tráfico legítimo';
+  const filas = (D && D.decisiones) || [];
+  const acc = filas.filter(f => f.accion !== 'PERMIT');
+  const peor = acc.some(f => f.accion === 'BLOCK') ? 'alerta' : (acc.length ? 'limit' : '');
+  const ent = D && D.feed && D.feed.entrada;
+  const apl = (D && D.aplicacion) || [];
+  const aplicada = apl.some(a => a.regla);
+  const liberada = apl.some(a => (a.eventos || []).some(e => e.evento === 'liberada'));
+  if (legit) {
+    const visto = filas.length > 0, limpio = visto && !acc.length;
+    return { ataque: visto ? 'ok' : '', actividad: limpio ? 'ok' : (acc.length ? peor : ''),
+             decisiones: limpio ? 'ok' : (acc.length ? peor : ''), respuestas: limpio ? 'ok' : (ent ? peor : ''),
+             host: limpio ? 'ok' : (aplicada ? peor : '') };
+  }
+  return { ataque: filas.length ? 'ok' : '', actividad: acc.length ? peor : '', decisiones: acc.length ? peor : '',
+           respuestas: ent ? (ent.accion === 'BLOCK' ? 'alerta' : 'limit') : '',
+           host: aplicada ? (apl.find(a => a.regla).regla.accion === 'BLOCK' ? 'alerta' : 'limit') : (liberada ? 'ok' : '') };
+}
+
+function rgDetalle(k) {
+  // Lo pequeño bajo cada paso: el dato que lo prueba.
+  const D = escDatos;
+  if (!D) return 'esperando…';
+  const filas = D.decisiones || [];
+  const acc = filas.filter(f => f.accion !== 'PERMIT');
+  const ent = D.feed && D.feed.entrada;
+  const apl = (D.aplicacion || []).find(a => a.regla);
+  const prim = acc.length ? acc.reduce((a, b) => (a.logged_at < b.logged_at ? a : b)) : null;
+  if (k === 'ataque') return filas.length ? filas.length + ' ventanas' : 'lanza el comando';
+  if (k === 'actividad' || k === 'decisiones') return prim ? prim.accion + escDelta(prim.logged_at) : (filas.length ? 'todo PERMIT' : '—');
+  if (k === 'respuestas') return ent ? ent.accion + ' · caduca ' + fmtTime(ent.hasta) : 'sin orden';
+  if (k === 'host') {
+    const lib = (D.aplicacion || []).some(a => (a.eventos || []).some(e => e.evento === 'liberada'));
+    return apl ? apl.regla.accion + ' en nftables' : (lib ? 'liberada' : 'sin regla');
+  }
+  return '';
+}
+
+function renderRg() {
+  const caja = document.getElementById('rg'), abrir = document.getElementById('rgAbrir');
+  if (!caja) return;
+  const activo = escActivo();
+  caja.hidden = !activo || rgOculto;
+  if (abrir) abrir.hidden = !activo || !rgOculto;
+  document.body.classList.toggle('con-rg', activo && !rgOculto);
+  if (!activo || rgOculto) return;
+  const s = ESC_CATALOGO.find(x => x.id === esc.id) || {};
+  document.getElementById('rgEsc').innerHTML = '<span class="k">' + varEsc(s.capa || '') + '</span>' + varEsc(s.nombre || '')
+    + '<span class="ip">' + varEsc(esc.ip) + '</span>';
+  document.getElementById('rgReloj').textContent = escMmss(Date.now() / 1000 - esc.t0);
+  const est = rgEstado();
+  document.getElementById('rgPasos').innerHTML = RG_PASOS.map((p, i) =>
+    '<li class="' + (est[p.k] || '') + (i === rgPaso ? ' actual' : '') + '"><button type="button" data-tp="' + i + '">'
+    + '<span class="num">' + (i + 1) + '</span><span class="lbl"><b>' + (p.k === 'ataque' && ((ESC_CATALOGO.find(x => x.id === (esc && esc.id)) || {}).tipo === 'tráfico legítimo') ? 'Tráfico' : p.t) + '</b><small>' + varEsc(rgDetalle(p.k)) + '</small></span></button></li>').join('');
+  const p = RG_PASOS[rgPaso];
+  document.getElementById('rgFrase').textContent = (s.rg && s.rg[p.k]) || '';
+  const cli = rgCli(p.k, s);
+  document.getElementById('rgCli').innerHTML = cli ? '<span class="h">' + varEsc(cli[0]) + '</span>' + varEsc(cli[1]) : '';
+  document.getElementById('rgSig').textContent = rgPaso < RG_PASOS.length - 1 ? 'Siguiente →' : 'Ver los 5 pasos';
+}
+
+function rgCli(k, s) {
+  const ip = esc.ip;
+  if (k === 'ataque') return [s.id === 'fp' ? 'CLIENTES $' : 'KALI $', s.comando || ''];
+  if (k === 'decisiones') return ['SENSOR1 $', '~/cf-demo/mira-motor.sh ' + ip];
+  if (k === 'host') return ['SRV-DMZ $', '~/cf-demo/en-firewall.sh ' + ip];
+  return null;
+}
+
+function rgResaltar(el) {
+  if (!el) return;
+  document.querySelectorAll('.rg-foco').forEach(x => x.classList.remove('rg-foco'));
+  el.classList.add('rg-foco');
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  setTimeout(() => el.classList.remove('rg-foco'), 6000);
+}
+
+function rgIr(i) {
+  rgPaso = Math.max(0, Math.min(RG_PASOS.length - 1, i));
+  const p = RG_PASOS[rgPaso], ip = esc.ip;
+  const legit = ((ESC_CATALOGO.find(x => x.id === esc.id) || {}).tipo === 'tráfico legítimo');
+  if (p.k === 'ataque') { mostrarSeccion('s-escenario', false); rgResaltar(document.getElementById('escDet')); }
+  else if (p.k === 'actividad') {
+    mostrarSeccion('s-actividad'); renderTopIps();
+    setTimeout(() => rgResaltar(document.querySelector('#topIps tr[data-ip="' + ip + '"]') || document.getElementById('topIps').closest('.tbl-wrap')), 120);
+  } else if (p.k === 'decisiones') {
+    document.getElementById('ipFilter').value = ip;
+    decVista = legit ? 'todas' : 'accion'; pintarDecVista(); renderDecisionsTable();
+    mostrarSeccion('s-decisiones');
+    setTimeout(() => rgResaltar(document.querySelector('#decisions tr')), 160);
+  } else if (p.k === 'respuestas') {
+    mostrarSeccion('s-bloqueos');
+    setTimeout(() => rgResaltar([...document.querySelectorAll('#blocked tr')].find(tr => tr.textContent.includes(ip))
+      || document.getElementById('blocked').closest('.tbl-wrap')), 160);
+  } else if (p.k === 'host') {
+    mostrarSeccion('s-escenario', false);
+    setTimeout(() => rgResaltar(document.querySelector('#escPasos li:last-child')), 120);
+  }
+  renderRg();
+}
+
+on('rgPasos', 'click', (ev) => { const b = ev.target.closest('button[data-tp]'); if (b) rgIr(+b.dataset.tp); });
+on('rgSig', 'click', () => {
+  if (rgPaso < RG_PASOS.length - 1) rgIr(rgPaso + 1);
+  else { mostrarSeccion('s-escenario', false); setTimeout(() => rgResaltar(document.getElementById('escPasos')), 100); }
+});
+on('rgCerrar', 'click', () => { rgOculto = true; try { sessionStorage.setItem('cf_rg_oculto', '1'); } catch (e) { /* */ } renderRg(); });
+on('rgAbrir', 'click', () => { rgOculto = false; try { sessionStorage.removeItem('cf_rg_oculto'); } catch (e) { /* */ } renderRg(); });
+setInterval(renderRg, 1000);
+renderRg();
+
 </script>
 """
 
@@ -7039,6 +7335,7 @@ def _decisiones_parseadas(log_path: Path, max_bytes: int) -> list[dict]:
             if event.get("event") == "decision":
                 records.append(event)
         records.sort(key=lambda item: item.get("logged_at", 0))
+        anotar_politica_modelo(records)
         ent["datos"], ent["t"] = records, time.monotonic()
         return records
 
@@ -7418,7 +7715,8 @@ def accion_de(d: dict) -> tuple[str, str, str] | None:
         det = str(d.get("detector_name", ""))
         if det.endswith("_heuristic"):
             candidatos.append(("BLOCK", REGLA_LEGACY.get(det, "regla determinista"), det))
-        else:
+        elif d.get("politica_modelo") in (None, "sostenida"):
+            # = publicar_feed: el modelo solo actua con anomalia clara y sostenida
             candidatos.append(("LIMIT", "anomalía del modelo", "modelo"))
     h = d.get("heuristico")
     if isinstance(h, dict) and h.get("accion") in SEVERIDAD_ACCION:
@@ -7430,7 +7728,41 @@ def accion_de(d: dict) -> tuple[str, str, str] | None:
 
 
 
-MARGEN_MARGINAL = 0.02   # misma cifra que el navegador (MARGEN_MARGINAL en el JS)
+MARGEN_MARGINAL = 0.05   # misma cifra que el navegador (MARGEN_MARGINAL en el JS)
+VENTANA_SOSTENIDA_S = 120  # = tramo que lee publicar_feed (--ventana-segundos)
+MIN_VENTANAS_MODELO = 3    # = publicar_feed.MIN_VENTANAS_MODELO
+
+
+def anotar_politica_modelo(decisiones: list[dict]) -> None:
+    """Marca cada ALERT solo-modelo como «marginal», «suelta» o «sostenida».
+
+    Es la misma politica que publicar_feed.py (3-nov): el modelo solo, sin regla
+    que lo confirme, publica LIMIT con anomalia CLARA (score < umbral - 0,05) y
+    SOSTENIDA (3 ventanas claras de la misma IP a <= 120 s). Las otras dos se
+    registran y se ven, pero no piden accion. Escribe el campo en cada dict.
+    """
+    claras: dict[str, list[float]] = {}
+    solo = []
+    for d in decisiones:
+        if d.get("decision") != "ALERT" or str(d.get("detector_name", "")).endswith("_heuristic"):
+            continue
+        h = d.get("heuristico")
+        if isinstance(h, dict) and h.get("accion") in SEVERIDAD_ACCION:
+            continue
+        solo.append(d)
+        s, u = d.get("score"), d.get("threshold")
+        marginal = (isinstance(s, (int, float)) and isinstance(u, (int, float))
+                    and s >= u - MARGEN_MARGINAL)
+        d["politica_modelo"] = "marginal" if marginal else "suelta"
+        if not marginal:
+            claras.setdefault(str(d.get("entity_ip")), []).append(float(d.get("logged_at", 0)))
+    for d in solo:
+        if d["politica_modelo"] != "suelta":
+            continue
+        t = float(d.get("logged_at", 0))
+        ts = claras.get(str(d.get("entity_ip")), [])
+        if sum(1 for x in ts if abs(x - t) <= VENTANA_SOSTENIDA_S) >= MIN_VENTANAS_MODELO:
+            d["politica_modelo"] = "sostenida"
 
 
 def es_marginal(d: dict, margen: float = MARGEN_MARGINAL) -> bool:
@@ -7482,7 +7814,7 @@ def estado_escenario(log_path: Path, ip: str, desde: str, ahora: float,
             "decision": d.get("decision"), "score": d.get("score"), "threshold": d.get("threshold"),
             "detector_name": d.get("detector_name"), "heuristico": d.get("heuristico"),
             "accion": a[0] if a else "PERMIT", "motivo": a[1] if a else "",
-            "origen": a[2] if a else "", "marginal": es_marginal(d),
+            "origen": a[2] if a else "", "marginal": es_marginal(d), "politica_modelo": d.get("politica_modelo"),
         })
         if len(filas) >= 400:
             break
@@ -7695,13 +8027,16 @@ def historial_acciones(log_path: Path, ahora: float, horas: int = 24,
         except (ValueError, KeyError, TypeError):
             continue
     ofensas: dict[str, list[tuple[float, str, str, str]]] = {}
+    leidas = []
     for linea in lineas:
         if '"ALERT"' not in linea and '"accion"' not in linea:
             continue
         try:
-            d = json.loads(linea)
+            leidas.append(json.loads(linea))
         except ValueError:
             continue
+    anotar_politica_modelo(leidas)
+    for d in leidas:
         t = d.get("logged_at")
         ip = str(d.get("entity_ip", ""))
         if not isinstance(t, (int, float)) or t < limite or not ip or ip in nunca:
@@ -7806,6 +8141,24 @@ def pulso_ingesta(decisions: list[dict], eve_path: Path | None, dataset: Path | 
         "dataset": ds,
         "feed": feed,
     }
+
+
+def comparaciones_en_vivo(carpeta: Path | None, maximo: int = 12) -> list[dict]:
+    """Resumenes que deja comparar-suricata.sh (uno por escenario de la demo).
+
+    Cada fichero es la evidencia de una comparacion: el mismo PCAP del espejo
+    analizado por Suricata + ET Open en otra VM y las decisiones del motor en el
+    mismo intervalo. El panel solo los lee; la mas reciente primero.
+    """
+    if carpeta is None or not Path(carpeta).is_dir():
+        return []
+    salida = []
+    for f in sorted(Path(carpeta).glob("cmp-*.json"), reverse=True)[:maximo]:
+        try:
+            salida.append(json.loads(f.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue
+    return salida
 
 
 def estado_comparacion(ruta: Path | None) -> dict:
@@ -8805,6 +9158,9 @@ def parse_args() -> argparse.Namespace:
         "--feed-path", type=Path, default=Path.home() / "feed" / "feed.json",
         help="feed publicado por publicar_feed.py: caducidad exacta de cada accion")
     parser.add_argument(
+        "--comparaciones-dir", type=Path, default=Path.home() / "feed" / "comparaciones",
+        help="resumenes de comparar-suricata.sh (seccion CyberFlow frente a Suricata)")
+    parser.add_argument(
         "--acuse-dir", type=Path, default=Path.home() / "feed" / "acuses",
         help="acuses de aplicacion de los hosts protegidos (los deja el relay): paso 5 del escenario")
     parser.add_argument(
@@ -9257,7 +9613,9 @@ def main() -> int:
                     self._send_json({"error": "%s: %s" % (type(exc).__name__, exc)})
                 return
             if path == "/api/comparacion":
-                self._send_json(estado_comparacion(args.comparacion))
+                datos = estado_comparacion(args.comparacion)
+                datos["en_vivo"] = comparaciones_en_vivo(args.comparaciones_dir)
+                self._send_json(datos)
                 return
             if path == "/api/aprendizaje":
                 self._send_json(estado_aprendizaje_cacheado(args.config_toml, args.demo))

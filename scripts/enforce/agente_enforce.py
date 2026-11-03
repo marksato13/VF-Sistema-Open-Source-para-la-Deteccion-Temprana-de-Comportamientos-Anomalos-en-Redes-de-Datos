@@ -185,15 +185,20 @@ def registrar_liberacion(v: dict | None, ahora: float, gracia: int) -> dict:
 def depurar_liberadas(liberadas: dict[str, dict], vig: dict[str, dict],
                       ahora: float = 0.0) -> dict[str, dict]:
     """Olvida liberaciones de IPs que ya no tienen orden. Durante la gracia, lo absorbido
-    sigue a las órdenes del feed (la cola del mismo episodio queda liberada)."""
+    sigue a las órdenes del feed (la cola del mismo episodio queda liberada).
+
+    Durante la gracia la liberación se CONSERVA aunque la IP no tenga orden: el motor
+    registra ventanas con ~2 min de retraso, así que la IP puede salir del feed justo al
+    liberarla y volver a entrar con la cola del mismo episodio (corrida 3, 3-nov: BLOCK
+    liberado 02:18:21 y reaplicado 02:18:55; LIMIT 02:24:30 → 02:25:05)."""
     out = {}
     for ip, d in liberadas.items():
-        if ip not in vig:
+        if ip not in vig and not _en_gracia(d, ahora):
             continue
         d = dict(d)
         if _en_gracia(d, ahora):
             d["ordenes"] = dict(d.get("ordenes") or {})
-            for k, o in (vig[ip].get("ordenes") or {}).items():
+            for k, o in ((vig.get(ip) or {}).get("ordenes") or {}).items():
                 prev = d["ordenes"].get(k, {"hasta": 0, "nivel": 0})
                 d["ordenes"][k] = {"hasta": max(int(prev["hasta"]), o["hasta"]),
                                    "nivel": max(int(prev["nivel"]), o["nivel"])}

@@ -179,7 +179,19 @@ class AlcanceYLiberacion(unittest.TestCase):
 
     def test_liberacion_se_olvida_si_sale_del_feed(self):
         v = self.feed(dict(accion="BLOCK", hasta=1300, detector="port_scan"))
-        self.assertEqual(ag.depurar_liberadas(self.lib(v), {}), {})
+        self.assertEqual(ag.depurar_liberadas(self.lib(v), {}, 1100), {})
+
+    def test_en_gracia_la_liberacion_sobrevive_a_salir_del_feed(self):
+        # corrida 3 (3-nov): la IP sale del feed al liberarla y la cola tardia la vuelve a meter
+        v = self.feed(dict(accion="BLOCK", hasta=1300, detector="port_scan"))
+        lib = ag.depurar_liberadas(self.lib(v, desde=1000, gracia=120), {}, 1010)
+        self.assertIn("10.10.20.30", lib)
+        v2 = self.feed(dict(accion="BLOCK", hasta=1340, detector="port_scan"))     # ventanas tardias
+        aplicar, sombra = ag.filtrar_alcance(v2, None, lib, ahora=1034)
+        self.assertNotIn("10.10.20.30", aplicar)
+        self.assertEqual(sombra["10.10.20.30"], "liberada")
+        # pasada la gracia y sin orden, se olvida
+        self.assertEqual(ag.depurar_liberadas(lib, {}, 1200), {})
 
     def test_vigentes_lleva_el_nivel(self):
         f = {"entradas": [{"ip": "10.10.20.30", "accion": "BLOCK", "hasta": 1300, "nivel": 2}]}

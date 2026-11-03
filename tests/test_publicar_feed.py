@@ -13,10 +13,48 @@ class DecisionesAEntradas(unittest.TestCase):
         self.nunca = pf.NUNCA_BLOQUEAR_POR_DEFECTO
 
     def test_alerta_del_modelo_es_limit(self):
-        ent = pf.decisiones_a_entradas([dec("10.10.20.30")], {}, 1000.0, self.nunca)
+        # sostenida: tres ventanas claras de la misma IP
+        ent = pf.decisiones_a_entradas([dec("10.10.20.30", logged_at=980.0), dec("10.10.20.30", logged_at=990.0),
+                                        dec("10.10.20.30")], {}, 1000.0, self.nunca)
         self.assertEqual(len(ent), 1)
         self.assertEqual(ent[0]["accion"], "LIMIT")
         self.assertEqual(ent[0]["hasta"], 1000 + 300)
+
+    def test_alerta_suelta_del_modelo_no_se_publica(self):
+        ent = pf.decisiones_a_entradas([dec("10.10.20.21")], {}, 1000.0, self.nunca)
+        self.assertEqual(ent, [])
+
+    def test_alerta_marginal_del_modelo_no_se_publica(self):
+        marg = []
+        for t in (980.0, 990.0, 1000.0):
+            d = dec("10.10.20.21", logged_at=t)
+            d.update(score=-0.610, threshold=-0.569)       # a 0,041 del umbral: marginal
+            marg.append(d)
+        self.assertEqual(pf.decisiones_a_entradas(marg, {}, 1000.0, self.nunca), [])
+
+    def test_alerta_clara_y_sostenida_se_publica(self):
+        ds = []
+        for t in (980.0, 990.0, 1000.0):
+            d = dec("10.10.20.30", logged_at=t)
+            d.update(score=-0.630, threshold=-0.569)
+            ds.append(d)
+        ent = pf.decisiones_a_entradas(ds, {}, 1000.0, self.nunca)
+        self.assertEqual([e["accion"] for e in ent], ["LIMIT"])
+
+    def test_dos_ventanas_claras_no_bastan(self):
+        # corrida 3 (3-nov): .21 con dos ventanas a 0,03 y 0,05 del umbral -> no se publica
+        ds = []
+        for t, s in ((990.0, -0.598), (1000.0, -0.621)):
+            d = dec("10.10.20.21", logged_at=t)
+            d.update(score=s, threshold=-0.569)
+            ds.append(d)
+        self.assertEqual(pf.decisiones_a_entradas(ds, {}, 1000.0, self.nunca), [])
+
+    def test_regla_actua_desde_la_primera_ventana(self):
+        d = dec("10.10.20.30", decision="PERMIT")
+        d["heuristico"] = {"heuristico": "http_abuse", "accion": "LIMIT", "motivo": "x"}
+        ent = pf.decisiones_a_entradas([d], {}, 1000.0, self.nunca)
+        self.assertEqual(ent[0]["detector"], "http_abuse")
 
     def test_alerta_de_heuristico_es_block(self):
         ent = pf.decisiones_a_entradas(
