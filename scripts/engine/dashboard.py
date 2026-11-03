@@ -1454,7 +1454,7 @@ HTML = """<!doctype html>
         </span></label>
       <input type="text" id="alertasIp" class="ip-filter" placeholder="Filtrar por IP..." aria-label="Filtrar alertas por IP">
       <button type="button" class="btn-sec neutro" id="alertasLimpiar">Limpiar filtros</button>
-      <button type="button" class="btn-sec neutro" id="alertasMarg" aria-pressed="false" title="Anomalías solo del modelo con el score a menos de 0,02 del umbral">Marginales: ocultas</button>
+      <button type="button" class="btn-sec neutro" id="alertasMarg" aria-pressed="false" title="Anomalías solo del modelo con el score a menos de 0,05 del umbral">Marginales: ocultas</button>
     </div>
     <div class="alertas-lista" id="alertasLista"></div>
   </section>
@@ -2983,12 +2983,15 @@ function renderAlertas() {
   const nMod = (c.alert_model != null) ? c.alert_model : h.filter(d => alertaTipos(d).modelo).length;
   const nReg = hayCont ? Math.max(0, totalHora - nMod) : h.filter(d => alertaTipos(d).regla).length;
   const nMargH = (c.alert_model_marginal != null) ? c.alert_model_marginal : h.filter(esMarginal).length;
-  const relev = Math.max(0, totalHora - nMargH);
+  // Politica A: alerta = lo que provoca accion (una regla). El modelo solo queda
+  // «para revision» y la infraestructura protegida nunca se actua: se cuentan aparte.
+  const relev = (c.acciones_relevantes != null) ? c.acciones_relevantes : Math.max(0, totalHora - nMargH);
   const nRegla = (c.acciones_regla != null) ? c.acciones_regla : h.filter(d => alertaTipos(d).regla).length;
   resumen.innerHTML = `<div class="al-num ${relev ? 'hay' : ''}">${relev}</div>`
-    + `<div class="al-num-t">alerta(s) relevantes en la última hora`
-    + `<small>${nRegla} con regla · ${Math.max(0, relev - nRegla)} solo del modelo · `
-    + `${nMargH} marginal(es) ${verMarginales ? 'visibles' : 'agrupadas'} (score a menos de 0,02 del umbral)`
+    + `<div class="al-num-t">alerta(s) con acción en la última hora`
+    + `<small>${nRegla} por regla · ${c.revision_modelo || 0} anomalía(s) solo del modelo para revisión (sin acción) · `
+    + `${c.infra_protegida || 0} en infraestructura protegida (no se actúa) · `
+    + `${nMargH} marginal(es) ${verMarginales ? 'visibles' : 'agrupadas'} (score a menos de 0,05 del umbral)`
     + `</small></div>`;
   // Estados vacios: dependen de por que no hay filas. Una lista filtrada vacia
   // NUNCA permite concluir que el sistema este en PERMIT.
@@ -3012,7 +3015,7 @@ function renderAlertas() {
   rows = rows.slice(0, 80);
   if (!rows.length) {
     const limpiar = ' <button type="button" class="btn-sec neutro" data-al-limpiar="1">Limpiar filtros</button>';
-    if (!verMarginales && nMargLista) vacio('Ahora solo hay anomalías marginales del modelo (' + nMargLista + '): score a menos de 0,02 del umbral.', ' <button type="button" class="btn-sec neutro" data-al-marg="1">Mostrarlas</button>');
+    if (!verMarginales && nMargLista) vacio('Ahora solo hay anomalías marginales del modelo (' + nMargLista + '): score a menos de 0,05 del umbral.', ' <button type="button" class="btn-sec neutro" data-al-marg="1">Mostrarlas</button>');
     else if (ipQ) vacio('No encontramos alertas para esta IP en la lista cargada.', limpiar);
     else if (alertasFiltro === 'regla') vacio('No hay alertas de reglas en los registros cargados. Puede haber anomalías del modelo; consulta «Todas».', limpiar);
     else if (alertasFiltro === 'modelo') vacio('No hay anomalías del modelo en los registros cargados. Puede haber alertas de reglas; consulta «Todas».', limpiar);
@@ -7702,7 +7705,9 @@ def compute_counters(decisions: list[dict], window_seconds: int = 3600,
         1 for d in recent
         if d["decision"] == "PERMIT" and d.get("detector_name") == detector_modelo
     )
-    acciones = [accion_de(d) for d in recent]
+    # Infraestructura protegida (DNS/AD, gateways...): sus reglas se registran pero
+    # nunca se publican ni aplican, asi que no son alertas con accion (politica A).
+    acciones = [None if str(d.get("entity_ip", "")) in NUNCA_BLOQUEAR else accion_de(d) for d in recent]
     return {
         "total": len(recent),
         "block": sum(1 for a in acciones if a and a[0] == "BLOCK"),
@@ -7711,8 +7716,13 @@ def compute_counters(decisions: list[dict], window_seconds: int = 3600,
         # Las anomalias marginales cuentan aparte: el panel las agrupa, no las borra.
         "alert_model_marginal": sum(1 for d in recent if es_marginal(d)),
         "acciones_relevantes": sum(1 for d, a in zip(recent, acciones) if a and not es_marginal(d)),
-        "acciones_regla": sum(1 for d in recent if isinstance(d.get("heuristico"), dict)
+        "acciones_regla": sum(1 for d, a in zip(recent, acciones) if a and isinstance(d.get("heuristico"), dict)
                               and d["heuristico"].get("accion") in SEVERIDAD_ACCION),
+        "revision_modelo": sum(1 for d in recent if d.get("politica_modelo") == "sostenida"
+                               and str(d.get("entity_ip", "")) not in NUNCA_BLOQUEAR
+                               and not (isinstance(d.get("heuristico"), dict) and d["heuristico"].get("accion"))),
+        "infra_protegida": sum(1 for d in recent if str(d.get("entity_ip", "")) in NUNCA_BLOQUEAR
+                               and (d.get("decision") == "ALERT" or isinstance(d.get("heuristico"), dict))),
         "alert_model": alert_ocsvm,
         "alert_auth_heuristic": alert_auth_heuristic,
         "permit_model": permit_model,
