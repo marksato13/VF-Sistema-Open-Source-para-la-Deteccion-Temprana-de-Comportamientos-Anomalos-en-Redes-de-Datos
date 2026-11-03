@@ -94,6 +94,66 @@ class PlanNftables(unittest.TestCase):
         self.assertNotIn("sudo", lote)
 
 
+class AlcanceYLiberacion(unittest.TestCase):
+    VIG = {"10.10.20.30": {"accion": "BLOCK", "hasta": 1300, "nivel": 0},
+           "10.10.50.51": {"accion": "LIMIT", "hasta": 1300, "nivel": 0},
+           "10.10.20.24": {"accion": "LIMIT", "hasta": 1300, "nivel": 0}}
+
+    def test_sin_alcance_se_aplica_todo(self):
+        aplicar, sombra = ag.filtrar_alcance(self.VIG, None, None)
+        self.assertEqual(set(aplicar), set(self.VIG))
+        self.assertEqual(sombra, {})
+
+    def test_nunca_por_red(self):
+        aplicar, sombra = ag.filtrar_alcance(self.VIG, {"nunca": ["10.10.50.0/24"]}, None)
+        self.assertNotIn("10.10.50.51", aplicar)
+        self.assertEqual(sombra["10.10.50.51"], "nunca")
+
+    def test_solo_deja_el_resto_en_sombra(self):
+        aplicar, sombra = ag.filtrar_alcance(self.VIG, {"solo": ["10.10.20.30"]}, None)
+        self.assertEqual(list(aplicar), ["10.10.20.30"])
+        self.assertEqual(sombra["10.10.20.24"], "fuera-de-alcance")
+
+    def test_nunca_gana_a_solo(self):
+        aplicar, _ = ag.filtrar_alcance(self.VIG, {"solo": ["10.10.0.0/16"], "nunca": ["10.10.20.30/32"]}, None)
+        self.assertNotIn("10.10.20.30", aplicar)
+
+    LIB = {"10.10.20.30": {"nivel": 0, "hasta": 1300}}
+
+    def test_liberada_no_se_reaplica_si_es_la_misma_orden(self):
+        aplicar, sombra = ag.filtrar_alcance(self.VIG, None, self.LIB)
+        self.assertNotIn("10.10.20.30", aplicar)
+        self.assertEqual(sombra["10.10.20.30"], "liberada")
+
+    def test_republicacion_dentro_del_margen_sigue_liberada(self):
+        vig = {"10.10.20.30": {"accion": "BLOCK", "hasta": 1310, "nivel": 0}}
+        aplicar, _ = ag.filtrar_alcance(vig, None, self.LIB)
+        self.assertNotIn("10.10.20.30", aplicar)
+
+    def test_reincidencia_de_nivel_vuelve_a_aplicar(self):
+        vig = {"10.10.20.30": {"accion": "BLOCK", "hasta": 1300, "nivel": 1}}
+        aplicar, _ = ag.filtrar_alcance(vig, None, self.LIB)
+        self.assertIn("10.10.20.30", aplicar)
+        self.assertEqual(ag.depurar_liberadas(self.LIB, vig), {})
+
+    def test_ofensa_nueva_que_renueva_la_orden_vuelve_a_aplicar(self):
+        vig = {"10.10.20.30": {"accion": "LIMIT", "hasta": 1600, "nivel": 0}}
+        aplicar, _ = ag.filtrar_alcance(vig, None, self.LIB)
+        self.assertIn("10.10.20.30", aplicar)
+
+    def test_liberacion_se_olvida_si_sale_del_feed(self):
+        self.assertEqual(ag.depurar_liberadas(self.LIB, {}), {})
+
+    def test_vigentes_lleva_el_nivel(self):
+        f = {"entradas": [{"ip": "10.10.20.30", "accion": "BLOCK", "hasta": 1300, "nivel": 2}]}
+        self.assertEqual(ag.vigentes(f, 1000.0, set())["10.10.20.30"]["nivel"], 2)
+
+    def test_plan_liberar_toca_los_dos_sets(self):
+        texto = " ".join(" ".join(c) for c in ag.plan_liberar("10.10.20.30"))
+        self.assertIn(ag.SET_BLOCK + " { 10.10.20.30 }", texto)
+        self.assertIn(ag.SET_LIMIT + " { 10.10.20.30 }", texto)
+
+
 @unittest.skipUnless(TIENE_OPENSSL, "requiere openssl")
 class VerificacionFirma(unittest.TestCase):
     def setUp(self):
