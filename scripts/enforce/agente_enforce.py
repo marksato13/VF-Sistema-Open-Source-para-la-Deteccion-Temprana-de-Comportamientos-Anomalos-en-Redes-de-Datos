@@ -68,9 +68,9 @@ def verificar_feed(datos: bytes, firma: bytes, pub_path: str) -> dict | None:
 def vigentes(feed_obj: dict, ahora: float, nunca: set[str]) -> dict[str, dict]:
     """IPs con acción vigente (hasta > ahora), sin las de nunca-bloquear.
 
-    Devuelve {ip: {"accion", "hasta"}} con la acción MÁS severa por IP.
+    Devuelve {ip: {"accion", "hasta", "nivel", "ordenes"}} con la acción MÁS severa por
+    IP; "ordenes" guarda cada orden del feed por su detector (para la liberación humana).
     """
-    sev = {"BLOCK": 2, "LIMIT": 1}
     out: dict[str, dict] = {}
     for e in feed_obj.get("entradas", []):
         ip = e.get("ip")
@@ -79,12 +79,24 @@ def vigentes(feed_obj: dict, ahora: float, nunca: set[str]) -> dict[str, dict]:
         if float(e.get("hasta", 0)) <= ahora:
             continue
         accion = e.get("accion")
-        if accion not in sev:
+        if accion not in SEV:
             continue
-        prev = out.get(ip)
-        if prev is None or sev[accion] > sev[prev["accion"]]:
-            out[ip] = {"accion": accion, "hasta": int(e["hasta"]), "nivel": int(e.get("nivel") or 0)}
-    return out
+        orden = {"accion": accion, "hasta": int(e["hasta"]), "nivel": int(e.get("nivel") or 0)}
+        clave = str(e.get("detector") or accion)
+        ordenes = out.setdefault(ip, {})
+        prev = ordenes.get(clave)
+        if prev is None or (SEV[accion], orden["hasta"]) > (SEV[prev["accion"]], prev["hasta"]):
+            ordenes[clave] = orden
+    return {ip: mas_severa(o) for ip, o in out.items()}
+
+
+SEV = {"BLOCK": 2, "LIMIT": 1}
+
+
+def mas_severa(ordenes: dict[str, dict]) -> dict:
+    """La orden que el host aplica para una IP: la más severa; a igualdad, la que más dura."""
+    o = max(ordenes.values(), key=lambda x: (SEV[x["accion"]], x["hasta"]))
+    return {"accion": o["accion"], "hasta": o["hasta"], "nivel": o["nivel"], "ordenes": ordenes}
 
 
 def _redes(lista) -> list:
@@ -111,7 +123,7 @@ def filtrar_alcance(vig: dict[str, dict], alcance: dict | None,
 
     - `nunca`: redes de infraestructura -> nunca se aplican.
     - `solo`: si tiene algo, solo esas IPs/redes se aplican.
-    - liberadas: no se reaplica mientras el nivel de la orden no supere el liberado.
+    - liberadas: solo se aplican las órdenes NUEVAS tras la liberación humana.
     """
     alcance = alcance or {}
     nunca, solo = _redes(alcance.get("nunca")), _redes(alcance.get("solo"))
@@ -122,8 +134,12 @@ def filtrar_alcance(vig: dict[str, dict], alcance: dict | None,
             sombra[ip] = "nunca"
         elif solo and not en_redes(ip, solo):
             sombra[ip] = "fuera-de-alcance"
-        elif ip in liberadas and misma_orden(v, liberadas[ip], ahora):
-            sombra[ip] = "liberada"
+        elif ip in liberadas:
+            nv = ordenes_nuevas(v, liberadas[ip], ahora)
+            if nv:
+                aplicar[ip] = mas_severa(nv)     # solo lo nuevo: lo liberado no vuelve
+            else:
+                sombra[ip] = "liberada"
         else:
             aplicar[ip] = v
     return aplicar, sombra
@@ -133,30 +149,55 @@ MARGEN_RENOVACION = 20   # s: el sensor republica; solo una ofensa NUEVA mueve l
 GRACIA_LIBERACION = 120  # s: el motor registra ventanas con retraso; la cola del MISMO episodio se absorbe
 
 
-def misma_orden(v: dict, lib: dict, ahora: float = 0.0) -> bool:
-    """¿Sigue siendo la orden que el humano liberó?
+def _en_gracia(lib: dict, ahora: float) -> bool:
+    return ahora < float(lib.get("desde", 0)) + float(lib.get("gracia", 0))
 
-    No, si escaló de nivel. Durante la gracia, las renovaciones (ventanas tardías del
-    mismo episodio) se absorben. Pasada la gracia, una ofensa nueva que mueve la
-    caducidad más allá de la absorbida vuelve a aplicar."""
-    if v.get("nivel", 0) > int(lib.get("nivel", 0)):
-        return False
-    if ahora < float(lib.get("desde", 0)) + float(lib.get("gracia", 0)):
-        return True
-    return int(v.get("hasta", 0)) <= int(lib.get("hasta", 0)) + MARGEN_RENOVACION
+
+def ordenes_nuevas(v: dict, lib: dict, ahora: float = 0.0) -> dict[str, dict]:
+    """Órdenes de la IP que el humano NO liberó.
+
+    La liberación recuerda cada orden por su detector (caducidad y nivel). Durante la
+    gracia todo se absorbe (ventanas tardías del mismo episodio). Después, es nueva una
+    orden de otro detector, una que escaló de nivel o una renovada más allá del margen."""
+    if _en_gracia(lib, ahora):
+        return {}
+    absorbidas = lib.get("ordenes") or {}
+    out = {}
+    for clave, o in (v.get("ordenes") or {v.get("accion", "?"): v}).items():
+        a = absorbidas.get(clave)
+        if (a is None or o.get("nivel", 0) > int(a.get("nivel", 0))
+                or o["hasta"] > int(a.get("hasta", 0)) + MARGEN_RENOVACION):
+            out[clave] = o
+    return out
+
+
+def misma_orden(v: dict, lib: dict, ahora: float = 0.0) -> bool:
+    """¿La IP sigue sin órdenes nuevas desde la liberación?"""
+    return not ordenes_nuevas(v, lib, ahora)
+
+
+def registrar_liberacion(v: dict | None, ahora: float, gracia: int) -> dict:
+    ordenes = (v or {}).get("ordenes") or {}
+    return {"desde": int(ahora), "gracia": int(gracia),
+            "ordenes": {k: {"hasta": o["hasta"], "nivel": o["nivel"]} for k, o in ordenes.items()}}
 
 
 def depurar_liberadas(liberadas: dict[str, dict], vig: dict[str, dict],
                       ahora: float = 0.0) -> dict[str, dict]:
-    """Olvida liberaciones de IPs que ya no tienen orden o cuya orden cambió; durante
-    la gracia, la caducidad absorbida sigue a la de la orden."""
+    """Olvida liberaciones de IPs que ya no tienen orden. Durante la gracia, lo absorbido
+    sigue a las órdenes del feed (la cola del mismo episodio queda liberada)."""
     out = {}
     for ip, d in liberadas.items():
-        if ip in vig and misma_orden(vig[ip], d, ahora):
-            d = dict(d)
-            if ahora < float(d.get("desde", 0)) + float(d.get("gracia", 0)):
-                d["hasta"] = max(int(d.get("hasta", 0)), int(vig[ip].get("hasta", 0)))
-            out[ip] = d
+        if ip not in vig:
+            continue
+        d = dict(d)
+        if _en_gracia(d, ahora):
+            d["ordenes"] = dict(d.get("ordenes") or {})
+            for k, o in (vig[ip].get("ordenes") or {}).items():
+                prev = d["ordenes"].get(k, {"hasta": 0, "nivel": 0})
+                d["ordenes"][k] = {"hasta": max(int(prev["hasta"]), o["hasta"]),
+                                   "nivel": max(int(prev["nivel"]), o["nivel"])}
+        out[ip] = d
     return out
 
 
@@ -323,9 +364,7 @@ def main() -> int:
             for c in plan_liberar(ip):          # uno a uno: si no está en un set, no pasa nada
                 subprocess.run((["sudo", "-n"] if a.sudo else []) + c, check=False,
                                capture_output=True, text=True)
-            orden = vig.get(ip, {})
-            liberadas[ip] = {"nivel": orden.get("nivel", 0), "hasta": orden.get("hasta", 0),
-                             "desde": int(ahora), "gracia": a.gracia}
+            liberadas[ip] = registrar_liberacion(vig.get(ip), ahora, a.gracia)
             ruta_lib.write_text(json.dumps(liberadas, sort_keys=True), encoding="utf-8")
         print(json.dumps({"estado": "liberada" if a.aplicar else "dry-run", "ip": ip,
                           "orden_vigente": vig.get(ip)}, sort_keys=True))
