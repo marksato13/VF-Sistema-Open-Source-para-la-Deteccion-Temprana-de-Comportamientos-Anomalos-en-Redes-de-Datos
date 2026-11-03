@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import bisect
 import hashlib
 import hmac
 import ipaddress
@@ -6881,7 +6882,7 @@ async function vivoPoll() {
   if (!sec || sec.hidden || !sec.classList.contains('pag-activa') || vivo.pausa || vivo.enCurso) return;
   vivo.enCurso = true;
   try {
-    const qs = new URLSearchParams({todos: document.getElementById('vivoTodos').checked ? '1' : '0'});
+    const qs = new URLSearchParams({abierta: '1', todos: document.getElementById('vivoTodos').checked ? '1' : '0'});
     for (const k of ['pf', 'po', 'pn', 'eo']) if (vivo.cursor[k] !== undefined) qs.set(k, vivo.cursor[k]);
     const d = await (await fetch('/api/vivo/flujo?' + qs.toString())).json();
     if (d.error) {
@@ -6906,9 +6907,11 @@ async function vivoPoll() {
 
 async function vivoMotor() {
   const sec = document.getElementById('s-vivo');
-  if (!sec || sec.hidden || vivo.pausa || vivo.error) return;
+  // Solo con «Datos en vivo» abierta: /api/vivo recorre el anillo PCAP y el eve.json
+  // y era lo que mas CPU gastaba en el sensor aunque nadie mirara esta seccion.
+  if (!sec || sec.hidden || !sec.classList.contains('pag-activa') || vivo.pausa || vivo.error) return;
   try {
-    const d = await (await fetch('/api/vivo?todos=1&limite=3000')).json();
+    const d = await (await fetch('/api/vivo?abierta=1&todos=1&limite=3000')).json();
     if (d.error) return;
     vivo.motorInfo = d;
     for (const r of d.tramas) vivo.motor.pcap.set(r.fuente.fichero + '#' + r.fuente.trama, r);
@@ -7390,6 +7393,44 @@ renderRg();
 """
 
 
+VIVO_MIN_S = 30.0
+_VIVO_LOCK = threading.Lock()
+_VIVO_ULTIMO: dict = {}
+STATUS_CACHE_S = 3.0
+_STATUS_CACHE: dict = {}
+_STATUS_LOCK = threading.Lock()
+_RENDIMIENTO: dict = {"desde": time.time(), "rutas": {}, "volcado": 0.0}
+_RENDIMIENTO_LOCK = threading.Lock()
+
+
+def medir_ruta(ruta: str, segundos: float, nbytes: int, destino: Path | None) -> None:
+    if not ruta.startswith("/api/"):
+        ruta = "(pagina)"
+    with _RENDIMIENTO_LOCK:
+        r = _RENDIMIENTO["rutas"].setdefault(ruta, {"n": 0, "s": 0.0, "max_s": 0.0, "bytes": 0})
+        r["n"] += 1
+        r["s"] += segundos
+        r["max_s"] = max(r["max_s"], segundos)
+        r["bytes"] += nbytes
+        if destino is None or time.monotonic() - _RENDIMIENTO["volcado"] < 30:
+            return
+        _RENDIMIENTO["volcado"] = time.monotonic()
+        dur = max(1.0, time.time() - _RENDIMIENTO["desde"])
+        filas = sorted(({"ruta": k, "peticiones": v["n"], "por_min": round(v["n"] * 60 / dur, 1),
+                         "ms_medio": round(1000 * v["s"] / v["n"], 1), "ms_max": round(1000 * v["max_s"]),
+                         "cpu_s_por_min": round(v["s"] * 60 / dur, 2),
+                         "kb_medio": round(v["bytes"] / v["n"] / 1024, 1)}
+                        for k, v in _RENDIMIENTO["rutas"].items()),
+                       key=lambda f: -f["cpu_s_por_min"])
+        datos = {"desde": _RENDIMIENTO["desde"], "segundos": round(dur), "rutas": filas}
+    try:
+        tmp = destino.with_suffix(".tmp")
+        tmp.write_text(json.dumps(datos, indent=1), encoding="utf-8")
+        tmp.replace(destino)
+    except OSError:
+        pass
+
+
 def tail_lines(path: Path, max_bytes: int = 1_048_576) -> list[str]:
     if not path.exists():
         return []
@@ -7404,42 +7445,140 @@ def tail_lines(path: Path, max_bytes: int = 1_048_576) -> list[str]:
     ]
 
 
-# Cache de decisiones parseadas. Cada vista sondea cada 3-5 s y el servidor
-# atiende cada peticion en su hilo: sin cache, N pestanas x N endpoints volvian
-# a parsear 4-32 MiB del registro a la vez y el panel llego a 4,7 GB y dejo de
-# responder (3-nov). Una lectura por tramo y por DECISIONES_CACHE_S; mientras
-# un hilo parsea, los demas del mismo tramo esperan su resultado en vez de
-# repetir el trabajo. Los dicts se comparten: los llamadores no los modifican.
-DECISIONES_CACHE_S = 2.5
-_CACHE_DECISIONES: dict = {}
-_CACHE_DECISIONES_LOCK = threading.Lock()
+# Almacen incremental de decisiones (3-nov, segunda version). Antes cada tramo
+# (1, 4, 16 y 32 MiB) se volvia a parsear entero cada 2,5 s: en el Sensor1 eso
+# era la CPU al 100 % y el panel en 5 GB con 66 hilos esperando. Ahora se parsea
+# una vez la cola de DECISIONES_VENTANA_BYTES y despues solo los bytes nuevos;
+# cada tramo es un corte por desplazamiento del mismo almacen. La politica del
+# modelo se recalcula solo en la zona que las ventanas nuevas pueden cambiar.
+# Los dicts se comparten: los llamadores no los modifican.
+DECISIONES_CACHE_S = 2.0
+DECISIONES_VENTANA_BYTES = 33_554_432
+_ALMACENES: dict = {}
+_ALMACENES_LOCK = threading.Lock()
 
 
-def _decisiones_parseadas(log_path: Path, max_bytes: int) -> list[dict]:
-    clave = (str(log_path), max_bytes)
-    with _CACHE_DECISIONES_LOCK:
-        ent = _CACHE_DECISIONES.setdefault(clave, {"t": 0.0, "datos": [], "lock": threading.Lock()})
-    with ent["lock"]:
-        if time.monotonic() - ent["t"] < DECISIONES_CACHE_S:
-            return ent["datos"]
-        records = []
-        for line in tail_lines(log_path, max_bytes=max_bytes):
-            if '"decision"' not in line:
-                continue
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if event.get("event") == "decision":
-                records.append(event)
-        records.sort(key=lambda item: item.get("logged_at", 0))
-        anotar_politica_modelo(records)
-        ent["datos"], ent["t"] = records, time.monotonic()
-        return records
+def _malloc():
+    """glibc: pocas arenas (un servidor con muchos hilos fragmenta mucho) y una
+    forma de devolver al sistema la memoria liberada. Nada fuera de Linux."""
+    try:
+        import ctypes
+        libc = ctypes.CDLL("libc.so.6")
+        libc.mallopt(-8, 2)            # M_ARENA_MAX = 2
+        return libc
+    except (OSError, AttributeError):
+        return None
+
+
+_LIBC = _malloc()
+_ULTIMO_TRIM = [0.0]
+
+
+def _devolver_memoria() -> None:
+    if _LIBC is not None and time.monotonic() - _ULTIMO_TRIM[0] > 60:
+        _ULTIMO_TRIM[0] = time.monotonic()
+        try:
+            _LIBC.malloc_trim(0)
+        except Exception:              # noqa: BLE001 - es solo higiene de memoria
+            pass
+
+
+def _almacen(log_path: Path) -> dict:
+    """Pone al dia el almacen de `log_path` (como mucho cada DECISIONES_CACHE_S)
+    y lo devuelve bloqueado por el llamador via a["lock"]."""
+    clave = str(log_path)
+    with _ALMACENES_LOCK:
+        a = _ALMACENES.get(clave)
+        if a is None:
+            a = _ALMACENES[clave] = {"lock": threading.Lock(), "t": -1e9, "ino": None,
+                                     "pos": 0, "resto": b"", "offs": [], "recs": [],
+                                     "inicio_partido": False}
+    with a["lock"]:
+        if time.monotonic() - a["t"] < DECISIONES_CACHE_S:
+            return a
+        a["t"] = time.monotonic()
+        try:
+            st = log_path.stat()
+        except OSError:
+            a.update(ino=None, pos=0, resto=b"", offs=[], recs=[])
+            return a
+        if a["ino"] != st.st_ino or st.st_size < a["pos"]:          # rotado o truncado
+            ini = max(0, st.st_size - DECISIONES_VENTANA_BYTES)
+            a.update(ino=st.st_ino, pos=ini, resto=b"", offs=[], recs=[], inicio_partido=ini > 0)
+        if st.st_size > a["pos"]:
+            with log_path.open("rb") as fh:
+                fh.seek(a["pos"])
+                datos = fh.read(st.st_size - a["pos"])
+            base = a["pos"] - len(a["resto"])
+            buf = a["resto"] + datos
+            a["pos"] += len(datos)
+            ini = 0
+            if a["inicio_partido"]:
+                nl = buf.find(b"\n")
+                ini = nl + 1 if nl >= 0 else len(buf)
+                a["inicio_partido"] = nl < 0
+            fin = buf.rfind(b"\n")
+            if fin < ini:
+                a["resto"] = buf[ini:]
+                return a
+            a["resto"] = buf[fin + 1:]
+            nuevos, offs = [], []
+            p = ini
+            while p <= fin:
+                q = buf.index(b"\n", p)
+                linea = buf[p:q]
+                if b'"decision"' in linea:
+                    try:
+                        ev = json.loads(linea)
+                    except ValueError:
+                        ev = None
+                    if isinstance(ev, dict) and ev.get("event") == "decision":
+                        nuevos.append(ev)
+                        offs.append(base + p)
+                p = q + 1
+            if nuevos:
+                recs, offsets = a["recs"], a["offs"]
+                previo = recs[-1].get("logged_at", 0) if recs else None
+                recs.extend(nuevos)
+                offsets.extend(offs)
+                t_nuevo = min(float(d.get("logged_at", 0)) for d in nuevos)
+                if previo is not None and t_nuevo < float(previo):
+                    orden = sorted(range(len(recs)), key=lambda k: recs[k].get("logged_at", 0))
+                    a["recs"] = recs = [recs[k] for k in orden]
+                    a["offs"] = offsets = [offsets[k] for k in orden]
+                # Una ventana nueva puede volver «sostenida» otra de hasta 120 s antes,
+                # que a su vez necesita 120 s de contexto: se recalcula desde t-240 s
+                # con contexto desde t-360 s y lo anterior se deja como estaba.
+                corte, ctx_t = t_nuevo - 2 * VENTANA_SOSTENIDA_S, t_nuevo - 3 * VENTANA_SOSTENIDA_S
+                k = len(recs)
+                while k > 0 and float(recs[k - 1].get("logged_at", 0)) >= ctx_t:
+                    k -= 1
+                ctx = recs[k:]
+                fijas = [(d, d["politica_modelo"]) for d in ctx
+                         if float(d.get("logged_at", 0)) < corte and "politica_modelo" in d]
+                anotar_politica_modelo(ctx)
+                for d, v in fijas:
+                    d["politica_modelo"] = v
+            limite = a["pos"] - DECISIONES_VENTANA_BYTES
+            if a["offs"] and a["offs"][0] < limite - DECISIONES_VENTANA_BYTES // 8:
+                k = bisect.bisect_left(a["offs"], limite)
+                del a["offs"][:k]
+                del a["recs"][:k]
+                _devolver_memoria()
+        return a
+
+
+def _decisiones_tramo(log_path: Path, max_bytes: int) -> list[dict]:
+    """Decisiones de los ultimos `max_bytes` del registro, de la mas antigua a la
+    mas reciente (copia de la lista; los dicts son compartidos)."""
+    a = _almacen(log_path)
+    with a["lock"]:
+        k = bisect.bisect_left(a["offs"], a["pos"] - max_bytes)
+        return a["recs"][k:]
 
 
 def read_decisions(log_path: Path, limit: int, max_bytes: int = 1_048_576) -> list[dict]:
-    records = _decisiones_parseadas(log_path, max_bytes)
+    records = _decisiones_tramo(log_path, max_bytes)
     return records[-limit:][::-1]
 
 
@@ -7485,6 +7624,22 @@ def leer_alcance(log_path: Path) -> dict:
     aparecen: un cero afirmaria que se midio y salio limpio, que es justo lo
     contrario de no haberlo medido.
     """
+    try:
+        sello = (str(log_path), log_path.stat().st_size // 262_144)
+    except OSError:
+        sello = None
+    if sello is not None and _CACHE_ALCANCE.get("sello") == sello \
+            and time.monotonic() - _CACHE_ALCANCE.get("t", 0) < 15:
+        return dict(_CACHE_ALCANCE["datos"])
+    alcance = _leer_alcance(log_path)
+    _CACHE_ALCANCE.update(sello=sello, t=time.monotonic(), datos=alcance)
+    return dict(alcance)
+
+
+_CACHE_ALCANCE: dict = {}
+
+
+def _leer_alcance(log_path: Path) -> dict:
     alcance: dict = {}
     for line in tail_lines(log_path, max_bytes=1_048_576):
         try:
@@ -8185,24 +8340,12 @@ def historial_acciones(log_path: Path, ahora: float, horas: int = 24,
     if nunca is None:
         nunca = NUNCA_BLOQUEAR
     limite = ahora - horas * 3600
-    lineas = tail_lines(log_path, max_bytes=max_bytes)
-    primera = None
-    for linea in lineas[:50]:
-        try:
-            primera = float(json.loads(linea)["logged_at"])
-            break
-        except (ValueError, KeyError, TypeError):
-            continue
+    # Del almacen incremental (ya con la politica del modelo anotada): antes se
+    # releian y parseaban 32 MiB cada 30 s solo para esta vista.
+    tramo = _decisiones_tramo(log_path, max_bytes)
+    primera = float(tramo[0].get("logged_at", 0)) if tramo else None
     ofensas: dict[str, list[tuple[float, str, str, str]]] = {}
-    leidas = []
-    for linea in lineas:
-        if '"ALERT"' not in linea and '"accion"' not in linea:
-            continue
-        try:
-            leidas.append(json.loads(linea))
-        except ValueError:
-            continue
-    anotar_politica_modelo(leidas)
+    leidas = [d for d in tramo if d.get("decision") == "ALERT" or d.get("heuristico")]
     for d in leidas:
         t = d.get("logged_at")
         ip = str(d.get("entity_ip", ""))
@@ -9623,6 +9766,7 @@ def main() -> int:
 
         def _send_json(self, payload: dict | list) -> None:
             body = json.dumps(payload).encode("utf-8")
+            self._bytes_resp = len(body)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
@@ -9630,6 +9774,18 @@ def main() -> int:
             self.wfile.write(body)
 
         def do_GET(self) -> None:  # noqa: N802
+            # Rendimiento por ruta (3-nov): cuantas, cuanto tardan y cuanto pesan.
+            # Se vuelca cada 30 s a logs/panel_rendimiento.json para ver que
+            # vista carga al sensor sin tener que adivinar.
+            t0 = time.perf_counter()
+            self._bytes_resp = 0
+            try:
+                self._do_get()
+            finally:
+                medir_ruta(self.path.partition("?")[0], time.perf_counter() - t0,
+                           self._bytes_resp, args.log_path.parent / "panel_rendimiento.json")
+
+        def _do_get(self) -> None:
             path, _, query = self.path.partition("?")
 
             if path == "/login":
@@ -9656,6 +9812,14 @@ def main() -> int:
                 self._send_html(pagina)
                 return
             if path == "/api/status":
+                # Todas las pestanas sondean cada 5 s y cada estado lanza systemctl y
+                # sudo: se calcula una vez cada STATUS_CACHE_S y se comparte.
+                with _STATUS_LOCK:
+                    if "datos" in _STATUS_CACHE and \
+                            time.monotonic() - _STATUS_CACHE.get("t", -1e9) < STATUS_CACHE_S:
+                        self._send_json(_STATUS_CACHE["datos"])
+                        return
+                    _STATUS_CACHE["t"] = time.monotonic()
                 decisions = read_decisions(args.log_path, limit=2000)
                 ahora = time.time()
                 servicios = service_status([] if args.demo else service_names)
@@ -9673,7 +9837,7 @@ def main() -> int:
                     captura["drops_estado"] = de
                     _CAPTURA_PREVIA["v"] = {"medido_en": de.get("marca"),
                                             "total": de.get("total")}
-                self._send_json(
+                _STATUS_CACHE["datos"] = datos_status = (
                     {
                         "modo": "demo" if args.demo else "live",
                         "services": servicios,
@@ -9701,6 +9865,7 @@ def main() -> int:
                         "calibracion": calibr,
                     }
                 )
+                self._send_json(datos_status)
                 return
             if path == "/api/escenario":
                 params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
@@ -9774,6 +9939,12 @@ def main() -> int:
                     self._send_json({"error": "falta la red de entidades (--entity-network "
                                               "o [red] red_entidades)"})
                     return
+                if params.get("abierta") != "1":
+                    # Una pestaña con el JS de antes pedía esto aunque la sección
+                    # estuviera cerrada, y cada /api/vivo es ~1 min de CPU con el GIL.
+                    self._send_json({"error": "Versión antigua del panel en esta pestaña: "
+                                              "recárgala con Ctrl+F5."})
+                    return
                 try:
                     if path == "/api/vivo/flujo":
                         # El cursor lo guarda el navegador. Del fichero solo se
@@ -9790,9 +9961,22 @@ def main() -> int:
                             args.eve_path, cfg, cursor, todos=params.get("todos") == "1"))
                         return
                     limite = params.get("limite", "150")
-                    self._send_json(vista_vivo.calcular_con_cache(
-                        args.eve_path, cfg, todos=params.get("todos") == "1",
-                        limite=min(int(limite), 3000) if limite.isdigit() else 150))
+                    # Un solo cálculo a la vez y como mucho uno cada VIVO_MIN_S: si ya
+                    # hay uno en marcha se sirve el último (o se avisa), no se encola.
+                    if not _VIVO_LOCK.acquire(blocking=False):
+                        self._send_json(_VIVO_ULTIMO.get("datos") or {"error": "calculando"})
+                        return
+                    try:
+                        if "datos" in _VIVO_ULTIMO and time.monotonic() - _VIVO_ULTIMO["t"] < VIVO_MIN_S:
+                            datos_vivo = _VIVO_ULTIMO["datos"]
+                        else:
+                            datos_vivo = vista_vivo.calcular_con_cache(
+                                args.eve_path, cfg, todos=params.get("todos") == "1",
+                                limite=min(int(limite), 3000) if limite.isdigit() else 150)
+                            _VIVO_ULTIMO.update(t=time.monotonic(), datos=datos_vivo)
+                    finally:
+                        _VIVO_LOCK.release()
+                    self._send_json(datos_vivo)
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"error": "%s: %s" % (type(exc).__name__, exc)})
                 return
