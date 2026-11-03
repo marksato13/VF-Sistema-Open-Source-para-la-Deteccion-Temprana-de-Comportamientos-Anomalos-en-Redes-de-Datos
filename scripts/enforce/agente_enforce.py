@@ -106,7 +106,7 @@ def en_redes(ip: str, redes: list) -> bool:
 
 
 def filtrar_alcance(vig: dict[str, dict], alcance: dict | None,
-                    liberadas: dict[str, dict] | None) -> tuple[dict, dict]:
+                    liberadas: dict[str, dict] | None, ahora: float = 0.0) -> tuple[dict, dict]:
     """Separa lo que el host aplica de lo que deja en sombra, con el motivo.
 
     - `nunca`: redes de infraestructura -> nunca se aplican.
@@ -122,7 +122,7 @@ def filtrar_alcance(vig: dict[str, dict], alcance: dict | None,
             sombra[ip] = "nunca"
         elif solo and not en_redes(ip, solo):
             sombra[ip] = "fuera-de-alcance"
-        elif ip in liberadas and misma_orden(v, liberadas[ip]):
+        elif ip in liberadas and misma_orden(v, liberadas[ip], ahora):
             sombra[ip] = "liberada"
         else:
             aplicar[ip] = v
@@ -130,19 +130,34 @@ def filtrar_alcance(vig: dict[str, dict], alcance: dict | None,
 
 
 MARGEN_RENOVACION = 20   # s: el sensor republica; solo una ofensa NUEVA mueve la caducidad más allá
+GRACIA_LIBERACION = 120  # s: el motor registra ventanas con retraso; la cola del MISMO episodio se absorbe
 
 
-def misma_orden(v: dict, lib: dict) -> bool:
-    """¿Sigue siendo la orden que el humano liberó? No si escaló de nivel o si el
-    sensor la renovó por una ofensa nueva (su caducidad avanzó)."""
+def misma_orden(v: dict, lib: dict, ahora: float = 0.0) -> bool:
+    """¿Sigue siendo la orden que el humano liberó?
+
+    No, si escaló de nivel. Durante la gracia, las renovaciones (ventanas tardías del
+    mismo episodio) se absorben. Pasada la gracia, una ofensa nueva que mueve la
+    caducidad más allá de la absorbida vuelve a aplicar."""
     if v.get("nivel", 0) > int(lib.get("nivel", 0)):
         return False
+    if ahora < float(lib.get("desde", 0)) + float(lib.get("gracia", 0)):
+        return True
     return int(v.get("hasta", 0)) <= int(lib.get("hasta", 0)) + MARGEN_RENOVACION
 
 
-def depurar_liberadas(liberadas: dict[str, dict], vig: dict[str, dict]) -> dict[str, dict]:
-    """Olvida liberaciones de IPs que ya no tienen orden o cuya orden cambió."""
-    return {ip: d for ip, d in liberadas.items() if ip in vig and misma_orden(vig[ip], d)}
+def depurar_liberadas(liberadas: dict[str, dict], vig: dict[str, dict],
+                      ahora: float = 0.0) -> dict[str, dict]:
+    """Olvida liberaciones de IPs que ya no tienen orden o cuya orden cambió; durante
+    la gracia, la caducidad absorbida sigue a la de la orden."""
+    out = {}
+    for ip, d in liberadas.items():
+        if ip in vig and misma_orden(vig[ip], d, ahora):
+            d = dict(d)
+            if ahora < float(d.get("desde", 0)) + float(d.get("gracia", 0)):
+                d["hasta"] = max(int(d.get("hasta", 0)), int(vig[ip].get("hasta", 0)))
+            out[ip] = d
+    return out
 
 
 def plan_liberar(ip: str) -> list[list[str]]:
@@ -275,6 +290,8 @@ def main() -> int:
                    help="registro de liberaciones humanas")
     p.add_argument("--liberar", metavar="IP", help="retira la IP de nftables y no la reaplica "
                                                     "mientras la orden no escale")
+    p.add_argument("--gracia", type=int, default=GRACIA_LIBERACION,
+                   help="s en que la liberación absorbe la cola del mismo episodio (def. 120)")
     a = p.parse_args()
 
     try:
@@ -293,7 +310,7 @@ def main() -> int:
     vig = vigentes(feed_obj, ahora, NUNCA_BLOQUEAR)
     ruta_lib = Path(a.liberadas)
     liberadas_prev = _leer_json(ruta_lib)
-    liberadas = depurar_liberadas(liberadas_prev, vig)
+    liberadas = depurar_liberadas(liberadas_prev, vig, ahora)
 
     if a.liberar:
         ip = a.liberar.strip()
@@ -308,13 +325,13 @@ def main() -> int:
                                capture_output=True, text=True)
             orden = vig.get(ip, {})
             liberadas[ip] = {"nivel": orden.get("nivel", 0), "hasta": orden.get("hasta", 0),
-                             "desde": int(ahora)}
+                             "desde": int(ahora), "gracia": a.gracia}
             ruta_lib.write_text(json.dumps(liberadas, sort_keys=True), encoding="utf-8")
         print(json.dumps({"estado": "liberada" if a.aplicar else "dry-run", "ip": ip,
                           "orden_vigente": vig.get(ip)}, sort_keys=True))
         return 0
 
-    vig, sombra = filtrar_alcance(vig,_leer_json(Path(a.alcance)), liberadas)
+    vig, sombra = filtrar_alcance(vig, _leer_json(Path(a.alcance)), liberadas, ahora)
     if a.aplicar and liberadas != liberadas_prev:
         try:
             ruta_lib.write_text(json.dumps(liberadas, sort_keys=True), encoding="utf-8")

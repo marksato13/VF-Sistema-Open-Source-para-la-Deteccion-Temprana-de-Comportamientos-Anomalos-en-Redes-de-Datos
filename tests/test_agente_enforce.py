@@ -141,6 +141,25 @@ class AlcanceYLiberacion(unittest.TestCase):
         aplicar, _ = ag.filtrar_alcance(vig, None, self.LIB)
         self.assertIn("10.10.20.30", aplicar)
 
+    def test_gracia_absorbe_la_cola_del_mismo_episodio(self):
+        lib = {"10.10.20.30": {"nivel": 0, "hasta": 1300, "desde": 1000, "gracia": 120}}
+        vig = {"10.10.20.30": {"accion": "LIMIT", "hasta": 1400, "nivel": 0}}   # ventana tardía
+        aplicar, sombra = ag.filtrar_alcance(vig, None, lib, ahora=1050)
+        self.assertNotIn("10.10.20.30", aplicar)
+        self.assertEqual(ag.depurar_liberadas(lib, vig, 1050)["10.10.20.30"]["hasta"], 1400)
+
+    def test_tras_la_gracia_una_ofensa_nueva_vuelve_a_aplicar(self):
+        lib = {"10.10.20.30": {"nivel": 0, "hasta": 1400, "desde": 1000, "gracia": 120}}
+        vig = {"10.10.20.30": {"accion": "LIMIT", "hasta": 1500, "nivel": 0}}
+        aplicar, _ = ag.filtrar_alcance(vig, None, lib, ahora=1200)
+        self.assertIn("10.10.20.30", aplicar)
+
+    def test_gracia_no_absorbe_una_escalada_de_nivel(self):
+        lib = {"10.10.20.30": {"nivel": 0, "hasta": 1300, "desde": 1000, "gracia": 120}}
+        vig = {"10.10.20.30": {"accion": "BLOCK", "hasta": 1300, "nivel": 1}}
+        aplicar, _ = ag.filtrar_alcance(vig, None, lib, ahora=1010)
+        self.assertIn("10.10.20.30", aplicar)
+
     def test_liberacion_se_olvida_si_sale_del_feed(self):
         self.assertEqual(ag.depurar_liberadas(self.LIB, {}), {})
 
