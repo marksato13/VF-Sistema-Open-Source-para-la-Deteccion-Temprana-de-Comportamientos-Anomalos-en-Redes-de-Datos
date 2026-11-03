@@ -955,7 +955,6 @@ HTML = """<!doctype html>
     <!--ADMIN-->
     <div class="nav-grupo">Sistema</div>
     <a href="#s-despliegue" data-sec="s-despliegue"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="3" y="17" width="6" height="5" rx="1"/><rect x="15" y="17" width="6" height="5" rx="1"/><path d="M12 7v4M6 17v-3h12v3"/></svg>Despliegue</a>
-    <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
     <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Mapa del sistema</a>
     <div class="nav-grupo">Datos</div>
     <a href="#s-variables" data-sec="s-variables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg>Variables</a>
@@ -1012,14 +1011,12 @@ HTML = """<!doctype html>
       <div class="topo-canvas" id="topoCanvas">
         <div class="topo-bar">
           <div class="range-toggle" id="topoVista">
-            <button data-vista="metodologica" class="active">1 · Fases del método</button>
-            <button data-vista="red">2 · Red y captura</button>
-            <button data-vista="completa">3 · Operacional</button>
-            <button data-vista="construccion">4 · Construcción y entrenamiento</button>
-            <button data-vista="decision">5 · Decisión</button>
-            <button data-vista="respuesta">6 · Respuesta</button>
-            <button data-vista="carpetas">7 · Carpetas</button>
-            <button data-vista="validacion">8 · Validación</button>
+            <button data-vista="red">1 · Red y captura</button>
+            <button data-vista="completa" class="active">2 · Operacional</button>
+            <button data-vista="construccion">3 · Construcción y entrenamiento</button>
+            <button data-vista="decision">4 · Decisión</button>
+            <button data-vista="respuesta">5 · Respuesta</button>
+            <button data-vista="carpetas">6 · Carpetas</button>
           </div>
           <div class="topo-zoom">
             <button id="topoMenos" title="Reducir" aria-label="Reducir">&minus;</button>
@@ -1193,7 +1190,7 @@ HTML = """<!doctype html>
     <ul class="cmp-notas" id="cmpNotas"></ul>
   </section>
 
-  <section id="s-alcance">
+  <section id="s-alcance" hidden>
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg><h2>Alcance del análisis</h2></div>
     <div class="alc-3">
       <div><h3>Observa</h3><ul>
@@ -1225,161 +1222,12 @@ HTML = """<!doctype html>
 
   <section id="s-simulacion">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg><h2>Simulación de escenarios</h2></div>
-    <p class="lede-small">Cada escenario trae su explicación y el comando exacto para copiar y pegar en TU terminal SSH. El panel no ejecuta nada: solo guía y luego verás la respuesta del modelo en Actividad y Decisiones.</p>
+    <p class="lede-small">Elige un escenario, copia el comando y ejecútalo en la Kali. La respuesta aparece en Actividad y Decisiones.</p>
     <div class="range-toggle" id="simTabs">
       <button data-sim="normal" class="active">Tráfico normal</button>
       <button data-sim="anomalo">Tráfico anómalo</button>
     </div>
     <div class="sim-grid" id="simGrid"></div>
-
-    <div class="umb-box">
-      <h3 class="umb-h">Cómo se genera la data: normal frente a anómalo</h3>
-      <p class="lede-small"><strong>Concepto de ventana:</strong> el motor no mira paquetes sueltos. Agrupa el tráfico de <em>cada IP</em> en <strong>ventanas de tiempo</strong> (10&nbsp;s para red y transporte, 30&nbsp;s y 60&nbsp;s para contexto y aplicación) y toma <strong>una decisión por ventana</strong>. Por eso "500 paquetes" no dice nada; "500 paquetes/s sostenidos en esta ventana, junto con las otras 27 variables" sí.</p>
-      <p class="lede-small"><strong>Desde dónde se ejecuta:</strong> el tráfico <strong>normal</strong> lo generan 6 perfiles, <strong>uno por IP</strong>, en las VM cliente <code class="esc-cmd">10.10.20.21&ndash;.26</code> (VLAN&nbsp;20), arrancados con <code class="esc-cmd">cyberflow-lab.target</code>. El tráfico <strong>anómalo</strong> sale de la Kali <code class="esc-cmd">10.10.20.30</code> por terminal SSH. El sensor observa todo por el <strong>espejo SPAN</strong>; nunca está en línea.</p>
-
-      <div class="pipe">
-        <div class="pipe-box"><span class="pl">Generación</span><b>Clientes + Kali</b><small>6 perfiles (normal) · ataques (anómalo)</small></div>
-        <div class="pipe-ar">&rarr;</div>
-        <div class="pipe-box"><span class="pl">Espejo SPAN</span><b>Copia del troncal</b><small>el sensor observa, no corta</small></div>
-        <div class="pipe-ar">&rarr;</div>
-        <div class="pipe-box hl"><span class="pl">Captura · ens37</span><b>Dos fuentes</b><small>tcpdump &rarr; PCAP · Suricata &rarr; eve.json</small></div>
-        <div class="pipe-ar">&rarr;</div>
-        <div class="pipe-box"><span class="pl">Ventanas</span><b>10 / 30 / 60 s</b><small>28 variables por IP</small></div>
-        <div class="pipe-ar">&rarr;</div>
-        <div class="pipe-box"><span class="pl">Dataset + modelo</span><b>Decisión</b><small>IsolationForest + heurísticos</small></div>
-      </div>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">Cómo se genera el tráfico normal (procedimiento)</h3>
-      <ol class="esc-refs">
-        <li><strong>Herramienta:</strong> scripts propios en Python (stdlib, sin dependencias externas) &mdash; <code class="esc-cmd">clientes_lab.py</code> (hace las peticiones) y <code class="esc-cmd">servidor_lab.py</code> (responde). No es JMeter ni Locust: es código propio.</li>
-        <li><strong>Orquestador:</strong> <strong>systemd</strong> &mdash; <code class="esc-cmd">cyberflow-lab.target</code> levanta <strong>6 servicios, uno por IP</strong> (.21&ndash;.26), con <code class="esc-cmd">Restart=always</code>. Se arrancan/paran todos con el target (<code class="esc-cmd">clientes_config.py</code> genera las unidades).</li>
-        <li><strong>Decisión por acción:</strong> cada perfil elige una acción <strong>al azar ponderada por su peso</strong> (los números del perfil) y espera un tiempo <strong>aleatorio</strong> (distribución exponencial) alrededor de su ritmo &rarr; parece humano, no periódico.</li>
-        <li><strong>Qué hace cada acción:</strong> peticiones reales HTTP/HTTPS/DNS/API/ping a endpoints que <em>alimentan variables concretas</em> (p. ej. <code class="esc-cmd">/api/auth</code>&rarr;401, <code class="esc-cmd">/api/fallo</code>&rarr;500, <code class="esc-cmd">/estatico/&lt;n&gt;k</code>&rarr;tamaño). Pulsa el <strong>ojito</strong> de cada perfil (tabla de abajo) para ver sus acciones y pesos.</li>
-      </ol>
-      <p class="toolbar-hint" style="margin-top:0.5rem"><strong>Horarios</strong> &mdash; curva diaria en <code class="esc-cmd">factor_horario()</code> de clientes_lab.py (las VMs corren en <strong>UTC</strong>):</p>
-      <div class="umb-tabla">
-        <table>
-          <thead><tr><th>Franja (hora local de la VM)</th><th>Factor</th><th></th></tr></thead>
-          <tbody>
-            <tr><td class="umb-r">08&ndash;13 h</td><td>1,0</td><td>mañana · plena carga</td></tr>
-            <tr><td class="umb-r">13&ndash;15 h</td><td>0,55</td><td>pausa de comida</td></tr>
-            <tr><td class="umb-r">15&ndash;19 h</td><td>0,9</td><td>tarde</td></tr>
-            <tr><td class="umb-r">19&ndash;23 h</td><td>0,35</td><td>noche</td></tr>
-            <tr><td class="umb-r">23&ndash;08 h</td><td>0,12</td><td>madrugada (poco, nunca cero)</td></tr>
-            <tr><td class="umb-r">Fin de semana</td><td>&times;0,3</td><td>multiplica sobre la franja</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="toolbar-hint">El factor multiplica la tasa: más factor &rarr; esperas más cortas &rarr; más tráfico. Los horarios y perfiles se definen en código (<code class="esc-cmd">clientes_lab.py</code>), no en un archivo de ajustes.</p>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">Tráfico NORMAL &mdash; los 6 perfiles (línea base)</h3>
-      <div class="umb-tabla">
-        <table>
-          <thead><tr><th>Perfil · IP</th><th>Qué hace</th><th>Ritmo</th><th>Por qué es normal</th></tr></thead>
-          <tbody>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="ofimatica" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>ofimatica ·21</td><td>web pequeña/media, DNS, API, HTTPS, algún ping</td><td>~3&nbsp;s</td><td>Oficina típica: mezcla de tamaños y protocolos, tasa baja y estable.</td></tr>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="navegacion" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>navegacion ·22</td><td>web pequeña/grande, HTTPS, mucho DNS, algún abandono</td><td>~1,5&nbsp;s</td><td>Navegación intensa pero humana: variedad de destinos, ritmo irregular.</td></tr>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="descargas" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>descargas ·23</td><td>web grande/media, HTTPS, poco DNS</td><td>~8&nbsp;s</td><td>Transferencias grandes espaciadas: muchos bytes, pocos flujos.</td></tr>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="aplicacion" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>aplicacion ·24</td><td>API ok/post/lenta, algún 500, HTTPS, DNS</td><td>~2&nbsp;s</td><td>Cliente de aplicación: patrón repetitivo pero con errores normales.</td></tr>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="ligero" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>ligero ·25</td><td>DNS, API, web pequeña, ping</td><td>~12&nbsp;s</td><td>Uso esporádico: tasa muy baja, pocas acciones.</td></tr>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="erratico" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>erratico ·26</td><td>mezcla + puerto cerrado + abandonos, en ráfagas</td><td>~5&nbsp;s</td><td>Ráfagas y silencios a propósito: ensancha la línea base para que el modelo no la aprenda demasiado estrecha.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="toolbar-hint">Comando por perfil: <code class="esc-cmd">python3 clientes_lab.py --perfil ofimatica --origen 10.10.20.21</code>. Dominios internos: <code class="esc-cmd">*.francos-sac.com</code>. <strong>Por qué es la referencia de "normal":</strong> tráfico realista, variado y sin intención maliciosa; de aquí el modelo aprende qué combinación es la esperada.</p>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">Tráfico ANÓMALO &mdash; familias de ataque (desde la Kali)</h3>
-      <div class="umb-tabla">
-        <table>
-          <thead><tr><th>Ataque</th><th>Comando</th><th>Variables que mueve</th><th>Por qué es anómalo</th></tr></thead>
-          <tbody>
-            <tr><td class="umb-r">Escaneo de puertos<br><small>MITRE T1046</small></td><td><code class="esc-cmd">nmap -sT -T4 -p 1-3000 --open 10.10.30.10</code></td><td>flow_attempt&uarr; · unique_dst_port_ratio&uarr; · syn_completion_ratio&darr;</td><td>Prueba muchos puertos y casi ninguno completa: patrón que el tráfico humano nunca produce.</td></tr>
-            <tr><td class="umb-r">DGA / DNS<br><small>MITRE T1568.002</small></td><td><code class="esc-cmd">dig +short &lt;aleatorio&gt;.francos-sac.com @10.10.10.20</code> (en bucle)</td><td>dns_query_rate&uarr; · unique_dns_name_ratio&uarr; · nxdomain_ratio&uarr;</td><td>Decenas de nombres distintos e inexistentes por segundo: firma de generación de dominios o túnel DNS.</td></tr>
-            <tr><td class="umb-r">Flood HTTP<br><small>MITRE T1499</small></td><td><code class="esc-cmd">seq 1 250 | xargs -P10 curl -s http://10.10.30.10/</code></td><td>http_request_rate&uarr;&uarr;</td><td>Volumen de peticiones muy por encima de cualquier perfil: abuso (ambiguo &rarr; LIMIT).</td></tr>
-            <tr><td class="umb-r">Fuerza bruta<br><small>MITRE T1110</small></td><td><code class="esc-cmd">curl -u admin:malN http://10.10.30.10:8081/</code> (en bucle)</td><td>http_auth_failure_ratio&uarr; (&rarr;1,0)</td><td>Ráfaga de logins casi todos 401: nadie legítimo falla el 100&nbsp;% de los intentos.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="toolbar-hint"><strong>Por qué es la referencia de "anómalo":</strong> cada familia empuja una combinación de variables fuera del rango aprendido, o cruza un umbral heurístico declarado (ver la sección <strong>Variables &rarr; Umbrales y régimen</strong>).</p>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">Comandos exactos</h3>
-      <div class="esc-code"><span class="c"># NORMAL &mdash; en la VM de clientes (10.10.20.20): arranca los 6 perfiles</span>
-sudo systemctl start cyberflow-lab.target
-<span class="c"># o un perfil concreto (uno por IP .21&ndash;.26):</span>
-python3 clientes_lab.py --perfil ofimatica --origen 10.10.20.21
-
-<span class="c"># ANÓMALO &mdash; desde la Kali (10.10.20.30), por SSH</span>
-<span class="c"># acceso:</span>
-ssh -t gadmin@10.10.10.30 "ssh -i ~/.ssh/cyberflow-to-atacante adminatacante@10.10.20.30"
-<span class="c"># 1) Escaneo de puertos &rarr; BLOCK</span>
-nmap -sT -T4 --max-retries 1 -p 1-3000 --open 10.10.30.10
-nmap -sT -T5 --min-rate 1500 -p- --open 10.10.30.10
-<span class="c"># 2) DGA / DNS de alta entropía &rarr; LIMIT</span>
-for i in $(seq 1 80); do r=$(head -c6 /dev/urandom|od -An -tx1|tr -d " "); dig +short $r.francos-sac.com @10.10.10.20; sleep 0.5; done
-<span class="c"># 3) Flood HTTP &rarr; LIMIT</span>
-seq 1 250 | xargs -P10 -I{} curl -s -o /dev/null http://10.10.30.10/
-<span class="c"># 4) Fuerza bruta HTTP &rarr; BLOCK (endpoint 401 en srv-dmz:8081)</span>
-for i in $(seq 1 50); do curl -s -o /dev/null -u admin:wrong$i http://10.10.30.10:8081/; sleep 0.4; done
-<span class="c"># verificar el corte: open &rarr; filtered</span>
-nmap -Pn -p80,443 10.10.30.10</div>
-      <p class="toolbar-hint">El panel <strong>no ejecuta</strong> nada: estos comandos se copian y se lanzan en la terminal SSH correspondiente. La respuesta se ve luego en Actividad, Decisiones y Respuestas.</p>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">Anatomía: por qué cada rango es normal o anómalo</h3>
-      <p class="lede-small">Qué significa cada parte del comando y por qué ese valor cae dentro o fuera de lo normal.</p>
-
-      <p class="toolbar-hint" style="margin-top:0.55rem"><strong>ANÓMALO</strong> &mdash; desde la Kali</p>
-      <div class="anat">
-        <code class="ac">nmap -sT -T4 --max-retries 1 -p 1-3000 --open 10.10.30.10</code>
-        <ul>
-          <li><code class="esc-cmd">-sT</code> conexión TCP completa &middot; <code class="esc-cmd">-T4</code> rápido &middot; <code class="esc-cmd">--max-retries 1</code> casi sin reintentos (agresivo)</li>
-          <li><code class="esc-cmd">-p 1-3000</code> &rarr; <strong>3000 puertos</strong> probados en ~20&nbsp;s</li>
-        </ul>
-        <div class="vd"><span class="bad">ANÓMALO:</span> un cliente habla con 2&ndash;3 puertos; 3000 en segundos dispara <code class="esc-cmd">flow_attempt &ge;20/30s</code>, <code class="esc-cmd">unique_dst_port_ratio &ge;0,45</code> y <code class="esc-cmd">syn_completion &le;0,30</code> (casi ninguno abre). &nbsp;<span class="good">Normal:</span> pocos intentos a 1&ndash;2 puertos conocidos.</div>
-      </div>
-      <div class="anat">
-        <code class="ac">for i in $(seq 1 80); do dig +short $r.francos-sac.com @10.10.10.20; sleep 0.5; done</code>
-        <ul>
-          <li><code class="esc-cmd">$r</code> = 6 bytes aleatorios &rarr; nombre <strong>inexistente y distinto</strong> cada vez</li>
-          <li><code class="esc-cmd">sleep 0.5</code> &rarr; ~2 consultas/s &middot; <code class="esc-cmd">seq 1 80</code> &rarr; <strong>80 consultas</strong> en ~40&nbsp;s</li>
-        </ul>
-        <div class="vd"><span class="bad">ANÓMALO:</span> <code class="esc-cmd">dns_query &ge;20/60s</code> con <code class="esc-cmd">unique_dns_name_ratio &ge;0,45</code> (nombres casi todos distintos). &nbsp;<span class="good">Normal:</span> se repiten pocos dominios conocidos (<code class="esc-cmd">*.francos-sac.com</code>).</div>
-      </div>
-      <div class="anat">
-        <code class="ac">seq 1 250 | xargs -P10 -I{} curl -s http://10.10.30.10/</code>
-        <ul>
-          <li><code class="esc-cmd">seq 1 250</code> &rarr; <strong>250 peticiones</strong> &middot; <code class="esc-cmd">-P10</code> &rarr; 10 en paralelo (ráfaga de segundos)</li>
-        </ul>
-        <div class="vd"><span class="bad">ANÓMALO:</span> <code class="esc-cmd">http_request &ge;100/60s</code>. &nbsp;<span class="good">Normal:</span> el perfil más intenso hace decenas por minuto, no cientos en segundos.</div>
-      </div>
-      <div class="anat">
-        <code class="ac">for i in $(seq 1 50); do curl -u admin:wrong$i http://10.10.30.10:8081/; done</code>
-        <ul>
-          <li><code class="esc-cmd">-u admin:wrong$i</code> &rarr; credenciales <strong>siempre erróneas</strong> (wrong1, wrong2…) &rarr; el servidor responde <strong>401</strong> a todas</li>
-          <li><code class="esc-cmd">seq 1 50</code> &rarr; <strong>50 intentos</strong> seguidos</li>
-        </ul>
-        <div class="vd"><span class="bad">ANÓMALO:</span> <code class="esc-cmd">http_request &ge;5/60s</code> con <code class="esc-cmd">http_auth_failure_ratio &ge;0,80</code> (100&nbsp;% fallo). &nbsp;<span class="good">Normal:</span> un usuario falla 1&ndash;2 veces, no el 100&nbsp;%.</div>
-      </div>
-
-      <p class="toolbar-hint" style="margin-top:0.65rem"><strong>NORMAL</strong> &mdash; cada perfil es un <code class="esc-cmd">--perfil</code> ligado a una IP, porque el motor puntúa por IP</p>
-      <div class="anat">
-        <code class="ac">python3 clientes_lab.py --perfil &lt;perfil&gt; --origen 10.10.20.2X</code>
-        <ul>
-          <li><code class="esc-cmd">--perfil</code> &rarr; qué mezcla de acciones (web, DNS, API, ping…)</li>
-          <li><code class="esc-cmd">--origen</code> &rarr; la IP <code class="esc-cmd">.21&ndash;.26</code> a la que se liga ese perfil</li>
-          <li><strong>ritmo</strong> (de 3 a 12&nbsp;s entre acciones, según perfil) &rarr; tasa humana, no automática</li>
-        </ul>
-        <div class="vd"><span class="good">NORMAL:</span> variedad de acciones + tasa baja + dominios conocidos = la combinación que el modelo aprende como esperada. El detalle de cada perfil está en la tabla de los 6 perfiles (arriba).</div>
-      </div>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">En qué nos guiamos para justificar estos valores</h3>
-      <ul class="esc-refs">
-        <li><strong>MITRE ATT&amp;CK</strong> &mdash; técnicas de ataque y su comportamiento observable (<code class="esc-cmd">attack.mitre.org</code>).</li>
-        <li><strong>OWASP</strong> &mdash; abuso de aplicaciones web (<code class="esc-cmd">owasp.org</code>).</li>
-        <li><strong>Informes de prevalencia</strong> &mdash; Verizon DBIR, Fortinet y ESET: qué ataques son frecuentes y relevantes.</li>
-        <li><strong>Entregable interno 11 · Justificación de ataques</strong> &mdash; la elección y el porqué de cada familia, con su mapeo a estos marcos.</li>
-      </ul>
-      <p class="toolbar-hint">La elección de los ataques y de los umbrales no es arbitraria: se apoya en estos marcos y se valida contra la propia línea base (FPR medido).</p>
-    </div>
 
     <div class="pmodal" id="pmodal">
       <div class="pmodal-box">
@@ -2077,7 +1925,7 @@ const TOUR_PASOS = [
   { sel: '#s-bloqueos', t: '4 · Revisar la respuesta', d: 'Respuestas separa lo registrado por el motor, lo publicado en el feed firmado y lo aplicado en el host, que este panel no comprueba. LIMIT degrada la tasa; solo BLOCK corta.' },
   { sel: '#kpis', t: 'Recorrido avanzado', d: 'Lo que sigue explica la arquitectura, el modelo y la evaluación. Puedes cerrar la guía aquí si solo vas a operar.' },
   { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo y heurísticos → decisión → respuesta en el host. Pulsa cualquier componente para ver qué hace.' },
-  { sel: '#topoVista', t: 'Siete vistas', d: 'De la red a la validación: cada botón es un diagrama del mismo sistema.' },
+  { sel: '#topoVista', t: 'Seis vistas', d: 'De la red a las carpetas: cada botón es un diagrama del mismo sistema.' },
   { sel: '#topoArchivosBtn', t: 'Código auditable', d: 'En modo desarrollador, pulsa Ver archivos, elige un componente y un archivo; en su ficha pulsa ◎ Ver contenido. El visor es de solo lectura y solo muestra rutas permitidas.' },
   { sel: '#s-modelo', t: 'El detector activo y su umbral', d: 'El detector desplegado aprende la normalidad de esta red; el umbral se fijó con validación. Aquí ves el modelo activo y sus métricas, no una etiqueta fija de OCSVM.' },
   { sel: '#pruebasPrevias', t: 'Pruebas previas', d: 'Siete modelos se compararon en el estudio; la ablación sobre nueve episodios separa modelo solo (6), heurísticos solos (7) y ambos combinados (9). No confundas el 9/9 del sistema con el modelo solo.' },
@@ -3583,7 +3431,7 @@ function validacionDetalleHTML() {
     + '<p class="dim">Los subtotales resumen la tabla documental; no se deriva de ellos el éxito en producción. TAM y juicio de expertos van en la validación externa.</p>';
 }
 
-let topoVista = 'metodologica';
+let topoVista = 'completa';
 // Ultimo estado de /api/aprendizaje (lo llena cargarAprendizaje). Los nodos del
 // aprendizaje en la topologia lo leen; con var y aqui arriba para que exista
 // desde el primer pintado, aunque llegue despues.
