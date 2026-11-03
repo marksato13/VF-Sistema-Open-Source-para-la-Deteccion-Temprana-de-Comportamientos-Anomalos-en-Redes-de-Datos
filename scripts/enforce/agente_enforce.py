@@ -176,6 +176,28 @@ def misma_orden(v: dict, lib: dict, ahora: float = 0.0) -> bool:
     return not ordenes_nuevas(v, lib, ahora)
 
 
+LIBERACION_VALIDA_S = 600   # una petición «Preparar demo» del feed solo vale 10 min
+
+
+def liberaciones_nuevas(feed_obj: dict, vistas: dict, ahora: float) -> list[tuple[str, str]]:
+    """Peticiones de liberación del panel («Preparar demo») que vienen en el feed FIRMADO
+    y este host aún no aplicó. Devuelve [(id, ip)]. Una petición vieja o futura se ignora."""
+    out = []
+    for lib in feed_obj.get("liberaciones") or []:
+        if not isinstance(lib, dict):
+            continue
+        ip, ident, t = str(lib.get("ip") or ""), str(lib.get("id") or ""), lib.get("t")
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            continue
+        if (not ident or not isinstance(t, (int, float)) or "%s:%s" % (ident, ip) in vistas
+                or not (-60 <= ahora - t <= LIBERACION_VALIDA_S)):
+            continue
+        out.append((ident, ip))
+    return out
+
+
 def registrar_liberacion(v: dict | None, ahora: float, gracia: int) -> dict:
     ordenes = (v or {}).get("ordenes") or {}
     return {"desde": int(ahora), "gracia": int(gracia),
@@ -375,6 +397,24 @@ def main() -> int:
                           "orden_vigente": vig.get(ip)}, sort_keys=True))
         return 0
 
+    # «Preparar demo» desde el panel: viaja firmado en el feed; aquí se aplica como una
+    # liberación humana más (quita la IP de los sets y absorbe la cola del episodio).
+    ruta_vistas = ruta_lib.with_name("peticiones_vistas.json")
+    vistas = _leer_json(ruta_vistas)
+    pedidas = liberaciones_nuevas(feed_obj, vistas, ahora)
+    if a.aplicar and pedidas:
+        for ident, ip in pedidas:
+            for c in plan_liberar(ip):
+                subprocess.run((["sudo", "-n"] if a.sudo else []) + c, check=False,
+                               capture_output=True, text=True)
+            liberadas[ip] = registrar_liberacion(vig.get(ip), ahora, a.gracia)
+            vistas["%s:%s" % (ident, ip)] = ahora
+        vistas = {k: t for k, t in vistas.items() if isinstance(t, (int, float)) and ahora - t < 86400}
+        try:
+            ruta_vistas.write_text(json.dumps(vistas, sort_keys=True), encoding="utf-8")
+        except OSError:
+            pass
+
     vig, sombra = filtrar_alcance(vig, _leer_json(Path(a.alcance)), liberadas, ahora)
     if a.aplicar and liberadas != liberadas_prev:
         try:
@@ -408,6 +448,7 @@ def main() -> int:
         "block": sorted(ip for ip, v in vig.items() if v["accion"] == "BLOCK"),
         "limit": sorted(ip for ip, v in vig.items() if v["accion"] == "LIMIT"),
         "comandos": len(cmds),
+        "liberadas_por_panel": [ip for _, ip in pedidas],
         "errores": len(errores),
         "sombra": sombra,
     }

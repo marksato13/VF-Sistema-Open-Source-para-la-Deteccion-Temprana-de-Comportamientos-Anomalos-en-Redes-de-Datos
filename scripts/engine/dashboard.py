@@ -143,6 +143,13 @@ HTML = """<!doctype html>
      despues, para que una seccion de desarrollo oculta no reaparezca. */
   .wrap > section[id] { display: none; }
   .wrap > section[id].pag-activa { display: block; }
+  @media (prefers-reduced-motion: no-preference) {
+    .wrap > section[id].pag-activa { animation: cf-entra .18s ease-out; }
+    @keyframes cf-entra { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .btn-sec, .btn-prep, .esc-card, .nav a, .rg-pasos button { transition: background-color .15s, border-color .15s, color .15s, transform .15s; }
+    .esc-card:hover { transform: translateY(-1px); }
+  }
+  .tbl-wrap, .esc-filas, .cmp-card { contain: content; }
   .wrap > section[id][hidden] { display: none; }
   /* Pie de "Vistas relacionadas": enlaces a las vistas que siguen el hilo. */
   .rel-vistas { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
@@ -819,7 +826,25 @@ HTML = """<!doctype html>
   .esc-card small { color: var(--text-dim); font-size: 12px; }
   .esc-capa { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
   .esc-card.fp .esc-capa { color: var(--amber); }
-  .esc-det { display: grid; grid-template-columns: 1.3fr 1fr; gap: 0.8rem; }
+  .esc-det { display: grid; grid-template-columns: 1fr; gap: 0.8rem; }
+  .prep { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; background: var(--surface);
+          border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 12px;
+          padding: 12px 14px; margin: 0 0 1rem; }
+  .btn-prep { background: var(--accent); color: #04131a; border: 0; border-radius: 9px; padding: 9px 16px;
+              font-weight: 700; font-size: 14px; cursor: pointer; }
+  .btn-prep:disabled { opacity: .55; cursor: progress; }
+  .prep-txt { color: var(--text-dim); font-size: 13px; flex: 1 1 320px; }
+  .prep-txt b { color: var(--text); }
+  .prep-lista { list-style: none; margin: 0; padding: 0; flex-basis: 100%; display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px 14px; }
+  .prep-lista:empty { display: none; }
+  .prep-lista li { font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
+  .prep-lista li .ic { font-family: var(--mono); font-weight: 700; width: 1.1em; }
+  .prep-lista li.ok .ic { color: #4ade80; }
+  .prep-lista li.esp .ic { color: #fbbf24; }
+  .prep-lista li.mal .ic { color: #f87171; }
+  .prep-lista li small { color: var(--text-dim); font-family: var(--mono); font-size: 11.5px; }
+  .prep.listo { border-left-color: #4ade80; }
   @media (max-width: 900px) { .esc-det { grid-template-columns: 1fr; } }
   .esc-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; }
   .esc-box h3 { margin: 0 0 0.4rem; font-size: 14px; }
@@ -1108,6 +1133,11 @@ HTML = """<!doctype html>
 
   <section id="s-escenario">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10,8 16,12 10,16"/></svg><h2>Escenario en vivo</h2></div>
+    <div class="prep" id="prep">
+      <button type="button" class="btn-prep" id="prepBtn">Preparar demo</button>
+      <span class="prep-txt" id="prepTxt">Libera la Kali (10.10.20.30) y el cliente (10.10.20.21) en srv-dmz y comprueba que todo está en marcha. Púlsalo antes de cada demo.</span>
+      <ul class="prep-lista" id="prepLista"></ul>
+    </div>
     <p class="lede-small">Elige un escenario, lanza su comando y pulsa «Iniciar». El panel sigue a esa IP de la detección a la publicación.</p>
     <div class="esc-cards" id="escCards"></div>
     <div class="esc-det" id="escDet"></div>
@@ -1648,6 +1678,31 @@ tr.rg-foco td{background:rgba(94,234,212,.10)!important}
 <script type="application/json" id="datosSesion">__SESION__</script>
 
 <script>
+// Fluidez (3-nov). (a) Con la pestaña oculta no se sondea nada (salvo tareas de >= 1 min);
+// al volver se refresca de inmediato. (b) Un innerHTML idéntico al último que se escribió
+// en el mismo elemento no se vuelve a escribir: el navegador no reconstruye la tabla,
+// no parpadea y no se pierden el hover, la selección ni la posición del scroll.
+(() => {
+  const nativo = window.setInterval.bind(window);
+  window.setInterval = (fn, ms, ...a) => nativo(() => {
+    if (document.hidden && (ms || 0) < 60000) return;
+    fn(...a);
+  }, ms);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && typeof refresh === 'function') refresh();
+  });
+  const d = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+  const ultimo = new WeakMap();
+  Object.defineProperty(Element.prototype, 'innerHTML', {
+    configurable: true, enumerable: d.enumerable, get: d.get,
+    set(v) {
+      const s = String(v), u = ultimo.get(this);
+      if (u && s !== '' && u.html === s && this.childElementCount === u.n && this.firstElementChild === u.primero) return;
+      d.set.call(this, s);
+      ultimo.set(this, { html: s, n: this.childElementCount, primero: this.firstElementChild });
+    },
+  });
+})();
 // Solo los iconos usados dinamicamente en refresh(); los estaticos (encabezados
 // de seccion, nota de contexto) ya estan inline en el HTML de arriba.
 const ICON = {
@@ -1827,9 +1882,7 @@ function renderEscDetalle() {
     + '<p><span class="k">Desde</span> ' + varEsc(s.desde) + '</p>'
     + '<div class="esc-cmd"><code>' + varEsc(s.comando) + '</code>'
     + '<button type="button" class="btn-sec neutro esc-copiar" data-cmd="' + varEsc(s.comando) + '">copiar</button></div>'
-    + '<p><span class="k">Qué esperamos</span> ' + varEsc(s.espera) + '</p></div>'
-    + '<div class="esc-box esc-guion"><span class="k">Guion</span><ol>'
-    + s.guion.map(g => '<li>«' + varEsc(g) + '»</li>').join('') + '</ol></div>';
+    + '<p><span class="k">Qué esperamos</span> ' + varEsc(s.espera) + '</p></div>';
   const ip = document.getElementById('escIp');
   if (ip && !escActivo()) ip.value = s.ip;
 }
@@ -2075,6 +2128,51 @@ on('escDet', 'click', async (ev) => {
   setTimeout(() => { b.textContent = 'copiar'; }, 1500);
 });
 on('escIniciar', 'click', escIniciar);
+
+// «Preparar demo»: el panel deja una petición; el publicador la mete en el feed FIRMADO;
+// el agente de srv-dmz la verifica, libera las IP de la demo y lo confirma en su acuse.
+let prepTimer = null;
+function renderPrep(d) {
+  const ul = document.getElementById('prepLista'), txt = document.getElementById('prepTxt'), box = document.getElementById('prep');
+  if (!ul || !d) return;
+  ul.innerHTML = (d.checks || []).map(c => '<li class="' + c.estado + '"><span class="ic">'
+    + ({ ok: '✔', esp: '…', mal: '✘' }[c.estado] || '·') + '</span><span>' + varEsc(c.texto)
+    + (c.detalle ? ' <small>' + varEsc(c.detalle) + '</small>' : '') + '</span></li>').join('');
+  if (box) box.classList.toggle('listo', !!d.listo);
+  if (txt && d.peticion) txt.innerHTML = d.listo
+    ? '<b>Listo para la demo.</b> Elige un escenario y pulsa «Iniciar».'
+    : 'Preparando… (feed firmado → srv-dmz → acuse, unos 30–40 s)';
+}
+async function prepSondear(fin) {
+  clearTimeout(prepTimer);
+  let d = null;
+  try { d = await (await fetch('/api/demo/estado')).json(); } catch (e) { /* reintenta */ }
+  if (d) renderPrep(d);
+  const b = document.getElementById('prepBtn');
+  if (d && d.listo || Date.now() > fin) { if (b) b.disabled = false; return; }
+  prepTimer = setTimeout(() => prepSondear(fin), 3000);
+}
+async function prepPedir() {
+  const b = document.getElementById('prepBtn'), ul = document.getElementById('prepLista');
+  if (b) b.disabled = true;
+  try {
+    const r = await fetch('/api/demo/preparar', { method: 'POST', headers: { 'X-CyberFlow': '1' } });
+    if (!r.ok) throw new Error(r.status === 403 ? 'Solo un administrador puede preparar la demo.' : 'HTTP ' + r.status);
+    esc = null; escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas();
+    if (typeof rgOculto !== 'undefined') { rgOculto = false; }
+    prepSondear(Date.now() + 120000);
+  } catch (e) {
+    if (ul) ul.innerHTML = '<li class="mal"><span class="ic">✘</span><span>' + varEsc(e.message) + '</span></li>';
+    if (b) b.disabled = false;
+  }
+}
+on('prepBtn', 'click', prepPedir);
+(async () => {
+  try {
+    const d = await (await fetch('/api/demo/estado')).json();
+    if (d && d.peticion && d.peticion_edad < 900) renderPrep(d);
+  } catch (e) { /* sin estado previo */ }
+})();
 on('escParar', 'click', () => { esc = null; escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas(); });
 renderEscCards(); renderEscDetalle(); renderEscReloj(); renderEscPasos();
 if (escActivo()) { const ip = document.getElementById('escIp'); if (ip) ip.value = esc.ip; }
@@ -6780,7 +6878,7 @@ function vivoDetalle(r, fuente) {
 
 async function vivoPoll() {
   const sec = document.getElementById('s-vivo');
-  if (!sec || sec.hidden || vivo.pausa || vivo.enCurso) return;
+  if (!sec || sec.hidden || !sec.classList.contains('pag-activa') || vivo.pausa || vivo.enCurso) return;
   vivo.enCurso = true;
   try {
     const qs = new URLSearchParams({todos: document.getElementById('vivoTodos').checked ? '1' : '0'});
@@ -7844,6 +7942,75 @@ def estado_escenario(log_path: Path, ip: str, desde: str, ahora: float,
 ACUSE_VIEJO_S = 35
 
 
+DEMO_IPS = ("10.10.20.30", "10.10.20.21")   # Kali (ataques) y cliente legítimo del laboratorio
+PREP_VALIDA_S = 600                          # = LIBERACION_VALIDA_S del agente
+
+
+def pedir_preparacion(ruta: Path, usuario: str, ahora: float) -> dict:
+    """Deja la petición «preparar demo». No toca ningún host: la lleva el feed FIRMADO
+    (publicar_feed la incluye) y el agente de cada host decide si la aplica."""
+    pet = {"id": secrets.token_hex(6), "t": ahora, "ips": list(DEMO_IPS), "por": usuario}
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    tmp = ruta.with_name(ruta.name + ".tmp")
+    tmp.write_text(json.dumps(pet), encoding="utf-8")
+    tmp.replace(ruta)
+    return pet
+
+
+def estado_preparacion(ruta: Path, log_path: Path, feed_path: Path | None, acuse_dir: Path | None,
+                       ahora: float) -> dict:
+    """Lista de comprobación para empezar una demo: motor, feed, agente y cada IP sin regla."""
+    checks = []
+
+    def chk(ok, texto, detalle="", espera=False):
+        checks.append({"estado": "ok" if ok else ("esp" if espera else "mal"), "texto": texto, "detalle": detalle})
+        return ok
+
+    try:
+        pet = json.loads(Path(ruta).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pet = None
+    t_pet = float(pet.get("t", 0)) if isinstance(pet, dict) else 0.0
+    try:
+        edad_m = ahora - Path(log_path).stat().st_mtime
+    except OSError:
+        edad_m = None
+    chk(edad_m is not None and edad_m < 30, "Motor en vivo",
+        "última ventana hace %d s" % edad_m if edad_m is not None else "sin registro")
+    feed = {}
+    if feed_path is not None:
+        try:
+            feed = json.loads(Path(feed_path).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            feed = {}
+    gen = feed.get("generado") if isinstance(feed.get("generado"), (int, float)) else None
+    chk(gen is not None and ahora - gen < 30, "Feed firmado al día",
+        "publicado hace %d s" % (ahora - gen) if gen else "sin feed")
+    if pet:
+        en_feed = any(isinstance(x, dict) and x.get("id") == pet.get("id") for x in feed.get("liberaciones") or [])
+        chk(en_feed or False, "Petición dentro del feed firmado", "id " + str(pet.get("id")), espera=not en_feed)
+    acs = [] if acuse_dir is None else acuses_resumen(acuse_dir, ahora)
+    host = next((a for a in acs if a.get("host") == "srv-dmz"), acs[0] if acs else None)
+    if host is None:
+        chk(False, "Acuse de srv-dmz", "no llega")
+    else:
+        chk(host.get("agente") == "active" and not host.get("atrasado"), "Agente de srv-dmz activo",
+            "acuse hace %d s" % (host.get("edad") or 0))
+    for ip in DEMO_IPS:
+        regla = (host or {}).get("reglas", {}).get(ip) if host else None
+        lib = ((host or {}).get("liberadas") or {}).get(ip) if host else None
+        desde = lib.get("desde") if isinstance(lib, dict) else None
+        fresca = host is not None and (host.get("edad") or 0) < 40 and (ahora - (host.get("edad") or 0)) >= t_pet
+        liberada_ahora = bool(desde and desde >= t_pet - 5) if pet else True
+        ok = host is not None and regla is None and (liberada_ahora or not pet) and fresca
+        det = ("con " + regla.get("accion", "?") + " en nftables") if regla else (
+            "liberada a las " + time.strftime("%H:%M:%S", time.localtime(desde)) if desde and liberada_ahora else "sin regla")
+        chk(ok, "%s sin regla en srv-dmz" % ip, det, espera=not ok and bool(pet) and ahora - t_pet < 120)
+    listo = all(c["estado"] == "ok" for c in checks)
+    return {"listo": listo, "checks": checks, "peticion": pet,
+            "peticion_edad": None if not pet else ahora - t_pet, "ahora": ahora}
+
+
 def acuses_resumen(acuse_dir: Path, ahora: float) -> list[dict]:
     """Por host protegido: que tiene aplicado, que libero un humano y que dejo fuera de alcance."""
     out = []
@@ -8421,7 +8588,8 @@ ROLES = ("admin", "lector")
 # nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
 RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios", "/api/archivo",
                          "/api/vivo", "/api/vivo/flujo", "/api/trazabilidad",
-                         "/api/aprendizaje", "/api/comparacion", "/api/despliegue"})
+                         "/api/aprendizaje", "/api/comparacion", "/api/despliegue",
+                         "/api/demo/estado"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -9158,6 +9326,9 @@ def parse_args() -> argparse.Namespace:
         "--feed-path", type=Path, default=Path.home() / "feed" / "feed.json",
         help="feed publicado por publicar_feed.py: caducidad exacta de cada accion")
     parser.add_argument(
+        "--peticion-preparar", type=Path, default=Path.home() / "feed" / "peticiones" / "preparar.json",
+        help="petición «Preparar demo» del panel; publicar_feed la mete en el feed firmado")
+    parser.add_argument(
         "--comparaciones-dir", type=Path, default=Path.home() / "feed" / "comparaciones",
         help="resumenes de comparar-suricata.sh (seccion CyberFlow frente a Suricata)")
     parser.add_argument(
@@ -9395,6 +9566,19 @@ def main() -> int:
                 self.end_headers()
                 return
 
+            if path == "/api/demo/preparar":
+                s = self._sesion()
+                # Solo un administrador, y solo desde el propio panel (cabecera propia:
+                # un formulario de otro sitio no puede añadirla sin CORS).
+                if not s or s.get("rol") != "admin" or self.headers.get("X-CyberFlow") != "1":
+                    self.send_error(403)
+                    return
+                pet = pedir_preparacion(args.peticion_preparar, s["usuario"], time.time())
+                auditar(args.auditoria, "preparar-demo", s["usuario"], self._origen(), s["rol"],
+                        ",".join(pet["ips"]) + " id=" + pet["id"])
+                self._send_json({"ok": True, "peticion": pet})
+                return
+
             if path != "/login":
                 self.send_error(404)
                 return
@@ -9611,6 +9795,10 @@ def main() -> int:
                         limite=min(int(limite), 3000) if limite.isdigit() else 150))
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"error": "%s: %s" % (type(exc).__name__, exc)})
+                return
+            if path == "/api/demo/estado":
+                self._send_json(estado_preparacion(args.peticion_preparar, args.log_path, args.feed_path,
+                                                   None if args.demo else args.acuse_dir, time.time()))
                 return
             if path == "/api/comparacion":
                 datos = estado_comparacion(args.comparacion)

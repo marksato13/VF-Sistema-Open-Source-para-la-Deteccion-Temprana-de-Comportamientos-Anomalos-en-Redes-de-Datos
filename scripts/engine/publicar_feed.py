@@ -15,6 +15,7 @@ Nunca actúa sobre la lista de nunca-bloquear (gateways, DNS, sensor, bastión).
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import time
 from pathlib import Path
@@ -174,6 +175,35 @@ def _leer_decisiones(log_path: Path, desde: float) -> list[dict]:
     return out
 
 
+LIBERACION_VALIDA_S = 600   # una petición «Preparar demo» viaja en el feed 10 min
+
+
+def liberaciones_pedidas(ruta: Path | None, ahora: float) -> list[dict]:
+    """Petición «Preparar demo» del panel -> [{id, ip, t}] para el feed firmado.
+
+    El panel no toca ningún host: deja la petición; aquí entra en el feed que firma el
+    sensor, y el agente de cada host la verifica y la aplica (liberar = quitar reglas)."""
+    if ruta is None:
+        return []
+    try:
+        pet = json.loads(Path(ruta).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    if not isinstance(pet, dict):
+        return []
+    t, ident = pet.get("t"), str(pet.get("id") or "")
+    if not isinstance(t, (int, float)) or not ident or not (0 <= ahora - t <= LIBERACION_VALIDA_S):
+        return []
+    out = []
+    for ip in pet.get("ips") or []:
+        try:
+            ipaddress.ip_address(str(ip))
+        except ValueError:
+            continue
+        out.append({"id": ident, "ip": str(ip), "t": float(t)})
+    return out
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--log", type=Path, required=True, help="motor_decision.log")
@@ -183,6 +213,8 @@ def main() -> int:
     p.add_argument("--salida-firma", type=Path, required=True)
     p.add_argument("--ventana-segundos", type=int, default=120,
                    help="solo decisiones de los últimos N s")
+    p.add_argument("--peticion", type=Path, default=Path.home() / "feed" / "peticiones" / "preparar.json",
+                   help="petición «Preparar demo» del panel (liberar las IP de la demo)")
     p.add_argument("--umbrales", default="",
                    help="obsoleto: la versión se toma de heuristicos.VERSION_UMBRALES; "
                         "si se pasa y no coincide, se avisa")
@@ -203,6 +235,9 @@ def main() -> int:
     if aviso:
         print("AVISO: " + aviso, file=sys.stderr)
     feed_obj = feed.construir(entradas, ahora=ahora, umbrales=umbrales)
+    lib = liberaciones_pedidas(a.peticion, ahora)
+    if lib:
+        feed_obj["liberaciones"] = lib          # va dentro de lo firmado
     datos = feed.serializar(feed_obj)
     firma = feed.firmar(datos, str(a.clave_privada))
 
