@@ -7893,6 +7893,10 @@ def bucket_activity(decisions: list[dict], bucket_seconds: int, count: int) -> l
             bucket["permit"] += 1
         # La accion (LIMIT/BLOCK) no coincide con ALERT: una regla puede pedir
         # BLOCK con el modelo en PERMIT. El grafico cuenta acciones.
+        # Infraestructura protegida (p. ej. el DNS con dns_entropy): nunca se
+        # actua sobre ella, asi que no pinta LIMIT/BLOCK (= compute_counters).
+        if str(item.get("entity_ip", "")) in NUNCA_BLOQUEAR:
+            continue
         accion = accion_de(item)
         if accion is not None:
             bucket[accion[0].lower()] += 1
