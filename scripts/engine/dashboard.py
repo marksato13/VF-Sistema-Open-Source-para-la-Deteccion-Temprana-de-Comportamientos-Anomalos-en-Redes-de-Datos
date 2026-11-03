@@ -1813,7 +1813,7 @@ function markSeenAndCountNewAlerts(decisions) {
 // debajo del umbral. Es real (esta en el registro y su LIMIT se publica), pero
 // es ruido de borde: no se avisa con tarjeta flotante y Alertas la agrupa,
 // diciendo siempre cuantas hay. Una regla disparada nunca es marginal.
-const MARGEN_MARGINAL = 0.05;
+const MARGEN_MARGINAL = 0.0;   // motor de las campañas (demo: 0.05)
 function esMarginal(d) {
   if (!d || d.decision !== 'ALERT' || String(d.detector_name || '').endsWith('_heuristic')) return false;
   if (d.heuristico && (d.heuristico.accion === 'BLOCK' || d.heuristico.accion === 'LIMIT')) return false;
@@ -2967,7 +2967,7 @@ function miniBarraScore(score) {
 // Politica A (3-nov): el modelo SOLO no actua (queda «para revisión humana»);
 // actua la regla. Y la infraestructura (gateways, DNS/AD, sensor, bastión) nunca
 // recibe accion: = NUNCA_BLOQUEAR de publicar_feed.py.
-const MODELO_SOLO_ACTUA = false;
+const MODELO_SOLO_ACTUA = true;   // motor de las campañas (3-nov, noche); política A = false
 const NUNCA_BLOQUEAR_JS = new Set(['10.10.10.30', '10.10.60.11', '10.10.30.1', '10.10.40.1',
   '10.10.60.1', '10.10.20.1', '10.10.10.20']);
 function esInfraProtegida(d) { return NUNCA_BLOQUEAR_JS.has(String(d.entity_ip || '')); }
@@ -8244,10 +8244,11 @@ def accion_de(d: dict) -> tuple[str, str, str] | None:
 
 
 
-MARGEN_MARGINAL = 0.05   # misma cifra que el navegador (MARGEN_MARGINAL en el JS)
+# 3-nov (noche): motor de las campañas otra vez (demo: 0.05 / 3 / False).
+MARGEN_MARGINAL = 0.0    # misma cifra que el navegador (MARGEN_MARGINAL en el JS)
 VENTANA_SOSTENIDA_S = 120  # = tramo que lee publicar_feed (--ventana-segundos)
-MIN_VENTANAS_MODELO = 3    # = publicar_feed.MIN_VENTANAS_MODELO
-MODELO_SOLO_ACTUA = False  # = publicar_feed.MODELO_SOLO_ACTUA (politica A, 3-nov)
+MIN_VENTANAS_MODELO = 1    # = publicar_feed.MIN_VENTANAS_MODELO
+MODELO_SOLO_ACTUA = True   # = publicar_feed.MODELO_SOLO_ACTUA (politica A = False)
 
 
 def anotar_politica_modelo(decisiones: list[dict]) -> None:

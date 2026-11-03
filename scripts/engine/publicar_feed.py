@@ -50,8 +50,11 @@ _SEVERIDAD = {"BLOCK": 2, "LIMIT": 1}
 # .30 conserva sus 6. Con 0,02 y 2 ventanas, .21 tenia 5 y el DNS 29: en la corrida
 # 3 de la demo .21 recibio un LIMIT del modelo (margen 0,051, dos ventanas).
 # Las reglas (port_scan, http_abuse...) no cambian: actúan desde la 1.a ventana.
-MARGEN_MARGINAL = 0.05
-MIN_VENTANAS_MODELO = 3
+# 3-nov (noche): Mark pide volver al motor de las campañas. Margen 0 y 1 ventana =
+# el modelo solo actúa en la primera ALERT, como antes de 866ebbf. Valores de la
+# demo: 0.05 y 3.
+MARGEN_MARGINAL = 0.0
+MIN_VENTANAS_MODELO = 1
 
 # Política A (3-nov, tarde): el modelo SOLO ya no publica acciones. Medido sobre
 # 9 h: los perfiles de tráfico legítimo intenso (.22, .24, .26) alcanzan márgenes
@@ -61,7 +64,7 @@ MIN_VENTANAS_MODELO = 3
 # (port_scan, icmp_flood, http_abuse, dns_entropy, brute_force). Respaldo del
 # estado anterior: etiqueta git antes-politica-AC-2026-11-03 y
 # sensor1:~/respaldos/motor-antes-politica-AC-20261103-0937/.
-MODELO_SOLO_ACTUA = False
+MODELO_SOLO_ACTUA = True     # vuelta al motor de las campañas (3-nov, noche); política A = False
 
 
 def _modelo_claro(d: dict, margen: float = MARGEN_MARGINAL) -> bool:
