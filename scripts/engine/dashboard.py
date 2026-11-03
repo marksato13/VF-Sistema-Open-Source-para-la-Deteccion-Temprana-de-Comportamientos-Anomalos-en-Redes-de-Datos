@@ -28,6 +28,7 @@ import secrets
 import ssl
 import subprocess
 import sys
+import threading
 import time
 import tomllib
 import urllib.parse
@@ -1816,7 +1817,8 @@ function renderEscPasos() {
 const ESC_EVENTO = { aplicada: 'aplicada', cambiada: 'cambiada a', retirada: 'retirada', liberada: 'liberada por un humano' };
 
 function escPaso5(D, activo, ent) {
-  const apl = D ? D.aplicacion : null;
+  if (!D) return escPaso('5', 'Aplicación en el host', 'espera', 'Consultando el acuse de los hosts…');
+  const apl = D.aplicacion;
   if (apl == null) return escPaso('5', 'Aplicación en el host', 'ext',
     'Sin acuse de los hosts: el panel no lee su nftables. Se comprueba en el host.', '', 'srv-dmz: mira-agente.sh');
   if (!apl.length) return escPaso('5', 'Aplicación en el host', 'espera',
@@ -1830,7 +1832,15 @@ function escPaso5(D, activo, ent) {
     if (a.error) return quien + ': no pudo leer su firewall (' + varEsc(a.error) + ').';
     if (a.atrasado) return quien + ': acuse atrasado' + (a.edad != null ? ' (hace ' + Math.round(a.edad) + ' s)' : '') + '.' + hist;
     if (a.agente && a.agente !== 'active') return quien + ': agente EN SOMBRA (' + varEsc(a.agente) + '): recibe la orden, no la aplica.' + hist;
-    if (a.fuera_de_alcance && !a.regla) return quien + ': no se aplica, la IP está fuera de su alcance (' + varEsc(a.fuera_de_alcance) + ').' + hist;
+    const liberadaYa = evs.some(e => e.evento === 'liberada') || String(a.fuera_de_alcance || '').startsWith('liberada');
+    if (a.fuera_de_alcance && !a.regla && !liberadaYa)
+      return quien + ': no se aplica, la IP está fuera de su alcance (' + varEsc(a.fuera_de_alcance) + ').' + hist;
+    if (liberadaYa && !a.regla) {
+      estado = 'ok';
+      const lb = evs.filter(e => e.evento === 'liberada').pop();
+      if (lb && activo) hora = 'liberada ' + fmtTime(lb.t) + escDelta(lb.t);
+      return quien + ': <b>sin regla</b>, liberada por revisión humana. Las ventanas tardías del mismo episodio no la vuelven a poner.' + hist;
+    }
     if (a.regla) {
       estado = 'ok';
       const ap = evs.filter(e => e.evento === 'aplicada' || e.evento === 'cambiada').pop();
@@ -1895,6 +1905,7 @@ function renderEscReloj() {
   if (bP) bP.hidden = !escActivo();
 }
 
+let escEnVuelo = null;
 async function escConsultar() {
   const sec = document.getElementById('s-escenario');
   const visible = sec && sec.classList.contains('pag-activa');
@@ -1902,11 +1913,29 @@ async function escConsultar() {
   const ip = escActivo() ? esc.ip : ((document.getElementById('escIp') || {}).value || '').trim();
   if (!ip) return;
   const desde = escActivo() ? esc.t0 - 5 : Date.now() / 1000 - 120;
+  const t0 = escActivo() ? esc.t0 : null;
+  // Una respuesta que llega tarde (de la IP o el seguimiento anterior) no se
+  // pinta: sin esto, al cambiar de .30 a .21 los pasos mostraban datos de .30.
+  const vigente = () => (escActivo() ? (esc.ip === ip && esc.t0 === t0)
+    : ((document.getElementById('escIp') || {}).value || '').trim() === ip);
+  // Sin solapes: si el panel tarda, no se apilan peticiones cada 3 s.
+  const clave = ip + '|' + t0;
+  if (escEnVuelo === clave) return;
+  escEnVuelo = clave;
+  setTimeout(() => { if (escEnVuelo === clave) escEnVuelo = null; }, 20000);
   try {
     const r = await fetch('/api/escenario?ip=' + encodeURIComponent(ip) + '&desde=' + desde.toFixed(0));
     const d = await r.json();
+    if (!vigente()) return;
     if (d.error) { escError = d.error; } else { escError = ''; escDatos = d; }
-  } catch (e) { escError = 'sin conexión con el panel'; }
+  } catch (e) {
+    if (!vigente()) return;
+    escError = 'sin conexión con el panel';
+    if (escDatos && escDatos.ip !== ip) escDatos = null;
+  } finally {
+    if (escEnVuelo === clave) escEnVuelo = null;
+  }
+  if (!vigente()) return;
   renderEscPasos();
   renderEscFilas();
 }
@@ -2854,7 +2883,9 @@ function estadoEnHosts(ip) {
     const r = (a.reglas || {})[ip];
     if (r) return `<span class="est si" title="Según el propio host">${h}: ${varEsc(r.accion)} aplicado</span>`;
     if ((a.liberadas || {})[ip]) return `<span class="est lib" title="Un humano la liberó en el host">${h}: liberada</span>`;
-    if ((a.sombra || {})[ip]) return `<span class="est no" title="${varEsc(a.sombra[ip])}">${h}: no se aplica (fuera de alcance)</span>`;
+    const motivo = String((a.sombra || {})[ip] || '');
+    if (motivo.startsWith('liberada')) return `<span class="est lib" title="Un humano la liberó en el host">${h}: liberada</span>`;
+    if (motivo) return `<span class="est no" title="${varEsc(motivo)}">${h}: no se aplica (fuera de alcance)</span>`;
     return `<span class="est no">${h}: sin regla</span>`;
   }).join('');
 }
@@ -6979,16 +7010,41 @@ def tail_lines(path: Path, max_bytes: int = 1_048_576) -> list[str]:
     ]
 
 
+# Cache de decisiones parseadas. Cada vista sondea cada 3-5 s y el servidor
+# atiende cada peticion en su hilo: sin cache, N pestanas x N endpoints volvian
+# a parsear 4-32 MiB del registro a la vez y el panel llego a 4,7 GB y dejo de
+# responder (3-nov). Una lectura por tramo y por DECISIONES_CACHE_S; mientras
+# un hilo parsea, los demas del mismo tramo esperan su resultado en vez de
+# repetir el trabajo. Los dicts se comparten: los llamadores no los modifican.
+DECISIONES_CACHE_S = 2.5
+_CACHE_DECISIONES: dict = {}
+_CACHE_DECISIONES_LOCK = threading.Lock()
+
+
+def _decisiones_parseadas(log_path: Path, max_bytes: int) -> list[dict]:
+    clave = (str(log_path), max_bytes)
+    with _CACHE_DECISIONES_LOCK:
+        ent = _CACHE_DECISIONES.setdefault(clave, {"t": 0.0, "datos": [], "lock": threading.Lock()})
+    with ent["lock"]:
+        if time.monotonic() - ent["t"] < DECISIONES_CACHE_S:
+            return ent["datos"]
+        records = []
+        for line in tail_lines(log_path, max_bytes=max_bytes):
+            if '"decision"' not in line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("event") == "decision":
+                records.append(event)
+        records.sort(key=lambda item: item.get("logged_at", 0))
+        ent["datos"], ent["t"] = records, time.monotonic()
+        return records
+
+
 def read_decisions(log_path: Path, limit: int, max_bytes: int = 1_048_576) -> list[dict]:
-    records = []
-    for line in tail_lines(log_path, max_bytes=max_bytes):
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if event.get("event") == "decision":
-            records.append(event)
-    records.sort(key=lambda item: item.get("logged_at", 0))
+    records = _decisiones_parseadas(log_path, max_bytes)
     return records[-limit:][::-1]
 
 
@@ -7957,6 +8013,38 @@ def estado_aprendizaje(config_toml: Path | None, demo: bool = False,
     e["demo"] = demo
     e["toml"] = Path(config_toml).name
     return e
+
+
+# estado_aprendizaje verifica el sha256 de CADA lote CSV del registro: con los
+# lotes acumulados son minutos de CPU y E/S. Cada pagina abierta lo pedia al
+# cargar, y con varios hilos a la vez el panel dejo de responder (3-nov). El
+# estado cambia una vez al dia (timer de aprendizaje): se calcula una vez y se
+# sirve desde cache hasta APRENDIZAJE_CACHE_S o hasta que el registro cambie.
+APRENDIZAJE_CACHE_S = 600
+_CACHE_APRENDIZAJE: dict = {}
+_CACHE_APRENDIZAJE_LOCK = threading.Lock()
+
+
+def _sello_aprendizaje(config_toml: Path | None) -> tuple | None:
+    """mtime/tamano del directorio de aprendizaje y sus .jsonl (registro, deriva...)."""
+    try:
+        import cyberflow_aprendizaje as ap                      # ya importado por estado_aprendizaje
+        d = Path(ap.cargar_config(config_toml)["dir"])
+        return tuple(sorted((f.name, f.stat().st_mtime_ns, f.stat().st_size)
+                            for f in d.glob("*.jsonl")))
+    except Exception:                                            # noqa: BLE001 - solo invalida antes
+        return None
+
+
+def estado_aprendizaje_cacheado(config_toml: Path | None, demo: bool = False) -> dict:
+    with _CACHE_APRENDIZAJE_LOCK:
+        c = _CACHE_APRENDIZAJE
+        sello = _sello_aprendizaje(config_toml) if c else None
+        if c and time.monotonic() - c["t"] < APRENDIZAJE_CACHE_S and c["sello"] == sello:
+            return c["datos"]
+        datos = estado_aprendizaje(config_toml, demo)
+        c.update(t=time.monotonic(), datos=datos, sello=_sello_aprendizaje(config_toml))
+        return datos
 
 
 # --------------------------------------------------------------- autenticacion
@@ -9172,7 +9260,7 @@ def main() -> int:
                 self._send_json(estado_comparacion(args.comparacion))
                 return
             if path == "/api/aprendizaje":
-                self._send_json(estado_aprendizaje(args.config_toml, args.demo))
+                self._send_json(estado_aprendizaje_cacheado(args.config_toml, args.demo))
                 return
             if path == "/api/decisions":
                 params = dict(pair.split("=", 1) for pair in query.split("&") if "=" in pair)
