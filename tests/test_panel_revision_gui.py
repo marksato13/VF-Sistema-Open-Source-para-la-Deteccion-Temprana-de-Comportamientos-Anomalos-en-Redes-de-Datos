@@ -106,7 +106,8 @@ class TextosServidos(unittest.TestCase):
     def test_respuestas_no_se_presentan_como_bloqueos_aplicados(self):
         self.assertNotIn("IPs bloqueadas ahora", self.admin)
         self.assertIn("Respuestas registradas como vigentes", self.admin)
-        self.assertIn("La aplicación en el host no se verifica desde esta vista", self.admin)
+        # la aplicacion en el host la informa el propio host (acuse), no el sensor
+        self.assertIn("lo que <b>cada host protegido dice tener</b>", self.admin)
 
     def test_umbral_vigente_e_historico_separados(self):
         self.assertNotIn("&minus;0,5689</strong>", self.admin)

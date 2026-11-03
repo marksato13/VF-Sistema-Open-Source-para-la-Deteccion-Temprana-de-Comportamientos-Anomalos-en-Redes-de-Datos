@@ -808,6 +808,8 @@ HTML = """<!doctype html>
   .esc-paso .n { font-family: var(--mono); color: var(--text-dim); font-size: 11px; }
   .esc-paso .t { font-family: var(--mono); color: var(--text-dim); font-size: 12px; display: block; margin-top: 0.3rem; }
   .esc-paso .dnd { display: block; margin-top: 0.35rem; font-size: 11.5px; color: var(--text-dim); }
+  .esc-paso .esc-hist, .esc-hist { font-size: 11.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .esc-x { font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); margin-left: 0.35rem; }
   .esc-paso.ok { border-top-color: var(--ok); }
   .esc-paso.espera { border-top-color: var(--amber); animation: escPulso 1.6s ease-in-out infinite; }
   .esc-paso.ext { border-top-color: var(--accent); border-style: dashed; }
@@ -822,7 +824,7 @@ HTML = """<!doctype html>
   .tag-marg { font-size: 10.5px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 4px; padding: 0 0.3rem; margin-left: 0.3rem; }
   @media (prefers-reduced-motion: reduce) { .esc-paso.espera, .esc-fila.nueva { animation: none; } }
   /* Alertas flotantes: una por IP y accion, apiladas arriba a la derecha. */
-  .toasts { position: fixed; top: 16px; right: 16px; z-index: 400; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+  .toasts { position: fixed; bottom: 76px; right: 16px; z-index: 400; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
   .toast { pointer-events: auto; background: var(--surface-2); border: 1px solid var(--border); border-left: 5px solid var(--amber);
     border-radius: 10px; padding: 0.75rem 0.9rem 0.7rem; box-shadow: 0 10px 30px rgba(0,0,0,0.45); cursor: pointer;
     animation: toast-in .25s ease-out; }
@@ -970,6 +972,7 @@ HTML = """<!doctype html>
     border: 1px solid var(--border); color: var(--text-dim); white-space: nowrap; }
   .est.si { color: var(--text); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
   .est.no { border-style: dashed; }
+  .est.lib { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--border)); }
   .alc-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.8rem; margin: 0.6rem 0 1rem; }
   .alc-3 > div { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 0.95rem; }
   .alc-3 h3 { margin: 0 0 0.4rem; font-size: 0.95rem; }
@@ -1397,12 +1400,12 @@ HTML = """<!doctype html>
   <section id="s-bloqueos">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><h2>Respuestas</h2></div>
     <p class="sec-sub"><b>LIMIT</b> degrada la tasa de una IP; solo <b>BLOCK</b> la corta.</p>
-    <p class="resp-fuente" id="vigentesSub">Fuente: registro del motor y feed publicado por el sensor. La aplicación en el host no se verifica desde esta vista: el panel no tiene acceso al nftables remoto. Por eso puede diferir del feed instantáneo (0 entradas entre ciclos) o del historial (un episodio ya caducado).</p>
+    <p class="resp-fuente" id="vigentesSub">Fuente: registro del motor y feed firmado por el sensor. La columna Evidencia añade lo que <b>cada host protegido dice tener</b> en su nftables (acuse que trae el relay cada 10 s): aplicada, liberada por un humano o fuera de alcance. El acuse es un informe del host, no una orden.</p>
     <p class="act-h">Respuestas registradas como vigentes <span class="th-sub" id="vigentesN"></span></p>
     <div class="tbl-wrap">
       <table><thead><tr><th>Entidad</th><th>Acción</th><th>Motivo</th><th>Inicio del episodio · última renovación</th><th>Caduca</th><th>Evidencia</th></tr></thead><tbody id="blocked"></tbody></table>
     </div>
-    <p class="toolbar-hint">Estados: <span class="est si">registrada</span> el motor la decidió · <span class="est si">publicada</span> está en el feed firmado · <span class="est no">aplicación en el host: no comprobada</span> solo el agente del host lo sabe.</p>
+    <p class="toolbar-hint">Estados: <span class="est si">registrada</span> el motor la decidió · <span class="est si">publicada</span> está en el feed firmado · <span class="est si">srv-dmz: BLOCK aplicado</span> el host la tiene en nftables · <span class="est lib">liberada</span> un humano la quitó · <span class="est no">fuera de alcance</span> el host no la aplica (infraestructura).</p>
     <p class="act-h" style="margin-top:1.2rem">Historial de las últimas 24 h <span class="th-sub" id="histSub"></span></p>
     <div class="spark-wrap" style="margin-bottom:0.8rem">
       <svg id="histChart" class="hist-chart" role="img" aria-label="Línea de tiempo de acciones por IP en las últimas 24 horas"></svg>
@@ -1663,9 +1666,9 @@ let verMarginales = false;
 const ESC_CATALOGO = [
   { id: 'l3', capa: 'L3 · Red', tipo: 'ataque', nombre: 'Inundación ICMP',
     simula: 'Un equipo comprometido satura al servidor con pings: denegación de servicio a nivel de red, sin puertos ni aplicación.',
-    desde: 'Kali · 10.10.20.30 (pide la contraseña de sudo)', ip: '10.10.20.30',
-    comando: 'sudo hping3 --icmp -i u2000 -c 30000 10.10.30.10',
-    espera: 'No hay regla de capa 3: solo el modelo puede verlo, por el volumen de paquetes. Si lo marca, la acción es LIMIT. Es el caso que se mide hoy.',
+    desde: 'Kali · 10.10.20.30 (sin sudo)', ip: '10.10.20.30',
+    comando: 'for k in 1 2 3 4; do ping -q -i 0.002 -s 1200 -w 60 10.10.30.10 >/dev/null & done; wait',
+    espera: 'No hay regla de capa 3: solo el modelo puede verlo, por el volumen (≈ 2000 paquetes/s). Medido el 3-nov: LIMIT por el modelo en ≈ 40 s.',
     guion: ['Empezamos por la capa de red: un torrente de ICMP contra el servidor.',
             'Aquí no hay regla que lo reconozca. Si se detecta, es el modelo quien lo ve.',
             'Miren el score de cada ventana frente al umbral: a la izquierda, anómalo.'] },
@@ -1681,7 +1684,7 @@ const ESC_CATALOGO = [
     simula: 'Cientos de peticiones web en segundos desde una sola IP, como un bot que satura la aplicación.',
     desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
     comando: 'seq 1 250 | xargs -P10 -I{} curl -s -o /dev/null http://10.10.30.10/',
-    espera: 'Regla http_abuse → LIMIT: degrada la tasa, no corta.',
+    espera: 'Regla http_abuse → LIMIT: degrada la tasa, no corta. Ojo: la regla port_scan puede escalarlo a BLOCK (las 250 conexiones cortas se parecen a un escaneo).',
     guion: ['Capa de aplicación: el mismo servidor web, pero ahora abusado con peticiones legítimas en forma.',
             'Cada petición es válida; lo anómalo es la tasa. La regla http_abuse lo reconoce.',
             'La respuesta es LIMIT: se frena a la IP sin cortarla.'] },
@@ -1697,10 +1700,10 @@ const ESC_CATALOGO = [
     simula: 'Un usuario real que sincroniza o descarga mucho de golpe. No es un ataque, pero se parece a uno.',
     desde: 'VM clientes · 10.10.20.21', ip: '10.10.20.21',
     comando: 'seq 1 250 | xargs -P10 -I{} curl -s -o /dev/null --interface 10.10.20.21 http://10.10.30.10/',
-    espera: 'Puede recibir LIMIT: es un falso positivo. Por eso LIMIT no corta, caduca solo a los 5 min y nunca es indefinido.',
+    espera: 'Medido el 3-nov: LIMIT por http_abuse y luego BLOCK por port_scan. Es un falso positivo: caduca solo y un humano lo libera con un comando.',
     guion: ['Ahora un caso honesto: tráfico de un usuario legítimo, solo que intenso.',
-            'Si el sistema lo marca, es un falso positivo. Lo mostramos a propósito.',
-            'Por diseño la respuesta es proporcional: LIMIT temporal, no un corte permanente.'] },
+            'El sistema lo marca: es un falso positivo y lo mostramos a propósito.',
+            'Toda respuesta caduca y un humano la libera con un comando; la regla port_scan es la que hay que afinar.'] },
 ];
 
 let esc = null;                  // {id, ip, t0} mientras hay seguimiento
@@ -1783,8 +1786,13 @@ function renderEscPasos() {
     const quien = hayModelo && hayRegla ? 'modelo y regla' : (hayRegla ? 'regla' : 'modelo');
     const conScore = filas.filter(f => f.score != null);
     const minimo = conScore.length ? conScore.reduce((a, b) => (a.score < b.score ? a : b)) : null;
-    const regla = conAccion.find(f => f.heuristico && f.heuristico.heuristico);
+    // el motivo que se enseña es el de la ventana que fijó la acción más severa
+    const regla = (peor.heuristico && peor.heuristico.heuristico) ? peor
+      : conAccion.find(f => f.heuristico && f.heuristico.heuristico);
+    const prim = conAccion.reduce((a, b) => (a.logged_at < b.logged_at ? a : b));
+    const escalo = prim.accion !== peor.accion;
     p3 = escPaso('3', 'Decisión', 'ok', '<span class="badge acc-' + peor.accion.toLowerCase() + '">' + peor.accion + '</span> por <b>' + quien + '</b>'
+      + (escalo ? '<br><span class="esc-hist">escaló de ' + prim.accion + ' (' + fmtTime(prim.logged_at) + ') a ' + peor.accion + '</span>' : '')
       + (regla ? '<br>' + varEsc(regla.heuristico.heuristico) + ': ' + varEsc(regla.heuristico.motivo || '') : '')
       + (minimo ? '<br>score mínimo ' + minimo.score.toFixed(3) + ' · umbral ' + Number(minimo.threshold).toFixed(3) : ''),
       fmtTime(peor.logged_at) + escDelta(peor.logged_at), 'Alertas · Decisiones');
@@ -1795,16 +1803,54 @@ function renderEscPasos() {
   if (ent && activo && !escFeedVisto) escFeedVisto = ahora;
   if (!activo) p4 = escPaso('4', 'Publicación', 'inactivo', '—');
   else if (ent) p4 = escPaso('4', 'Publicación', 'ok', 'En el feed firmado: <b>' + varEsc(ent.accion) + '</b> · ' + varEsc(ent.motivo || '')
-      + '<br>caduca ' + fmtTime(ent.hasta) + ' · nivel ' + (ent.nivel == null ? '—' : ent.nivel),
+      + '<br>caduca ' + fmtTime(ent.hasta)
+      + (ent.nivel > 1 ? '<br><span class="esc-hist">reincidencia nivel ' + ent.nivel + ': la IP ya tuvo episodios en las últimas 24 h, por eso dura más</span>' : ''),
       'feed de las ' + fmtTime(D.feed.generado) + (escFeedVisto ? escDelta(escFeedVisto) : ''), 'Respuestas');
-  else if (D && D.vigente) p4 = escPaso('4', 'Publicación', 'espera', 'Registrada (' + varEsc(D.vigente.accion) + '); esperando el próximo feed (cada 10 s).', '', 'Respuestas');
+  else if (D && D.vigente && conAccion.length) p4 = escPaso('4', 'Publicación', 'espera', 'Registrada (' + varEsc(D.vigente.accion) + '); esperando el próximo feed (cada 10 s).', '', 'Respuestas');
   else p4 = escPaso('4', 'Publicación', activo && conAccion.length ? 'espera' : 'inactivo', 'Aún no está en el feed.', D && D.feed ? 'feed de las ' + fmtTime(D.feed.generado) : '');
-  // 5. Aplicacion: fuera del panel, a proposito
-  const p5 = escPaso('5', 'Aplicación en el host', 'ext',
-    ent ? 'El agente del servidor la recoge en ≤ 10 s y la aplica en nftables. El panel no lo afirma: se comprueba en el host.'
-        : 'Solo el agente del servidor sabe si aplicó. El panel no lee su nftables.',
-    '', 'srv-dmz: registro del agente · Kali: nmap → filtered');
+  // 5. Aplicacion: lo que el host dice tener en nftables (acuse que trae el relay)
+  const p5 = escPaso5(D, activo, ent);
   ol.innerHTML = p1 + p2 + p3 + p4 + p5;
+}
+
+const ESC_EVENTO = { aplicada: 'aplicada', cambiada: 'cambiada a', retirada: 'retirada', liberada: 'liberada por un humano' };
+
+function escPaso5(D, activo, ent) {
+  const apl = D ? D.aplicacion : null;
+  if (apl == null) return escPaso('5', 'Aplicación en el host', 'ext',
+    'Sin acuse de los hosts: el panel no lee su nftables. Se comprueba en el host.', '', 'srv-dmz: mira-agente.sh');
+  if (!apl.length) return escPaso('5', 'Aplicación en el host', 'espera',
+    'Ningún host protegido ha enviado su acuse todavía.', '', 'acuse del host · relay cada 10 s');
+  let estado = 'espera', hora = '';
+  const partes = apl.map(a => {
+    const evs = (a.eventos || []);
+    const hist = evs.length ? '<br><span class="esc-hist">' + evs.slice(-4).map(e => fmtTime(e.t) + ' ' + (ESC_EVENTO[e.evento] || e.evento)
+      + (e.accion ? ' ' + varEsc(e.accion) : '')).join(' · ') + '</span>' : '';
+    const quien = '<b>' + varEsc(a.host) + '</b>';
+    if (a.error) return quien + ': no pudo leer su firewall (' + varEsc(a.error) + ').';
+    if (a.atrasado) return quien + ': acuse atrasado' + (a.edad != null ? ' (hace ' + Math.round(a.edad) + ' s)' : '') + '.' + hist;
+    if (a.agente && a.agente !== 'active') return quien + ': agente EN SOMBRA (' + varEsc(a.agente) + '): recibe la orden, no la aplica.' + hist;
+    if (a.fuera_de_alcance && !a.regla) return quien + ': no se aplica, la IP está fuera de su alcance (' + varEsc(a.fuera_de_alcance) + ').' + hist;
+    if (a.regla) {
+      estado = 'ok';
+      const ap = evs.filter(e => e.evento === 'aplicada' || e.evento === 'cambiada').pop();
+      if (ap && activo) hora = 'aplicada ' + fmtTime(ap.t) + escDelta(ap.t);
+      return '<span class="badge acc-' + a.regla.accion.toLowerCase() + '">' + varEsc(a.regla.accion) + '</span> en el nftables de ' + quien
+        + (a.regla.expira ? ' · se quita sola a las ' + fmtTime(a.regla.expira) : '') + hist;
+    }
+    const lib = evs.filter(e => e.evento === 'liberada').pop();
+    if (lib) {
+      estado = 'ok';
+      if (activo) hora = 'liberada ' + fmtTime(lib.t) + escDelta(lib.t);
+      return quien + ': <b>sin regla</b>, liberada por revisión humana. No se reaplica salvo reincidencia.' + hist;
+    }
+    if (ent && activo) return quien + ': orden publicada; el agente aún no la aplica (la recoge cada 10 s).' + hist;
+    return quien + ': sin regla para esta IP (pasa libre).' + hist;
+  });
+  const edad = apl.map(a => a.edad).filter(x => x != null);
+  return escPaso('5', 'Aplicación en el host', activo ? estado : (estado === 'ok' ? 'ok' : 'inactivo'),
+    partes.join('<br>'), hora || (edad.length ? 'acuse de hace ' + Math.round(Math.min.apply(null, edad)) + ' s' : ''),
+    'según el host · relay cada 10 s');
 }
 
 function renderEscFilas() {
@@ -1816,16 +1862,26 @@ function renderEscFilas() {
     : 'de ' + ((document.getElementById('escIp') || {}).value || '') + ' en los últimos 2 min';
   if (escError) { cont.innerHTML = '<p class="estado-vacio">No se pudo consultar: ' + varEsc(escError) + '</p>'; return; }
   if (!filas.length) { cont.innerHTML = '<p class="estado-vacio">Sin ventanas de esta IP en el periodo.</p>'; return; }
-  cont.innerHTML = filas.slice(0, 40).map(f => {
-    const k = f.logged_at + '|' + f.window_end_utc;
-    const nueva = !escVistas.has(k);
-    escVistas.add(k);
+  // Ventanas iguales del mismo instante (los tres tamaños de ventana, o varias
+  // sin score) se agrupan en una fila «×N»: la tabla cuenta lo que cambia.
+  const grupos = [];
+  for (const f of filas.slice(0, 120)) {
     const mot = f.heuristico && f.heuristico.heuristico ? varEsc(f.heuristico.heuristico) + ': ' + varEsc(f.heuristico.motivo || '')
       : (f.decision === 'ALERT' ? 'anomalía del modelo' : (f.score == null ? 'sin score (poco tráfico)' : 'normal para el modelo'));
+    const clave = fmtTime(f.logged_at) + '|' + f.accion + '|' + mot + '|' + (f.marginal ? 1 : 0);
+    const ult = grupos[grupos.length - 1];
+    if (ult && ult.clave === clave) { ult.n += 1; ult.keys.push(f.logged_at + '|' + f.window_end_utc); continue; }
+    grupos.push({ clave: clave, f: f, mot: mot, n: 1, keys: [f.logged_at + '|' + f.window_end_utc] });
+  }
+  cont.innerHTML = grupos.slice(0, 30).map(g => {
+    const f = g.f;
+    const nueva = g.keys.some(k => !escVistas.has(k));
+    g.keys.forEach(k => escVistas.add(k));
     return '<div class="esc-fila' + (nueva ? ' nueva' : '') + '"><span class="hora">' + fmtTime(f.logged_at) + '</span>'
       + '<span><span class="badge acc-' + String(f.accion).toLowerCase() + '">' + f.accion + '</span></span>'
       + '<span>' + miniBarraScore(f.score) + '</span>'
-      + '<span>' + mot + (f.marginal ? '<span class="tag-marg">marginal</span>' : '') + '</span></div>';
+      + '<span>' + g.mot + (g.n > 1 ? ' <b class="esc-x">×' + g.n + '</b>' : '')
+      + (f.marginal ? '<span class="tag-marg">marginal</span>' : '') + '</span></div>';
   }).join('');
 }
 
@@ -1860,7 +1916,7 @@ function escIniciar() {
   if (!/^\\d{1,3}(\\.\\d{1,3}){3}$/.test(ip)) { const e = document.getElementById('escEstado'); if (e) e.textContent = 'Escribe una IP válida.'; return; }
   esc = { id: escSel, ip: ip, t0: Date.now() / 1000 };
   escFeedVisto = null; escDatos = null; escVistas = new Set();
-  escGuardar(); renderEscReloj(); renderEscPasos(); escConsultar();
+  escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas(); escConsultar();
 }
 
 on('escCards', 'click', (ev) => {
@@ -1924,7 +1980,9 @@ function motivoDeDecision(d) {
 function avisar(nuevas) {
   if (!avisosOn) return;
   nuevas = (nuevas || []).filter(d => !esMarginal(d));
-  if (escActivo()) nuevas = nuevas.filter(d => d.entity_ip === esc.ip);
+  // Con un escenario en seguimiento los cinco pasos ya cuentan lo de su IP: el aviso
+  // solo taparía la evidencia. Se avisa de las OTRAS IP.
+  if (escActivo()) nuevas = nuevas.filter(d => d.entity_ip !== esc.ip);
   if (!nuevas.length) return;
   const cont = document.getElementById('toasts');
   if (!cont) return;
@@ -1959,9 +2017,9 @@ function avisar(nuevas) {
       el.remove();
     });
     cont.prepend(el);
-    setTimeout(() => el.remove(), g.acc === 'BLOCK' ? 45000 : 15000);
+    setTimeout(() => el.remove(), g.acc === 'BLOCK' ? 20000 : 10000);
   }
-  while (cont.children.length > 4) cont.lastElementChild.remove();
+  while (cont.children.length > 2) cont.lastElementChild.remove();
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -2001,7 +2059,9 @@ function renderKpis(status) {
     tile('Alertas detectadas', nAcc,
          nMod + ' anomalía(s) del modelo · ' + Math.max(0, nAcc - nMod) + ' por reglas' + (cal ? '' : ' · modelo sin calibrar'),
          !cal || nAcc > 0 ? 'warn' : '', 's-alertas') +
-    tile('Respuestas registradas', vig, 'vigentes según el registro del motor; la aplicación en el host no se comprueba aquí',
+    tile('Respuestas registradas', vig, (status.acuses || []).length
+           ? 'vigentes según el motor · ' + aplicadasEnHostsDe(status.acuses) + ' aplicada(s) en el host según su acuse'
+           : 'vigentes según el registro del motor; ningún host ha enviado acuse',
          vig > 0 ? 'warn' : '', 's-bloqueos');
 }
 const SEC_TITULO_CORTO = { 's-actividad': 'Actividad', 's-decisiones': 'Decisiones', 's-alertas': 'Alertas', 's-bloqueos': 'Respuestas' };
@@ -2498,6 +2558,7 @@ async function refresh() {
       }
     }
 
+    ACUSES = status.acuses || [];
     renderVigentes(status.vigentes || [], status.blocked || []);
 
     const c = status.counters;
@@ -2783,6 +2844,26 @@ function duracionTexto(s) {
   return m + ' min' + (r ? ' ' + r + ' s' : '');
 }
 
+// Lo que cada host protegido dice tener para una IP (acuse que trae el relay).
+let ACUSES = [];
+function estadoEnHosts(ip) {
+  if (!ACUSES.length) return '<span class="est no" title="Ningún host ha enviado su acuse">host: sin acuse</span>';
+  return ACUSES.map(a => {
+    const h = varEsc(a.host);
+    if (a.atrasado) return `<span class="est no" title="El último acuse tiene ${Math.round(a.edad || 0)} s">${h}: acuse atrasado</span>`;
+    const r = (a.reglas || {})[ip];
+    if (r) return `<span class="est si" title="Según el propio host">${h}: ${varEsc(r.accion)} aplicado</span>`;
+    if ((a.liberadas || {})[ip]) return `<span class="est lib" title="Un humano la liberó en el host">${h}: liberada</span>`;
+    if ((a.sombra || {})[ip]) return `<span class="est no" title="${varEsc(a.sombra[ip])}">${h}: no se aplica (fuera de alcance)</span>`;
+    return `<span class="est no">${h}: sin regla</span>`;
+  }).join('');
+}
+function aplicadasEnHostsDe(acuses) {
+  const ips = new Set();
+  (acuses || []).forEach(a => { if (!a.atrasado) Object.keys(a.reglas || {}).forEach(ip => ips.add(ip)); });
+  return ips.size;
+}
+
 // Acciones vigentes: del feed publicado (caducidad exacta) o reconstruidas del
 // registro con la misma escalera. Si el host tuviera nftables local, tambien.
 function renderVigentes(vigentes, locales) {
@@ -2799,7 +2880,7 @@ function renderVigentes(vigentes, locales) {
     const publicada = v.publicada != null ? v.publicada : v.fuente === 'feed';
     const estados = `<span class="est ${registrada ? 'si' : 'no'}">${registrada ? 'registrada' : 'solo en el feed'}</span>`
       + `<span class="est ${publicada ? 'si' : 'no'}">${publicada ? 'publicada' : 'no vista en el feed'}</span>`
-      + `<span class="est no" title="El panel no consulta el nftables del host">host: no comprobada</span>`;
+      + estadoEnHosts(v.ip);
     return `<tr class="row-${v.accion.toLowerCase()}"><td class="ip">${varEsc(v.ip)}</td>`
       + `<td><span class="badge acc-${v.accion.toLowerCase()}">${v.accion}</span>${reinc ? '<span class="hace">' + reinc + '</span>' : ''}</td>`
       + `<td class="why"><span class="clamp">${varEsc(v.origen || '')}${v.motivo ? ' · ' + varEsc(v.motivo) : ''}</span></td>`
@@ -7314,12 +7395,14 @@ def es_marginal(d: dict, margen: float = MARGEN_MARGINAL) -> bool:
 
 
 def estado_escenario(log_path: Path, ip: str, desde: str, ahora: float,
-                     feed_path: Path | None, estado_path: Path | None) -> dict:
+                     feed_path: Path | None, estado_path: Path | None,
+                     acuse_dir: Path | None = None) -> dict:
     """Lo que la seccion «Escenario en vivo» necesita de una IP desde un instante.
 
     Solo lectura y acotado: la cola del registro (4 MiB), las decisiones de esa
     IP, su entrada del feed firmado y su respuesta vigente. La aplicacion en el
-    host no esta aqui porque el sensor no la ve.
+    host la informa el propio host (acuse que trae el relay); el sensor no la
+    ve por si mismo.
     """
     try:
         ip = str(ipaddress.ip_address(ip.strip()))
@@ -7364,7 +7447,79 @@ def estado_escenario(log_path: Path, ip: str, desde: str, ahora: float,
         "ips_60s": len({d.get("entity_ip") for d in recientes if d.get("entity_ip")}),
         "decisiones": filas, "feed": feed, "vigente": vig[0] if vig else None,
         "margen_marginal": MARGEN_MARGINAL,
+        "aplicacion": acuses_de_ip(acuse_dir, ip, t0, ahora) if acuse_dir is not None else None,
     }
+
+
+# Un acuse mas viejo que esto ya no describe el firewall de ahora (el relay lo
+# trae cada 10 s; tres vueltas perdidas = dato atrasado).
+ACUSE_VIEJO_S = 35
+
+
+def acuses_resumen(acuse_dir: Path, ahora: float) -> list[dict]:
+    """Por host protegido: que tiene aplicado, que libero un humano y que dejo fuera de alcance."""
+    out = []
+    try:
+        ficheros = sorted(Path(acuse_dir).glob("*.json"))[:20]
+    except OSError:
+        return out
+    for f in ficheros:
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(d, dict):
+            continue
+        gen = d.get("generado") if isinstance(d.get("generado"), (int, float)) else None
+        pasada = d.get("ultima_pasada") or {}
+        out.append({
+            "host": d.get("host") or f.stem, "edad": None if gen is None else max(0.0, ahora - gen),
+            "atrasado": gen is None or ahora - gen > ACUSE_VIEJO_S, "agente": d.get("agente"),
+            "error": d.get("error"),
+            "reglas": {ip: r for ip, r in (d.get("reglas") or {}).items() if isinstance(r, dict)},
+            "liberadas": d.get("liberadas") or {},
+            "sombra": pasada.get("sombra") if isinstance(pasada.get("sombra"), dict) else {},
+        })
+    return out
+
+
+def acuses_de_ip(acuse_dir: Path, ip: str, t0: float, ahora: float) -> list[dict]:
+    """Paso 5 con datos del host: lo que cada host protegido dice tener en nftables.
+
+    Lee ~/feed/acuses/<host>.json (los deja el relay del bastion). Por host:
+    regla vigente de la IP (BLOCK/LIMIT con caducidad), liberacion humana,
+    eventos de la IP desde t0 (aplicada, cambiada, retirada, liberada) y la
+    edad del acuse. Es un informe del host, no una orden firmada.
+    """
+    out = []
+    try:
+        ficheros = sorted(Path(acuse_dir).glob("*.json"))[:20]
+    except OSError:
+        return out
+    for f in ficheros:
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(d, dict):
+            continue
+        gen = d.get("generado") if isinstance(d.get("generado"), (int, float)) else None
+        regla = (d.get("reglas") or {}).get(ip)
+        lib = (d.get("liberadas") or {}).get(ip)
+        eventos = [e for e in (d.get("eventos") or [])
+                   if isinstance(e, dict) and e.get("ip") == ip and float(e.get("t") or 0) >= t0 - 1]
+        pasada = d.get("ultima_pasada") or {}
+        sombra = pasada.get("sombra") if isinstance(pasada.get("sombra"), dict) else {}
+        out.append({
+            "host": d.get("host") or f.stem, "generado": gen, "fuera_de_alcance": sombra.get(ip),
+            "edad": None if gen is None else max(0.0, ahora - gen),
+            "atrasado": gen is None or ahora - gen > ACUSE_VIEJO_S,
+            "agente": d.get("agente"), "error": d.get("error"),
+            "regla": regla, "liberada": lib, "eventos": eventos[-20:],
+            "ultima_pasada": {"hora": pasada.get("hora"), "estado": pasada.get("estado"),
+                              "errores": pasada.get("errores")} if pasada else None,
+        })
+    return out
 
 
 def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | None = None,
@@ -8562,6 +8717,9 @@ def parse_args() -> argparse.Namespace:
         "--feed-path", type=Path, default=Path.home() / "feed" / "feed.json",
         help="feed publicado por publicar_feed.py: caducidad exacta de cada accion")
     parser.add_argument(
+        "--acuse-dir", type=Path, default=Path.home() / "feed" / "acuses",
+        help="acuses de aplicacion de los hosts protegidos (los deja el relay): paso 5 del escenario")
+    parser.add_argument(
         "--feed-estado", type=Path, default=Path.home() / "feed" / "estado.json",
         help="estado de la escalera del publicador: nivel de reincidencia por IP")
     parser.add_argument(
@@ -8902,6 +9060,7 @@ def main() -> int:
                             decisions, ahora,
                             None if args.demo else args.feed_path,
                             None if args.demo else args.feed_estado),
+                        "acuses": [] if args.demo else acuses_resumen(args.acuse_dir, ahora),
                         "counters": contadores,
                         "activity": bucket_by_minute(decisions),
                         "capture_metrics": captura,
@@ -8921,7 +9080,8 @@ def main() -> int:
                     args.log_path, urllib.parse.unquote(params.get("ip", "")),
                     params.get("desde", ""), time.time(),
                     None if args.demo else args.feed_path,
-                    None if args.demo else args.feed_estado))
+                    None if args.demo else args.feed_estado,
+                    None if args.demo else args.acuse_dir))
                 return
             if path == "/api/acciones":
                 self._send_json(historial_acciones(args.log_path, time.time()))

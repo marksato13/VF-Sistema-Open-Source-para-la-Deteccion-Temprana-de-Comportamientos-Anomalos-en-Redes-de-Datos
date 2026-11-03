@@ -19,3 +19,15 @@ scp -o BatchMode=yes -o ConnectTimeout=10 -i ~/.ssh/cyberflow-to-sensor \
   m4rk@10.10.60.11:/home/m4rk/feed/feed.json m4rk@10.10.60.11:/home/m4rk/feed/feed.sig ~/relay/ 2>/dev/null || exit 0
 scp -o BatchMode=yes -o ConnectTimeout=10 -i ~/.ssh/cyberflow-to-srv \
   ~/relay/feed.json ~/relay/feed.sig adminsrvdmz@10.10.30.10:/home/adminsrvdmz/enforce/ 2>/dev/null
+
+# Vuelta: acuse de aplicacion del host (lo que tiene de verdad en nftables),
+# para el paso 5 del panel. Es un informe, no una orden: no va firmado.
+if ssh -o BatchMode=yes -o ConnectTimeout=10 -i ~/.ssh/cyberflow-to-srv adminsrvdmz@10.10.30.10 \
+     'python3 ~/enforce/acuse_aplicacion.py' > ~/relay/srv-dmz.json.tmp 2>/dev/null \
+   && [ -s ~/relay/srv-dmz.json.tmp ]; then
+  mv ~/relay/srv-dmz.json.tmp ~/relay/srv-dmz.json
+  ssh -o BatchMode=yes -o ConnectTimeout=10 -i ~/.ssh/cyberflow-to-sensor m4rk@10.10.60.11 \
+    'mkdir -p ~/feed/acuses && cat > ~/feed/acuses/.srv-dmz.tmp && mv ~/feed/acuses/.srv-dmz.tmp ~/feed/acuses/srv-dmz.json' \
+    < ~/relay/srv-dmz.json 2>/dev/null
+fi
+exit 0
