@@ -40,7 +40,8 @@ class Marginal(unittest.TestCase):
                   {"accion": "LIMIT", "heuristico": "dns_entropy", "motivo": "x"})]
         c = dash.compute_counters(ds, detector_modelo="if_limpio_2026_10")
         self.assertEqual(c["alert_model_marginal"], 1)
-        self.assertEqual(c["acciones_relevantes"], 2)
+        # «b» (modelo solo, claro) queda para revision con la politica A: solo cuenta «c»
+        self.assertEqual(c["acciones_relevantes"], 1)
 
 
 class Escenario(unittest.TestCase):

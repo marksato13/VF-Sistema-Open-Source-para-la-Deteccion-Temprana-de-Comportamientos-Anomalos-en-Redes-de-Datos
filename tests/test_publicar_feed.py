@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 
 from scripts.engine import publicar_feed as pf
 
@@ -12,6 +13,15 @@ class DecisionesAEntradas(unittest.TestCase):
     def setUp(self):
         self.nunca = pf.NUNCA_BLOQUEAR_POR_DEFECTO
 
+    def test_politica_a_el_modelo_solo_no_publica(self):
+        # 3-nov tarde: aunque sea clara y sostenida, sin regla queda para revision
+        self.assertFalse(pf.MODELO_SOLO_ACTUA)
+        ds = [dec("10.10.20.22", logged_at=t) for t in (980.0, 990.0, 1000.0)]
+        for d in ds:
+            d.update(score=-0.676, threshold=-0.569)       # perfil legitimo intenso real
+        self.assertEqual(pf.decisiones_a_entradas(ds, {}, 1000.0, self.nunca), [])
+
+    @mock.patch.object(pf, "MODELO_SOLO_ACTUA", True)
     def test_alerta_del_modelo_es_limit(self):
         # sostenida: tres ventanas claras de la misma IP
         ent = pf.decisiones_a_entradas([dec("10.10.20.30", logged_at=980.0), dec("10.10.20.30", logged_at=990.0),
@@ -32,6 +42,7 @@ class DecisionesAEntradas(unittest.TestCase):
             marg.append(d)
         self.assertEqual(pf.decisiones_a_entradas(marg, {}, 1000.0, self.nunca), [])
 
+    @mock.patch.object(pf, "MODELO_SOLO_ACTUA", True)
     def test_alerta_clara_y_sostenida_se_publica(self):
         ds = []
         for t in (980.0, 990.0, 1000.0):

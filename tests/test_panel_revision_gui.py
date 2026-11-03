@@ -37,7 +37,7 @@ class EstadosDeRespuesta(unittest.TestCase):
             v = db.acciones_vigentes([
                 dec("10.10.20.30", 1000, heur={"accion": "BLOCK", "heuristico": "port_scan", "motivo": ""}),
                 dec("10.10.20.30", 1060, heur={"accion": "BLOCK", "heuristico": "port_scan", "motivo": ""}),
-                dec("10.10.20.31", 1050, "ALERT"),
+                dec("10.10.20.31", 1050, heur={"accion": "LIMIT", "heuristico": "http_abuse", "motivo": ""}),
             ], 1100, feed)
         por = {x["ip"]: x for x in v}
         # En el registro y en el feed.

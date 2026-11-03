@@ -1819,15 +1819,15 @@ const ESC_CATALOGO = [
     simula: 'Un equipo satura al servidor con pings: denegación de servicio en capa de red.',
     desde: 'Kali · 10.10.20.30 (sin sudo)', ip: '10.10.20.30',
     comando: 'for k in 1 2 3 4; do ping -q -i 0.002 -s 1200 -w 60 10.10.30.10 >/dev/null & done; wait',
-    espera: 'Sin regla de capa 3: lo ve el modelo (anomalía clara y sostenida) → LIMIT.',
+    espera: 'Regla icmp_flood (≥ 200 paquetes/s casi todo ICMP) + modelo → BLOCK con caducidad.',
     guion: ['Capa de red: ≈ 2000 paquetes ICMP por segundo.',
-            'No hay regla para esto: lo detecta el modelo por el volumen.',
-            'El score cae bajo el umbral varias ventanas seguidas → LIMIT.'],
+            'El modelo ve el volumen anómalo; la regla icmp_flood lo confirma.',
+            'BLOCK con caducidad: el servidor deja de contestar los pings.'],
     tour: { ataque: '4 pings en paralelo: ≈ 2000 paquetes/s de ICMP.',
-            actividad: 'La Kali aparece con LIMIT, sin regla.',
-            decisiones: 'Solo el modelo: score bajo el umbral, sostenido.',
-            respuestas: 'LIMIT por el modelo · srv-dmz lo confirma.',
-            host: 'Ping a 250/s: pierde lo que pasa de 100/s.' } },
+            actividad: 'La Kali aparece con BLOCK por icmp_flood.',
+            decisiones: 'Modelo + regla: cientos de paquetes/s, 100 % ICMP.',
+            respuestas: 'BLOCK firmado con caducidad · srv-dmz lo confirma.',
+            host: 'Ping: 100 % de pérdida mientras dura el BLOCK.' } },
   { id: 'l7dns', capa: 'L7 · Aplicación', tipo: 'ataque', nombre: 'DNS de alta entropía (DGA)',
     simula: 'Malware que busca su servidor de control con nombres aleatorios.',
     desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
@@ -2042,7 +2042,7 @@ function renderEscFilas() {
   const grupos = [];
   for (const f of filas.slice(0, 120)) {
     const mot = f.heuristico && f.heuristico.heuristico ? varEsc(f.heuristico.heuristico) + ': ' + varEsc(f.heuristico.motivo || '')
-      : (f.decision === 'ALERT' ? (f.politica_modelo === 'marginal' ? 'anomalía marginal del modelo · sin acción' : (f.politica_modelo === 'suelta' ? 'anomalía suelta del modelo · sin acción' : 'anomalía sostenida del modelo')) : (f.score == null ? 'sin score (poco tráfico)' : 'normal para el modelo'));
+      : (f.decision === 'ALERT' ? (f.politica_modelo === 'marginal' ? 'anomalía marginal del modelo · sin acción' : (f.politica_modelo === 'suelta' ? 'anomalía suelta del modelo · sin acción' : 'anomalía sostenida del modelo · para revisión humana')) : (f.score == null ? 'sin score (poco tráfico)' : 'normal para el modelo'));
     const clave = fmtTime(f.logged_at) + '|' + f.accion + '|' + mot + '|' + (f.marginal ? 1 : 0);
     const ult = grupos[grupos.length - 1];
     if (ult && ult.clave === clave) { ult.n += 1; ult.keys.push(f.logged_at + '|' + f.window_end_utc); continue; }
@@ -2219,7 +2219,7 @@ function motivoDeDecision(d) {
 
 function avisar(nuevas) {
   if (!avisosOn) return;
-  nuevas = (nuevas || []).filter(d => !esMarginal(d));
+  nuevas = (nuevas || []).filter(d => !esMarginal(d) && accionDeDecision(d) !== 'PERMIT');
   // Con un escenario en seguimiento los cinco pasos ya cuentan lo de su IP: el aviso
   // solo taparía la evidencia. Se avisa de las OTRAS IP.
   if (escActivo()) nuevas = nuevas.filter(d => d.entity_ip !== esc.ip);
@@ -2917,13 +2917,24 @@ function miniBarraScore(score) {
 // publicar_feed.py: un heuristico confirmado manda (BLOCK o LIMIT); si no, una
 // anomalia del modelo (ALERT) degrada a LIMIT; lo demas, PERMIT. Si el motor
 // aun no emite el campo `heuristico` (no reiniciado), se cae a modelo/PERMIT.
+// Politica A (3-nov): el modelo SOLO no actua (queda «para revisión humana»);
+// actua la regla. Y la infraestructura (gateways, DNS/AD, sensor, bastión) nunca
+// recibe accion: = NUNCA_BLOQUEAR de publicar_feed.py.
+const MODELO_SOLO_ACTUA = false;
+const NUNCA_BLOQUEAR_JS = new Set(['10.10.10.30', '10.10.60.11', '10.10.30.1', '10.10.40.1',
+  '10.10.60.1', '10.10.20.1', '10.10.10.20']);
+function esInfraProtegida(d) { return NUNCA_BLOQUEAR_JS.has(String(d.entity_ip || '')); }
+function paraRevision(d) {
+  return d.decision === 'ALERT' && !String(d.detector_name || '').endsWith('_heuristic')
+    && d.politica_modelo === 'sostenida' && !(d.heuristico && d.heuristico.accion);
+}
 function accionDeDecision(d) {
   const sev = { BLOCK: 2, LIMIT: 1, PERMIT: 0 };
   let acc = 'PERMIT';
+  if (esInfraProtegida(d)) return acc;
   if (d.decision === 'ALERT') {
-    // = publicar_feed: el modelo solo actua con anomalia clara y sostenida
     if (String(d.detector_name || '').endsWith('_heuristic')) acc = 'BLOCK';
-    else if (!d.politica_modelo || d.politica_modelo === 'sostenida') acc = 'LIMIT';
+    else if (MODELO_SOLO_ACTUA && (!d.politica_modelo || d.politica_modelo === 'sostenida')) acc = 'LIMIT';
   }
   if (d.heuristico && sev[d.heuristico.accion] > sev[acc]) acc = d.heuristico.accion;
   return acc;
@@ -7968,8 +7979,8 @@ def accion_de(d: dict) -> tuple[str, str, str] | None:
         det = str(d.get("detector_name", ""))
         if det.endswith("_heuristic"):
             candidatos.append(("BLOCK", REGLA_LEGACY.get(det, "regla determinista"), det))
-        elif d.get("politica_modelo") in (None, "sostenida"):
-            # = publicar_feed: el modelo solo actua con anomalia clara y sostenida
+        elif MODELO_SOLO_ACTUA and d.get("politica_modelo") in (None, "sostenida"):
+            # = publicar_feed: con la politica A el modelo solo no pide accion
             candidatos.append(("LIMIT", "anomalía del modelo", "modelo"))
     h = d.get("heuristico")
     if isinstance(h, dict) and h.get("accion") in SEVERIDAD_ACCION:
@@ -7984,6 +7995,7 @@ def accion_de(d: dict) -> tuple[str, str, str] | None:
 MARGEN_MARGINAL = 0.05   # misma cifra que el navegador (MARGEN_MARGINAL en el JS)
 VENTANA_SOSTENIDA_S = 120  # = tramo que lee publicar_feed (--ventana-segundos)
 MIN_VENTANAS_MODELO = 3    # = publicar_feed.MIN_VENTANAS_MODELO
+MODELO_SOLO_ACTUA = False  # = publicar_feed.MODELO_SOLO_ACTUA (politica A, 3-nov)
 
 
 def anotar_politica_modelo(decisiones: list[dict]) -> None:

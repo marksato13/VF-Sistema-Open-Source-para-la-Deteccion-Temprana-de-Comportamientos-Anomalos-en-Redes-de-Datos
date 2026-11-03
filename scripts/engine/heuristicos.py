@@ -25,7 +25,14 @@ from __future__ import annotations
 
 # Subir esta versión cada vez que cambien los umbrales; queda en el registro y en
 # el feed para poder reproducir por qué se tomó una decisión.
-VERSION_UMBRALES = "2026-11-03.1"
+VERSION_UMBRALES = "2026-11-03.2"
+# 2026-11-03.2: nueva regla icmp_flood. Desde esta version el modelo solo ya no
+# publica acciones (las deja para revision humana: ver publicar_feed.py), y la
+# inundacion ICMP era el unico escenario que dependia de el. Calibrada sobre
+# 3 119 148 ventanas reales (multilayer-v3, 3-nov): en ventanas con >= 50 % ICMP,
+# lo legitimo llega como mucho a 43,6 paquetes/s (.21) y el ping normal de la Kali
+# a 25-30; el flood de la demo L3 da 318-3998. Umbral 200 paquetes/s con >= 80 %
+# ICMP: 4,6 veces lo legitimo mas alto y ninguna IP salvo la Kali lo alcanza.
 # 2026-11-03.1: la rama de ráfaga de port_scan bloqueaba a un cliente legítimo
 # (250 descargas HTTP al puerto 80 en 30 s): el espejo SPAN no atribuye el
 # SYN-ACK, así que «0 % completados» sale también en tráfico web sano. Un escaneo
@@ -85,6 +92,13 @@ UMBRALES_POR_DEFECTO: dict[str, dict] = {
         "min_nxdomain_ratio_60s": 0.5,
         "min_unique_dns_name_ratio_60s": 0.45,
         "accion": "LIMIT",
+    },
+    # Inundacion ICMP (capa 3): cientos de paquetes por segundo casi todos ICMP.
+    # Un ping normal son 1-30 paquetes/s; esto es denegacion de servicio -> BLOCK.
+    "icmp_flood": {
+        "min_packet_rate_10s": 200,
+        "min_icmp_ratio_10s": 0.8,
+        "accion": "BLOCK",
     },
 }
 
@@ -152,9 +166,17 @@ def _dns_entropy(row: dict, u: dict) -> str | None:
     return None
 
 
+def _icmp_flood(row: dict, u: dict) -> str | None:
+    pr, ic = _n(row, "packet_rate_10s"), _n(row, "icmp_ratio_10s")
+    if pr >= u["min_packet_rate_10s"] and ic >= u["min_icmp_ratio_10s"]:
+        return "%.0f paquetes/s, %.0f%% ICMP (inundación)" % (pr, 100 * min(1.0, ic))
+    return None
+
+
 _REGLAS = (
     ("brute_force", _brute_force),
     ("port_scan", _port_scan),
+    ("icmp_flood", _icmp_flood),
     ("http_abuse", _http_abuse),
     ("dns_entropy", _dns_entropy),
 )

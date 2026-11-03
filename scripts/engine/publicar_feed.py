@@ -53,6 +53,16 @@ _SEVERIDAD = {"BLOCK": 2, "LIMIT": 1}
 MARGEN_MARGINAL = 0.05
 MIN_VENTANAS_MODELO = 3
 
+# Política A (3-nov, tarde): el modelo SOLO ya no publica acciones. Medido sobre
+# 9 h: los perfiles de tráfico legítimo intenso (.22, .24, .26) alcanzan márgenes
+# de hasta 0,107 bajo el umbral y la Kali solo 0,078; ningún margen ni número de
+# ventanas separa ambos casos. La anomalía sostenida del modelo queda registrada y
+# visible en el panel como «para revisión humana»; actúa la regla que la confirma
+# (port_scan, icmp_flood, http_abuse, dns_entropy, brute_force). Respaldo del
+# estado anterior: etiqueta git antes-politica-AC-2026-11-03 y
+# sensor1:~/respaldos/motor-antes-politica-AC-20261103-0937/.
+MODELO_SOLO_ACTUA = False
+
 
 def _modelo_claro(d: dict, margen: float = MARGEN_MARGINAL) -> bool:
     s, u = d.get("score"), d.get("threshold")
@@ -75,7 +85,7 @@ def _verdicto_de(d: dict) -> tuple[str, str, str] | None:
         det = str(d.get("detector_name", ""))
         if det.endswith("_heuristic"):
             candidatos.append(("BLOCK", det, det))
-        else:
+        elif MODELO_SOLO_ACTUA:
             candidatos.append(("LIMIT", "modelo:" + det, det))
     h = d.get("heuristico")
     if isinstance(h, dict) and h.get("accion") in _SEVERIDAD:
@@ -115,9 +125,9 @@ def decisiones_a_entradas(decisiones: list[dict], estado: dict, ahora: float,
             continue
         accion, motivo, detector = v
         solo_modelo = motivo.startswith("modelo:")
-        if solo_modelo and (not _modelo_claro(d)
+        if solo_modelo and (not MODELO_SOLO_ACTUA or not _modelo_claro(d)
                             or claras.get(ip, 0) < MIN_VENTANAS_MODELO):
-            continue         # marginal o suelta: se registra, no se publica
+            continue         # modelo solo: se registra y se revisa, no se publica
         evento_ts = float(d.get("logged_at", 0))
         prev = por_ip.get(ip)
         if (prev is None

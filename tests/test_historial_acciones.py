@@ -28,7 +28,7 @@ class Historial(unittest.TestCase):
 
     def test_una_racha_es_un_episodio_y_gana_la_accion_mas_severa(self):
         scan = {"heuristico": "port_scan", "accion": "BLOCK", "motivo": "250 intentos"}
-        # Modelo solo con anomalia clara y sostenida (3 ventanas <= 120 s): pide LIMIT.
+        # Las ALERT del modelo solo no son accion (politica A): el episodio es la regla.
         self.escribir([
             linea(AHORA - 5000, "10.10.20.21"),
             linea(AHORA - 4000, "10.10.20.30", "ALERT"),                 # LIMIT por el modelo
@@ -40,8 +40,8 @@ class Historial(unittest.TestCase):
         self.assertEqual(len(d["episodios"]), 1)
         e = d["episodios"][0]
         self.assertEqual((e["ip"], e["accion"], e["origen"], e["ventanas"]),
-                         ("10.10.20.30", "BLOCK", "port_scan", 4))
-        self.assertEqual((e["inicio"], e["fin"]), (AHORA - 4000, AHORA - 3980))
+                         ("10.10.20.30", "BLOCK", "port_scan", 1))
+        self.assertEqual((e["inicio"], e["fin"]), (AHORA - 3990, AHORA - 3990))
         self.assertFalse(e["vigente"])
 
     def test_una_alerta_suelta_del_modelo_no_es_episodio(self):
