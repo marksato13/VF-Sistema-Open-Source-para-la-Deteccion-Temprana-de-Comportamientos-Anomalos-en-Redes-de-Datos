@@ -30,3 +30,23 @@ escalada y panel de f57ca00). La candidata se instala al lado, en `/home/m4rk/cy
 reversión retira los drop-ins y vuelve a las unidades copiadas en el respaldo, sin depender de git.
 
 DC1 no se toca. El LIMIT DNS no se aplica en ningún sitio. Ningún agente lleva `--aplicar`.
+
+## Reconciliación 2026-11-03 (rama `recuperacion/etapa4a-20261103`)
+
+Lectura del laboratorio del 2026-11-04 01:04 UTC (solo lectura), después de la demo del 3-nov:
+
+- Sensor1 sigue con el motor **24f8a80**, pero `publicar_feed.py` y `dashboard.py` son ya los de **ca66db5**
+  (rama as-deployed), no los de f57ca00. El resto de la cadena v1 no cambió.
+- srv-dmz: `ppi-enforce-agent.timer` está **enabled/active desde el 03-nov 02:50 UTC** con `--aplicar --sudo`,
+  y la tabla `inet cyberflow` tiene sets en uso (en la lectura, un LIMIT a 10.10.20.21). Ya **no** está
+  «disabled/inactive», como suponían este directorio y el PROCEDIMIENTO del 2-nov.
+
+Cambios de esta rama (solo herramientas de instalación; el código instalado sigue siendo ec78ca5):
+
+- `srvdmz/instalar_srvdmz_sombra.sh`: condición previa que **para** si el timer v1 está activo o habilitado,
+  si `ppi-enforce-agent.service` corre, si queda la tabla `cyberflow` del v1 o si nft no se puede leer.
+- `banco/ensayo_precondicion_v1.sh`: siete casos con systemctl/sudo/nft simulados (7/7 en Linux).
+
+Dejar la cadena v1 sin aplicar (fase P0) es una acción sobre reglas activas: la ejecuta Mark con autorización
+expresa y respaldo previo, según el informe de reconciliación del repositorio de documentación
+(`etapa4-reconciliacion-2026-11-03/`).

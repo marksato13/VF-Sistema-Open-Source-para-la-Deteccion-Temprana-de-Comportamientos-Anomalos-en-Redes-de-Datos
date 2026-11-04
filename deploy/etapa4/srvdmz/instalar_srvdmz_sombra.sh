@@ -2,13 +2,25 @@
 # [SRV-DMZ adminsrvdmz] Agente v2 perfil dmz en SOMBRA (sin --aplicar), Etapa 4. Lo ejecuta MARK: crea
 # cuentas e instala en /usr/local, /opt, /etc, /var/lib y sudoers. Mismos pasos que el procedimiento
 # revisado de la Etapa 2 (P1–P8, probados en el banco :3), con el código de ec78ca5.
-# El agente v1 (ppi-enforce-agent.timer, hoy disabled/inactive) y ppi-brute-lab NO se tocan.
+# El agente v1 (ppi-enforce-agent.timer) y ppi-brute-lab NO se tocan desde aquí.
+#
+# Reconciliación 2026-11-03: el 2-nov el agente v1 estaba disabled/inactive, pero desde el 03-nov 02:50 UTC
+# (preparación de la demo) está enabled/active con --aplicar y la tabla `inet cyberflow` tiene sets en uso.
+# Este guion ya no lo da por supuesto: la fase P0 (PROCEDIMIENTO, la ejecuta Mark con autorización expresa)
+# deja la cadena v1 sin aplicar, y aquí se comprueba antes de cualquier otra cosa. Sin lectura de nft, para.
 #
 #   bash instalar_srvdmz_sombra.sh <RESPALDO_DIR> <DST_PAQUETE> <pub.pem del sensor> <cyberflow-feed-v2-srv.pub>
 set -uo pipefail
 parar() { echo "PARADA $*"; exit 1; }
 ok() { echo "OK    $*"; }
 R="${1:?respaldo}"; DST="${2:?paquete extraído}"; PUB="${3:?pub.pem}"; RELE="${4:?llave pública del relé}"
+v1_ac=$(systemctl is-active ppi-enforce-agent.timer 2>/dev/null); v1_en=$(systemctl is-enabled ppi-enforce-agent.timer 2>/dev/null)
+[ "$v1_ac" = active ] && parar "el agente v1 (ppi-enforce-agent.timer) está activo y aplica con --aplicar: fase P0 pendiente"
+[ "$v1_en" = enabled ] && parar "ppi-enforce-agent.timer sigue enabled: volvería a aplicar al reiniciar (fase P0 pendiente)"
+systemctl is-active --quiet ppi-enforce-agent.service && parar "ppi-enforce-agent.service está en ejecución"
+tablas=$(sudo -n nft list tables 2>/dev/null) || parar "no se pueden leer las tablas nft: no se demuestra la sombra"
+printf '%s\n' "$tablas" | grep -qE '^table [a-z0-9]+ cyberflow$' && parar "queda la tabla nft del agente v1 (cyberflow): fase P0 pendiente"
+ok "condición previa: cadena v1 sin aplicar (timer $v1_ac/$v1_en, sin tabla cyberflow)"
 ( cd "$R" && sha256sum -c --quiet SHA256SUMS ) || parar "el respaldo no verifica"
 [ -s "$R/ruleset.nft" ] || parar "el respaldo no tiene ruleset.nft (CON_SUDO=1)"
 grep -qiE 'requiretty' "$R/sudoers-defaults.txt" && parar "sudo exige tty: el helper no funcionaría"
