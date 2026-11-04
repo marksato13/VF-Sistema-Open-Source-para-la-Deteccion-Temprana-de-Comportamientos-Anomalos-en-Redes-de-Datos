@@ -54,8 +54,12 @@ ok "fase 1: cuentas, rutas, helper, sudoers y llave del relé (solo 'recibir')"
 
 # El helper NO aplica nada sin petición; en sombra el agente solo pide 'listar'. Antes de arrancar se
 # comprueba que el perfil impuesto por el host rechaza otro perfil.
-echo '{"perfil":"dns","operaciones":[{"op":"listar"}]}' | sudo -u cfagente sudo -n /usr/local/sbin/cf-nft-helper \
-  | grep -q perfil_no_autorizado || parar "el helper no rechaza un perfil ajeno"
+# >>> comprobacion-helper (banco: ensayo_helper_rechazo.sh)
+# 4A (2026-11-04): el helper responde al rechazo con rc=1; con pipefail, «… | grep -q» daba fallo aunque el
+# texto estuviera. Se captura la respuesta y se busca el rechazo explícito.
+rech=$(echo '{"perfil":"dns","operaciones":[{"op":"listar"}]}' | sudo -u cfagente sudo -n /usr/local/sbin/cf-nft-helper 2>&1) || true
+printf '%s\n' "$rech" | grep -q '"rechazo": "perfil_no_autorizado"' || parar "el helper no rechaza un perfil ajeno: $rech"
+# <<< comprobacion-helper
 sudo install -o root -g root -m 0644 "$DST/deploy/etapa4/unidades/srvdmz/ppi-enforce-agent-v2-dmz.service" /etc/systemd/system/
 grep -q -- '--aplicar' /etc/systemd/system/ppi-enforce-agent-v2-dmz.service && parar "la unidad lleva --aplicar"
 sudo systemctl daemon-reload

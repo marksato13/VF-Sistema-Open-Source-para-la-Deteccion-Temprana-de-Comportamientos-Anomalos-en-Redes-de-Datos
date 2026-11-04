@@ -35,9 +35,10 @@ c "reloj sincronizado" "[ \"\$(timedatectl show -p NTPSynchronized --value)\" = 
 if [ "${CON_SUDO:-0}" = 1 ]; then
   T=/var/lib/cyberflow/agente/traza.jsonl
   echo "INFO  rechazos por motivo: $(sudo -n grep -o '"motivo": "[a-z_]*"' $T | sort | uniq -c | tr '\n' ' ')"
-  # positivo: la orden debe IMPRIMIR el rechazo; si sudo o el helper fallan, grep no lo ve -> FALLO
-  c "helper rechaza un perfil ajeno" \
-    "echo '{\"perfil\":\"dns\",\"operaciones\":[{\"op\":\"listar\"}]}' | sudo -n -u cfagente sudo -n /usr/local/sbin/cf-nft-helper | grep -q perfil_no_autorizado"
+  # positivo: la orden debe IMPRIMIR el rechazo; si sudo o el helper fallan, grep no lo ve -> FALLO.
+  # 4A (2026-11-04): el helper rechaza con rc=1; con pipefail la tubería daba FALLO aunque el rechazo estuviera.
+  rech=$(echo '{"perfil":"dns","operaciones":[{"op":"listar"}]}' | sudo -n -u cfagente sudo -n /usr/local/sbin/cf-nft-helper 2>&1) || true
+  c "helper rechaza un perfil ajeno" "printf '%s\n' \"\$rech\" | grep -q '\"rechazo\": \"perfil_no_autorizado\"'"
 else
   echo "INFO  sin CON_SUDO=1: traza, tablas y ruleset NO verificados (alcance procesos)"
 fi
