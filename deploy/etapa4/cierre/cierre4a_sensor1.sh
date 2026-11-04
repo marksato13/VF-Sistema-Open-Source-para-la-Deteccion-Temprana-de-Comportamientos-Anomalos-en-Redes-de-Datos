@@ -70,7 +70,10 @@ if [ "$FASE" = A ]; then
   systemd-analyze verify ppi-motor-capture.service ppi-dashboard.service > "$EV/verify.txt" 2>&1 || true
   cat "$EV/verify.txt"
 
-  echo "== A4 arranque controlado de la captura (el motor NO se reinicia)"
+  # OJO (corregido tras la ejecución del 4-nov 06:12): ppi-motor tiene Requires=ppi-motor-capture, así
+  # que systemd TAMBIÉN reinicia el motor; su contador pcaps_ilegibles vuelve a 0 en el proceso nuevo y
+  # el valor histórico queda en el registro anterior y en previo/pcaps-ilegibles-antes.txt.
+  echo "== A4 arranque controlado de la captura (el motor se reinicia con ella por Requires=)"
   date -u +%s.%N > "$EV/t-restart-captura.txt"
   systemctl restart ppi-motor-capture.service
   sleep 3

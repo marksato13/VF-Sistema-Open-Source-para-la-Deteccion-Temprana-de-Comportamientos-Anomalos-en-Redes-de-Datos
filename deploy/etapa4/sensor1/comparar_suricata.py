@@ -51,6 +51,31 @@ def bloques(stats: Path, desde: float, hasta: float):
     return out
 
 
+def bloques_eve(rutas: list[Path], desde: float, hasta: float):
+    """Eventos «stats» de EVE (mismo intervalo de 8 s). A diferencia de stats.log —que con null-values por
+    defecto OMITE los contadores a 0 y deja sin kernel_drops cada bloque sin descartes— EVE escribe
+    kernel_drops: 0 explícito. Un evento sin kernel_packets o kernel_drops se ignora (no se supone 0)."""
+    out = []
+    for r in rutas:
+        op = gzip.open if r.suffix == ".gz" else open
+        with op(r, "rt", encoding="utf-8", errors="replace") as fh:
+            for l in fh:
+                if '"event_type":"stats"' not in l:
+                    continue
+                try:
+                    e = json.loads(l)
+                    cap = e["stats"]["capture"]
+                    ts = e["timestamp"]
+                    t = dt.datetime.strptime(ts[:26] + ts[-5:], "%Y-%m-%dT%H:%M:%S.%f%z").timestamp()
+                    b = {"t": t, "up": int(e["stats"]["uptime"]), "p": int(cap["kernel_packets"]), "d": int(cap["kernel_drops"])}
+                except (ValueError, KeyError, TypeError):
+                    continue
+                if desde - 30 <= t <= hasta + 30:
+                    out.append(b)
+    out.sort(key=lambda b: b["t"])
+    return out
+
+
 def leer_eve(rutas: list[Path], desde: float, hasta: float):
     flujos = []
     for r in rutas:
@@ -83,7 +108,9 @@ def leer_eve(rutas: list[Path], desde: float, hasta: float):
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--stats", type=Path, required=True)
+    p.add_argument("--stats", type=Path, help="stats.log (omite contadores a 0: sin descartes no hay bloque válido)")
+    p.add_argument("--stats-eve", type=Path, action="append", default=[],
+                   help="eve.json (o rotados) de donde leer los eventos stats; tiene prioridad sobre --stats")
     p.add_argument("--eve", type=Path, action="append", default=[])
     p.add_argument("--desde", type=float, required=True)
     p.add_argument("--hasta", type=float, required=True)
@@ -91,7 +118,13 @@ def main(argv=None) -> int:
     p.add_argument("--rafaga-paquetes", type=int, default=5000, help="paquetes en un intervalo de stats (8 s)")
     p.add_argument("--flujo-grande", type=int, default=1000)
     a = p.parse_args(argv)
-    bl = [b for b in bloques(a.stats, a.desde, a.hasta) if a.desde <= b["t"] <= a.hasta]
+    if a.stats_eve:
+        fuente, bl = "eve stats", bloques_eve(a.stats_eve, a.desde, a.hasta)
+    elif a.stats:
+        fuente, bl = "stats.log", bloques(a.stats, a.desde, a.hasta)
+    else:
+        p.error("hace falta --stats-eve o --stats")
+    bl = [b for b in bl if a.desde <= b["t"] <= a.hasta]
     incs, reinicios = [], 0
     for x, y in zip(bl, bl[1:]):
         if y["up"] < x["up"] or y["p"] < x["p"] or y["d"] < x["d"]:
@@ -113,7 +146,9 @@ def main(argv=None) -> int:
             s = srv.setdefault(c, {"flujos": 0, "paquetes": 0, "bytes": 0})
             s["flujos"] += 1; s["paquetes"] += f["pk"]; s["bytes"] += f["by"]
     res = {
-        "etiqueta": a.etiqueta, "desde": a.desde, "hasta": a.hasta, "duracion_s": round(a.hasta - a.desde, 1),
+        "etiqueta": a.etiqueta, "fuente_contadores": fuente,
+        "hueco_max_entre_bloques_s": round(max((y["t"] - x["t"] for x, y in zip(bl, bl[1:])), default=0), 1),
+        "desde": a.desde, "hasta": a.hasta, "duracion_s": round(a.hasta - a.desde, 1),
         "bloques_stats": len(bl), "intervalos_validos": len(incs), "reinicios_suricata_en_ventana": reinicios,
         "cobertura_stats_s": round(sum(i["s"] for i in incs), 1),
         "paquetes": paq, "descartes": dsc, "descartes_por_millon": round(1e6 * dsc / paq, 3) if paq else None,
