@@ -5,7 +5,8 @@
 set -uo pipefail
 R="${1:-}"
 fallo=0
-c() { if eval "$2"; then echo "OK    $1"; else echo "FALLO $1"; fallo=1; fi; }
+# 4A (2026-11-04): cada comprobación sin pipefail (grep -q corta la tubería: SIGPIPE río arriba daba FALLO falso).
+c() { if ( set +o pipefail; eval "$2" ); then echo "OK    $1"; else echo "FALLO $1"; fallo=1; fi; }
 i() { echo "INFO  $*"; }
 E4="$HOME/cyberflow-e4"
 L="$HOME/cyberflow/logs/motor_decision.log"

@@ -4,7 +4,8 @@
 # y eventos "pareja_inconsistente" / "lectura_inestable" / "error" con "t".
 set -uo pipefail
 fallo=0
-c() { if eval "$2"; then echo "OK    $1"; else echo "FALLO $1"; fallo=1; fi; }
+# 4A (2026-11-04): cada comprobación sin pipefail (grep -q corta la tubería: SIGPIPE río arriba daba FALLO falso).
+c() { if ( set +o pipefail; eval "$2" ); then echo "OK    $1"; else echo "FALLO $1"; fallo=1; fi; }
 T="$HOME/relay-v2/traza.jsonl"
 c "relé v2 activo" "systemctl is-active --quiet ppi-relay-eventos"
 c "relé v2 solo con destino srv-dmz (sin dc1)" "! systemctl cat ppi-relay-eventos | grep -q 'dc1='"

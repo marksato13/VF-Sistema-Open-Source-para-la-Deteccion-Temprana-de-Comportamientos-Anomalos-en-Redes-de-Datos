@@ -10,7 +10,8 @@ set -uo pipefail
 R="${1:-}"
 AQUI="$(cd "$(dirname "$0")" && pwd)"
 fallo=0
-c() { if eval "$2"; then echo "OK    $1"; else echo "FALLO $1"; fallo=1; fi; }
+# 4A (2026-11-04): cada comprobación sin pipefail (grep -q corta la tubería: SIGPIPE río arriba daba FALLO falso).
+c() { if ( set +o pipefail; eval "$2" ); then echo "OK    $1"; else echo "FALLO $1"; fallo=1; fi; }
 
 if [ "${CON_SUDO:-0}" = 1 ]; then
   args=(--alcance completo)

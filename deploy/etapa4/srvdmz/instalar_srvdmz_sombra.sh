@@ -61,7 +61,12 @@ rech=$(echo '{"perfil":"dns","operaciones":[{"op":"listar"}]}' | sudo -u cfagent
 printf '%s\n' "$rech" | grep -q '"rechazo": "perfil_no_autorizado"' || parar "el helper no rechaza un perfil ajeno: $rech"
 # <<< comprobacion-helper
 sudo install -o root -g root -m 0644 "$DST/deploy/etapa4/unidades/srvdmz/ppi-enforce-agent-v2-dmz.service" /etc/systemd/system/
-grep -q -- '--aplicar' /etc/systemd/system/ppi-enforce-agent-v2-dmz.service && parar "la unidad lleva --aplicar"
+# >>> comprobacion-unidad (banco: ensayo_comprobaciones_4a.sh)
+# 4A (2026-11-04): el grep sobre el fichero entero encontraba el COMENTARIO «SIN --aplicar» y paraba en falso.
+# Se mira solo lo que no es comentario, como argumento suelto (--aplicar o --aplicar=…).
+grep -vE '^[[:space:]]*#' /etc/systemd/system/ppi-enforce-agent-v2-dmz.service \
+  | grep -qE '(^|[[:space:]])--aplicar(=|[[:space:]]|$)' && parar "la unidad lleva --aplicar"
+# <<< comprobacion-unidad
 sudo systemctl daemon-reload
 systemd-analyze verify ppi-enforce-agent-v2-dmz.service 2>&1 | grep . && parar "systemd-analyze verify"
 sudo systemctl enable --now ppi-enforce-agent-v2-dmz.service

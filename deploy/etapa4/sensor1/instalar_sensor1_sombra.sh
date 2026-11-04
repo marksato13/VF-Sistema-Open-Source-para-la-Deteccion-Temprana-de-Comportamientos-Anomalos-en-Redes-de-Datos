@@ -25,7 +25,12 @@ if [ "${1:-}" = llave-rele ]; then
   [ "$tipo" = ssh-ed25519 ] || parar "la llave no es ed25519"
   printf 'command="/usr/local/bin/cf-feed-ssh.sh servir /home/m4rk/feed-v2",restrict %s %s cyberflow-feed-v2-rele\n' \
     "$tipo" "$clave" >> "$HOME/.ssh/authorized_keys"
-  diff "$R/authorized_keys" "$HOME/.ssh/authorized_keys" | grep -c '^>' | grep -qx 1 || parar "authorized_keys cambió en más de una línea"
+  # >>> comprobacion-authorized-keys (banco: ensayo_comprobaciones_4a.sh)
+  # 4A (2026-11-04): diff sale con 1 cuando hay diferencias y, con pipefail, la tubería paraba siempre.
+  anad=$(diff "$R/authorized_keys" "$HOME/.ssh/authorized_keys" | grep -c '^>' || true)
+  quit=$(diff "$R/authorized_keys" "$HOME/.ssh/authorized_keys" | grep -c '^<' || true)
+  [ "$anad" = 1 ] && [ "$quit" = 0 ] || parar "authorized_keys cambió en más de una línea (+$anad −$quit)"
+  # <<< comprobacion-authorized-keys
   ok "llave del relé v2 añadida con comando forzado de solo lectura"
   exit 0
 fi

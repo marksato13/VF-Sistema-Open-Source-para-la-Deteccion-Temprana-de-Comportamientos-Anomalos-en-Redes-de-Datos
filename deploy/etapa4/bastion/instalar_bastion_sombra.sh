@@ -28,10 +28,15 @@ instalar)
   [ -f "$K/cyberflow-feed-v2-sensor" ] && [ -f "$K/cyberflow-feed-v2-srv" ] || parar "faltan las llaves (fase llaves)"
   # El acceso con las llaves nuevas debe estar ya limitado por el comando forzado en ambos extremos:
   # una orden cualquiera tiene que ser rechazada.
-  ssh -o BatchMode=yes -i "$K/cyberflow-feed-v2-sensor" m4rk@10.10.60.11 id 2>&1 | grep -q 'orden no permitida' \
-    || parar "Sensor1 no limita la llave del relé (falta la línea command=... en authorized_keys)"
-  ssh -o BatchMode=yes -i "$K/cyberflow-feed-v2-srv" cffeed@10.10.30.10 id 2>&1 | grep -q 'orden no permitida' \
-    || parar "srv-dmz no limita la llave del relé (cffeed sin command=...)"
+  # >>> comprobacion-llaves-limitadas (banco: ensayo_comprobaciones_4a.sh)
+  # 4A (2026-11-04): el comando forzado rechaza con rc=1 y, con pipefail, «ssh … | grep -q» paraba siempre.
+  rs=$(ssh -n -o BatchMode=yes -i "$K/cyberflow-feed-v2-sensor" m4rk@10.10.60.11 id 2>&1) || true
+  printf '%s\n' "$rs" | grep -q 'orden no permitida' && ! printf '%s\n' "$rs" | grep -q 'uid=' \
+    || parar "Sensor1 no limita la llave del relé (falta la línea command=... en authorized_keys): $rs"
+  rd=$(ssh -n -o BatchMode=yes -i "$K/cyberflow-feed-v2-srv" cffeed@10.10.30.10 id 2>&1) || true
+  printf '%s\n' "$rd" | grep -q 'orden no permitida' && ! printf '%s\n' "$rd" | grep -q 'uid=' \
+    || parar "srv-dmz no limita la llave del relé (cffeed sin command=...): $rd"
+  # <<< comprobacion-llaves-limitadas
   ssh -o BatchMode=yes -i "$K/cyberflow-feed-v2-sensor" m4rk@10.10.60.11 "cat /home/m4rk/feed-v2/feed.json" > /dev/null \
     || parar "el relé no puede leer el feed v2 del sensor"
   sudo install -d -o root -g root -m 0755 /opt/cyberflow /opt/cyberflow/relay-v2
