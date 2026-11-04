@@ -37,6 +37,13 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+if str(Path(__file__).resolve().parent) not in sys.path:      # cargado por ruta (tests)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import cadena_v2  # noqa: E402  (mismo directorio; solo lectura de las trazas v2)
+
+# Cadena de respuesta v2 (4A). None = panel con la politica v1 de siempre (demo).
+_CADENA_V2: "cadena_v2.IndiceV2 | None" = None
+
 RAIZ_REPO = Path(__file__).resolve().parents[2]
 
 HTML = """<!doctype html>
@@ -2087,6 +2094,7 @@ function renderEscFilas() {
   const grupos = [];
   for (const f of filas.slice(0, 120)) {
     const mot = f.heuristico && f.heuristico.heuristico ? varEsc(f.heuristico.heuristico) + ': ' + varEsc(f.heuristico.motivo || '')
+      : (f.cadena_v2 && f.decision === 'ALERT') ? 'señal IF · ' + varEsc(TXT_MEDIDA_V2[(f.cadena_v2.medida || {}).estado] || 'medida desconocida')
       : (f.decision === 'ALERT' ? (f.politica_modelo === 'marginal' ? 'anomalía marginal del modelo · sin acción' : (f.politica_modelo === 'suelta' ? 'anomalía suelta del modelo · sin acción' : 'anomalía sostenida del modelo · para revisión humana')) : (f.score == null ? 'sin score (poco tráfico)' : 'normal para el modelo'));
     const clave = fmtTime(f.logged_at) + '|' + f.accion + '|' + mot + '|' + (f.marginal ? 1 : 0);
     const ult = grupos[grupos.length - 1];
@@ -2341,10 +2349,14 @@ function renderKpis(status) {
   el.innerHTML =
     tile('Entidades observadas', c.entidades != null ? c.entidades : '—', 'IPs con ventanas en la última hora', '', 's-actividad') +
     tile('Ventanas analizadas', (c.total != null ? c.total : 0).toLocaleString('es'), 'en la última hora', '', 's-decisiones') +
-    tile('Alertas detectadas', nAcc,
-         nMod + ' anomalía(s) del modelo · ' + Math.max(0, nAcc - nMod) + ' por reglas' + (cal ? '' : ' · modelo sin calibrar'),
+    tile((status.cadena_v2 && status.cadena_v2.activa) ? 'Medidas publicadas (v2)' : 'Alertas detectadas', nAcc,
+         (status.cadena_v2 && status.cadena_v2.activa)
+           ? nMod + ' señal(es) del IF en la hora · solo actúa lo que publica el publicador v2' + (cal ? '' : ' · modelo sin calibrar')
+           : nMod + ' anomalía(s) del modelo · ' + Math.max(0, nAcc - nMod) + ' por reglas' + (cal ? '' : ' · modelo sin calibrar'),
          !cal || nAcc > 0 ? 'warn' : '', 's-alertas') +
-    tile('Respuestas registradas', vig, (status.acuses || []).length
+    tile('Respuestas registradas', vig, (status.cadena_v2 && status.cadena_v2.activa)
+           ? 'medidas en el feed v2 · ' + (status.cadena_v2.modo === 'sombra' ? 'propuestas (sombra), aplicación no ejecutada' : 'aplicación sin evidencia')
+           : (status.acuses || []).length
            ? 'vigentes según el motor · ' + aplicadasEnHostsDe(status.acuses) + ' aplicada(s) en el host según su acuse'
            : 'vigentes según el registro del motor; ningún host ha enviado acuse',
          vig > 0 ? 'warn' : '', 's-bloqueos');
@@ -2844,6 +2856,8 @@ async function refresh() {
     }
 
     ACUSES = status.acuses || [];
+    ACUSES_V1_HISTORICOS = !!status.acuses_v1_historicos;
+    pintarCadenaV2(status.cadena_v2);
     renderVigentes(status.vigentes || [], status.blocked || []);
     AA_VIG = status.vigentes || [];
     try { renderAlertasActivas(); } catch (e) { console.warn('alertas activas', e); }
@@ -2975,9 +2989,17 @@ function paraRevision(d) {
   return d.decision === 'ALERT' && !String(d.detector_name || '').endsWith('_heuristic')
     && d.politica_modelo === 'sostenida' && !(d.heuristico && d.heuristico.accion);
 }
+// Cadena v2 (4A): si el servidor adjunta d.cadena_v2, la accion es SOLO la medida que
+// publico el publicador v2 (traza). Una anomalia del IF sin medida publicada es PERMIT.
+const MEDIDAS_V2 = ['nueva', 'renovada', 'escalada', 'mantenida'];
+function medidaV2(d) {
+  const m = (d && d.cadena_v2 && d.cadena_v2.medida) || {};
+  return (MEDIDAS_V2.includes(m.estado) && (m.accion === 'BLOCK' || m.accion === 'LIMIT')) ? m.accion : 'PERMIT';
+}
 function accionDeDecision(d) {
   const sev = { BLOCK: 2, LIMIT: 1, PERMIT: 0 };
   let acc = 'PERMIT';
+  if (d && d.cadena_v2) return medidaV2(d);
   if (esInfraProtegida(d)) return acc;
   if (d.decision === 'ALERT') {
     if (String(d.detector_name || '').endsWith('_heuristic')) acc = 'BLOCK';
@@ -3149,7 +3171,40 @@ function duracionTexto(s) {
 
 // Lo que cada host protegido dice tener para una IP (acuse que trae el relay).
 let ACUSES = [];
+let ACUSES_V1_HISTORICOS = false;
+// Cadena v2 (4A): franja de estado y panel de solo lectura («Preparar demo» oculto).
+function pintarCadenaV2(cv) {
+  const activa = !!(cv && cv.activa);
+  const b = document.getElementById('prepBtn');
+  if (b) { b.hidden = activa; b.disabled = activa; }
+  let f = document.getElementById('cadenaV2Franja');
+  if (!activa) { if (f) f.remove(); return; }
+  if (!f) {
+    f = document.createElement('div');
+    f.id = 'cadenaV2Franja';
+    f.className = 'toolbar-hint';
+    f.setAttribute('role', 'status');
+    const main = document.querySelector('main') || document.body;
+    main.insertBefore(f, main.firstChild);
+  }
+  const fu = cv.fuentes || {};
+  const est = k => (fu[k] && fu[k].ok) ? 'ok' : 'sin evidencia';
+  f.innerHTML = '<b>Cadena v2</b> · política ' + varEsc(String(cv.politica || 'desconocida'))
+    + ' · modo ' + varEsc(String(cv.modo)) + (cv.modo === 'sombra' ? ' (las medidas son propuestas; no se ejecutan)' : '')
+    + ' · feed v2 n.º ' + varEsc(String(cv.feed_secuencia ?? '—'))
+    + (cv.feed_atrasado ? ' <b>atrasado</b>' : ' hace ' + Math.round(cv.feed_edad_s || 0) + ' s')
+    + ' · ' + (cv.feed_entradas || 0) + ' medida(s) en el feed'
+    + ' · fuentes: señales IF ' + est('senales_if') + ', traza ' + est('traza') + ', feed ' + est('feed')
+    + ' · agente: desconocido desde el sensor · efecto: sin evidencia'
+    + ' · panel de solo lectura';
+}
 function estadoEnHosts(ip) {
+  if (ACUSES_V1_HISTORICOS) {
+    // El agente v1 está parado: su acuse es evidencia HISTÓRICA, no el estado actual del host.
+    const r = ACUSES.map(a => (a.reglas || {})[ip] ? varEsc(a.host) + ': ' + varEsc(a.reglas[ip].accion) : null).filter(Boolean);
+    return r.length ? `<span class="est no" title="Acuse del agente v1 (parado): evidencia histórica">aplicación v1 (histórica): ${r.join(', ')}</span>`
+      : '<span class="est no" title="El agente v2 no envía acuse al sensor">host: sin evidencia de aplicación</span>';
+  }
   if (!ACUSES.length) return '<span class="est no" title="Ningún host ha enviado su acuse">host: sin acuse</span>';
   return ACUSES.map(a => {
     const h = varEsc(a.host);
@@ -3183,7 +3238,12 @@ function renderVigentes(vigentes, locales) {
     const caducaEn = ahora + (v.expira_s || 0);
     const registrada = v.registrada !== false;
     const publicada = v.publicada != null ? v.publicada : v.fuente === 'feed';
-    const estados = `<span class="est ${registrada ? 'si' : 'no'}">${registrada ? 'registrada' : 'solo en el feed'}</span>`
+    const estados = v.fuente === 'feed_v2'
+      ? `<span class="est si">publicada en el feed v2</span>`
+        + `<span class="est no">${varEsc(v.estado_respuesta || 'propuesta')}</span>`
+        + `<span class="est no">aplicación: ${v.aplicacion === 'no_ejecutada' ? 'no ejecutada (sombra)' : 'desconocida'}</span>`
+        + `<span class="est no">efecto: sin evidencia</span>`
+      : `<span class="est ${registrada ? 'si' : 'no'}">${registrada ? 'registrada' : 'solo en el feed'}</span>`
       + `<span class="est ${publicada ? 'si' : 'no'}">${publicada ? 'publicada' : 'no vista en el feed'}</span>`
       + estadoEnHosts(v.ip);
     return `<tr class="row-${v.accion.toLowerCase()}"><td class="ip">${varEsc(v.ip)}</td>`
@@ -3769,6 +3829,39 @@ function porQueDecision(d, accion) {
   if (t.regla) return 'Se decidió ' + accion + ' porque se activó ' + reglaTxt + '. ' + modeloTxt;
   return 'Se decidió ' + accion + ' porque el score del modelo fue inferior al umbral vigente. No se activaron reglas heurísticas en esta ventana. Una anomalía del modelo solo llega a LIMIT.';
 }
+// Los siete pasos de la cadena v2 de una decision, con su fuente. Lo que no consta en
+// una fuente se muestra «desconocido» o «sin evidencia», nunca como «no».
+const TXT_MEDIDA_V2 = {
+  nueva: 'medida publicada (nueva)', renovada: 'medida publicada (renovada)',
+  escalada: 'medida publicada (escalada)', mantenida: 'medida vigente mantenida',
+  rechazada: 'regla rechazada por el publicador · sin efecto',
+  sin_punto_de_aplicacion: 'sin punto de aplicación · no se restringe',
+  no_publicada: 'sin medida publicada', desconocido: 'desconocido · la traza v2 no cubre esta decisión',
+};
+function cadenaV2HTML(d) {
+  const c = d.cadena_v2;
+  if (!c) return '';
+  const fila = (k, v, src) => `<div><dt>${k}</dt><dd>${v}<small class="hace"> · ${src}</small></dd></div>`;
+  const s = c.if || {};
+  const ifTxt = s.estado === 'senal'
+    ? 'señal IF · score ' + (s.score != null ? Number(s.score).toFixed(4) : '—') + ' · α superados: ' + varEsc((s.alfa_superados || []).join(', ') || 'ninguno')
+    : (s.estado === 'sin_senal' ? 'sin señal IF' : 'desconocido');
+  const reglas = (c.reglas || []).map(r => varEsc(r.regla) + (r.accion ? ' → ' + varEsc(r.accion) : '')).join('; ') || 'ninguna';
+  const m = c.medida || {};
+  let medTxt = varEsc(TXT_MEDIDA_V2[m.estado] || String(m.estado || 'desconocido'));
+  if (m.accion) medTxt = `<span class="badge acc-${String(m.accion).toLowerCase()}">${varEsc(m.accion)}</span> ` + medTxt
+    + (c.propuesta ? ' · <b>propuesta (sombra)</b>' : '') + (m.secuencia != null ? ' · feed n.º ' + m.secuencia : '');
+  const apl = c.aplicacion === 'no_ejecutada' ? 'no ejecutada (modo sombra)' : (c.aplicacion === 'no_aplica' ? 'no aplica (no hay medida)' : 'desconocido');
+  return '<div><h4>Cadena v2 (fuentes reales)</h4><dl>'
+    + fila('1 · Señal IF', ifTxt, 'senales-if.jsonl')
+    + fila('2 · Regla heurística', reglas, 'registro del motor')
+    + fila('3 · Decisión del motor', varEsc(String(c.decision || '—')), 'registro del motor')
+    + fila('4 · Medida', medTxt, 'traza del publicador v2')
+    + fila('5 · Agente (recepción/evaluación)', 'desconocido', 'sin canal desde el sensor')
+    + fila('6 · Aplicación confirmada', apl, 'modo declarado')
+    + fila('7 · Efecto observado', 'sin evidencia', 'el sensor no lo mide')
+    + '</dl></div>';
+}
 function decDetalleHTML(d, accion) {
   const h = d.heuristico;
   const margen = d.score != null && d.threshold != null ? d.score - d.threshold : null;
@@ -3797,6 +3890,7 @@ function decDetalleHTML(d, accion) {
     + fila('Historia cubierta', d.history_coverage_s != null ? d.history_coverage_s + ' s' : '—')
     + fila('Registrada (logged_at)', d.logged_at ? new Date(d.logged_at * 1000).toLocaleString('es-PE', { hour12: false }) : '—')
     + '</dl></div>'
+    + cadenaV2HTML(d)
     + '</div>';
 }
 on('decisions', 'click', (ev) => {
@@ -7826,7 +7920,10 @@ def _decisiones_tramo(log_path: Path, max_bytes: int) -> list[dict]:
     a = _almacen(log_path)
     with a["lock"]:
         k = bisect.bisect_left(a["offs"], a["pos"] - max_bytes)
-        return a["recs"][k:]
+        tramo = a["recs"][k:]
+    if _CADENA_V2 is not None:
+        _CADENA_V2.anotar(tramo)        # cadena_v2 en cada decision, desde las trazas reales
+    return tramo
 
 
 def read_decisions(log_path: Path, limit: int, max_bytes: int = 1_048_576) -> list[dict]:
@@ -8226,6 +8323,10 @@ NUNCA_BLOQUEAR = {"10.10.10.30", "10.10.60.11", "10.10.30.1", "10.10.40.1",
 
 def accion_de(d: dict) -> tuple[str, str, str] | None:
     """(accion, motivo, origen) de una decision, o None si no pide accion."""
+    if _CADENA_V2 is not None:
+        # Cadena v2 (4A): la accion es la medida que PUBLICO el publicador v2 (traza),
+        # nunca una deduccion del panel. Una anomalia del IF sin medida no es LIMIT.
+        return cadena_v2.medida_como_accion(d)
     candidatos = []
     if d.get("decision") == "ALERT":
         det = str(d.get("detector_name", ""))
@@ -8258,7 +8359,11 @@ def anotar_politica_modelo(decisiones: list[dict]) -> None:
     que lo confirme, publica LIMIT con anomalia CLARA (score < umbral - 0,05) y
     SOSTENIDA (3 ventanas claras de la misma IP a <= 120 s). Las otras dos se
     registran y se ven, pero no piden accion. Escribe el campo en cada dict.
+
+    Con la cadena v2 activa no se anota: esa politica es la del publicador v1.
     """
+    if _CADENA_V2 is not None:
+        return
     claras: dict[str, list[float]] = {}
     solo = []
     for d in decisiones:
@@ -8333,6 +8438,7 @@ def estado_escenario(log_path: Path, ip: str, desde: str, ahora: float,
             "detector_name": d.get("detector_name"), "heuristico": d.get("heuristico"),
             "accion": a[0] if a else "PERMIT", "motivo": a[1] if a else "",
             "origen": a[2] if a else "", "marginal": es_marginal(d), "politica_modelo": d.get("politica_modelo"),
+            "cadena_v2": d.get("cadena_v2"),
         })
         if len(filas) >= 400:
             break
@@ -8507,7 +8613,12 @@ def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | Non
     3600 s (BLOCK, nivel leido de estado.json) + la cadencia del feed. Lo que el
     agente del host aplica es exactamente eso; el sensor no tiene otra forma de
     saberlo, porque el bloqueo ocurre en el host.
+
+    Con la cadena v2 activa la unica fuente es el feed v2 firmado (en sombra: propuestas);
+    no se reconstruye nada desde el registro con la escalera v1.
     """
+    if _CADENA_V2 is not None:
+        return _CADENA_V2.vigentes(ahora)
     vigentes: dict[str, dict] = {}
     # Tres estados distintos que el panel no debe mezclar: registrada (el motor
     # la decidio), publicada (esta en el feed firmado) y aplicada en el host
@@ -9746,6 +9857,17 @@ def parse_args() -> argparse.Namespace:
         "--feed-estado", type=Path, default=Path.home() / "feed" / "estado.json",
         help="estado de la escalera del publicador: nivel de reincidencia por IP")
     parser.add_argument(
+        "--cadena-v2-dir", type=Path, default=Path.home() / "feed-v2",
+        help="salidas del publicador v2 (senales-if.jsonl, traza.jsonl, feed.json). Si existe "
+             "traza.jsonl, el panel muestra la cadena v2 real y deja de deducir acciones (4A)")
+    parser.add_argument(
+        "--sin-cadena-v2", action="store_true",
+        help="fuerza el panel de la politica v1 aunque exista --cadena-v2-dir (solo demo historica)")
+    parser.add_argument(
+        "--modo-respuesta", choices=("sombra", "activo"), default="sombra",
+        help="modo declarado del agente v2: en sombra las medidas son propuestas y su aplicacion "
+             "«no ejecutada»; en activo, sin evidencia del host, «desconocido»")
+    parser.add_argument(
         "--eve-path",
         type=Path,
         default=Path("/var/log/suricata/eve.json"),
@@ -9866,6 +9988,13 @@ def main() -> int:
     service_names = [name.strip() for name in args.services.split(",") if name.strip()]
     model_summary = load_model_summary(args.manifest_path, args.detector_name)
     model_summary["evaluacion"] = evaluacion_del_vigente(args.detector_name)
+    global _CADENA_V2
+    if not (args.demo or args.sin_cadena_v2) and (args.cadena_v2_dir / "traza.jsonl").is_file():
+        _CADENA_V2 = cadena_v2.IndiceV2(args.cadena_v2_dir, args.modo_respuesta)
+        print(f"panel: cadena v2 desde {args.cadena_v2_dir} (modo {args.modo_respuesta}); "
+              "«Preparar demo» deshabilitado", file=sys.stderr, flush=True)
+    else:
+        print("panel: SIN cadena v2 (politica v1 del panel)", file=sys.stderr, flush=True)
     red_vigilada = None if args.demo else red_analizada(args.entity_network, args.config_toml)
     # Sin --dataset, el que declara el .toml en [rutas]: asi el pulso puede decir
     # cuantas filas se llevan acumuladas sin tocar la unidad del servicio.
@@ -9975,6 +10104,16 @@ def main() -> int:
                 return
 
             if path == "/api/demo/preparar":
+                if _CADENA_V2 is not None:
+                    # 4A: el panel es de solo lectura; la peticion viajaba por el feed v1.
+                    body = json.dumps({"ok": False, "motivo": "panel de solo lectura con la cadena v2: "
+                                       "«Preparar demo» deshabilitado"}).encode("utf-8")
+                    self.send_response(409)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 s = self._sesion()
                 # Solo un administrador, y solo desde el propio panel (cabecera propia:
                 # un formulario de otro sitio no puede añadirla sin CORS).
@@ -10118,6 +10257,11 @@ def main() -> int:
                             None if args.demo else args.feed_path,
                             None if args.demo else args.feed_estado),
                         "acuses": [] if args.demo else acuses_resumen(args.acuse_dir, ahora),
+                        # Con la cadena v2 los acuses del agente v1 son evidencia HISTORICA de
+                        # aplicacion (el agente v1 esta parado), no el estado actual del host.
+                        "acuses_v1_historicos": _CADENA_V2 is not None,
+                        "cadena_v2": _CADENA_V2.resumen(ahora) if _CADENA_V2 is not None
+                        else {"activa": False},
                         "counters": contadores,
                         "activity": bucket_by_minute(decisions),
                         "capture_metrics": captura,
