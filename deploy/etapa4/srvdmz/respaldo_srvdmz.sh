@@ -23,7 +23,13 @@ ls -la /usr/local/bin /usr/local/sbin /opt /etc/cyberflow /var/lib/cyberflow > "
 python3 --version > "$D/versiones.txt" 2>&1; openssl version >> "$D/versiones.txt"; ls -l /usr/sbin/nft >> "$D/versiones.txt"
 timedatectl show -p NTPSynchronized -p TimeUSec >> "$D/versiones.txt" 2>&1
 if [ "${CON_SUDO:-0}" = 1 ]; then
-  sudo nft list ruleset > "$D/ruleset.nft" || fallo=1
+  # 4A (2026-11-04): tras P0 srv-dmz no tiene ninguna tabla nft y el ruleset leído está VACÍO. Vacío leído
+  # no es lo mismo que no leído: la lectura correcta se deja constancia en ruleset.lectura.
+  if sudo nft list ruleset > "$D/ruleset.nft"; then
+    printf 'rc=0 bytes=%s utc=%s\n' "$(wc -c < "$D/ruleset.nft")" "$TS" > "$D/ruleset.lectura"
+  else
+    fallo=1
+  fi
   sudo nft list tables > "$D/tablas.txt"
   sudo cp -a /etc/sudoers.d "$D/sudoers.d" && sudo chown -R "$(id -u):$(id -g)" "$D/sudoers.d"
   sudo grep -hE '^\s*Defaults' /etc/sudoers /etc/sudoers.d/* > "$D/sudoers-defaults.txt" 2>&1

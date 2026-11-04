@@ -22,7 +22,9 @@ tablas=$(sudo -n nft list tables 2>/dev/null) || parar "no se pueden leer las ta
 printf '%s\n' "$tablas" | grep -qE '^table [a-z0-9]+ cyberflow$' && parar "queda la tabla nft del agente v1 (cyberflow): fase P0 pendiente"
 ok "condición previa: cadena v1 sin aplicar (timer $v1_ac/$v1_en, sin tabla cyberflow)"
 ( cd "$R" && sha256sum -c --quiet SHA256SUMS ) || parar "el respaldo no verifica"
-[ -s "$R/ruleset.nft" ] || parar "el respaldo no tiene ruleset.nft (CON_SUDO=1)"
+# Un ruleset vacío es válido si consta que se leyó (ruleset.lectura, rc=0): tras P0 srv-dmz no tiene tablas.
+[ -f "$R/ruleset.nft" ] && { [ -s "$R/ruleset.nft" ] || grep -q '^rc=0 ' "$R/ruleset.lectura" 2>/dev/null; } \
+  || parar "el respaldo no tiene una lectura válida de ruleset.nft (CON_SUDO=1)"
 grep -qiE 'requiretty' "$R/sudoers-defaults.txt" && parar "sudo exige tty: el helper no funcionaría"
 ( cd "$DST" && sha256sum -c --quiet SHA256SUMS ) || parar "el paquete no verifica"
 getent passwd cffeed cfagente > /dev/null && parar "las cuentas ya existen"

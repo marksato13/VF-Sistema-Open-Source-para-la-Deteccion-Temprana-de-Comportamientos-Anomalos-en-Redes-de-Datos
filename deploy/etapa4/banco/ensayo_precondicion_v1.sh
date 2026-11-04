@@ -48,4 +48,21 @@ caso "tabla v1 restante"                 "PARADA queda la tabla"          inacti
 caso "nft ilegible (fallo cerrado)"      "PARADA no se pueden leer"       inactive disabled inactive ilegible
 caso "solo cyberflow_dmz (no es v1)"     "OK    condición previa"         inactive disabled inactive v2
 caso "limpio (sigue al respaldo)"        "PARADA el respaldo no verifica" inactive disabled inactive none
-[ "$fallos" = 0 ] && echo "ENSAYO OK (7/7)" || { echo "ENSAYO CON $fallos FALLOS"; exit 1; }
+
+# 4A (2026-11-04): respaldo con ruleset VACÍO (srv-dmz tras P0). Sin constancia de lectura debe parar; con
+# ruleset.lectura rc=0 debe pasar esa comprobación y parar después (el paquete del banco no existe).
+resp() {  # dir lectura(si|no) contenido
+  mkdir -p "$1"; printf '%s' "$3" > "$1/ruleset.nft"; echo 'Defaults env_reset' > "$1/sudoers-defaults.txt"
+  [ "$2" = si ] && echo "rc=0 bytes=${#3} utc=X" > "$1/ruleset.lectura"
+  ( cd "$1" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+}
+resp "$T/r-vacio-sin" no ""; resp "$T/r-vacio-con" si ""; resp "$T/r-lleno" no "table inet filter {}"
+caso2() {  # nombre esperado respaldo
+  local out; out=$(PATH="$T/bin:$PATH" TIMER_AC=inactive TIMER_EN=disabled SERV_AC=inactive NFT=none bash "$G" "$3" "$T/vacio" x y 2>&1)
+  if printf '%s' "$out" | grep -qF -- "$2"; then echo "OK    $1: $(printf '%s' "$out" | tail -1)"
+  else echo "FALLO $1: esperaba «$2», salió: $out"; fallos=$((fallos + 1)); fi
+}
+caso2 "ruleset vacío sin constancia de lectura" "PARADA el respaldo no tiene una lectura válida" "$T/r-vacio-sin"
+caso2 "ruleset vacío leído (rc=0)"              "PARADA el paquete no verifica"                 "$T/r-vacio-con"
+caso2 "ruleset con contenido (respaldo antiguo)" "PARADA el paquete no verifica"                 "$T/r-lleno"
+[ "$fallos" = 0 ] && echo "ENSAYO OK (10/10)" || { echo "ENSAYO CON $fallos FALLOS"; exit 1; }
