@@ -96,5 +96,8 @@ else
   nota "pendiente CON_SUDO=1: ruleset.nft y sudoers.d (Mark)"
 fi
 
+# 4A (2026-11-04): la línea final se escribe ANTES del manifiesto. Antes se añadía después a RESPALDO.txt y
+# el manifiesto no verificaba nunca (sha256sum -c: RESPALDO.txt FAILED); el instalador habría parado en la fase 0.
+if [ "$fallo" = 0 ]; then nota "RESPALDO OK $D"; else nota "RESPALDO INCOMPLETO $D (no instalar)"; fi
 ( cd "$D" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
-if [ "$fallo" = 0 ]; then nota "RESPALDO OK $D"; else nota "RESPALDO INCOMPLETO $D (no instalar)"; exit 1; fi
+[ "$fallo" = 0 ] || exit 1

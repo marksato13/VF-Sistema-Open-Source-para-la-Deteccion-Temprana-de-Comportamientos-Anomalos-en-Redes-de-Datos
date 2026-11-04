@@ -36,5 +36,7 @@ if [ "${CON_SUDO:-0}" = 1 ]; then
 else
   echo "pendiente CON_SUDO=1: ruleset.nft, tablas, sudoers.d y Defaults (Mark)" | tee -a "$D/RESPALDO.txt"
 fi
+# 4A (2026-11-04): línea final antes del manifiesto (si RESPALDO.txt ya existía, el manifiesto no verificaba).
+if [ "$fallo" = 0 ]; then echo "RESPALDO OK $D" | tee -a "$D/RESPALDO.txt"; else echo "RESPALDO INCOMPLETO $D" | tee -a "$D/RESPALDO.txt"; fi
 ( cd "$D" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
-[ "$fallo" = 0 ] && echo "RESPALDO OK $D" | tee -a "$D/RESPALDO.txt" || { echo "RESPALDO INCOMPLETO $D"; exit 1; }
+[ "$fallo" = 0 ] || exit 1

@@ -24,5 +24,6 @@ ls -la /opt /opt/cyberflow > "$D/opt.ls" 2>&1
 [ -d "$HOME/relay-v2" ] && echo "AVISO ~/relay-v2 ya existe" | tee -a "$D/RESPALDO.txt"
 python3 --version > "$D/versiones.txt" 2>&1; openssl version >> "$D/versiones.txt"; systemctl --version | head -1 >> "$D/versiones.txt"
 timedatectl show -p NTPSynchronized -p TimeUSec >> "$D/versiones.txt" 2>&1
-( cd "$D" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+# 4A (2026-11-04): línea final antes del manifiesto (con un AVISO previo, el manifiesto no verificaba).
 echo "RESPALDO OK $D" | tee -a "$D/RESPALDO.txt"
+( cd "$D" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
