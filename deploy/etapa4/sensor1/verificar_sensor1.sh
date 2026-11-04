@@ -31,8 +31,9 @@ c "importaciones desde el candidato" "bash $E4/ec78ca5/deploy/etapa4/sensor1/com
   $E4/ec78ca5 $PY $HOME/cyberflow $HOME/cyberflow/scripts > /dev/null"
 i "NRestarts motor/captura/vía: $(systemctl show -p NRestarts --value ppi-motor)/$(systemctl show -p NRestarts --value ppi-motor-capture)/$(systemctl show -p NRestarts --value ppi-via-rapida@ens37)"
 
-# ---- registros del motor candidato (últimas 2000 líneas)
-tail -2000 "$L" > /tmp/e4-ult.jsonl
+# ---- registros del motor candidato (últimas 2000 líneas + el ÚLTIMO motor_startup de todo el registro)
+# 4A (2026-11-04): tras ~2000 decisiones el arranque salía de la cola y la comprobación daba FALLO falso.
+{ grep -F '"event": "motor_startup"' "$L" | tail -1; tail -2000 "$L"; } > /tmp/e4-ult.jsonl
 "$PY" - /tmp/e4-ult.jsonl > /tmp/e4-registros.txt <<'EOF'
 import json, sys
 dec, ini = [], None
