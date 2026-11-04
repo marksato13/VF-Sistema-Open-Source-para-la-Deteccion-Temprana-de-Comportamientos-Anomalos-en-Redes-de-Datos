@@ -30,8 +30,11 @@ case $rc in
 esac
 
 # comprobaciones de frescura: un error de lectura es FALLO (stat/timedatectl fallan -> la condición es falsa)
+# 4A (2026-11-04): /var/lib/cyberflow/feed es 2750 cffeed:cfagente; el operador no puede hacer stat sin sudo
+# (FALLO falso en vivo). Con CON_SUDO=1 se lee con sudo -n; sin él, la lectura denegada sigue siendo FALLO.
+SUDO_STAT=""; [ "${CON_SUDO:-0}" = 1 ] && SUDO_STAT="sudo -n"
 c "feed v2 recibido hace < 60 s" \
-  "m=\$(stat -c %Y /var/lib/cyberflow/feed/feed.json) && [ \$(( \$(date +%s) - m )) -lt 60 ]"
+  "m=\$($SUDO_STAT stat -c %Y /var/lib/cyberflow/feed/feed.json) && [ \$(( \$(date +%s) - m )) -lt 60 ]"
 c "reloj sincronizado" "[ \"\$(timedatectl show -p NTPSynchronized --value)\" = yes ]"
 if [ "${CON_SUDO:-0}" = 1 ]; then
   T=/var/lib/cyberflow/agente/traza.jsonl
