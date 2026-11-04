@@ -2094,7 +2094,7 @@ function renderEscFilas() {
   const grupos = [];
   for (const f of filas.slice(0, 120)) {
     const mot = f.heuristico && f.heuristico.heuristico ? varEsc(f.heuristico.heuristico) + ': ' + varEsc(f.heuristico.motivo || '')
-      : (f.cadena_v2 && f.decision === 'ALERT') ? 'señal IF · ' + varEsc(TXT_MEDIDA_V2[(f.cadena_v2.medida || {}).estado] || 'medida desconocida')
+      : (f.cadena_v2 && f.decision === 'ALERT') ? 'IF del motor: ALERT · ' + varEsc(TXT_MEDIDA_V2[(f.cadena_v2.medida || {}).estado] || 'medida desconocida')
       : (f.decision === 'ALERT' ? (f.politica_modelo === 'marginal' ? 'anomalía marginal del modelo · sin acción' : (f.politica_modelo === 'suelta' ? 'anomalía suelta del modelo · sin acción' : 'anomalía sostenida del modelo · para revisión humana')) : (f.score == null ? 'sin score (poco tráfico)' : 'normal para el modelo'));
     const clave = fmtTime(f.logged_at) + '|' + f.accion + '|' + mot + '|' + (f.marginal ? 1 : 0);
     const ult = grupos[grupos.length - 1];
@@ -2338,18 +2338,23 @@ function renderKpis(status) {
   const c = status.counters || {};
   const cal = status.calibracion && status.calibracion.calibrado_en_esta_red;
   const nMod = c.alert_model || 0;
-  const nAcc = (c.block || 0) + (c.limit || 0);
-  const vig = (status.vigentes || []).length;
+  let nAcc = (c.block || 0) + (c.limit || 0);
+  let vig = (status.vigentes || []).length;
   // Cada cifra lleva a la vista donde se ve su detalle. Ambar solo si pide
   // atencion; nunca verde por «hay respuesta»: eso no confirma nada en el host.
   const tile = (lab, val, sub, estado, ir) =>
     `<div class="kpi ${estado || ''}"${ir ? ` data-ir="${ir}" role="link" tabindex="0"` : ''}><div class="k-dot"></div>`
     + `<div class="k-lab">${lab}</div><div class="k-val">${val}</div>`
     + `<div class="k-sub">${sub}</div>${ir ? '<div class="k-ir">Ver ' + escSimple(SEC_TITULO_CORTO[ir] || '') + ' &rarr;</div>' : ''}</div>`;
+  // Modo v2 con una fuente ausente: la cifra es desconocida, no cero.
+  const cvF = (status.cadena_v2 && status.cadena_v2.activa) ? (status.cadena_v2.fuentes || {}) : null;
+  const sinFuente = k => cvF && !(cvF[k] && cvF[k].ok);
+  if (sinFuente('traza')) nAcc = '—';
+  if (sinFuente('feed')) vig = '—';
   el.innerHTML =
     tile('Entidades observadas', c.entidades != null ? c.entidades : '—', 'IPs con ventanas en la última hora', '', 's-actividad') +
     tile('Ventanas analizadas', (c.total != null ? c.total : 0).toLocaleString('es'), 'en la última hora', '', 's-decisiones') +
-    tile((status.cadena_v2 && status.cadena_v2.activa) ? 'Medidas publicadas (v2)' : 'Alertas detectadas', nAcc,
+    tile((status.cadena_v2 && status.cadena_v2.activa) ? 'Medidas publicadas (v2)' + (sinFuente('traza') ? ' · desconocido (traza ausente)' : '') : 'Alertas detectadas', nAcc,
          (status.cadena_v2 && status.cadena_v2.activa)
            ? nMod + ' señal(es) del IF en la hora · solo actúa lo que publica el publicador v2' + (cal ? '' : ' · modelo sin calibrar')
            : nMod + ' anomalía(s) del modelo · ' + Math.max(0, nAcc - nMod) + ' por reglas' + (cal ? '' : ' · modelo sin calibrar'),
@@ -3173,10 +3178,29 @@ function duracionTexto(s) {
 let ACUSES = [];
 let ACUSES_V1_HISTORICOS = false;
 // Cadena v2 (4A): franja de estado y panel de solo lectura («Preparar demo» oculto).
+// Texto de la franja (función pura: se prueba con Node). Las incidencias de las fuentes se
+// muestran tal cual; una fuente ausente NUNCA se presenta como cero medidas o normalidad.
+function franjaV2HTML(cv) {
+  const fu = cv.fuentes || {};
+  const est = k => (fu[k] && fu[k].ok) ? 'ok' : '<b>ausente o ilegible</b>';
+  const inc = cv.incidencias || [];
+  const medidas = (fu.feed && fu.feed.ok) ? (cv.feed_entradas || 0) + ' medida(s) en el feed' : 'medidas en el feed: <b>desconocido</b>';
+  return '<b>Cadena v2</b> · política ' + varEsc(String(cv.politica || 'desconocida'))
+    + ' · modo ' + varEsc(String(cv.modo)) + (cv.modo === 'sombra' ? ' (las medidas son propuestas; no se ejecutan)' : '')
+    + (inc.length ? ' · <b class="est no">INCIDENCIA: ' + inc.map(varEsc).join(' · ') + '</b>' : '')
+    + ' · feed v2 n.º ' + varEsc(String(cv.feed_secuencia ?? '—'))
+    + (cv.feed_atrasado ? ' <b>atrasado</b>' : ' hace ' + Math.round(cv.feed_edad_s || 0) + ' s')
+    + ' · ' + medidas
+    + ' · fuentes: señales IF ' + est('senales_if') + ', traza ' + est('traza') + ', feed ' + est('feed')
+    + ' · agente: desconocido desde el sensor · efecto: sin evidencia'
+    + ' · panel de solo lectura';
+}
 function pintarCadenaV2(cv) {
   const activa = !!(cv && cv.activa);
   const b = document.getElementById('prepBtn');
-  if (b) { b.hidden = activa; b.disabled = activa; }
+  // Solo se oculta, nunca se vuelve a mostrar: en modo v2 el servidor ya lo sirve oculto
+  // y una respuesta fallida de /api/status no debe reactivarlo.
+  if (b && activa) { b.hidden = true; b.disabled = true; }
   let f = document.getElementById('cadenaV2Franja');
   if (!activa) { if (f) f.remove(); return; }
   if (!f) {
@@ -3187,16 +3211,7 @@ function pintarCadenaV2(cv) {
     const main = document.querySelector('main') || document.body;
     main.insertBefore(f, main.firstChild);
   }
-  const fu = cv.fuentes || {};
-  const est = k => (fu[k] && fu[k].ok) ? 'ok' : 'sin evidencia';
-  f.innerHTML = '<b>Cadena v2</b> · política ' + varEsc(String(cv.politica || 'desconocida'))
-    + ' · modo ' + varEsc(String(cv.modo)) + (cv.modo === 'sombra' ? ' (las medidas son propuestas; no se ejecutan)' : '')
-    + ' · feed v2 n.º ' + varEsc(String(cv.feed_secuencia ?? '—'))
-    + (cv.feed_atrasado ? ' <b>atrasado</b>' : ' hace ' + Math.round(cv.feed_edad_s || 0) + ' s')
-    + ' · ' + (cv.feed_entradas || 0) + ' medida(s) en el feed'
-    + ' · fuentes: señales IF ' + est('senales_if') + ', traza ' + est('traza') + ', feed ' + est('feed')
-    + ' · agente: desconocido desde el sensor · efecto: sin evidencia'
-    + ' · panel de solo lectura';
+  f.innerHTML = franjaV2HTML(cv);
 }
 function estadoEnHosts(ip) {
   if (ACUSES_V1_HISTORICOS) {
@@ -3837,6 +3852,22 @@ const TXT_MEDIDA_V2 = {
   rechazada: 'regla rechazada por el publicador · sin efecto',
   sin_punto_de_aplicacion: 'sin punto de aplicación · no se restringe',
   no_publicada: 'sin medida publicada', desconocido: 'desconocido · la traza v2 no cubre esta decisión',
+  pendiente: 'pendiente · posterior a la última publicación del publicador v2',
+  fuente_desactualizada: 'desconocido · la traza v2 está desactualizada',
+  fuente_ausente: 'desconocido · traza v2 ausente o ilegible',
+};
+// Señal α publicada (senales-if.jsonl). «sin señal» solo con cobertura demostrada.
+const TXT_SENAL_V2 = {
+  sin_senal: 'sin señal α (procesada por el publicador, ningún α superado)',
+  sin_puntuar: 'sin puntuar (el motor no puntuó la ventana)',
+  pendiente: 'pendiente · posterior a la última publicación del publicador v2',
+  fuente_desactualizada: 'desconocido · la traza v2 está desactualizada',
+  fuente_ausente: 'desconocido · senales-if.jsonl ausente o ilegible',
+  desconocido: 'desconocido · cobertura no demostrada',
+};
+const TXT_APLICACION_V2 = {
+  no_ejecutada: 'no ejecutada (modo sombra)', no_aplica: 'no aplica (ausencia de medida demostrada)',
+  desconocido: 'desconocido (sin evidencia)',
 };
 function cadenaV2HTML(d) {
   const c = d.cadena_v2;
@@ -3845,15 +3876,21 @@ function cadenaV2HTML(d) {
   const s = c.if || {};
   const ifTxt = s.estado === 'senal'
     ? 'señal IF · score ' + (s.score != null ? Number(s.score).toFixed(4) : '—') + ' · α superados: ' + varEsc((s.alfa_superados || []).join(', ') || 'ninguno')
-    : (s.estado === 'sin_senal' ? 'sin señal IF' : (s.estado === 'sin_puntuar' ? 'sin puntuar (ventana sin paquetes)' : 'desconocido'));
+    : varEsc(TXT_SENAL_V2[s.estado] || TXT_SENAL_V2.desconocido);
+  const im = c.if_motor || {};
+  const motorTxt = c.if_motor
+    ? 'decision_if ' + varEsc(String(im.decision_if ?? 'sin puntuar')) + ' · score ' + (im.score != null ? Number(im.score).toFixed(4) : '—')
+      + ' · umbral desplegado ' + (im.umbral != null ? Number(im.umbral).toFixed(4) : '—')
+    : 'desconocido';
   const reglas = (c.reglas || []).map(r => varEsc(r.regla) + (r.accion ? ' → ' + varEsc(r.accion) : '')).join('; ') || 'ninguna';
   const m = c.medida || {};
   let medTxt = varEsc(TXT_MEDIDA_V2[m.estado] || String(m.estado || 'desconocido'));
   if (m.accion) medTxt = `<span class="badge acc-${String(m.accion).toLowerCase()}">${varEsc(m.accion)}</span> ` + medTxt
     + (c.propuesta ? ' · <b>propuesta (sombra)</b>' : '') + (m.secuencia != null ? ' · feed n.º ' + m.secuencia : '');
-  const apl = c.aplicacion === 'no_ejecutada' ? 'no ejecutada (modo sombra)' : (c.aplicacion === 'no_aplica' ? 'no aplica (no hay medida)' : 'desconocido');
+  const apl = TXT_APLICACION_V2[c.aplicacion] || TXT_APLICACION_V2.desconocido;
   return '<div><h4>Cadena v2 (fuentes reales)</h4><dl>'
-    + fila('1 · Señal IF', ifTxt, 'senales-if.jsonl')
+    + fila('1a · IF del motor', motorTxt, 'registro del motor (decision_if)')
+    + fila('1b · Señal α publicada', ifTxt, 'senales-if.jsonl')
     + fila('2 · Regla heurística', reglas, 'registro del motor')
     + fila('3 · Decisión del motor', varEsc(String(c.decision || '—')), 'registro del motor')
     + fila('4 · Medida', medTxt, 'traza del publicador v2')
@@ -9266,6 +9303,24 @@ def auditar(ruta: Path | None, evento: str, usuario: str, origen: str,
                   "Revisa ReadWritePaths en la unidad." % (ruta, e))
 
 
+def modo_panel_de(args) -> str:
+    """«v2» salvo seleccion EXPLICITA de la demo historica (--modo-panel v1-historico,
+    --sin-cadena-v2 o --demo). No depende de que existan los ficheros de la cadena v2."""
+    if getattr(args, "demo", False) or getattr(args, "sin_cadena_v2", False):
+        return "v1-historico"
+    return getattr(args, "modo_panel", "v2") or "v2"
+
+
+BOTON_PREPARAR = '<button type="button" class="btn-prep" id="prepBtn">'
+
+
+def html_solo_lectura_v2(html: str) -> str:
+    """En modo v2 el boton «Preparar demo» sale ya oculto y deshabilitado del servidor:
+    no depende de que /api/status responda ni de que las fuentes v2 existan."""
+    return html.replace(BOTON_PREPARAR, BOTON_PREPARAR[:-1] + ' hidden disabled '
+                        'title="Panel de solo lectura en modo v2">')
+
+
 def html_por_rol(plantilla: str, rol: str) -> str:
     """Recorta del HTML lo que el rol no debe ni recibir.
 
@@ -9858,11 +9913,16 @@ def parse_args() -> argparse.Namespace:
         help="estado de la escalera del publicador: nivel de reincidencia por IP")
     parser.add_argument(
         "--cadena-v2-dir", type=Path, default=Path.home() / "feed-v2",
-        help="salidas del publicador v2 (senales-if.jsonl, traza.jsonl, feed.json). Si existe "
-             "traza.jsonl, el panel muestra la cadena v2 real y deja de deducir acciones (4A)")
+        help="salidas del publicador v2 (senales-if.jsonl, traza.jsonl, feed.json) que lee el "
+             "panel en modo v2. Si faltan, el panel sigue en v2 y lo declara como incidencia")
+    parser.add_argument(
+        "--modo-panel", choices=("v2", "v1-historico"), default="v2",
+        help="v2 (por omision, el de la investigacion): la accion es solo la medida que publico el "
+             "publicador v2. v1-historico: la politica v1 del panel, solo para presentar la demo "
+             "historica. Nunca se pasa de v2 a v1 por un fallo de las fuentes (cierre de la 4A)")
     parser.add_argument(
         "--sin-cadena-v2", action="store_true",
-        help="fuerza el panel de la politica v1 aunque exista --cadena-v2-dir (solo demo historica)")
+        help="equivale a --modo-panel v1-historico (seleccion explicita; solo demo historica)")
     parser.add_argument(
         "--modo-respuesta", choices=("sombra", "activo"), default="sombra",
         help="modo declarado del agente v2: en sombra las medidas son propuestas y su aplicacion "
@@ -9989,12 +10049,18 @@ def main() -> int:
     model_summary = load_model_summary(args.manifest_path, args.detector_name)
     model_summary["evaluacion"] = evaluacion_del_vigente(args.detector_name)
     global _CADENA_V2
-    if not (args.demo or args.sin_cadena_v2) and (args.cadena_v2_dir / "traza.jsonl").is_file():
+    modo_panel = modo_panel_de(args)
+    if modo_panel == "v2":
+        # Cierre de la 4A: el modo v2 NO depende de que existan sus ficheros. Si faltan al
+        # arrancar (o desaparecen despues), el panel sigue en v2 y lo muestra como incidencia.
         _CADENA_V2 = cadena_v2.IndiceV2(args.cadena_v2_dir, args.modo_respuesta)
-        print(f"panel: cadena v2 desde {args.cadena_v2_dir} (modo {args.modo_respuesta}); "
-              "«Preparar demo» deshabilitado", file=sys.stderr, flush=True)
+        inc = _CADENA_V2.resumen(time.time())["incidencias"]
+        print(f"panel: modo v2, cadena desde {args.cadena_v2_dir} (modo {args.modo_respuesta}); "
+              "«Preparar demo» deshabilitado"
+              + ("; INCIDENCIA: " + "; ".join(inc) if inc else ""), file=sys.stderr, flush=True)
     else:
-        print("panel: SIN cadena v2 (politica v1 del panel)", file=sys.stderr, flush=True)
+        print("panel: modo v1-historico seleccionado explicitamente (politica v1 del panel)",
+              file=sys.stderr, flush=True)
     red_vigilada = None if args.demo else red_analizada(args.entity_network, args.config_toml)
     # Sin --dataset, el que declara el .toml en [rutas]: asi el pulso puede decir
     # cuantas filas se llevan acumuladas sin tocar la unidad del servicio.
@@ -10036,6 +10102,8 @@ def main() -> int:
 
     cerrojo = Cerrojo(args.intentos_max, args.bloqueo_minutos)
     HTML_POR_ROL = {rol: html_por_rol(HTML, rol) for rol in ROLES}
+    if _CADENA_V2 is not None:
+        HTML_POR_ROL = {rol: html_solo_lectura_v2(h) for rol, h in HTML_POR_ROL.items()}
 
     class Handler(BaseHTTPRequestHandler):
         # ---------------------------------------------------------- sesion

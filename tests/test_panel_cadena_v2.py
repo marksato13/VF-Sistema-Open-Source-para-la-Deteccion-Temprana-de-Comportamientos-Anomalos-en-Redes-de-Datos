@@ -161,8 +161,10 @@ class FuenteAusente(ConCadena):
         idx = self.activar()
         idx.anotar([d])
         c = d["cadena_v2"]
-        self.assertEqual(c["if"]["estado"], "desconocido")
-        self.assertEqual(c["medida"]["estado"], "desconocido")
+        # Cierre 4A: la fuente ausente se nombra como tal (antes «desconocido» genérico).
+        self.assertEqual(c["if"]["estado"], "fuente_ausente")
+        self.assertEqual(c["medida"]["estado"], "fuente_ausente")
+        self.assertEqual(c["aplicacion"], "desconocido")
         self.assertIsNone(db.accion_de(d))           # NO vuelve a la política v1 (LIMIT)
         r = idx.resumen(T0 + 20)
         self.assertFalse(r["fuentes"]["traza"]["ok"])
@@ -181,9 +183,12 @@ class FuenteAusente(ConCadena):
                  feed={"secuencia": 2, "generado": T0 + 110, "entradas": []})
         antes = decision("10.10.20.24", T0 + 10, "ALERT")     # anterior a la traza leída
         despues = decision("10.10.20.24", T0 + 200, "ALERT")  # posterior a la última publicación
-        self.activar().anotar([antes, despues])
+        self.activar().anotar([antes, despues], ahora=T0 + 201)
         self.assertEqual(antes["cadena_v2"]["medida"]["estado"], "desconocido")
-        self.assertEqual(despues["cadena_v2"]["medida"]["estado"], "desconocido")
+        # Cierre 4A: posterior a la última publicación y traza vieja (91 s) = desactualizada.
+        self.assertEqual(despues["cadena_v2"]["medida"]["estado"], "fuente_desactualizada")
+        for x in (antes, despues):
+            self.assertEqual(x["cadena_v2"]["aplicacion"], "desconocido")
 
     def test_feed_ilegible_no_inventa_vigentes(self):
         escribir(self.dir, senales=[], traza=[publicacion(1, T0)])
@@ -198,12 +203,12 @@ class FuenteAusente(ConCadena):
         d = decision("10.10.20.30", T0 + 10, "PERMIT")
         escribir(self.dir, senales=[], traza=[publicacion(1, T0)], feed={"entradas": []})
         idx = self.activar()
-        idx.anotar([d])
-        self.assertEqual(d["cadena_v2"]["medida"]["estado"], "desconocido")   # aún sin publicar
+        idx.anotar([d], ahora=T0 + 12)
+        self.assertEqual(d["cadena_v2"]["medida"]["estado"], "pendiente")   # aún sin publicar
         time.sleep(0.02)
         with open(self.dir / "traza.jsonl", "a", encoding="utf-8") as fh:
             fh.write(json.dumps(publicacion(2, T0 + 20)) + "\n")
-        idx.anotar([d])
+        idx.anotar([d], ahora=T0 + 21)
         self.assertEqual(d["cadena_v2"]["medida"]["estado"], "no_publicada")
 
 
@@ -242,7 +247,8 @@ class JsDelPanel(unittest.TestCase):
     def test_comportamiento(self):
         piezas = [_bloque_js(self.script, n) for n in (
             "MODELO_SOLO_ACTUA", "NUNCA_BLOQUEAR_JS", "esInfraProtegida", "MEDIDAS_V2", "medidaV2",
-            "accionDeDecision", "TXT_MEDIDA_V2", "cadenaV2HTML", "estadoEnHosts")]
+            "accionDeDecision", "TXT_MEDIDA_V2", "TXT_SENAL_V2", "TXT_APLICACION_V2", "cadenaV2HTML",
+            "estadoEnHosts")]
         prueba = r"""
 let ACUSES = [], ACUSES_V1_HISTORICOS = false;
 const varEsc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -266,7 +272,7 @@ ok(h.includes('feed n.º 7'), 'correlación con la secuencia del feed');
 // medida rechazada / sin punto -> PERMIT; fuente ausente -> desconocido
 ok(accionDeDecision({cadena_v2: {medida: {estado: 'rechazada', accion: 'BLOCK'}}}) === 'PERMIT', 'rechazada');
 const desc = cadenaV2HTML({cadena_v2: {if: {estado: 'desconocido'}, reglas: [], medida: {estado: 'desconocido'}, aplicacion: 'no_aplica'}});
-ok(desc.includes('desconocido · la traza v2 no cubre') && desc.includes('1 · Señal IF</dt><dd>desconocido'), 'fuente ausente');
+ok(desc.includes('desconocido · la traza v2 no cubre') && desc.includes('1b · Señal α publicada</dt><dd>desconocido'), 'fuente ausente');
 // evidencia historica de aplicacion (acuse v1 con agente v1 parado)
 ACUSES = [{host: 'srv-dmz', reglas: {'10.10.20.30': {accion: 'BLOCK'}}, atrasado: false}];
 ACUSES_V1_HISTORICOS = true;
@@ -304,7 +310,9 @@ class ServidorSoloLectura(unittest.TestCase):
                 "regla": "port_scan", "tipo": "nueva", "accion": "BLOCK", "id": "e1", "hasta": ahora + 300}
         escribir(cls.v2, senales=[{"decision_id": ifd["decision_id"], "ip": ifd["entity_ip"], "score": -0.58,
                                    "alfa_superados": ["0.05"], "logged_at": ahora - 30}],
-                 traza=[publicacion(1, ahora - 60), publicacion(2, ahora - 20, [item], ["e1"])],
+                 # cada 20 s, como el publicador desplegado (un hueco > 30 s no demuestra cobertura)
+                 traza=[publicacion(1, ahora - 60), publicacion(2, ahora - 40),
+                        publicacion(3, ahora - 20, [item], ["e1"])],
                  feed={"secuencia": 2, "generado": ahora - 20, "entradas": [
                      {"ip": "10.10.20.30", "accion": "BLOCK", "hasta": ahora + 300, "id": "e1", "detector": "port_scan",
                       "motivo": "port_scan: 40 puertos", "nivel": 1, "evento_id": item["evento_id"]}]})
