@@ -38,7 +38,8 @@ c "feed v2 recibido hace < 60 s" \
 c "reloj sincronizado" "[ \"\$(timedatectl show -p NTPSynchronized --value)\" = yes ]"
 if [ "${CON_SUDO:-0}" = 1 ]; then
   T=/var/lib/cyberflow/agente/traza.jsonl
-  echo "INFO  rechazos por motivo: $(sudo -n grep -o '"motivo": "[a-z_]*"' $T | sort | uniq -c | tr '\n' ' ')"
+  # 4A: solo motivos NO vacíos (cada recepción aceptada lleva "motivo": "" y se contaba como rechazo).
+  echo "INFO  rechazos por motivo: $(sudo -n grep -o '"motivo": "[a-z_][a-z_]*"' $T | sort | uniq -c | tr '\n' ' ') (recepciones: $(sudo -n grep -c '"evento": "recepcion"' $T))"
   # positivo: la orden debe IMPRIMIR el rechazo; si sudo o el helper fallan, grep no lo ve -> FALLO.
   # 4A (2026-11-04): el helper rechaza con rc=1; con pipefail la tubería daba FALLO aunque el rechazo estuviera.
   rech=$(echo '{"perfil":"dns","operaciones":[{"op":"listar"}]}' | sudo -n -u cfagente sudo -n /usr/local/sbin/cf-nft-helper 2>&1) || true
