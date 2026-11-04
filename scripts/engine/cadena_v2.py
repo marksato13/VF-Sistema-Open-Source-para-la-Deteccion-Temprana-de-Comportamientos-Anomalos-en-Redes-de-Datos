@@ -5,7 +5,8 @@ la acción ya no se deduce de la decisión: la publica (o no) el publicador y de
 Este módulo NO recalcula ninguna política. Indexa por ``decision_id`` lo que dejaron
 las fuentes reales y dice, para cada decisión, en qué punto de la cadena está:
 
-1. ``if``          señal del Isolation Forest (``senales-if.jsonl``): señal | sin_senal | desconocido
+1. ``if``          señal del Isolation Forest (``senales-if.jsonl``): señal | sin_senal | sin_puntuar |
+                   desconocido
 2. ``regla``       regla heurística del propio registro del motor (``heuristicos``/``heuristico``)
 3. ``decision``    decisión desplegada por el motor (ALERT/PERMIT), tal cual
 4. ``medida``      lo que hizo el publicador v2 (``traza.jsonl``, campo ``nuevos``):
@@ -174,7 +175,10 @@ class IndiceV2:
         t = d.get("logged_at") if isinstance(d.get("logged_at"), (int, float)) else None
         # 1) IF
         s = self.senales.get(did)
-        if s is not None:
+        if s is None and d.get("score") is None:
+            # Ventana que el IF no puntúa (sin paquetes): el publicador no emite señal por diseño.
+            senal_if = {"estado": "sin_puntuar"}
+        elif s is not None:
             senal_if = {"estado": "senal", "score": s.get("score"),
                         "alfa_superados": s.get("alfa_superados") or []}
         elif self.fuentes.get("senales_if", {}).get("ok") and self.senales_desde is not None \

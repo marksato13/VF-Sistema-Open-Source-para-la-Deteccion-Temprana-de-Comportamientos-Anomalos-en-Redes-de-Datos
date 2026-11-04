@@ -3845,7 +3845,7 @@ function cadenaV2HTML(d) {
   const s = c.if || {};
   const ifTxt = s.estado === 'senal'
     ? 'señal IF · score ' + (s.score != null ? Number(s.score).toFixed(4) : '—') + ' · α superados: ' + varEsc((s.alfa_superados || []).join(', ') || 'ninguno')
-    : (s.estado === 'sin_senal' ? 'sin señal IF' : 'desconocido');
+    : (s.estado === 'sin_senal' ? 'sin señal IF' : (s.estado === 'sin_puntuar' ? 'sin puntuar (ventana sin paquetes)' : 'desconocido'));
   const reglas = (c.reglas || []).map(r => varEsc(r.regla) + (r.accion ? ' → ' + varEsc(r.accion) : '')).join('; ') || 'ninguna';
   const m = c.medida || {};
   let medTxt = varEsc(TXT_MEDIDA_V2[m.estado] || String(m.estado || 'desconocido'));

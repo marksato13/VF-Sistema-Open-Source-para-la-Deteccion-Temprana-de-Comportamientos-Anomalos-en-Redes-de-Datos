@@ -169,6 +169,13 @@ class FuenteAusente(ConCadena):
         self.assertFalse(r["fuentes"]["senales_if"]["ok"])
         self.assertEqual(r["agente"]["estado"], "desconocido")
 
+    def test_ventana_sin_score_es_sin_puntuar_no_desconocida(self):
+        escribir(self.dir, senales=[], traza=[publicacion(1, T0), publicacion(2, T0 + 20)], feed={"entradas": []})
+        d = decision("10.10.20.21", T0 + 10, "PERMIT", score=None)
+        self.activar().anotar([d])
+        self.assertEqual(d["cadena_v2"]["if"]["estado"], "sin_puntuar")
+        self.assertEqual(d["cadena_v2"]["medida"]["estado"], "no_publicada")
+
     def test_decision_fuera_de_la_cobertura_de_la_traza_es_desconocida(self):
         escribir(self.dir, senales=[], traza=[publicacion(1, T0 + 100), publicacion(2, T0 + 110)],
                  feed={"secuencia": 2, "generado": T0 + 110, "entradas": []})
