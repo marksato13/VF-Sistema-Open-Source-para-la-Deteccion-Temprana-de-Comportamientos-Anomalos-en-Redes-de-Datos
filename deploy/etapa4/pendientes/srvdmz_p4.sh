@@ -1,97 +1,169 @@
 #!/usr/bin/env bash
-# [SRV-DMZ adminsrvdmz] P4 (2026-11-06): entrega coherente feed+firma (paquete feed.par) en SOMBRA. sudo -n (NOPASSWD).
-# Nunca --aplicar; el ruleset debe seguir igual (vacío) antes y después. Fases:
-#   bash srvdmz_p4.sh respaldo                      -> ~/respaldos-etapa4/srvdmz-p4-<UTC>/ (sellado)
-#   bash srvdmz_p4.sh fase-a <PAQ> <RESPALDO>        cf-feed-ssh.sh (admite pareja Y paquete) + código nuevo del
-#                                                    agente; la unidad sigue con --feed/--firma (compatibilidad)
-#   bash srvdmz_p4.sh fase-c <PAQ> <RESPALDO>        unidad con --paquete (DESPUÉS de que el relé entregue paquete)
-#   bash srvdmz_p4.sh revertir <RESPALDO>            ficheros y unidad del respaldo
+# [SRV-DMZ adminsrvdmz] P4: agente v2 que lee el paquete feed.par, en SOMBRA. sudo -n (NOPASSWD en srv-dmz).
+# VERSION p4-instalador 2026-11-06.2 (ver p4_comun.sh). Nunca --aplicar; ruleset igual al del respaldo.
+#
+#   bash srvdmz_p4.sh fase-a <PAQ>          cf-feed-ssh.sh (pareja Y paquete) + código nuevo; unidad sin cambios
+#                                           (ya ejecutada el 06-nov 03:51 con la versión .1 de este guion)
+#   bash srvdmz_p4.sh fase-c <PAQ>          unidad con --paquete (DESPUÉS de que el relé entregue paquete)
+#   bash srvdmz_p4.sh revertir <RESPALDO>   reversión MANUAL a un respaldo de la versión .2
+#   bash srvdmz_p4.sh revertir-heredado <RESPALDO_0351>
+#                                           reversión MANUAL al estado previo a la fase A (respaldo de la versión .1,
+#                                           srvdmz-p4-20261106T035127Z: ficheros en la raíz; ver README)
+#
+# Códigos: 0 OK · 10 parada sin cambios · 20 revertido automáticamente (verificado) · 30 reversión fallida (manual).
+# Respaldo: ~/respaldos-etapa4/srvdmz-p4-<fase>-<UTC>/ (solo lectura). Evidencia: ~/evidencia-etapa4/srvdmz-p4-<fase>-<UTC>/.
 set -uo pipefail
 AQUI="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=../comun/evidencia.sh
 source "$AQUI/../comun/evidencia.sh"
-parar() { echo "PARADA $*"; ev_sellar "$EV" >/dev/null 2>&1; exit 1; }
-ok() { echo "OK    $*"; }
+source "$AQUI/p4_comun.sh"
+p4_entorno "sudo -n"
 TS=$(date -u +%Y%m%dT%H%M%SZ)
 U=ppi-enforce-agent-v2-dmz
-UF=/etc/systemd/system/$U.service
-FICH=(/opt/cyberflow/agente-v2/agente_enforce_v2.py /opt/cyberflow/agente-v2/feed.py /opt/cyberflow/agente-v2/pub.pem
-      /usr/local/bin/cf-feed-ssh.sh /usr/local/sbin/cf-nft-helper "$UF")
+UF="$RAIZ/etc/systemd/system/$U.service"
+OPT="$RAIZ/opt/cyberflow/agente-v2"
+FS="$RAIZ/usr/local/bin/cf-feed-ssh.sh"
+FEED="$RAIZ/var/lib/cyberflow/feed"
+TR="$RAIZ/var/lib/cyberflow/agente/traza.jsonl"
+FICH=("$OPT/agente_enforce_v2.py" "$OPT/feed.py" "$OPT/pub.pem" "$FS" "$RAIZ/usr/local/sbin/cf-nft-helper" "$UF")
+
 norm() { sed -E 's/counter packets [0-9]+ bytes [0-9]+/counter/; s/expires [0-9hms.]+//'; }
-sombra() {  # sin --aplicar en la unidad ni en el proceso; tablas nft como en el respaldo
-  ! grep -v '^[[:space:]]*#' "$UF" | grep -qE '(^|[[:space:]])--aplicar' || parar "la unidad lleva --aplicar"
-  p=$(systemctl show -p MainPID --value $U); [ "$p" != 0 ] || parar "$U sin proceso"
-  ! tr '\0' ' ' < /proc/$p/cmdline | grep -q -- '--aplicar' || parar "el proceso lleva --aplicar"
-  diff <(sudo -n nft list ruleset | norm) <(norm < "$1/ruleset.nft") > /dev/null || parar "el ruleset cambió"
-  ok "sombra: sin --aplicar y ruleset igual al del respaldo"
-}
-esperar_recepcion() {  # una recepción aceptada/repetida posterior al arranque
-  local t0 desde=$1
+sin_aplicar_unidad() { ! grep -v '^[[:space:]]*#' "$1" | grep -qE '(^|[[:space:]])--aplicar'; }
+sin_aplicar_proceso() { local c; c=$(p4_cmdline "$U") || return 1; [[ "$c" != *"--aplicar"* ]]; }
+lee_paquete() { local c; c=$(p4_cmdline "$U") || return 1; [[ "$c" == *"--paquete $RAIZ/var/lib/cyberflow/feed/feed.par"* || "$c" == *"--paquete /var/lib/cyberflow/feed/feed.par"* ]]; }
+ruleset_igual() { diff <($NFT list ruleset | norm) <(norm < "$1/ruleset.nft") > /dev/null; }
+paquete_fresco() { local m; m=$($SUDO stat -c %Y "$FEED/feed.par") || return 1; [ $(( $(date +%s) - m )) -lt 60 ]; }
+esperar_recepcion() {  # una recepción aceptada/repetida posterior a $1 (60 s máximo)
+  local n
   for _ in $(seq 1 30); do
-    t0=$(sudo -n tail -50 /var/lib/cyberflow/agente/traza.jsonl | python3 -c '
+    n=$($SUDO tail -50 "$TR" | python3 -c '
 import json,sys
-d=float(sys.argv[1]); r=[json.loads(l) for l in sys.stdin if l.strip()]
-print(sum(1 for x in r if x["evento"]=="recepcion" and x["t"]>d and x.get("estado") in ("aceptado","repetido")))' "$desde")
-    [ "${t0:-0}" -gt 0 ] && { ok "agente recibe ($t0 recepciones válidas desde el arranque)"; return 0; }
-    sleep 2
+d=float(sys.argv[1]); n=0
+for l in sys.stdin:
+    try: x=json.loads(l)
+    except ValueError: continue
+    if x.get("evento")=="recepcion" and x.get("t",0)>d and x.get("estado") in ("aceptado","repetido"): n+=1
+print(n)' "$1") || return 1
+    [ "${n:-0}" -gt 0 ] && { echo "recepciones válidas: $n"; return 0; }
+    sleep "${CF_ESPERA:-2}"
   done
-  parar "el agente no recibe nada en 60 s"
+  echo "el agente no recibe"; return 1
 }
+reiniciar() { T_REINICIO=$(date +%s.%N); $SUDO systemctl restart "$U" && sleep "${CF_ESPERA:-3}"; }
+respaldo_srvdmz() {  # ruleset de referencia + ficheros -> respaldo sellado, estricto y de solo lectura
+  paso "crear respaldo $R" mkdir -p "$R"
+  paso "leer ruleset para el respaldo" bash -c "$NFT list ruleset > '$R/ruleset.nft'"
+  p4_respaldo "$R" "${FICH[@]}"
+}
+sombra() {
+  paso "unidad sin --aplicar" sin_aplicar_unidad "$UF"
+  paso "proceso sin --aplicar" sin_aplicar_proceso
+  paso "ruleset igual al del respaldo" ruleset_igual "$R"
+}
+p4_revertir_desde() {
+  local r="$1" f t
+  rpaso "respaldo íntegro antes de revertir" p4_verificar_respaldo "$r" || return 1
+  for f in "${FICH[@]}"; do rpaso "restaurar $f" p4_restaurar "$f" "$r"; done
+  rpaso "daemon-reload (reversión)" $SUDO systemctl daemon-reload
+  t=$(date +%s.%N)
+  rpaso "reiniciar $U (reversión)" $SUDO systemctl restart "$U"
+  sleep "${CF_ESPERA:-3}"
+  rpaso "$U activo (reversión)" p4_activa "$U"
+  rpaso "hashes = respaldo" p4_hashes_iguales "$r/instalados-antes.sha256" "${FICH[@]}"
+  rpaso "unidad sin --aplicar (reversión)" sin_aplicar_unidad "$UF"
+  rpaso "proceso sin --aplicar (reversión)" sin_aplicar_proceso
+  rpaso "ruleset igual al del respaldo (reversión)" ruleset_igual "$r"
+  if [ "${P4_REV_AVISO_RELE:-0}" = 1 ]; then
+    echo "AVISO: el relé del bastión sigue en modo paquete y el agente revertido lee feed.json: la cadena no recibe"
+    echo "       hasta revertir el bastión A MANO (bastion_p4.sh revertir <RESPALDO del bastión>, lo ejecuta Mark)."
+  fi
+  if [ "${P4_REV_AVISO_RELE:-0}" = 1 ]; then   # informativo: depende del modo del relé, no de esta reversión
+    esperar_recepcion "$t" || echo "(sin recepción tras revertir: esperado mientras el relé siga en modo paquete)"
+  else
+    rpaso "el agente recibe tras revertir" esperar_recepcion "$t"
+  fi
+}
+iniciar() {  # $1 fase
+  R="$HOME/respaldos-etapa4/srvdmz-p4-$1-$TS"; E="$HOME/evidencia-etapa4/srvdmz-p4-$1-$TS"
+  mkdir -p "$(dirname "$R")" "$(dirname "$E")"
+  ev_abrir "$E"
+  echo "$P4_VERSION · srvdmz_p4.sh $1 · paquete ${P:-} · respaldo $R · evidencia $E"
+}
+
 case "${1:-}" in
-respaldo)
-  EV="$HOME/respaldos-etapa4/srvdmz-p4-$TS"; ev_abrir "$EV"
-  for f in "${FICH[@]}"; do sudo -n cp -a "$f" "$EV/" || parar "no se copia $f"; done
-  sudo -n cp -a /var/lib/cyberflow/agente/estado.json "$EV/estado.json"
-  sudo -n cp -a /var/lib/cyberflow/agente/traza.jsonl "$EV/traza-agente-antes.jsonl"
-  sudo -n chown "$(id -u):$(id -g)" "$EV"/*
-  sudo -n nft list ruleset > "$EV/ruleset.nft"; echo "rc=$? $(date -u +%FT%TZ)" > "$EV/ruleset.lectura"
-  for f in "${FICH[@]}"; do sudo -n sha256sum "$f"; done | tee "$EV/instalados-antes.sha256"
-  systemctl show $U -p ActiveState -p MainPID -p NRestarts -p ExecMainStartTimestamp | tee "$EV/unidad-antes.txt"
-  ok "respaldo en $EV"; ev_sellar "$EV" ;;
 fase-a)
-  P="${2:?paquete}"; R="${3:?respaldo}"; EV="$R/fase-a-$TS"
-  ( cd "$R" && sha256sum -c --quiet SHA256SUMS ) || { echo "PARADA el respaldo no verifica"; exit 1; }
-  ev_abrir "$EV"
-  ( cd "$P" && sha256sum -c --quiet SHA256SUMS ) || parar "el paquete no verifica"
-  sombra "$R"
-  sudo -n install -o root -g root -m 0755 "$P/deploy/enforcement/candidato-etapa2/cf-feed-ssh.sh" /usr/local/bin/cf-feed-ssh.sh
-  sudo -n install -o root -g root -m 0644 "$P/scripts/enforce/agente_enforce_v2.py" "$P/scripts/engine/feed.py" /opt/cyberflow/agente-v2/
-  t=$(date +%s.%N); sudo -n systemctl restart $U; sleep 3
-  systemctl is-active --quiet $U || parar "$U no arranca"
-  esperar_recepcion "$t"; sombra "$R"
-  for f in "${FICH[@]}"; do sudo -n sha256sum "$f"; done | tee "$EV/instalados.sha256"
-  ok "fase A: forzado admite paquete; agente nuevo en modo pareja (siguiente: bastion_p4.sh instalar, lo ejecuta Mark)"
-  ev_sellar "$EV" ;;
+  P="${2:?paquete}"; iniciar fase-a; P4_FASE_SIGUIENTE="el paso del bastión"
+  paso "paquete verifica" bash -c "cd '$P' && sha256sum -c --quiet SHA256SUMS"
+  paso "$U activo" p4_activa "$U"
+  respaldo_srvdmz; sombra
+  cambio
+  paso "instalar cf-feed-ssh.sh" $SUDO install -o root -g root -m 0755 "$P/deploy/enforcement/candidato-etapa2/cf-feed-ssh.sh" "$FS"
+  paso "instalar agente y feed.py" $SUDO install -o root -g root -m 0644 "$P/scripts/enforce/agente_enforce_v2.py" "$P/scripts/engine/feed.py" "$OPT/"
+  paso "reiniciar $U" reiniciar
+  paso "$U activo" p4_activa "$U"
+  paso "el agente recibe" esperar_recepcion "$T_REINICIO"
+  sombra
+  paso "hashes instalados = paquete" p4_hashes_paquete "$P/deploy/enforcement/candidato-etapa2/cf-feed-ssh.sh" "$FS" \
+    "$P/scripts/enforce/agente_enforce_v2.py" "$OPT/agente_enforce_v2.py" "$P/scripts/engine/feed.py" "$OPT/feed.py"
+  $SUDO sha256sum "${FICH[@]}" > "$E/instalados.sha256"
+  echo "RESULTADO: OK — fase A. RESPALDO=$R EVIDENCIA=$E"; ev_sellar "$E"; exit 0 ;;
 fase-c)
-  P="${2:?paquete}"; R="${3:?respaldo}"; EV="$R/fase-c-$TS"
-  ( cd "$R" && sha256sum -c --quiet SHA256SUMS ) || { echo "PARADA el respaldo no verifica"; exit 1; }
-  ev_abrir "$EV"
-  ( cd "$P" && sha256sum -c --quiet SHA256SUMS ) || parar "el paquete no verifica"
-  m=$(sudo -n stat -c %Y /var/lib/cyberflow/feed/feed.par 2>/dev/null) || parar "no hay feed.par: el relé aún no entrega paquete"
-  [ $(( $(date +%s) - m )) -lt 60 ] || parar "feed.par no se actualiza (> 60 s)"
-  sudo -n install -o root -g root -m 0644 "$P/deploy/etapa4/unidades/srvdmz/$U.service" "$UF"
-  sombra "$R"
-  sudo -n systemctl daemon-reload
-  systemd-analyze verify $U.service 2>&1 | grep . && parar "systemd-analyze verify"
-  t=$(date +%s.%N); sudo -n systemctl restart $U; sleep 3
-  systemctl is-active --quiet $U || parar "$U no arranca"
-  tr '\0' ' ' < /proc/$(systemctl show -p MainPID --value $U)/cmdline | grep -q -- '--paquete /var/lib/cyberflow/feed/feed.par' \
-    || parar "el agente no lee feed.par"
-  esperar_recepcion "$t"; sombra "$R"
-  for f in "${FICH[@]}"; do sudo -n sha256sum "$f"; done | tee "$EV/instalados.sha256"
-  ok "fase C: agente v2 lee el paquete; sombra mantenida"; ev_sellar "$EV" ;;
+  P="${2:?paquete}"; iniciar fase-c; P4_FASE_SIGUIENTE="la transición en sombra"; P4_REV_AVISO_RELE=1
+  NU="$P/deploy/etapa4/unidades/srvdmz/$U.service"
+  paso "paquete verifica" bash -c "cd '$P' && sha256sum -c --quiet SHA256SUMS"
+  paso "$U activo" p4_activa "$U"
+  paso "código de la fase A instalado (hashes = paquete)" p4_hashes_paquete \
+    "$P/scripts/enforce/agente_enforce_v2.py" "$OPT/agente_enforce_v2.py" "$P/scripts/engine/feed.py" "$OPT/feed.py" \
+    "$P/deploy/enforcement/candidato-etapa2/cf-feed-ssh.sh" "$FS"
+  paso "feed.par existe y se actualiza (relé en modo paquete)" paquete_fresco
+  paso "unidad nueva con --paquete" grep -q -- '--paquete /var/lib/cyberflow/feed/feed.par' "$NU"
+  paso "unidad nueva sin --aplicar" sin_aplicar_unidad "$NU"
+  paso "systemd-analyze verify de la unidad NUEVA (antes de instalarla)" p4_verify_unidad "$NU"
+  respaldo_srvdmz; sombra
+  cambio
+  paso "instalar la unidad" $SUDO install -o root -g root -m 0644 "$NU" "$UF"
+  paso "daemon-reload" $SUDO systemctl daemon-reload
+  paso "systemd-analyze verify de la unidad instalada" p4_verify_unidad "$U.service"
+  paso "reiniciar $U" reiniciar
+  paso "$U activo" p4_activa "$U"
+  paso "el agente lee feed.par" lee_paquete
+  paso "el agente recibe" esperar_recepcion "$T_REINICIO"
+  sombra
+  paso "hashes instalados = paquete" p4_hashes_paquete "$NU" "$UF" \
+    "$P/scripts/enforce/agente_enforce_v2.py" "$OPT/agente_enforce_v2.py" "$P/scripts/engine/feed.py" "$OPT/feed.py" \
+    "$P/deploy/enforcement/candidato-etapa2/cf-feed-ssh.sh" "$FS"
+  $SUDO sha256sum "${FICH[@]}" > "$E/instalados.sha256"
+  echo "RESULTADO: OK — fase C: el agente v2 lee el paquete; sombra mantenida. RESPALDO=$R EVIDENCIA=$E"
+  ev_sellar "$E"; exit 0 ;;
 revertir)
-  R="${2:?respaldo}"; EV="$R/revertir-$TS"
-  ( cd "$R" && sha256sum -c --quiet SHA256SUMS ) || { echo "PARADA el respaldo no verifica"; exit 1; }
-  ev_abrir "$EV"
-  sudo -n install -o root -g root -m 0755 "$R/cf-feed-ssh.sh" /usr/local/bin/cf-feed-ssh.sh
-  sudo -n install -o root -g root -m 0644 "$R/agente_enforce_v2.py" "$R/feed.py" /opt/cyberflow/agente-v2/
-  sudo -n install -o root -g root -m 0644 "$R/$U.service" "$UF"
-  sudo -n systemctl daemon-reload; t=$(date +%s.%N); sudo -n systemctl restart $U; sleep 3
-  for f in "${FICH[@]}"; do sudo -n sha256sum "$f"; done > "$EV/instalados.sha256"
-  diff <(awk '{print $1}' "$R/instalados-antes.sha256") <(awk '{print $1}' "$EV/instalados.sha256") \
-    && ok "hashes iguales a los del respaldo" || parar "los hashes no coinciden con el respaldo"
-  echo "NOTA: si el relé sigue en modo paquete, revertir ANTES el bastión (bastion_p4.sh revertir) o el agente no recibe"
-  esperar_recepcion "$t"; sombra "$R"; ok "reversión srv-dmz"; ev_sellar "$EV" ;;
-*) echo "uso: srvdmz_p4.sh respaldo | fase-a PAQ R | fase-c PAQ R | revertir R"; exit 2 ;;
+  R="${2:?respaldo}"; E="$HOME/evidencia-etapa4/srvdmz-p4-revertir-$TS"; mkdir -p "$(dirname "$E")"; ev_abrir "$E"
+  echo "$P4_VERSION · srvdmz_p4.sh revertir (MANUAL) · respaldo $R"
+  P4_REV_FALLOS=(); P4_REV_AVISO_RELE=1; p4_revertir_desde "$R"
+  [ "${#P4_REV_FALLOS[@]}" -eq 0 ] && { echo "RESULTADO: REVERSIÓN MANUAL OK"; ev_sellar "$E"; exit 0; }
+  echo "RESULTADO: REVERSIÓN MANUAL FALLIDA en: ${P4_REV_FALLOS[*]} — DETENIDO, revisar a mano"; ev_sellar "$E"; exit 30 ;;
+revertir-heredado)
+  # Respaldo de la versión .1: ficheros en la raíz del directorio y, dentro, la evidencia fase-a-* (defecto de
+  # la .1, corregido en la .2). Se verifican TODOS los hashes del manifiesto; los ficheros no listados se informan.
+  R0="${2:?respaldo .1}"; E="$HOME/evidencia-etapa4/srvdmz-p4-revertir-heredado-$TS"; mkdir -p "$(dirname "$E")"; ev_abrir "$E"
+  echo "$P4_VERSION · srvdmz_p4.sh revertir-heredado (MANUAL) · respaldo $R0"
+  paso "manifiesto del respaldo .1 verifica" bash -c "cd '$R0' && sha256sum -c --strict --quiet SHA256SUMS"
+  echo "no listados en el manifiesto (evidencia de la .1, no se usan): $(cd "$R0" && find . -type f ! -name SHA256SUMS | LC_ALL=C sort | grep -vxF -f <(sed -E 's/^[0-9a-f]{64} [ *]//' SHA256SUMS) | tr '\n' ' ')"
+  cambio; R="$R0"
+  hmodo() { stat -c %a "$1"; }   # la .1 copió con «cp -a»: el modo original está en la copia
+  p4_revertir_desde() {
+    local r="$1" t f
+    for f in "$FS" "$OPT/agente_enforce_v2.py" "$OPT/feed.py" "$UF"; do
+      rpaso "restaurar $f" $SUDO install -o root -g root -m "$(hmodo "$r/$(basename "$f")")" "$r/$(basename "$f")" "$f"
+    done
+    rpaso "daemon-reload" $SUDO systemctl daemon-reload
+    t=$(date +%s.%N); rpaso "reiniciar" $SUDO systemctl restart "$U"; sleep "${CF_ESPERA:-3}"
+    rpaso "activo" p4_activa "$U"
+    rpaso "hashes = respaldo .1" p4_hashes_iguales "$r/instalados-antes.sha256" "${FICH[@]}"
+    rpaso "unidad sin --aplicar" sin_aplicar_unidad "$UF"; rpaso "proceso sin --aplicar" sin_aplicar_proceso
+    rpaso "ruleset igual" ruleset_igual "$r"
+    echo "AVISO: revertir también el bastión (bastion_p4.sh revertir) para que el agente vuelva a recibir"
+  }
+  P4_REV_FALLOS=(); p4_revertir_desde "$R0"
+  [ "${#P4_REV_FALLOS[@]}" -eq 0 ] && { echo "RESULTADO: REVERSIÓN MANUAL OK (estado previo a la fase A)"; ev_sellar "$E"; exit 0; }
+  echo "RESULTADO: REVERSIÓN MANUAL FALLIDA en: ${P4_REV_FALLOS[*]} — DETENIDO, revisar a mano"; ev_sellar "$E"; exit 30 ;;
+*) echo "uso: srvdmz_p4.sh fase-a PAQ | fase-c PAQ | revertir R | revertir-heredado R0"; exit 2 ;;
 esac
