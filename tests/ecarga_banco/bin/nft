@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# nft simulado (banco de E-carga): ruleset vacío, como el de srv-dmz.
+exit 0

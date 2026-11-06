@@ -1,0 +1,25 @@
+# E-carga v2: guiones de preparación, muestreo y derivación (ubicación canónica)
+
+**Estado: PREPARADO. E-carga NO se ha ejecutado ni programado.** Ejecutarla exige una autorización posterior y explícita
+de Mark. Nada de esta carpeta arranca generadores por sí solo, ataca, activa restricciones ni toca el modelo IF,
+las 28 características, α, los heurísticos o la política de respuesta.
+
+Esta carpeta es la **única** copia de trabajo del código. El repositorio de documentación solo referencia el commit y
+los sha256 (ver `SHA256SUMS`). Las copias `guiones-c7f24510/` y `evaluacion-e83f4be6/` del repo de documentación
+quedan como evidencia sellada **sustituida**: no se usan.
+
+| Fichero | Versión | Dónde corre | Qué hace |
+|---|---|---|---|
+| `generadores.sh` | 2026-11-06.2 | clientes (por ssh desde el bastión, entra por stdin) | `estado`, `permisos`, `configuracion`, `arrancar`, `parar`, `comprobar-parado`; rc 0/2/3/4/5 inequívocos |
+| `muestreo_bastion.sh` | 2026-11-06.2 | bastión | muestreo cada 30 s y guardia §3.7; parada con estados solicitada/fallida/confirmada/agotada; rc 4 si no se confirma |
+| `guardia.py` | 2026-11-06.2 | bastión | condiciones de parada §3.7; avisa `SIN_LECTURA` |
+| `sensor1_muestreadores.sh` | 2026-11-06.2 | Sensor1 | `comprobar` (anillo ≥ 900 s, PSI, vmstat, diskstats, USER_HZ), `arrancar`/`parar` de los 4 muestreadores (con S14) |
+| `muestreo_s14.py` | 2026-11-06.1 | Sensor1 | lectura a 1 s de PSI, /proc/stat, softnet, diskstats, MemAvailable, vmstat e hilos W# de Suricata |
+| `sensor1_post.sh` | 2026-11-06.2 | Sensor1 | `DIR DESDE HASTA BASE_DESDE BASE_HASTA`: deriva S2/S3 (con `obs_pcap.log`) y S14 (con línea base) y sella |
+| `derivar_pcap.py` | 2026-11-06.2 | Sensor1 / portátil | S2 y S3 con cobertura de bordes, continuidad y lectura completa |
+| `evaluar_s14.py` | 2026-11-06.1 | Sensor1 / portátil | S14 según PROTOCOLO-CARGA-v2 r3 §3.6.1 |
+| `derivar_bastion.py` | 2026-11-06.2 | portátil | S1, S6, S8, S9, S10; `ERROR` -> sin medida |
+| `construir_entrada.py` | 2026-11-06.2 | portátil | entrada de `../sensor1/evaluar_ecarga.py veredicto` (2026-11-06.4, sin cambios); S14 ya no es manual |
+
+Pruebas aisladas: `tests/test_etapa4_ecarga_prep.py` con los dobles de `tests/ecarga_banco/bin` (systemctl, sudo, ssh,
+curl, nft, pgrep). Las pruebas `*regresion*` fallan con la versión anterior y pasan con esta.

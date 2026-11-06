@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""systemctl simulado para el banco de E-carga (SIN acceso al laboratorio). Estado en $FAKE_DIR:
+  units/<unidad>.json   propiedades (LoadState, ActiveState, SubState, MainPID, NRestarts, PartOf, ExecStart, UnitFileState)
+  config.json           {"start": ok|fail|parcial|argv_malo, "stop": ok|fail|sin_efecto|fail_pero_para,
+                         "fail_show": null|"siempre"|"tras_start"}
+  proc/<pid>/cmdline    procesos simulados (CF_PROC apunta aquí)
+  llamadas.log          cada invocación
+Una unidad que no existe responde como systemd: LoadState=not-found, ActiveState=inactive, MainPID=0.
+"""
+import json
+import os
+import sys
+
+F = os.environ["FAKE_DIR"]
+U = os.path.join(F, "units")
+PERFILES = [("ofimatica", "10.10.20.21"), ("navegacion", "10.10.20.22"), ("descargas", "10.10.20.23"),
+            ("aplicacion", "10.10.20.24"), ("ligero", "10.10.20.25"), ("erratico", "10.10.20.26")]
+TARGET = "cyberflow-lab.target"
+
+
+def cfg():
+    try:
+        return json.load(open(os.path.join(F, "config.json")))
+    except OSError:
+        return {}
+
+
+def nombre(u):
+    return u if "." in u else u + ".service"
+
+
+def leer(u):
+    try:
+        return json.load(open(os.path.join(U, nombre(u) + ".json")))
+    except OSError:
+        return {"LoadState": "not-found", "ActiveState": "inactive", "SubState": "dead", "MainPID": "0",
+                "NRestarts": "0", "UnitFileState": "", "PartOf": "", "ExecStart": ""}
+
+
+def escribir(u, d):
+    os.makedirs(U, exist_ok=True)
+    json.dump(d, open(os.path.join(U, nombre(u) + ".json"), "w"))
+
+
+def proc_nuevo(argv):
+    base = os.path.join(F, "proc")
+    os.makedirs(base, exist_ok=True)
+    pid = 1000 + len(os.listdir(base)) + int.from_bytes(os.urandom(1), "big") * 10
+    while os.path.exists(os.path.join(base, str(pid))):
+        pid += 1
+    os.makedirs(os.path.join(base, str(pid)))
+    open(os.path.join(base, str(pid), "cmdline"), "wb").write(b"\0".join(a.encode() for a in argv) + b"\0")
+    return pid
+
+
+def proc_borrar(pid):
+    import shutil
+    shutil.rmtree(os.path.join(F, "proc", str(pid)), ignore_errors=True)
+
+
+def gen():
+    return os.environ.get("CF_GEN") or os.path.join(os.environ["HOME"], "laboratorio", "clientes_lab.py")
+
+
+def arrancar(modo):
+    t = leer(TARGET)
+    t.update(ActiveState="active", SubState="active")
+    escribir(TARGET, t)
+    for i, (p, ip) in enumerate(PERFILES):
+        u = f"cyberflow-lab-{p}.service"
+        d = leer(u)
+        if modo == "parcial" and i >= 4:
+            d.update(ActiveState="failed", SubState="failed", MainPID="0")
+        else:
+            ip_real = "10.10.20.99" if (modo == "argv_malo" and p == "ligero") else ip
+            pid = proc_nuevo(["/usr/bin/python3", gen(), "--perfil", p, "--origen", ip_real,
+                              "--servidor", "10.10.30.10", "--dns", "10.10.10.20"])
+            d.update(ActiveState="active", SubState="running", MainPID=str(pid))
+        escribir(u, d)
+
+
+def parar():
+    t = leer(TARGET)
+    t.update(ActiveState="inactive", SubState="dead")
+    escribir(TARGET, t)
+    for p, _ in PERFILES:
+        u = f"cyberflow-lab-{p}.service"
+        d = leer(u)
+        if d.get("MainPID", "0") != "0":
+            proc_borrar(d["MainPID"])
+        d.update(ActiveState="inactive", SubState="dead", MainPID="0")
+        escribir(u, d)
+
+
+def main(a):
+    open(os.path.join(F, "llamadas.log"), "a").write("systemctl " + " ".join(a) + "\n")
+    c = cfg()
+    fs = c.get("fail_show")
+    if a and a[0] in ("show", "is-active", "is-enabled", "list-units") and (
+            fs == "siempre" or (fs == "tras_start" and os.path.exists(os.path.join(F, "arrancado")))):
+        print("Failed to connect to bus: No such file or directory", file=sys.stderr)
+        return 1
+    if a and a[0] == "show":
+        props, valor, unidades, i = [], False, [], 1
+        while i < len(a):
+            if a[i] == "-p":
+                props.append(a[i + 1]); i += 2
+            elif a[i] == "--value":
+                valor = True; i += 1
+            else:
+                unidades.append(a[i]); i += 1
+        d = leer(unidades[0])
+        for p in props:
+            v = str(d.get(p, ""))
+            print(v if valor else f"{p}={v}")
+        return 0
+    if a and a[0] == "is-active":
+        s = leer(a[1])["ActiveState"]; print(s); return 0 if s == "active" else 3
+    if a and a[0] == "is-enabled":
+        s = leer(a[1]).get("UnitFileState") or "disabled"; print(s); return 0 if s == "enabled" else 1
+    if a and a[0] == "list-units":
+        for p, _ in PERFILES:
+            d = leer(f"cyberflow-lab-{p}.service")
+            print(f"cyberflow-lab-{p}.service {d['LoadState']} {d['ActiveState']} {d['SubState']} perfil")
+        return 0
+    if a and a[0] == "start":
+        modo = c.get("start", "ok")
+        if modo == "fail":
+            print("Job for cyberflow-lab.target failed because a timeout was exceeded.", file=sys.stderr); return 1
+        arrancar(modo)
+        open(os.path.join(F, "arrancado"), "w").write("1")
+        return 0
+    if a and a[0] == "stop":
+        modo = c.get("stop", "ok")
+        if modo == "fail":
+            print("Failed to stop cyberflow-lab.target: Access denied", file=sys.stderr); return 1
+        if modo == "sin_efecto":
+            return 0
+        parar()
+        return 1 if modo == "fail_pero_para" else 0
+    print("systemctl simulado: orden no soportada " + " ".join(a), file=sys.stderr)
+    return 1
+
+
+sys.exit(main(sys.argv[1:]))

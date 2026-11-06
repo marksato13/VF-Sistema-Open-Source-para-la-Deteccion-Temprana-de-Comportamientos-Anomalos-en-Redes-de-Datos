@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# curl simulado (banco de E-carga): el panel responde 401 sin sesión.
+printf 401

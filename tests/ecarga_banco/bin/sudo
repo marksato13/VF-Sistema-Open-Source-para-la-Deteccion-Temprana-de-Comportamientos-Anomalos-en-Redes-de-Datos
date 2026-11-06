@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# sudo simulado (banco de E-carga): solo «sudo -n …». Si existe $FAKE_DIR/sudo_falla, falla como sin contraseña.
+echo "sudo $*" >> "$FAKE_DIR/llamadas.log"
+[ "${1:-}" = -n ] && shift
+if [ "${1:-}" = -l ]; then
+  echo "    (root) NOPASSWD: /usr/bin/systemctl start cyberflow-lab.target, /usr/bin/systemctl stop cyberflow-lab.target"; exit 0
+fi
+[ -e "$FAKE_DIR/sudo_falla" ] && { echo "sudo: a password is required" >&2; exit 1; }
+exec "$@"

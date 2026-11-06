@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# ssh simulado (banco de E-carga, SIN red). Registra cada llamada en $FAKE_DIR/ssh.log.
+#  clientes (10.10.20.20): ejecuta la orden en local (los guiones entran por stdin), con los dobles del banco.
+#     $FAKE_DIR/ssh_falla_parar = N  -> las N próximas órdenes que contienen «parar» fallan con rc 255
+#     $FAKE_DIR/ssh_falla_clientes   -> toda conexión a clientes falla con rc 255
+#  Sensor1 (10.10.60.11) y srv-dmz (10.10.30.10): si existe $FAKE_DIR/ejecutar_remoto, ejecuta la orden en local
+#     (para probar las lecturas con fallos); si no, devuelve una muestra enlatada coherente.
+h=""; while [ $# -gt 0 ]; do
+  case "$1" in -o|-i|-p|-l) shift 2;; -*) shift;; *) h=$1; shift; break;; esac
+done
+c="$*"
+echo "$h :: $c" >> "$FAKE_DIR/ssh.log"
+case "$h" in
+  *10.10.20.20)
+    if [[ $c == *parar* ]] && [ -e "$FAKE_DIR/ssh_falla_parar" ] && [ "$(cat "$FAKE_DIR/ssh_falla_parar")" -gt 0 ]; then
+      echo $(( $(cat "$FAKE_DIR/ssh_falla_parar") - 1 )) > "$FAKE_DIR/ssh_falla_parar"
+      cat > /dev/null; echo "ssh: connect to host 10.10.20.20 port 22: Connection timed out" >&2; exit 255
+    fi
+    [ -e "$FAKE_DIR/ssh_falla_clientes" ] && { cat > /dev/null; echo "ssh: connect to host 10.10.20.20 port 22: No route to host" >&2; exit 255; }
+    exec bash -c "$c" ;;
+  *10.10.60.11)
+    [ -e "$FAKE_DIR/ejecutar_remoto" ] && exec bash -c "$c"
+    cat > /dev/null 2>&1
+    for u in "ppi-motor 1384" "ppi-motor-capture 1355" "ppi-via-rapida@ens37 1387" "suricata 1351" "ppi-publicar-feed-v2 1386" "ppi-dashboard 1385"; do
+      set -- $u; echo "S $1 pid=$2 nr=0 active"; done
+    echo "S v1 inactive/inactive enforce_aplicar=0"
+    echo "S feed_seq=5897"
+    echo "S home_libre_kb=12455468 carga=0.35 0.22 0.22 memdisp_kb=6769344"
+    echo "S ruleset=24c320e3e9538573"
+    echo "S eve_ultimo_stats=$(date -u +%Y-%m-%dT%H:%M:%S.000000+0000) 45000 1000 0"
+    echo "S anillo_ultimo=live-$(date -u +%Y%m%d%H%M%S).pcap"; exit 0 ;;
+  *10.10.30.10)
+    [ -e "$FAKE_DIR/ejecutar_remoto" ] && exec bash -c "$c"
+    cat > /dev/null 2>&1
+    echo "D agente pid=15020 nr=0 active aplicar_cmd=0 v1=inactive"
+    echo "D aplicacion=0 firma_invalida=14 paquete_invalido=0 ruleset=e3b0c44298fc1c14"
+    echo "D ultima={}"; exit 0 ;;
+  *) echo "ssh simulado: host desconocido $h" >&2; exit 255 ;;
+esac
