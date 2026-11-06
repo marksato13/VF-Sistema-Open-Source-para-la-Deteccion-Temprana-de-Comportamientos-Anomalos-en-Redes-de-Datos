@@ -3,6 +3,8 @@
 # SIN --aplicar: verifica la firma, valida el feed v2 y LISTA los sets por el helper; no llama al
 # helper para añadir ni quitar nada (agente_enforce_v2.py: "if self.a.aplicar and ops").
 # verificar_srvdmz.sh comprueba en la traza que no hay ningún evento "aplicacion".
+# P4 (2026-11-06): lee feed.par (feed + firma en un fichero, un solo rename del relé --entrega paquete) en lugar
+# de feed.json/feed.sig. La firma se sigue verificando igual. Reversión: unidad anterior del respaldo.
 Description=CyberFlow - agente v2 perfil dmz (srv-dmz), SOMBRA (Etapa 4)
 After=network-online.target
 Wants=network-online.target
@@ -13,8 +15,7 @@ User=cfagente
 Group=cfagente
 ExecStart=/usr/bin/python3 -I /opt/cyberflow/agente-v2/agente_enforce_v2.py \
     --perfil dmz \
-    --feed /var/lib/cyberflow/feed/feed.json \
-    --firma /var/lib/cyberflow/feed/feed.sig \
+    --paquete /var/lib/cyberflow/feed/feed.par \
     --clave-publica /opt/cyberflow/agente-v2/pub.pem \
     --estado /var/lib/cyberflow/agente/estado.json \
     --traza /var/lib/cyberflow/agente/traza.jsonl \

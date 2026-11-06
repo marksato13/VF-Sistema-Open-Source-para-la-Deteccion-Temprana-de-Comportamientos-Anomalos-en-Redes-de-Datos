@@ -17,6 +17,10 @@ en el guion lo que en la 4A hubo que hacer a mano:
    exportar, sin lecturas SIGUSR1, o ``clasificar`` sin muestras que acoten el periodo.
 6. Suricata segmentado por proceso: cada bajada de uptime o de contador es un reinicio; se informan
    los contadores de cada segmento por separado y si algún reinicio cae dentro del periodo.
+7. (2026-11-06.1) Con --suricata-eve, Suricata se mide por los eventos ``stats`` de EVE
+   (``medida_suricata_eve``: cero explícito, ausente, desactualizada, error, cobertura) y esa medida
+   decide la parte de Suricata de cada captura. Sin --suricata-eve se conserva lo de 2026-11-04.1
+   (stats.log), para reproducir la clasificación histórica sin reclasificarla.
 
 La clase de cada captura es la de ``salud_captura.clasificar`` (C0..C3, criterios congelados).
 La clase del periodo es la peor de las capturas evaluadas; ``no_evaluable`` domina a todas.
@@ -24,7 +28,8 @@ No cambia I5 ni la población C0: solo decide con qué datos se clasifica.
 
 Uso (Sensor1, m4rk; ``journalctl --no-pager`` está permitido):
   clasificar_periodo.py --salud-captura ~/cyberflow-e4/ec78ca5/scripts/etapa4/salud_captura.py \
-      --muestras DIR/muestras.jsonl --salida DIR/clasificacion [--desde T --hasta T]
+      --muestras DIR/muestras.jsonl --salida DIR/clasificacion [--desde T --hasta T] \
+      [--suricata-eve /var/log/suricata/eve.json [--suricata-eve /var/log/suricata/eve.json.1]]
 Sin acceso al journal (pruebas): --journal captura=FICHERO --journal via-rapida=FICHERO.
 """
 from __future__ import annotations
@@ -34,6 +39,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 CAPTURAS = {"captura": "ppi-motor-capture", "via-rapida": "ppi-via-rapida@ens37"}
@@ -99,11 +105,16 @@ def main(argv=None) -> int:
     p.add_argument("--margen", type=float, default=35.0)
     p.add_argument("--rotacion", type=float, default=5.0)
     p.add_argument("--journal", action="append", default=[], help="NOMBRE=FICHERO ya exportado (pruebas)")
+    p.add_argument("--suricata-eve", type=Path, action="append", default=[],
+                   help="eve.json (y rotados): Suricata por EVE stats; exige salud_captura >= 2026-11-06.1")
     a = p.parse_args(argv)
     sc = cargar_salud(a.salud_captura)
     a.salida.mkdir(parents=True, exist_ok=True)
     muestras = leer_jsonl(a.muestras)
-    res = {"version": "clasificar_periodo 2026-11-04.1", "salud_captura": sc.VERSION, "capturas": {}}
+    res = {"version": "clasificar_periodo 2026-11-06.1", "salud_captura": sc.VERSION, "capturas": {}}
+    if a.suricata_eve and not hasattr(sc, "medida_suricata_eve"):
+        res.update(clase_periodo="no_evaluable", motivo="--suricata-eve con un salud_captura sin lectura EVE")
+        return _fin(a, res, 3)
     if len(muestras) < 2:
         res.update(clase_periodo="no_evaluable", motivo="menos de dos muestras")
         return _fin(a, res, 3)
@@ -123,7 +134,14 @@ def main(argv=None) -> int:
             fh.write(json.dumps(x, sort_keys=True) + "\n")
     segs = segmentos_suricata(muestras)
     dentro = [g for g in segs[1:] if desde < g["desde_t"] <= hasta]
-    res["suricata"] = {"segmentos": segs, "reinicios_dentro_del_periodo": len(dentro)}
+    res["suricata"] = {"fuente": "stats.log", "segmentos": segs, "reinicios_dentro_del_periodo": len(dentro)}
+    se = None
+    if a.suricata_eve:
+        lect = sc.leer_eve_stats(a.suricata_eve, desde=desde)
+        se = sc.medida_suricata_eve(lect, desde, hasta, time.time())
+        res["suricata"] = {"fuente": "eve_stats", "medida": se, "ficheros": lect.get("ficheros"),
+                           "reinicios_dentro_del_periodo": len(se.get("reinicios") or []),
+                           "stats_log_informativo": {"segmentos": segs}}
     crit = dict(sc.CRITERIOS, rotacion_s=a.rotacion)
     dados = dict(x.split("=", 1) for x in a.journal)
     peor = "C0"
@@ -140,7 +158,9 @@ def main(argv=None) -> int:
         if not exp["ok"]:
             r.update(clase="no_evaluable", motivos=["journal no exportado o sin lecturas SIGUSR1 (no es «0 descartes»)"])
         else:
-            c = sc.clasificar(incs, sc.leer_tcpdump_log(dest), desde, hasta, crit)
+            td = sc.leer_tcpdump_log(dest)
+            c = (sc.clasificar(incs, td, desde, hasta, crit, suricata_eve=se) if se is not None
+                 else sc.clasificar(incs, td, desde, hasta, crit))
             r.update(clase=c["clase"] if c["clase"] in ORDEN else "no_evaluable", motivos=c.get("motivos", []),
                      info=c.get("info"), acotado_por=c.get("acotado_por"))
             if c["clase"] == "insuficiente":

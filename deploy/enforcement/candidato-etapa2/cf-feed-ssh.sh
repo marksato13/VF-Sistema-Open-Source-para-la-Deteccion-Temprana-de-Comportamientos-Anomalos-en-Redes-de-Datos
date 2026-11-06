@@ -25,5 +25,8 @@ case "$modo:${SSH_ORIGINAL_COMMAND:-}" in
   "recibir:cat > $dir/.feed.sig.tmp")  exec cat > "$dir/.feed.sig.tmp" ;;
   "recibir:mv -f $dir/.feed.sig.tmp $dir/feed.sig && mv -f $dir/.feed.json.tmp $dir/feed.json")
       mv -f "$dir/.feed.sig.tmp" "$dir/feed.sig" && exec mv -f "$dir/.feed.json.tmp" "$dir/feed.json" ;;
+  # P4 (2026-11-06): paquete feed+firma en un fichero, publicado con UN rename (relay_eventos --entrega paquete)
+  "recibir:cat > $dir/.feed.par.tmp") exec cat > "$dir/.feed.par.tmp" ;;
+  "recibir:mv -f $dir/.feed.par.tmp $dir/feed.par") exec mv -f "$dir/.feed.par.tmp" "$dir/feed.par" ;;
   *) echo "orden no permitida" >&2; exit 1 ;;
 esac

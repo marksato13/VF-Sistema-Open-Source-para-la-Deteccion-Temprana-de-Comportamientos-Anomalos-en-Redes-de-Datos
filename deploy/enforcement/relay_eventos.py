@@ -28,6 +28,13 @@ siguiente publicacion. Ahora:
 5. Entregar != aceptar != aplicar: la traza del rele solo dice que los ficheros
    llegaron (``entregado_en``). La aceptacion (firma y contrato) y la aplicacion son
    del agente, que sigue verificando la firma.
+6. (2026-11-06, pendiente P4 del cierre 4A) ``--entrega paquete``: el paso 4 renombraba
+   firma y feed con DOS ``mv``; un agente que leia entre ambos veia firma nueva + feed
+   anterior y lo rechazaba (13 ``firma_invalida`` en srv-dmz, todos dentro de una
+   entrega). En modo paquete se sube UN fichero ``.feed.par.tmp`` (feed + firma,
+   ``feed.empaquetar``) y se publica con UN solo ``mv`` a ``feed.par``: el destino tiene
+   siempre una generacion completa. ``--entrega pareja`` (por omision) conserva lo
+   anterior para la reversion.
 
 Transporte ``ssh`` (por omision): ``ssh -i IDENTIDAD usuario@host <orden>`` con
 ControlMaster; en el destino la llave lleva un comando forzado
@@ -40,6 +47,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -90,6 +98,11 @@ class TransporteSSH:
                       "mv -f %s/.feed.sig.tmp %s/feed.sig && mv -f %s/.feed.json.tmp %s/feed.json" % (d, d, d, d))
         return None if r.returncode == 0 else (r.stderr.decode(errors="replace").strip()[:160] or "ssh")
 
+    def confirmar_paquete(self, destino: dict) -> str | None:
+        d = destino["dir"].rstrip("/")
+        r = self._ssh(destino["host"], destino["identidad"], "mv -f %s/.feed.par.tmp %s/feed.par" % (d, d))
+        return None if r.returncode == 0 else (r.stderr.decode(errors="replace").strip()[:160] or "ssh")
+
 
 class TransporteLocal:
     def traer(self, origen: dict, nombre: str) -> bytes | None:
@@ -114,6 +127,14 @@ class TransporteLocal:
         except OSError as exc:
             return str(exc)[:160]
 
+    def confirmar_paquete(self, destino: dict) -> str | None:
+        d = Path(destino["dir"])
+        try:
+            os.replace(d / ".feed.par.tmp", d / "feed.par")   # rename(2): atomico en el mismo sistema de ficheros
+            return None
+        except OSError as exc:
+            return str(exc)[:160]
+
 
 def _secuencia(datos: bytes) -> int | None:
     try:
@@ -128,9 +149,12 @@ def verificador(clave_publica: str):
 
 class Rele:
     def __init__(self, origen: dict, destinos: list[dict], transporte, traza: Path | None,
-                 verificar, reloj=time.time) -> None:
+                 verificar, reloj=time.time, entrega: str = "pareja") -> None:
         self.origen, self.destinos, self.t, self.traza_ruta, self.reloj = origen, destinos, transporte, traza, reloj
         self.verificar = verificar
+        if entrega not in ("pareja", "paquete"):
+            raise ValueError("entrega: pareja | paquete")
+        self.entrega = entrega
         self.entregado: dict[str, str] = {}  # destino -> huella de la PAREJA entregada
         self.ultima_inconsistente: str | None = None
 
@@ -170,10 +194,14 @@ class Rele:
         if not pendientes:
             return None
         reg = {"evento": "reenvio", "secuencia": _secuencia(datos), "sha256_feed": sha_f[:16],
-               "huella": huella, "traido_en": traido, "destinos": {}}
+               "huella": huella, "traido_en": traido, "destinos": {}, "entrega": self.entrega}
+        paquete = feed.empaquetar(datos, firma) if self.entrega == "paquete" else None
         for d in pendientes:
-            err = (self.t.subir(d, "feed.sig", firma) or self.t.subir(d, "feed.json", datos)
-                   or self.t.confirmar(d))
+            if paquete is not None:
+                err = self.t.subir(d, "feed.par", paquete) or self.t.confirmar_paquete(d)
+            else:
+                err = (self.t.subir(d, "feed.sig", firma) or self.t.subir(d, "feed.json", datos)
+                       or self.t.confirmar(d))
             if err:
                 reg["destinos"][d["nombre"]] = {"error": err, "t": self.reloj()}
             else:
@@ -192,10 +220,12 @@ def main(argv=None) -> int:
     p.add_argument("--traza", type=Path, default=None)
     p.add_argument("--sondeo-segundos", type=float, default=1.0)
     p.add_argument("--max-iteraciones", type=int, default=0)
+    p.add_argument("--entrega", choices=("pareja", "paquete"), default="pareja",
+                   help="paquete: feed+firma en UN fichero publicado con UN rename (P4, 2026-11-06)")
     a = p.parse_args(argv)
     rele = Rele(parsear_destino("origen=" + a.origen), [parsear_destino(x) for x in a.destino],
                 TransporteSSH() if a.transporte == "ssh" else TransporteLocal(), a.traza,
-                verificador(a.clave_publica))
+                verificador(a.clave_publica), entrega=a.entrega)
     it = 0
     while True:
         try:

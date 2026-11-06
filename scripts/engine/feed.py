@@ -91,6 +91,52 @@ def verificar(datos: bytes, firma: bytes, pub_path: str) -> bool:
         os.unlink(spath)
 
 
+# --- Paquete feed + firma (pendiente P4 del cierre 4A, 2026-11-06) ------------
+#
+# Entregar feed.json y feed.sig con dos renombrados deja un instante en que el destino tiene la firma NUEVA con el
+# feed ANTERIOR: un lector que cae ahí ve una pareja que no verifica (13 rechazos firma_invalida en srv-dmz entre
+# el 04 y el 06-nov, todos 1–10 ms antes del fin de una entrega del relé). La atomicidad de cada fichero no da la
+# coherencia de la pareja. El paquete lleva la generación entera (feed y firma) en UN fichero, que se publica con
+# UN solo rename: el lector ve el paquete anterior completo o el nuevo completo. El paquete NO sustituye a la
+# firma: el agente sigue verificando ed25519 sobre los bytes del feed. Las huellas sha256 internas solo distinguen
+# un paquete dañado o incompleto (``paquete_invalido``) de una firma que no corresponde (``firma_invalida``).
+
+FORMATO_PAQUETE = "cyberflow-feed-paquete/1"
+
+
+def empaquetar(datos: bytes, firma: bytes) -> bytes:
+    import base64
+    import hashlib
+    obj = {"formato": FORMATO_PAQUETE, "sha256_feed": hashlib.sha256(datos).hexdigest(),
+           "sha256_firma": hashlib.sha256(firma).hexdigest(),
+           "feed_b64": base64.b64encode(datos).decode("ascii"), "firma_b64": base64.b64encode(firma).decode("ascii")}
+    return (json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n").encode("ascii")
+
+
+def desempaquetar(paquete: bytes) -> tuple[bytes, bytes]:
+    """(feed, firma). ValueError con el motivo si el paquete no es íntegro. No verifica la firma."""
+    import base64
+    import binascii
+    import hashlib
+    try:
+        obj = json.loads(paquete)
+    except ValueError as exc:
+        raise ValueError("paquete_no_json") from exc
+    if not isinstance(obj, dict) or obj.get("formato") != FORMATO_PAQUETE:
+        raise ValueError("paquete_formato")
+    try:
+        datos = base64.b64decode(obj["feed_b64"], validate=True)
+        firma = base64.b64decode(obj["firma_b64"], validate=True)
+    except (KeyError, TypeError, binascii.Error) as exc:
+        raise ValueError("paquete_base64") from exc
+    if hashlib.sha256(datos).hexdigest() != obj.get("sha256_feed") or \
+            hashlib.sha256(firma).hexdigest() != obj.get("sha256_firma"):
+        raise ValueError("paquete_huella")
+    if not datos or not firma:
+        raise ValueError("paquete_vacio")
+    return datos, firma
+
+
 # --- Feed v2 (Etapa 2, rama candidata) --------------------------------------
 #
 # Cambios respecto a v1, todos DENTRO de lo firmado (el JSON canonico entero):

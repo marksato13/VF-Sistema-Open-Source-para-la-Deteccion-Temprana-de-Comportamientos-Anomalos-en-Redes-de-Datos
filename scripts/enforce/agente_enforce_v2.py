@@ -301,11 +301,34 @@ def _huella(ruta: Path) -> tuple:
     return (st.st_ino, st.st_mtime_ns, st.st_size)
 
 
+def leer_generacion(a) -> tuple[tuple, bytes, bytes] | tuple[tuple, None, str]:
+    """(huella, feed, firma) de la generacion visible, o (huella, None, motivo) si el paquete no es integro.
+
+    Con ``--paquete`` (P4, 2026-11-06) se abre UN fichero una sola vez: el relé lo publica con un rename, asi que
+    el descriptor abierto ve una generacion completa aunque llegue otra a la vez (el rename no altera el inodo ya
+    abierto). Sin ``--paquete``, lo anterior: dos ficheros (puede verse una pareja a medias; la firma falla).
+    OSError si no hay nada que leer."""
+    if a.paquete is not None:
+        with a.paquete.open("rb") as fh:
+            hu_fd = os.fstat(fh.fileno())
+            bruto = fh.read()
+        hu = (hu_fd.st_ino, hu_fd.st_mtime_ns, hu_fd.st_size)
+        try:
+            datos, firma = feed.desempaquetar(bruto)
+        except ValueError as exc:
+            return (hu,), None, str(exc)
+        return (hu,), datos, firma
+    mt = (_huella(a.feed), _huella(a.firma))
+    return mt, _leer(a.feed), _leer(a.firma)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--perfil", choices=sorted(PERFILES), required=True)
-    p.add_argument("--feed", type=Path, required=True)
-    p.add_argument("--firma", type=Path, required=True)
+    p.add_argument("--feed", type=Path)
+    p.add_argument("--firma", type=Path)
+    p.add_argument("--paquete", type=Path, default=None,
+                   help="feed.par (feed + firma en un fichero, relé --entrega paquete); excluye --feed/--firma")
     p.add_argument("--clave-publica", type=Path, required=True)
     p.add_argument("--estado", type=Path, required=True)
     p.add_argument("--traza", type=Path, default=None)
@@ -320,28 +343,35 @@ def main(argv=None) -> int:
                    help="--seguir: reintento del MISMO feed si el helper fallo (sin otra publicacion)")
     p.add_argument("--max-iteraciones", type=int, default=0)
     a = p.parse_args(argv)
+    if (a.paquete is not None and (a.feed is not None or a.firma is not None)) or \
+            (a.paquete is None and (a.feed is None or a.firma is None)):
+        p.error("usar --paquete, o --feed y --firma (no ambos)")
     ag = Agente(a)
     ultima_huella = None
     ultima_obs = 0.0
     reintento = None  # (datos, firma, mtime, cuando)
     it = 0
     while True:
-        # Se vigilan los DOS ficheros (inodo, mtime, tamano): el rele los renombra uno
-        # tras otro; si se lee una pareja a medias la firma falla (fail-safe) y el
-        # renombrado del otro cambia la huella y repite la lectura.
+        # Pareja: se vigilan los DOS ficheros (inodo, mtime, tamano); si se lee una pareja a
+        # medias la firma falla (fail-safe) y el renombrado del otro repite la lectura.
+        # Paquete: un solo fichero, publicado con un rename; nunca hay pareja a medias.
         try:
-            mt = (_huella(a.feed), _huella(a.firma))
+            mt = (_huella(a.paquete),) if a.paquete is not None else (_huella(a.feed), _huella(a.firma))
         except OSError:
             mt = None
         if mt is not None and mt != ultima_huella:
             try:
-                datos, firma = _leer(a.feed), _leer(a.firma)
+                mt, datos, firma = leer_generacion(a)
             except OSError as exc:
                 ag.traza("rechazo", motivo="sin_feed", detalle=str(exc)[:120])
             else:
                 ultima_huella = mt
                 reintento = None
-                res = ag.procesar(datos, firma, mt[0][1] / 1e9)
+                if datos is None:  # paquete dañado o incompleto: nunca se acepta; no es firma_invalida
+                    ag.traza("rechazo", motivo="paquete_invalido", detalle=firma, recibido_en=time.time())
+                    res = {"estado": "rechazado", "motivo": "paquete_invalido"}
+                else:
+                    res = ag.procesar(datos, firma, mt[0][1] / 1e9)
                 if res["estado"] == "error_aplicacion":
                     reintento = (datos, firma, mt[0][1] / 1e9, time.time() + a.reintento_segundos)
                 if not a.seguir:

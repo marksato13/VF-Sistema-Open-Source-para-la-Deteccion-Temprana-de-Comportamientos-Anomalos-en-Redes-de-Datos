@@ -37,7 +37,7 @@ import tempfile
 import time
 from pathlib import Path
 
-VERSION = "2026-11-02.1"
+VERSION = "2026-11-06.1"  # .1 (06-nov): clases con Suricata por EVE stats + I5 informativo; reglas sin cambios
 UNIDADES = ("ppi-motor", "ppi-motor-capture", "ppi-via-rapida@ens37", "suricata")
 CRIT = {
     "intervalo_s": 60.0,          # una ronda por minuto (como la vigilancia de b01)
@@ -97,8 +97,16 @@ def obs_sensor(a) -> dict:
     r["archivador"] = sc.leer_archivador(Path(a.archivador))
     r["eve"] = eve_fuera_lista(Path(a.eve), a.eve_cursor, a.origen, set(a.lista_blanca.split(",")),
                                a.eve_max_bytes)
+    eves = eves_presentes(Path(a.eve))
+    # Informativo (no es una regla de pausa nueva: P1–P5 y X1–X3 no cambian): estado de I5 con la medida EVE.
+    try:
+        i5 = sc.comprobar_i5(sc.leer_eve_stats(eves, desde=ahora - 1920), ahora, 1800.0)
+        r["i5_informativo"] = {"i5": i5["i5"], "estado": i5["medida"]["estado"],
+                               "descartes": i5["medida"].get("descartes"), "motivos": i5["medida"]["motivos"][:3]}
+    except Exception as e:  # noqa: BLE001 - informativo: nunca tumba la ronda
+        r["i5_informativo"] = {"i5": "no_demostrable", "motivo": e.__class__.__name__}
     if a.muestras and a.clasificar:
-        r["clases"] = clasificar_episodios(sc, Path(a.muestras), a.clasificar, a.journalctl)
+        r["clases"] = clasificar_episodios(sc, Path(a.muestras), a.clasificar, a.journalctl, eves)
     return r
 
 
@@ -142,7 +150,18 @@ def eve_fuera_lista(eve: Path, cursor: int, origen: str, blanca: set[str], max_b
             "fuera_total": len(fuera)}
 
 
-def clasificar_episodios(sc, muestras: Path, pedidos: list[str], journalctl: str) -> dict:
+def eves_presentes(eve: Path) -> list[Path]:
+    """eve.json y su rotado inmediato (.1, o .1.gz si ya se comprimió): cubren un periodo que cruza la rotación."""
+    out = [eve]
+    for r in (eve.with_name(eve.name + ".1"), eve.with_name(eve.name + ".1.gz")):
+        if r.exists():
+            out.append(r)
+            break
+    return out
+
+
+def clasificar_episodios(sc, muestras: Path, pedidos: list[str], journalctl: str,
+                         eves: list[Path] | None = None) -> dict:
     out = {}
     try:
         ms = sc._leer_jsonl(muestras)
@@ -165,8 +184,12 @@ def clasificar_episodios(sc, muestras: Path, pedidos: list[str], journalctl: str
                 td = sc.leer_tcpdump_log(Path(fh.name))
             finally:
                 os.unlink(fh.name)
-            r = sc.clasificar(incs, td, de, ha, dict(sc.CRITERIOS))
-            out[ep] = {"clase": r["clase"], "motivos": r.get("motivos", [])[:5]}
+            se = None
+            if eves:  # 2026-11-06.1: Suricata por EVE stats (sin EVE legible la medida es error_lectura -> C3)
+                se = sc.medida_suricata_eve(sc.leer_eve_stats(eves, desde=de), de, ha, time.time())
+            r = sc.clasificar(incs, td, de, ha, dict(sc.CRITERIOS), suricata_eve=se)
+            out[ep] = {"clase": r["clase"], "motivos": r.get("motivos", [])[:5],
+                       "suricata": None if se is None else {k: se.get(k) for k in ("estado", "paquetes", "descartes")}}
         except (OSError, subprocess.TimeoutExpired, ValueError) as e:
             out[ep] = {"clase": "C3", "motivo": f"{e.__class__.__name__}"}
     return out

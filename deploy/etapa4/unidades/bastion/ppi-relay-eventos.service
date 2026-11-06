@@ -5,6 +5,8 @@
 # que siguen sirviendo al relé v1 y a las lecturas):
 #   cyberflow-feed-v2-sensor  -> m4rk@Sensor1 con command="cf-feed-ssh.sh servir /home/m4rk/feed-v2",restrict
 #   cyberflow-feed-v2-srv     -> cffeed@srv-dmz con command="cf-feed-ssh.sh recibir /var/lib/cyberflow/feed",restrict
+# P4 (2026-11-06): --entrega paquete (feed + firma en un fichero, UN rename en srv-dmz). Exige el cf-feed-ssh.sh
+# nuevo en srv-dmz (admite .feed.par.tmp y su mv). Reversión: unidad anterior del respaldo (entrega por pareja).
 Description=CyberFlow - rele por eventos del feed v2 (sensor -> srv-dmz), via bastion (Etapa 4)
 After=network-online.target
 
@@ -16,7 +18,7 @@ ExecStart=/usr/bin/python3 -I /opt/cyberflow/relay-v2/relay_eventos.py \
     --origen m4rk@10.10.60.11:/home/m4rk/feed-v2,/home/gadmin/.ssh/cyberflow-feed-v2-sensor \
     --destino srv-dmz=cffeed@10.10.30.10:/var/lib/cyberflow/feed,/home/gadmin/.ssh/cyberflow-feed-v2-srv \
     --clave-publica /opt/cyberflow/relay-v2/pub.pem \
-    --traza /home/gadmin/relay-v2/traza.jsonl --sondeo-segundos 1
+    --traza /home/gadmin/relay-v2/traza.jsonl --sondeo-segundos 1 --entrega paquete
 Restart=always
 RestartSec=2
 

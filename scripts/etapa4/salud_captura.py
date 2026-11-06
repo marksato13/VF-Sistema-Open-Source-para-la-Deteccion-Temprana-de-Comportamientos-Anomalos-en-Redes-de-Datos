@@ -18,10 +18,14 @@ Fuentes y contadores (unidades):
                (paquetes; acumulados desde el arranque de Suricata, todos los hilos: ``totals: yes``)
                y el uptime de la línea ``Date:`` (s). Alcance: socket AF_PACKET de Suricata en la
                interfaz del espejo. No ve pérdidas anteriores (switch, SPAN, hipervisor).
+  suricata_eve eventos ``stats`` de eve.json (2026-11-06.1, sustituye a stats.log para clasificar): ver
+               ``medida_suricata_eve``. stats.log se sigue pudiendo muestrear, pero ya no decide la clase si se
+               da ``--suricata-eve``.
   interfaz     /sys/class/net/<if>/statistics: rx_packets, rx_dropped, rx_missed_errors,
                rx_fifo_errors, rx_over_errors (tramas, acumulados desde el arranque del sistema).
-               rx_dropped NO es pérdida de captura: en este laboratorio incluye tramas que la pila no
-               entrega a ningún protocolo (p. ej. VLAN sin subinterfaz). Se informa sin clasificar.
+               Cada contador se informa por separado y SIN clasificar. Qué cuenta rx_dropped en esta
+               interfaz (vmxnet3) no está determinado (pendiente P3 del cierre 4A): no se atribuye a una
+               causa concreta ni se presenta como pérdida del tráfico evaluado.
   unidades     systemctl show: MainPID, NRestarts, ActiveState, ExecMainStartTimestampMonotonic.
   anillo       ficheros live-YYYYmmddHHMMSS.pcap: número, el más nuevo, y el mayor salto entre
                inicios consecutivos de los últimos ``--anillo-ultimos`` (s).
@@ -52,7 +56,8 @@ import sys
 import time
 from pathlib import Path
 
-VERSION = "2026-11-02.2"  # .2: cobertura SIGUSR1 completa (huecos, extremos, PID, contadores); antes bastaban 2 lecturas
+VERSION = "2026-11-06.1"  # .1 (06-nov): Suricata por EVE stats (cero explícito, ausente, desactualizada, error,
+#                           cobertura, identidad de proceso). 2026-11-02.2: cobertura SIGUSR1 completa.
 
 # ---------------------------------------------------------------- lectura de fuentes
 
@@ -97,6 +102,249 @@ def leer_stats_suricata(path: Path, cola_bytes: int = 1 << 20) -> dict:
                     "kernel_packets": c["capture.kernel_packets"], "kernel_drops": c["capture.kernel_drops"],
                     "decoder_pkts": c.get("decoder.pkts")}
     return _no("sin bloque con capture.kernel_drops en la cola del fichero")
+
+
+# ---------------------------------------------------------------- Suricata por EVE stats (2026-11-06.1)
+#
+# Por qué (cierre complementario 4A, P1): Suricata 7 escribe stats.log con ``null-values: no`` (por omisión), que
+# OMITE los contadores a cero. Con 0 descartes, ``capture.kernel_drops`` no aparece en ningún bloque reciente y
+# ``leer_stats_suricata`` devolvía el último bloque antiguo que sí lo tenía: «mismo bloque» o sin medida -> C3.
+# Los eventos ``stats`` de EVE (cada ``stats.interval`` = 8 s) escriben SIEMPRE ``capture.kernel_drops``, también a
+# cero, junto con ``stats.uptime``. Se prefiere leer EVE a cambiar la configuración de Suricata (no hace falta
+# reiniciarlo, no cambia el YAML 0962ce68 ni el ensayo del anillo).
+#
+# Estados de la medida de un periodo (nunca se convierte una ausencia en cero):
+#   cero_explicito          cobertura completa, un solo proceso, kernel_drops presente en todas las muestras, Δ = 0
+#   descartes               igual, con Δ kernel_drops > 0
+#   ausente                 hay muestras, pero falta kernel_drops o kernel_packets en alguna del tramo
+#   desactualizada          la fuente dejó de producir muestras (última > eve_max_hueco_s antes de «ahora») o el
+#                           uptime no avanza entre muestras (contadores congelados)
+#   error_lectura           fichero no legible, línea stats corrupta en mitad del fichero, dos muestras con la misma
+#                           hora y valores distintos, o contador que decrece dentro del mismo proceso
+#   cobertura_insuficiente  sin muestra en [desde − borde, desde] o en [hasta, hasta + borde], hueco > eve_max_hueco_s,
+#                           o reinicio de Suricata dentro del tramo (no se mezclan bloques de procesos distintos)
+# Identidad del proceso: arranque estimado = t − uptime. Dos muestras son del mismo proceso si su arranque estimado
+# difiere <= eve_tolerancia_arranque_s y el uptime crece. Un proceso nuevo NUNCA reutiliza bloques del anterior.
+
+CRITERIOS_EVE = {
+    # Fijados el 2026-11-06 ANTES de la observación técnica de integración; no se ajustan con sus resultados.
+    "eve_intervalo_s": 8.0,              # stats.interval del suricata.yaml desplegado (0962ce68…)
+    "eve_max_hueco_s": 20.0,             # 2 intervalos + 4 s: más separadas = tramo sin medida
+    "eve_borde_s": 10.0,                 # muestra que acota cada extremo: a <= 10 s fuera del periodo
+    "eve_tolerancia_arranque_s": 3.0,    # uptime entero (s) + jitter de escritura
+}
+
+_AGUJA_STATS = b'"event_type":"stats"'
+
+
+def _t_eve(ts: str) -> float:
+    # "2026-11-06T03:15:10.368372+0000"
+    return dt.datetime.strptime(ts[:26] + ts[-5:], "%Y-%m-%dT%H:%M:%S.%f%z").timestamp()
+
+
+def _muestra_eve(linea: bytes) -> dict:
+    e = json.loads(linea)
+    st = e["stats"]
+    cap = st.get("capture") if isinstance(st.get("capture"), dict) else {}
+    def ent(v):
+        return int(v) if isinstance(v, int) and not isinstance(v, bool) and v >= 0 else None
+    return {"t": _t_eve(e["timestamp"]), "uptime_s": ent(st.get("uptime")),
+            "kernel_packets": ent(cap.get("kernel_packets")), "kernel_drops": ent(cap.get("kernel_drops"))}
+
+
+def _abrir(path: Path):
+    import gzip
+    return gzip.open(path, "rb") if path.suffix == ".gz" else path.open("rb")
+
+
+def leer_eve_stats(rutas: list[Path], desde: float | None = None, bloque: int = 4 << 20) -> dict:
+    """Muestras ``stats`` de uno o varios EVE (actual y rotados, .gz admitido), ordenadas y sin repetidas.
+
+    Con ``desde`` y fichero sin comprimir se lee por bloques DESDE EL FINAL y se para cuando el bloque ya empieza
+    antes de ``desde`` (el EVE diario puede pasar de 400 MB). Una línea stats que no se puede interpretar cuenta
+    como ``parcial`` si es la última del fichero sin salto de línea (escritura en curso o corte de copytruncate) y
+    como ``invalida`` en cualquier otro sitio."""
+    res = {"ok": True, "muestras": [], "errores": [], "parciales": 0, "invalidas": [], "repetidas": 0,
+           "conflictos": [], "ficheros": []}
+    crudas = []
+    for p in rutas:
+        p = Path(p)
+        info = {"ruta": str(p)}
+        try:
+            if p.suffix != ".gz" and desde is not None:
+                lineas, completo = _cola_desde(p, desde, bloque)
+            else:
+                with _abrir(p) as fh:
+                    datos = fh.read()
+                lineas, completo = datos.split(b"\n"), True
+            info["tam"] = p.stat().st_size
+        except (OSError, EOFError) as e:
+            res["ok"] = False
+            res["errores"].append(f"{p}: no legible ({e.__class__.__name__})")
+            res["ficheros"].append(info)
+            continue
+        n = 0
+        ult = len(lineas) - 1
+        for i, l in enumerate(lineas):
+            if _AGUJA_STATS not in l:
+                continue
+            try:
+                m = _muestra_eve(l)
+            except (ValueError, KeyError, TypeError):
+                if i == ult and l.strip():
+                    res["parciales"] += 1          # última línea sin '\n': se leerá entera en la siguiente lectura
+                elif i == 0 and not completo:
+                    pass                           # primera línea de un bloque leído desde el final: cortada a propósito
+                else:
+                    res["invalidas"].append(f"{p}: línea stats no interpretable")
+                continue
+            m["fuente"] = p.name
+            crudas.append(m)
+            n += 1
+        info["muestras"] = n
+        res["ficheros"].append(info)
+    crudas.sort(key=lambda m: (m["t"], m["uptime_s"] or -1))
+    for m in crudas:
+        if res["muestras"] and res["muestras"][-1]["t"] == m["t"]:
+            a = res["muestras"][-1]
+            if all(a[k] == m[k] for k in ("uptime_s", "kernel_packets", "kernel_drops")):
+                res["repetidas"] += 1              # misma muestra en dos ficheros (copytruncate) o leída dos veces
+            else:
+                res["conflictos"].append(m["t"])
+            continue
+        res["muestras"].append(m)
+    return res
+
+
+def _cola_desde(p: Path, desde: float, bloque: int) -> tuple[list[bytes], bool]:
+    """Líneas del final del fichero hasta cubrir ``desde`` (con una muestra anterior). (líneas, leído_entero)."""
+    with p.open("rb") as fh:
+        fh.seek(0, os.SEEK_END)
+        tam = fh.tell()
+        pos, datos = tam, b""
+        while pos > 0:
+            pos = max(0, pos - bloque)
+            fh.seek(pos)
+            datos = fh.read(tam - pos)
+            primera = None
+            for l in datos.split(b"\n")[1:]:       # la primera puede estar cortada
+                if _AGUJA_STATS in l:
+                    try:
+                        primera = _t_eve(json.loads(l)["timestamp"])
+                    except (ValueError, KeyError, TypeError):
+                        continue
+                    break
+            if primera is not None and primera < desde - CRITERIOS_EVE["eve_max_hueco_s"]:
+                break
+        return datos.split(b"\n"), pos == 0
+
+
+def medida_suricata_eve(lect: dict, desde: float, hasta: float, ahora: float, crit: dict | None = None) -> dict:
+    """Medida de Suricata en [desde, hasta] a partir de ``leer_eve_stats``. Ver los estados arriba."""
+    c = dict(CRITERIOS_EVE, **(crit or {}))
+    res = {"fuente": "eve_stats", "version": VERSION, "periodo": [desde, hasta], "estado": None, "motivos": [],
+           "paquetes": None, "descartes": None, "descartes_parciales": None, "criterios": c,
+           "repetidas": lect.get("repetidas", 0), "parciales": lect.get("parciales", 0)}
+    def fin(estado, *mot):
+        res["estado"] = estado
+        res["motivos"].extend(mot)
+        return res
+    if not lect.get("ok"):
+        return fin("error_lectura", *lect.get("errores", []))
+    ms = lect["muestras"]
+    if lect.get("invalidas"):
+        return fin("error_lectura", f"{len(lect['invalidas'])} línea(s) stats no interpretables en mitad del EVE")
+    if lect.get("conflictos"):
+        return fin("error_lectura", f"{len(lect['conflictos'])} muestra(s) con la misma hora y valores distintos")
+    if not ms:
+        return fin("ausente", "el EVE no tiene eventos stats")
+    borde, hueco_max, tol = c["eve_borde_s"], c["eve_max_hueco_s"], c["eve_tolerancia_arranque_s"]
+    ultima = ms[-1]["t"]
+    res["ultima_muestra"] = ultima
+    a = [m for m in ms if desde - borde <= m["t"] <= desde]
+    b = [m for m in ms if hasta <= m["t"] <= hasta + borde]
+    if not b and ultima < hasta and ahora - ultima > hueco_max:
+        return fin("desactualizada", f"la última muestra stats es de hace {round(ahora - ultima, 1)} s "
+                                     f"(> {hueco_max} s) y no llega al fin del periodo")
+    if not a or not b:
+        return fin("cobertura_insuficiente",
+                   *(["sin muestra stats en [desde − %g s, desde]" % borde] if not a else []),
+                   *(["sin muestra stats en [hasta, hasta + %g s]" % borde] if not b else []))
+    ma, mb = a[-1], b[0]
+    tramo = [m for m in ms if ma["t"] <= m["t"] <= mb["t"]]
+    res["acotado_por"] = [ma["t"], mb["t"]]
+    res["muestras"] = len(tramo)
+    huecos = [(round(y["t"] - x["t"], 1), x["t"]) for x, y in zip(tramo, tramo[1:]) if y["t"] - x["t"] > hueco_max]
+    faltan = [m["t"] for m in tramo if m["kernel_drops"] is None or m["kernel_packets"] is None or m["uptime_s"] is None]
+    # procesos: arranque estimado t − uptime estable y uptime creciente
+    procesos, congeladas, decrecen = [], 0, 0
+    for x, y in zip(tramo, tramo[1:]):
+        if None in (x["uptime_s"], y["uptime_s"]):
+            continue
+        mismo = abs((y["t"] - y["uptime_s"]) - (x["t"] - x["uptime_s"])) <= tol and y["uptime_s"] >= x["uptime_s"]
+        if y["uptime_s"] == x["uptime_s"] and y["t"] - x["t"] > tol:
+            congeladas += 1
+        elif not mismo:
+            procesos.append(y["t"])
+        elif None not in (x["kernel_drops"], y["kernel_drops"], x["kernel_packets"], y["kernel_packets"]) and \
+                (y["kernel_drops"] < x["kernel_drops"] or y["kernel_packets"] < x["kernel_packets"]):
+            decrecen += 1
+    res["reinicios"] = procesos
+    res["arranque_estimado"] = sorted({round(m["t"] - m["uptime_s"]) for m in tramo if m["uptime_s"] is not None})
+    # descartes observados entre muestras compatibles (informativo aunque la cobertura falle)
+    parc = 0
+    for x, y in zip(tramo, tramo[1:]):
+        if None in (x["kernel_drops"], y["kernel_drops"], x["uptime_s"], y["uptime_s"]):
+            continue
+        if abs((y["t"] - y["uptime_s"]) - (x["t"] - x["uptime_s"])) <= tol and y["kernel_drops"] > x["kernel_drops"]:
+            parc += y["kernel_drops"] - x["kernel_drops"]
+    res["descartes_parciales"] = parc
+    if decrecen:
+        return fin("error_lectura", f"{decrecen} contador(es) que decrecen sin cambio de proceso")
+    if faltan:
+        return fin("ausente", f"{len(faltan)} muestra(s) del tramo sin kernel_drops/kernel_packets/uptime")
+    if congeladas:
+        return fin("desactualizada", f"{congeladas} par(es) de muestras con el mismo uptime: contadores congelados")
+    mot = []
+    if procesos:
+        mot.append(f"reinicio de Suricata dentro del tramo ({len(procesos)}): no se mezclan procesos")
+    if huecos:
+        h = max(huecos)
+        mot.append(f"{len(huecos)} hueco(s) entre muestras stats > {hueco_max} s (máximo {h[0]} s desde {h[1]})")
+    if mot:
+        return fin("cobertura_insuficiente", *mot)
+    res["paquetes"] = mb["kernel_packets"] - ma["kernel_packets"]
+    res["descartes"] = mb["kernel_drops"] - ma["kernel_drops"]
+    res["intervalos_con_descartes"] = [[x["t"], y["t"], y["kernel_drops"] - x["kernel_drops"]]
+                                       for x, y in zip(tramo, tramo[1:]) if y["kernel_drops"] > x["kernel_drops"]][:50]
+    if res["descartes"] > 0:
+        return fin("descartes", f"Suricata: {res['descartes']} descartes de {res['paquetes']} paquetes")
+    return fin("cero_explicito")
+
+
+def comprobar_i5(lect: dict, ahora: float, ventana_s: float = 1800.0, crit: dict | None = None) -> dict:
+    """I5 (SALUD-CAPTURA §4.1, solo 4C): 0 kernel_drops de Suricata en los ``ventana_s`` previos.
+
+    El periodo termina en la última muestra stats (no en «ahora»: la muestra de «ahora» aún no existe) y exige que
+    esa muestra sea reciente (<= eve_max_hueco_s). cumple = cero_explicito; no_cumple = descartes (o descartes
+    parciales observados); no_demostrable = cualquier otro estado. Solo «cumple» permite iniciar la 4C."""
+    c = dict(CRITERIOS_EVE, **(crit or {}))
+    ms = lect.get("muestras") or []
+    if not lect.get("ok") or not ms:
+        med = medida_suricata_eve(lect, ahora - ventana_s, ahora, ahora, c)
+    else:
+        hasta = ms[-1]["t"]
+        med = medida_suricata_eve(lect, hasta - ventana_s, hasta, ahora, c)
+        if ahora - hasta > c["eve_max_hueco_s"]:
+            med["estado"] = "desactualizada"
+            med["motivos"].append(f"última muestra stats de hace {round(ahora - hasta, 1)} s")
+    if med["estado"] == "cero_explicito":
+        dec = "cumple"
+    elif med["estado"] == "descartes" or (med.get("descartes_parciales") or 0) > 0:
+        dec = "no_cumple"
+    else:
+        dec = "no_demostrable"
+    return {"i5": dec, "ventana_s": ventana_s, "medida": med}
 
 
 CAMPOS_IF = ("rx_packets", "rx_dropped", "rx_missed_errors", "rx_fifo_errors", "rx_over_errors")
@@ -476,8 +724,13 @@ def cobertura_tcpdump(lecturas: list[dict], desde: float, hasta: float, crit: di
     return res
 
 
-def clasificar(incs: list[dict], tcpdump: list[dict], desde: float, hasta: float, crit: dict) -> dict:
-    """Clase del periodo según OBJETIVOS-Y-CRITERIOS §6.1, con la cota conservadora de las muestras."""
+def clasificar(incs: list[dict], tcpdump: list[dict], desde: float, hasta: float, crit: dict,
+               suricata_eve: dict | None = None) -> dict:
+    """Clase del periodo según OBJETIVOS-Y-CRITERIOS §6.1, con la cota conservadora de las muestras.
+
+    ``suricata_eve`` (resultado de ``medida_suricata_eve`` para el MISMO periodo): si se da, decide la parte de
+    Suricata en lugar de stats.log. cero_explicito -> nada; descartes -> C1; cualquier otro estado -> C3 con su
+    nombre. Sin él, se conserva el comportamiento de 2026-11-02.2 (stats.log), para reproducir lo histórico."""
     previos = [i for i in incs if i["desde"] <= desde]
     if not previos:
         return {"clase": "insuficiente", "motivos": ["ninguna muestra anterior o igual al inicio del periodo"]}
@@ -497,15 +750,27 @@ def clasificar(incs: list[dict], tcpdump: list[dict], desde: float, hasta: float
     if reinicios:
         motivos_c3.append("reinicio o parada: " + ", ".join(reinicios))
     # suricata
-    s_ok = [i["suricata"] for i in tramo if i.get("suricata", {}).get("ok")]
-    s_no = [i for i in tramo if "suricata" in i and not i["suricata"].get("ok")]
-    if s_no or not s_ok:
-        motivos_c3.append("Suricata sin medida completa en el periodo")
-    dd = sum(s["descartes"] for s in s_ok)
-    dp = sum(s["paquetes"] for s in s_ok)
-    info["suricata"] = {"paquetes": dp, "descartes": dd, "intervalos": len(s_ok)}
-    if dd > 0:
-        motivos_c1.append(f"Suricata: {dd} descartes de {dp} paquetes")
+    if suricata_eve is not None:
+        se = suricata_eve
+        info["suricata"] = {"fuente": "eve_stats", "estado": se.get("estado"), "paquetes": se.get("paquetes"),
+                            "descartes": se.get("descartes"), "descartes_parciales": se.get("descartes_parciales"),
+                            "acotado_por": se.get("acotado_por"), "motivos": se.get("motivos")}
+        if [round(x, 3) for x in se.get("periodo") or []] != [round(desde, 3), round(hasta, 3)]:
+            motivos_c3.append("Suricata (EVE): la medida dada no es del mismo periodo")
+        elif se.get("estado") == "descartes":
+            motivos_c1.append(f"Suricata (EVE): {se['descartes']} descartes de {se['paquetes']} paquetes")
+        elif se.get("estado") != "cero_explicito":
+            motivos_c3.append(f"Suricata (EVE) {se.get('estado')}: " + "; ".join(se.get("motivos") or []))
+    else:
+        s_ok = [i["suricata"] for i in tramo if i.get("suricata", {}).get("ok")]
+        s_no = [i for i in tramo if "suricata" in i and not i["suricata"].get("ok")]
+        if s_no or not s_ok:
+            motivos_c3.append("Suricata sin medida completa en el periodo")
+        dd = sum(s["descartes"] for s in s_ok)
+        dp = sum(s["paquetes"] for s in s_ok)
+        info["suricata"] = {"fuente": "stats.log", "paquetes": dp, "descartes": dd, "intervalos": len(s_ok)}
+        if dd > 0:
+            motivos_c1.append(f"Suricata: {dd} descartes de {dp} paquetes")
     # anillo
     saltos = [i["anillo"]["salto_max_s"] for i in tramo if i.get("anillo", {}).get("ok")
               and i["anillo"].get("salto_max_s") is not None]
@@ -596,7 +861,26 @@ def main(argv=None) -> int:
     c.add_argument("--desde", type=_t, required=True)
     c.add_argument("--hasta", type=_t, required=True)
     c.add_argument("--rotacion", type=float, default=CRITERIOS["rotacion_s"])
+    c.add_argument("--suricata-eve", type=Path, action="append", default=[],
+                   help="eve.json y sus rotados: Suricata se mide por EVE stats (2026-11-06.1)")
+    e = sub.add_parser("suricata-eve", help="medida de Suricata en [desde, hasta] por EVE stats (JSON)")
+    e.add_argument("--eve", type=Path, action="append", required=True)
+    e.add_argument("--desde", type=_t, required=True)
+    e.add_argument("--hasta", type=_t, required=True)
+    i5 = sub.add_parser("i5", help="I5: 0 kernel_drops en la ventana previa. rc 0 cumple, 1 no cumple, 2 no demostrable")
+    i5.add_argument("--eve", type=Path, action="append", required=True)
+    i5.add_argument("--ventana", type=float, default=1800.0)
     a = p.parse_args(argv)
+    if a.cmd == "suricata-eve":
+        res = medida_suricata_eve(leer_eve_stats(a.eve, desde=a.desde), a.desde, a.hasta, time.time())
+        print(json.dumps(res, indent=1, sort_keys=True, ensure_ascii=False))
+        return 0
+    if a.cmd == "i5":
+        ahora = time.time()
+        res = comprobar_i5(leer_eve_stats(a.eve, desde=ahora - a.ventana - 120), ahora, a.ventana)
+        res["evaluado_en"] = ahora
+        print(json.dumps(res, indent=1, sort_keys=True, ensure_ascii=False))
+        return {"cumple": 0, "no_cumple": 1}.get(res["i5"], 2)
     if a.cmd == "muestrear":
         import contextlib
         destino = (contextlib.nullcontext(sys.stdout) if str(a.salida) == "-"
@@ -625,8 +909,12 @@ def main(argv=None) -> int:
             print(f"error: --tcpdump-log no legible: {f}", file=sys.stderr)
             return 2
     td = [r for f in a.tcpdump_log for r in leer_tcpdump_log(f)]
-    res = clasificar(_leer_jsonl(a.incrementos), td, a.desde, a.hasta, crit)
-    res["criterios"] = crit
+    se = None
+    if a.suricata_eve:
+        se = medida_suricata_eve(leer_eve_stats(a.suricata_eve, desde=a.desde), a.desde, a.hasta, time.time())
+    res = clasificar(_leer_jsonl(a.incrementos), td, a.desde, a.hasta, crit, suricata_eve=se)
+    res["criterios"] = dict(crit, **(CRITERIOS_EVE if se is not None else {}))
+    res["version"] = VERSION
     print(json.dumps(res, indent=1, sort_keys=True))
     return 0
 
