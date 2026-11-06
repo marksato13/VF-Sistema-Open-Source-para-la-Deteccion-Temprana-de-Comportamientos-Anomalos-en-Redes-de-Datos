@@ -8,10 +8,11 @@ las salidas REALES de la ventana, con un fichero de trazabilidad por cada valor.
       --perfiles      DIR/perfiles.json --perfiles-rc N         evaluar_ecarga.py perfiles (y su rc)
       --bastion       DIR/bastion_s.json                        derivar_bastion.py
       --pcap          DIR/pcap_s.json                           derivar_pcap.py 2026-11-06.2
-      --s14           DIR/s14.json                              evaluar_s14.py (r3 §3.6.1)
+      --s14           DIR/s14.json                              evaluar_s14.py 2026-11-06.2 (r3 §3.6.1, r4 §3.6.1.1)
       [--manual S7=true:FICHERO] [--manual S11=…] [--manual S15=…]
 
-VERSION 2026-11-06.2: S14 sale de evaluar_s14.py (ya no es manual); S2/S3 exigen derivar_pcap 2026-11-06.2 (la .1
+VERSION 2026-11-06.3: exige evaluar_s14 2026-11-06.2 (la .1 no contaba el hueco anterior a una saturación y
+daba S14 true con un episodio posible de 8 s). VERSION 2026-11-06.2: S14 sale de evaluar_s14.py (ya no es manual); S2/S3 exigen derivar_pcap 2026-11-06.2 (la .1
 aprobaba observaciones incompletas) y copian su motivo a la trazabilidad.
       --salida-entrada entrada.json --salida-traza trazabilidad.json
 
@@ -37,9 +38,9 @@ MEDIDOS = ("cero_explicito", "descartes")
 MANUALES = ("S7", "S11", "S15")
 K = ("K1", "K2", "K3", "K4a", "K5")
 S = tuple(f"S{i}" for i in range(1, 16))
-VERSION = "construir_entrada 2026-11-06.2"
+VERSION = "construir_entrada 2026-11-06.3"
 VERSIONES_FUENTE = {"pcap": "derivar_pcap 2026-11-06.2", "bastion": "derivar_bastion 2026-11-06.2",
-                    "s14": "evaluar_s14 2026-11-06.1"}
+                    "s14": "evaluar_s14 2026-11-06.2"}
 
 
 def sha(p):

@@ -355,7 +355,7 @@ def test_regresion_lecturas_fallidas_se_escriben_error(lab):
     lab.marca("sudo_falla")                  # sudo -n sin permiso: nft y grep de la traza fallan
     lab.unidad("ppi-enforce-agent-v2-dmz.service", LoadState="loaded", ActiveState="active", SubState="running",
                MainPID="999999", NRestarts="0")   # PID ilegible
-    rc, o, leer, jl, out = muestreo(lab, "seco", 0)
+    rc, o, leer, jl, out = muestreo(lab, "seco", 2)   # margen: con FIN = segundo actual, el bucle podía no muestrear nada
     m = leer("muestras.txt")
     assert "S ruleset=ERROR" in m, m
     assert "ruleset=ERROR" in [l for l in m.splitlines() if l.startswith("D aplicacion")][0]
@@ -365,14 +365,14 @@ def test_regresion_lecturas_fallidas_se_escriben_error(lab):
 
 def test_agente_sin_proceso_da_aplicar_cero(lab):
     lab.marca("ejecutar_remoto")
-    rc, o, leer, jl, out = muestreo(lab, "seco", 0)
+    rc, o, leer, jl, out = muestreo(lab, "seco", 2)   # margen: con FIN = segundo actual, el bucle podía no muestrear nada
     m = leer("muestras.txt")
     assert "aplicar_cmd=0" in m and "enforce_aplicar=" in m and "enforce_aplicar=ERROR" not in m, m
 
 
 def test_ssh_caido_en_lectura_se_registra(lab):
     lab.marca("ssh_falla_clientes")
-    rc, o, leer, jl, out = muestreo(lab, "seco", 0)
+    rc, o, leer, jl, out = muestreo(lab, "seco", 2)   # margen: con FIN = segundo actual, el bucle podía no muestrear nada
     assert "C ERROR rc=255" in leer("muestras.txt")
 
 
@@ -675,6 +675,127 @@ def test_s14_base_saturada_o_ausente():
     assert r["componentes"]["cpu"]["valor"] is None and "no evaluable" in r["componentes"]["cpu"]["motivo"]
 
 
+# ------------------------------------------------------------------------------------------------ S14: tiempo desconocido
+# Semántica de la serie sintética: la tasa de f(t) vale para el par (t, t+1). Un campo ausente en las muestras
+# t ∈ [a, b) invalida los pares (a-1, a) … (b-1, b): intervalo desconocido U = [a-1, b). Un par válido no saturado (N)
+# es evidencia de que no hubo saturación. Duración posible de un tramo = fin − inicio de la sucesión S/U contigua.
+def falla_en(campo, a, b, valor=None):
+    def g(t, m):
+        if a <= t < b:
+            m[campo] = valor
+    return g
+
+
+def tasas(*tramos, **r):
+    return lambda t: r if any(D + x <= t < D + y for x, y in tramos) else {}
+
+
+SAT_CPU = dict(cpu=100, psi_cpu=50)
+# (id, tramos saturados [x, y) relativos a D, muestras sin psi [a, b) relativas a D, cpu esperado, tramo posible)
+CASOS_TIEMPO = [
+    ("regresion-antes-repro-9s", [(100, 108)], (100, 103), None, "U[99,103)+S[103,108) = 9 s"),
+    ("antes-posible-7s", [(104, 109)], (103, 104), True, "U[102,104)+S[104,109) = 7 s"),
+    ("regresion-antes-posible-8s-exactos", [(104, 109)], (102, 104), None, "U[101,104)+S5 = 8 s"),
+    ("regresion-antes-posible-9s", [(104, 109)], (101, 104), None, "U[100,104)+S5 = 9 s"),
+    ("despues-posible-7s", [(100, 105)], (106, 107), True, "S5+U[105,107) = 7 s"),
+    ("despues-posible-8s", [(100, 106)], (107, 108), None, "S6+U[106,108) = 8 s"),
+    ("despues-posible-9s", [(100, 106)], (107, 109), None, "S6+U[106,109) = 9 s"),
+    ("dentro-posible-6s", [(100, 106)], (102, 103), True, "S1+U2+S3 = 6 s"),
+    ("dentro-posible-8s", [(100, 108)], (103, 104), None, "S2+U[102,104)+S4 = 8 s"),
+    ("dentro-posible-10s", [(100, 110)], (104, 106), None, "S3+U3+S4 = 10 s"),
+    ("dentro-demostrado-14s", [(100, 120)], (115, 116), False, "S[100,114) = 14 s demostrados"),
+    ("separados-por-N", [(100, 105), (106, 111)], (108, 109), True, "S5 | N[105,106) | S1+U2+S2 = 5 s: no se suman"),
+    ("hueco-aislado", [], (500, 502), True, "U[499,502) entre N"),
+    ("completo-sin-saturacion", [], (0, 0), True, "todo N"),
+    ("completo-demostrado-8s", [(100, 108)], (0, 0), False, "S8 sin datos ausentes"),
+]
+
+
+@pytest.mark.parametrize("sat,miss,esperado,explica", [c[1:] for c in CASOS_TIEMPO], ids=[c[0] for c in CASOS_TIEMPO])
+def test_s14_tiempo_desconocido(sat, miss, esperado, explica):
+    ls = completo(tasas(*sat, **SAT_CPU), extra=falla_en("psi", D + miss[0], D + miss[1]))
+    r = s14(ls)
+    c = r["componentes"]["cpu"]
+    assert c["valor"] is esperado, (explica, c["motivo"], c["ventana"])
+    assert c["ventana"]["cobertura"]["ok"], c["ventana"]["cobertura"]       # la cobertura sola no decide
+    assert r["S14"]["valor"] is (False if esperado is False else (None if esperado is None else True))
+    if esperado is None:
+        d = c["ventana"]["dudosos"]
+        assert d and d[0]["duracion_posible_s"] >= 8 and d[0]["desconocido_s"] > 0 and "no se puede negar" in c["motivo"]
+    if esperado is True:
+        assert not c["ventana"].get("dudosos") and not c["ventana"]["episodios"]
+
+
+def test_regresion_s14_borde_inicio_de_la_ventana():
+    # sin muestras en [D-2, D+2): el par (D-3, D+2) dura 5 s (> 4) y queda U; dentro de la ventana U[D, D+2)
+    r = s14(completo(tasas((2, 8), **SAT_CPU), quitar=[(D - 2, D + 2)]))
+    assert r["componentes"]["cpu"]["valor"] is None and r["S14"]["valor"] is None      # U2 + S6 = 8 s
+    r = s14(completo(tasas((1, 7), **SAT_CPU), quitar=[(D - 3, D + 1)]))
+    assert r["componentes"]["cpu"]["valor"] is True                                       # U1 + S6 = 7 s
+
+
+def test_s14_borde_fin_de_la_ventana():
+    # sin muestras en [H-2, H+2): par (H-3, H+2) no válido; dentro de la ventana U[H-3, H)
+    r = s14(completo(tasas((3591, 3597), **SAT_CPU), quitar=[(H - 2, H + 2)]))
+    assert r["componentes"]["cpu"]["valor"] is None                                       # S6 + U3 = 9 s
+    r = s14(completo(tasas((3593, 3597), **SAT_CPU), quitar=[(H - 2, H + 2)]))
+    assert r["componentes"]["cpu"]["valor"] is True                                       # S4 + U3 = 7 s
+
+
+EPISODIO_VENTANA = (100, 120)
+
+
+def _con_base(base_sat, extra=None, quitar=()):
+    f = lambda t: SAT_CPU if (D + EPISODIO_VENTANA[0] <= t < D + EPISODIO_VENTANA[1]
+                              or any(BD + x <= t < BD + y for x, y in base_sat)) else {}
+    return s14(completo(f, extra=extra, quitar=quitar))["componentes"]["cpu"]
+
+
+def test_s14_base_limpia_permite_afirmar_nueva():
+    c = _con_base([])
+    assert c["valor"] is False and "nueva" in c["motivo"]
+
+
+def test_regresion_s14_base_dudosa_por_hueco_antes():
+    # base: U[BD+10, BD+13) + S[BD+13, BD+18) = 8 s posibles; cobertura de la base 297/300 = 99 % (evaluable)
+    c = _con_base([(13, 18)], extra=falla_en("psi", BD + 11, BD + 13))
+    assert c["valor"] is None and "línea base dudosa" in c["motivo"], c["motivo"]
+    assert c["base"]["cobertura"]["ok"] and c["base"]["dudosos"] and not c["base"]["episodios"]
+
+
+def test_s14_base_dudosa_por_hueco_despues():
+    c = _con_base([(10, 15)], extra=falla_en("psi", BD + 16, BD + 18))     # S5 + U[BD+15, BD+18) = 8 s
+    assert c["valor"] is None and "línea base dudosa" in c["motivo"] and c["base"]["cobertura"]["ok"], c["motivo"]
+
+
+def test_regresion_s14_base_dudosa_en_su_borde_de_inicio():
+    c = _con_base([(2, 8)], quitar=[(BD - 2, BD + 2)])                        # U[BD, BD+2) + S6 = 8 s
+    assert c["valor"] is None and "línea base dudosa" in c["motivo"] and c["base"]["cobertura"]["ok"], c["motivo"]
+
+
+def test_s14_base_con_hueco_aislado_sigue_valiendo():
+    c = _con_base([], extra=falla_en("psi", BD + 100, BD + 102))
+    assert c["valor"] is False and not c["base"]["dudosos"]
+
+
+# (componente, campo que se anula, tasas de saturación): todos comparten analizar()
+COMPONENTES_TIEMPO = [
+    ("cpu", "psi", dict(cpu=100, psi_cpu=50)),
+    ("hilos", "suricata", dict(hilo=100)),
+    ("softirq", "cpu", dict(softirq=96)),
+    ("disco", "disco", dict(disco=100, psi_io_full=20)),
+    ("memoria", "psi", dict(psi_mem=15)),
+]
+
+
+@pytest.mark.parametrize("comp,campo,r", COMPONENTES_TIEMPO, ids=[c[0] for c in COMPONENTES_TIEMPO])
+def test_regresion_s14_hueco_antes_en_cada_componente(comp, campo, r):
+    assert s14(completo(tasas((104, 109), **r)))["componentes"][comp]["valor"] is True              # S5: corto
+    assert s14(completo(tasas((104, 112), **r)))["componentes"][comp]["valor"] is False             # S8: demostrado
+    c = s14(completo(tasas((104, 109), **r), extra=falla_en(campo, D + 101, D + 104)))["componentes"][comp]
+    assert c["valor"] is None, (comp, c["motivo"], c["ventana"])                                    # U4 + S5 = 9 s
+
+
 # ------------------------------------------------------------------------------------------------ de punta a punta
 def _cli(script, *args):
     r = subprocess.run([sys.executable, "-I", str(script), *map(str, args)], capture_output=True, text=True)
@@ -763,6 +884,24 @@ def test_e2e_s14_saturado_no_habilita(tmp_path):
     rc, r, e, t = e2e(tmp_path, lineas(serie(D - 3, H + 20)), completo(entre(100, 130, cpu=100, psi_cpu=50)),
                       pcap_log=tmp_path / "obs_pcap.log")
     assert e["S"]["S14"] is False and r["habilita_condicion_3"] is False and r["estabilidad_tecnica"] == "no estable", r
+    assert rc == 1                                         # contrato 2026-11-06.4: rc 0 solo si habilita
+
+
+def test_e2e_s14_saturacion_demostrada_de_8s_exactos_no_habilita(tmp_path):
+    rc, r, e, t = e2e(tmp_path, lineas(serie(D - 3, H + 20)), completo(entre(100, 108, cpu=100, psi_cpu=50)),
+                      pcap_log=tmp_path / "obs_pcap.log")
+    assert (e["S"]["S14"], r["estabilidad_tecnica"], r["habilita_condicion_3"], rc) == (False, "no estable", False, 1), r
+
+
+def test_regresion_e2e_s14_hueco_antes_de_la_saturacion_no_habilita(tmp_path):
+    """Reproducción exacta: CPU 100 %/PSI 50 % en [D+100, D+108) y psi ausente en D+100 <= t < D+103.
+    a12deae: S14 true, «estable con carga suficiente», habilita true, rc 0."""
+    rc, r, e, t = e2e(tmp_path, lineas(serie(D - 3, H + 20)),
+                      completo(entre(100, 108, cpu=100, psi_cpu=50), extra=falla_en("psi", D + 100, D + 103)),
+                      pcap_log=tmp_path / "obs_pcap.log")
+    assert e["S"]["S14"] is None, e["S"]
+    assert r["estabilidad_tecnica"] == "no demostrable" and r["habilita_condicion_3"] is False and rc == 1, r
+    assert t["campos"]["S.S14"]["componentes"]["cpu"] is None
 
 
 def test_e2e_pcap_de_version_anterior_queda_sin_medida(tmp_path):

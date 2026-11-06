@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """S14 de E-carga v2: «sin saturación nueva de CPU, softirq, disco ni memoria; softnet dropped = 0».
-Definición operacional publicada en PROTOCOLO-CARGA-v2 r3 §3.6.1 ANTES de cualquier ensayo. No se aplica a
-observaciones anteriores. SOLO LECTURA.
+Definición operacional publicada en PROTOCOLO-CARGA-v2 r3 §3.6.1 y tratamiento del tiempo desconocido en r4 §3.6.1.1,
+ANTES de cualquier ensayo. No se aplica a observaciones anteriores. SOLO LECTURA.
+
+VERSION 2026-11-06.2. Sustituye a la 2026-11-06.1 (producto a12deae), que solo abría la «cadena posible» en el primer
+par saturado: un hueco inmediatamente ANTERIOR que completaba 8 s no contaba y la componente salía true (reproducción:
+CPU 100 %/PSI 50 % en [D+100, D+108) con psi ausente en D+100..D+102 -> S14 true y avance habilitado).
 
   evaluar_s14.py S14.jsonl --desde D --hasta H [--base-desde BD --base-hasta BH]  -> JSON {"S14": {"valor", ...}}
 
@@ -23,22 +27,36 @@ o un contador que retrocede (reinicio) interrumpe el episodio y no cuenta como c
 Incumplimientos inmediatos (sin duración): softnet dropped > 0 entre los bordes de la ventana; oom_kill > 0;
 MemAvailable < 1 GiB en alguna muestra (la condición de parada de §3.7).
 Cobertura mínima de cada componente: pares válidos (<= 4 s) que cubran >= 99 % de la ventana y ningún hueco > 4 s.
-Dato ausente dentro de una saturación: si los pares saturados más los huecos intercalados (desde el último par válido no
-saturado) suman >= 8 s, el episodio no se puede negar: la componente queda null («dudoso»), nunca true.
+
+Tiempo desconocido (r4 §3.6.1.1). Cada periodo [desde, hasta) se divide, sin huecos ni solapes, en intervalos:
+  S  par válido saturado          [max(t_a, desde), min(t_b, hasta))
+  N  par válido NO saturado       ídem
+  U  desconocido: todo lo que no cubre un par válido (par > 4 s, dato ausente o ilegible, contador que retrocede,
+     PID de Suricata distinto, o sin muestras antes de la primera / después de la última dentro del periodo).
+Un N es evidencia válida de que en ese intervalo no hubo saturación: corta cualquier episodio. Un U no corta nada: pudo
+estar saturado o no. Tramos posibles = sucesiones maximales de intervalos S o U contiguos (entre dos N o un borde);
+su duración posible = fin − inicio del tramo (S + U, contiguos por construcción). Dentro de cada tramo posible:
+  episodio demostrado  S contiguos (sin U entre ellos) que suman >= 8 s;
+  episodio dudoso      tramo posible con algún U, >= 8 s y sin episodio demostrado: la saturación no se puede negar
+                       ni dar por demostrada. Cubre el hueco antes, entre y después de los S y los bordes del periodo;
+  sin episodio         ningún tramo posible llega a 8 s.
+Nada se interpola y un dato ausente nunca cuenta como «no saturado». La cobertura (>= 99 %, huecos <= 4 s) es una
+condición adicional, no suficiente: un hueco de <= 4 s pegado a 4 s saturados ya es un episodio dudoso.
 
 Resultado por componente:
-  false  saturación NUEVA demostrada (episodio en la ventana y base evaluable sin episodios de esa componente),
-         o incumplimiento inmediato;
-  null   cobertura insuficiente; o episodio en la ventana con la base no evaluable o también saturada (no se puede
-         atribuir a la carga: «nueva» no es demostrable);
-  true   cobertura suficiente y ningún episodio.
+  false  saturación NUEVA demostrada (episodio demostrado en la ventana y base evaluable sin episodios demostrados
+         ni dudosos), o incumplimiento inmediato;
+  null   cobertura insuficiente; episodio dudoso en la ventana; o episodio en la ventana con la base no evaluable,
+         dudosa o también saturada («nueva» no es demostrable);
+  true   cobertura suficiente, ningún episodio demostrado y ningún episodio dudoso.
 S14 = false si alguna componente es false; si no, null si alguna es null; si no, true.
 """
 import argparse
 import json
 import math
 
-VERSION = "evaluar_s14 2026-11-06.1"
+VERSION = "evaluar_s14 2026-11-06.2"
+EPS = 1e-6
 D_MIN = 8.0
 PAR_MAX = 4.0
 COBERTURA_MIN = 0.99
@@ -134,29 +152,10 @@ def c_memoria(a, b, dt):
 COMPONENTES = {"cpu": c_cpu, "hilos": c_hilos, "softirq": c_softirq, "disco": c_disco, "memoria": c_memoria}
 
 
-def analizar(ms, desde, hasta, f):
-    """Episodios >= D_MIN, cobertura y máximos de una componente en [desde, hasta)."""
-    lon = hasta - desde
-    cubiertos, episodios, maximos = [], [], {}
-    run_ini = run_fin = None
-    run_dur = 0.0
-    prev_valido = False
-    # Cadena «posible»: pares saturados más los pares no válidos intercalados, desde el último par válido NO saturado.
-    # Si suma >= D_MIN y contiene algún dato ausente, la saturación pudo durar lo bastante y el dato que falta la parte:
-    # no se puede negar el episodio (dudoso -> la componente queda null, nunca true).
-    cad_ini, cad_dur, cad_sat, cad_inv = None, 0.0, 0.0, False
-    dudosos = []
-
-    def mirar_cadena():
-        if cad_inv and cad_sat > 0 and cad_dur >= D_MIN and (not dudosos or dudosos[-1]["desde"] != round(cad_ini, 3)):
-            dudosos.append({"desde": round(cad_ini, 3), "duracion_con_huecos_s": round(cad_dur, 1)})
-
-    def cerrar():
-        nonlocal run_ini, run_fin, run_dur
-        if run_ini is not None and run_dur >= D_MIN:
-            episodios.append({"desde": round(run_ini, 3), "hasta": round(run_fin, 3), "duracion_s": round(run_dur, 1)})
-        run_ini, run_fin, run_dur = None, None, 0.0
-
+def linea_temporal(ms, desde, hasta, f):
+    """Divide [desde, hasta) en intervalos contiguos (ini, fin, estado), estado S/N/U (ver el docstring del módulo).
+    Devuelve también los máximos de las métricas sobre los pares válidos."""
+    validos, maximos = [], {}
     for a, b in zip(ms, ms[1:]):
         ini, fin = max(a["t"], desde), min(b["t"], hasta)
         if fin <= ini:
@@ -164,42 +163,66 @@ def analizar(ms, desde, hasta, f):
         dt = b["t"] - a["t"]
         val, det = (None, {}) if dt <= 0 or dt > PAR_MAX else f(a, b, dt)
         if val is None:
-            cerrar()
-            prev_valido = False
-            if cad_ini is not None:
-                cad_dur += fin - ini
-                cad_inv = True
-                mirar_cadena()
-            continue
-        cubiertos.append((ini, fin))
+            continue                                   # no cubierto: quedará como U
+        validos.append((ini, fin, "S" if val else "N"))
         for k, v in det.items():
             maximos[k] = v if k not in maximos else (min(maximos[k], v) if k == "mem_disponible_kb" else max(maximos[k], v))
-        if val:
-            if run_ini is None or not prev_valido:
-                cerrar()
-                run_ini = ini
-            run_fin, run_dur = fin, run_dur + (fin - ini)
-            if cad_ini is None:
-                cad_ini = ini
-            cad_dur += fin - ini
-            cad_sat += fin - ini
-            mirar_cadena()
-        else:
-            cerrar()
-            cad_ini, cad_dur, cad_sat, cad_inv = None, 0.0, 0.0, False
-        prev_valido = True
-    cerrar()
-    tot = sum(f - i for i, f in cubiertos)
-    huecos, cursor = [], desde
-    for i, f in cubiertos:
-        if i - cursor > 1e-6:
-            huecos.append(i - cursor)
-        cursor = max(cursor, f)
-    if hasta - cursor > 1e-6:
-        huecos.append(hasta - cursor)
+    tl, cursor = [], desde
+    for ini, fin, e in validos:                        # pares consecutivos de muestras ordenadas: sin solapes
+        if ini - cursor > EPS:
+            tl.append((cursor, ini, "U"))
+        tl.append((max(ini, cursor), fin, e))
+        cursor = max(cursor, fin)
+    if hasta - cursor > EPS:
+        tl.append((cursor, hasta, "U"))
+    return tl, maximos
+
+
+def _intervalo(x0, x1, **kw):
+    return dict({"desde": round(x0, 3), "hasta": round(x1, 3)}, **kw)
+
+
+def analizar(ms, desde, hasta, f):
+    """Episodios demostrados y dudosos (>= D_MIN), cobertura y máximos de una componente en [desde, hasta)."""
+    lon = hasta - desde
+    tl, maximos = linea_temporal(ms, desde, hasta, f)
+    episodios, dudosos = [], []
+    i = 0
+    while i < len(tl):
+        if tl[i][2] == "N":
+            i += 1
+            continue
+        j = i
+        while j < len(tl) and tl[j][2] != "N":         # tramo posible: S y U contiguos, hasta un N o el borde
+            j += 1
+        tramo = tl[i:j]
+        demostrados, k = [], 0
+        while k < len(tramo):
+            if tramo[k][2] != "S":
+                k += 1
+                continue
+            m = k
+            while m < len(tramo) and tramo[m][2] == "S":
+                m += 1
+            d = sum(x[1] - x[0] for x in tramo[k:m])
+            if d >= D_MIN - EPS:
+                demostrados.append(_intervalo(tramo[k][0], tramo[m - 1][1], duracion_s=round(d, 1)))
+            k = m
+        episodios += demostrados
+        posible = tramo[-1][1] - tramo[0][0]
+        desconocido = sum(x[1] - x[0] for x in tramo if x[2] == "U")
+        if not demostrados and desconocido > EPS and posible >= D_MIN - EPS:
+            dudosos.append(_intervalo(
+                tramo[0][0], tramo[-1][1], duracion_posible_s=round(posible, 1),
+                saturado_observado_s=round(posible - desconocido, 1), desconocido_s=round(desconocido, 1),
+                desconocido_antes_s=round(sum(x[1] - x[0] for x in tramo[:next((n for n, x in enumerate(tramo) if x[2] == "S"), len(tramo))]), 1),
+                toca_borde=tramo[0][0] <= desde + EPS or tramo[-1][1] >= hasta - EPS))
+        i = j
+    tot = sum(x[1] - x[0] for x in tl if x[2] != "U")
+    huecos = [x[1] - x[0] for x in tl if x[2] == "U"]
     cob = {"cubierto_s": round(tot, 1), "fraccion": round(tot / lon, 4) if lon > 0 else 0.0,
            "hueco_max_s": round(max(huecos), 1) if huecos else 0.0}
-    cob["ok"] = lon > 0 and tot >= COBERTURA_MIN * lon - 1e-6 and (max(huecos) if huecos else 0.0) <= HUECO_MAX
+    cob["ok"] = lon > 0 and tot >= COBERTURA_MIN * lon - EPS and (max(huecos) if huecos else 0.0) <= HUECO_MAX
     return {"episodios": episodios, "dudosos": dudosos, "cobertura": cob,
             "maximos": {k: (round(v, 2) if isinstance(v, float) else v) for k, v in maximos.items()}}
 
@@ -245,15 +268,21 @@ def evaluar(lineas, desde, hasta, base=None):
         if w["episodios"]:
             if b and b["cobertura"]["ok"] and not b["episodios"] and not b["dudosos"]:
                 r["valor"], r["motivo"] = False, f"saturación nueva: {len(w['episodios'])} episodio(s) >= {D_MIN:g} s"
-            elif b and b["cobertura"]["ok"]:
+            elif b and b["cobertura"]["ok"] and b["episodios"]:
                 r["valor"], r["motivo"] = None, "saturación también en la línea base: no atribuible a la carga"
+            elif b and b["cobertura"]["ok"]:
+                r["valor"], r["motivo"] = None, ("línea base dudosa (posible episodio con datos ausentes): «nueva» no "
+                                                 "demostrable")
             else:
                 r["valor"], r["motivo"] = None, "saturación en la ventana con la línea base no evaluable: «nueva» no demostrable"
         elif not w["cobertura"]["ok"]:
             r["valor"], r["motivo"] = None, "cobertura insuficiente (>= 99 % y huecos <= 4 s)"
         elif w["dudosos"]:
-            r["valor"], r["motivo"] = None, (f"{len(w['dudosos'])} posible(s) episodio(s) >= {D_MIN:g} s partidos por "
-                                             "datos ausentes: no se puede negar la saturación")
+            d0 = w["dudosos"][0]
+            r["valor"], r["motivo"] = None, (
+                f"{len(w['dudosos'])} posible(s) episodio(s) >= {D_MIN:g} s con datos ausentes (el primero "
+                f"{d0['desde']}–{d0['hasta']}: {d0['saturado_observado_s']} s saturados observados + "
+                f"{d0['desconocido_s']} s desconocidos): la saturación no se puede negar ni dar por demostrada")
         else:
             r["valor"], r["motivo"] = True, "sin episodios de saturación"
         comp[nombre] = r

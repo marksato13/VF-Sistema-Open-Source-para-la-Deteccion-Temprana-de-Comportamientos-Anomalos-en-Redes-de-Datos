@@ -17,9 +17,11 @@ quedan como evidencia sellada **sustituida**: no se usan.
 | `muestreo_s14.py` | 2026-11-06.1 | Sensor1 | lectura a 1 s de PSI, /proc/stat, softnet, diskstats, MemAvailable, vmstat e hilos W# de Suricata |
 | `sensor1_post.sh` | 2026-11-06.2 | Sensor1 | `DIR DESDE HASTA BASE_DESDE BASE_HASTA`: deriva S2/S3 (con `obs_pcap.log`) y S14 (con línea base) y sella |
 | `derivar_pcap.py` | 2026-11-06.2 | Sensor1 / portátil | S2 y S3 con cobertura de bordes, continuidad y lectura completa |
-| `evaluar_s14.py` | 2026-11-06.1 | Sensor1 / portátil | S14 según PROTOCOLO-CARGA-v2 r3 §3.6.1 |
+| `evaluar_s14.py` | 2026-11-06.2 | Sensor1 / portátil | S14 según PROTOCOLO-CARGA-v2 r3 §3.6.1 y tiempo desconocido según r4 §3.6.1.1 (línea temporal S/N/U; posible episodio con datos ausentes = `null`) |
 | `derivar_bastion.py` | 2026-11-06.2 | portátil | S1, S6, S8, S9, S10; `ERROR` -> sin medida |
-| `construir_entrada.py` | 2026-11-06.2 | portátil | entrada de `../sensor1/evaluar_ecarga.py veredicto` (2026-11-06.4, sin cambios); S14 ya no es manual |
+| `construir_entrada.py` | 2026-11-06.3 | portátil | entrada de `../sensor1/evaluar_ecarga.py veredicto` (2026-11-06.4, sin cambios); S14 ya no es manual; exige `evaluar_s14 2026-11-06.2` |
 
 Pruebas aisladas: `tests/test_etapa4_ecarga_prep.py` con los dobles de `tests/ecarga_banco/bin` (systemctl, sudo, ssh,
-curl, nft, pgrep). Las pruebas `*regresion*` fallan con la versión anterior y pasan con esta.
+curl, nft, pgrep). Las pruebas `*regresion*` fallan con la versión que corrigen y pasan con esta: las de arranque,
+parada, lecturas y PCAP con `c7f24510`/`e83f4be6`; las de S14 con tiempo desconocido con `a12deae`
+(`evaluar_s14 2026-11-06.1`, que no contaba el hueco inmediatamente anterior al primer par saturado).
