@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Evaluación de E-carga v2 (estabilidad de la integración en sombra con carga suficiente). SOLO LECTURA.
 
-VERSION 2026-11-06.2. Reglas fijadas en PROTOCOLO-CARGA-v2.md ANTES de cualquier ejecución de E-carga.
+VERSION 2026-11-06.3. Reglas fijadas en PROTOCOLO-CARGA-v2.md ANTES de cualquier ejecución de E-carga.
 
   evaluar_ecarga.py perfiles --eve EVE [--eve EVE.1 …] --desde EPOCH --hasta EPOCH
                              [--perfil NOMBRE=IP …] [--erratico IP] [--factor-diseno 0.12] [--ritmo-erratico 5.0]
@@ -37,7 +37,7 @@ import math
 import sys
 import zlib
 
-VERSION = "2026-11-06.2"
+VERSION = "2026-11-06.3"
 INTERVALO_S = 8.0
 TRAMO_S = 600.0
 VENTANA_RAFAGA = 5          # intervalos (40 s): >= duración mínima de una ráfaga del generador (20 s) y con margen
@@ -87,7 +87,9 @@ def flujos(rutas, ips, desde, hasta):
 
 
 def k4a(por_ip, perfiles, desde, hasta):
-    ntr = math.ceil((hasta - desde) / TRAMO_S - 1e-9)
+    # Tramos completos de 600 s; un resto de menos de 600 s se suma al último tramo (2026-11-06.3: antes era un
+    # tramo propio y, en la ventana base de 3 606 s, un tramo de 6 s sin flujos hacía fallar K4a por construcción).
+    ntr = max(1, int((hasta - desde) // TRAMO_S))
     tabla, ok = {}, True
     for nombre, ip in perfiles.items():
         c = [0] * ntr

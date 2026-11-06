@@ -193,6 +193,15 @@ def test_k4a_un_tramo_sin_un_perfil_no_cumple(tmp_path):
     assert not r["cumple"] and r["perfiles"]["ligero"]["tramos_sin_flujos"] == [5]
 
 
+def test_k4a_resto_menor_que_un_tramo_se_suma_al_ultimo(tmp_path):
+    """Regresión de la referencia de desarrollo (base 4A, 3 606 s): el resto de 6 s no es un séptimo tramo."""
+    filas = _todos_presentes()
+    r = ev.k4a(ev.flujos([_eve(tmp_path, filas)], set(ev.PERFILES.values()), T0, T1 + 6), ev.PERFILES, T0, T1 + 6)
+    assert r["tramos"] == 6 and r["cumple"]
+    r = ev.k4a(ev.flujos([_eve(tmp_path, filas)], set(ev.PERFILES.values()), T0, T0 + 300), ev.PERFILES, T0, T0 + 300)
+    assert r["tramos"] == 1
+
+
 def _ts(f):
     return ev.ts(json.loads(f)["flow"]["start"])
 
