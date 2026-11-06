@@ -91,26 +91,55 @@ def test_concurrencia_de_motivos_respeta_la_precedencia(kw, clase, motivos):
 
 
 # ------------------------------------------------------------------ 2. veredicto: cuatro dimensiones separadas
-def _entrada(clase="C0", dpm=0.0, k=None, s=None):
+# Contrato de entrada 2026-11-06.4 (PROTOCOLO-CARGA-v2 §4.5). _entrada construye una entrada COHERENTE por defecto:
+# estado de Suricata según los descartes, dpm = descartes × 10⁶ / paquetes, motivos solo si la clase no es C0.
+ESTABLE = "estable con carga suficiente"
+
+
+def _entrada(clase="C0", ds=0, pq=1_000_000, estado=None, dpm="auto", k=None, s=None, motivos=None):
     kk = {x: True for x in ev.K}
     ss = {x: True for x in ev.S}
     kk.update(k or {})
     ss.update(s or {})
-    return {"K": kk, "S": ss, "clasificacion": {"clase_periodo": clase, "motivos": []}, "descartes_por_millon": dpm}
+    if estado is None:
+        estado = "descartes" if ds else "cero_explicito"
+    if dpm == "auto":
+        dpm = ds * 1_000_000 / pq if ds is not None and pq else None
+    if motivos is None:
+        motivos = [] if clase == "C0" else [f"motivo de {clase}"]
+    return {"K": kk, "S": ss, "clasificacion": {"clase_periodo": clase, "motivos": motivos},
+            "suricata": {"estado": estado, "paquetes": pq, "descartes": ds}, "descartes_por_millon": dpm}
+
+
+def _sin_medida(clase, **kw):
+    """Suricata sin medida (C3 o no_evaluable para el clasificador): números a null."""
+    return _entrada(clase, ds=None, pq=None, estado=kw.pop("estado", "ausente"), dpm=None, **kw)
+
+
+def _no_habilita(r):
+    assert r["habilita_condicion_3"] is False and r["habilita"].startswith("nada")
+    assert r["estabilidad_tecnica"] != ESTABLE
+
+
+def _cli(tmp_path, capsys, contenido):
+    p = tmp_path / "entrada.json"
+    p.write_text(contenido if isinstance(contenido, str) else json.dumps(contenido), encoding="utf-8")
+    rc = ev.main(["veredicto", "--entrada", str(p)])
+    return rc, json.loads(capsys.readouterr().out)
 
 
 def test_estable_c0():
     r = ev.veredicto(_entrada())
-    assert r["estabilidad_tecnica"] == "estable con carga suficiente"
-    assert r["clase_captura"] == "C0" and r["limitaciones"] == []
+    assert r["estabilidad_tecnica"] == ESTABLE and r["habilita_condicion_3"] is True
+    assert r["clase_captura"] == "C0" and r["limitaciones"] == [] and r["incoherencias"] == []
     assert r["i5"].startswith("no evaluado")
     assert "condición (3)" in r["habilita"]
 
 
 def test_estable_c1_conserva_la_limitacion_y_no_es_c0_ni_i5():
-    r = ev.veredicto(_entrada("C1", 3.2))
-    assert r["estabilidad_tecnica"] == "estable con carga suficiente"   # S13: 3,2 < 14,95
-    assert r["clase_captura"] == "C1"
+    r = ev.veredicto(_entrada("C1", ds=2, pq=625_000))          # 3,2/M < 14,95
+    assert r["estabilidad_tecnica"] == ESTABLE and r["habilita_condicion_3"] is True
+    assert r["clase_captura"] == "C1" and r["incoherencias"] == []
     assert "NO apta para la población principal" in r["poblacion_principal"]
     assert "No es captura sin pérdidas" in r["poblacion_principal"]
     assert any("no demuestra C0 ni I5" in x for x in r["limitaciones"])
@@ -118,40 +147,271 @@ def test_estable_c1_conserva_la_limitacion_y_no_es_c0_ni_i5():
     assert r["i5"].startswith("no evaluado")
 
 
-def test_s13_superado_es_no_estable():
-    r = ev.veredicto(_entrada("C1", 20.0, s={"S13": False}))
-    assert r["estabilidad_tecnica"] == "no estable" and r["S_no_cumplen"] == ["S13"]
-    assert r["habilita"].startswith("nada")
+def test_s13_superado_y_declarado_false_es_no_estable():
+    r = ev.veredicto(_entrada("C1", ds=20, s={"S13": False}))
+    assert r["estabilidad_tecnica"] == "no estable" and r["S_no_cumplen"] == ["S13"] and r["incoherencias"] == []
+    _no_habilita(r)
 
 
 def test_carga_insuficiente_domina_pero_conserva_hallazgos():
     r = ev.veredicto(_entrada(k={"K2": False}, s={"S1": False}))
     assert r["estabilidad_tecnica"] == "carga insuficiente"
     assert r["hallazgos_S_aunque_carga_insuficiente"] == ["S1"]
+    _no_habilita(r)
 
 
-def test_lectura_que_falta_es_no_demostrable():
-    assert ev.veredicto(_entrada(s={"S4": None}))["estabilidad_tecnica"] == "no demostrable"
-    assert ev.veredicto(_entrada(k={"K5": None}))["estabilidad_tecnica"] == "no demostrable"
+def test_carga_insuficiente_se_mantiene_aunque_haya_contradicciones():
+    r = ev.veredicto(_entrada("C1", ds=100, k={"K1": False}))      # S13 true con 100/M
+    assert r["estabilidad_tecnica"] == "carga insuficiente" and any("S13" in x for x in r["incoherencias"])
+    _no_habilita(r)
 
 
-def test_c3_estable_no_es_admisible():
+@pytest.mark.parametrize("grupo,clave", [("S", "S4"), ("K", "K5"), ("K", "K4a")])
+def test_criterio_sin_medida_es_no_demostrable(grupo, clave):
+    r = ev.veredicto(_entrada(**{grupo.lower(): {clave: None}}))
+    assert r["estabilidad_tecnica"] == "no demostrable"
+    assert any(clave in m for m in r["motivos_no_demostrable"])
+    _no_habilita(r)
+
+
+def test_c3_no_es_admisible():
     r = ev.veredicto(_entrada("C3"))
     assert r["poblacion_principal"].startswith("NO apta: C3")
+    _no_habilita(r)
 
 
 def test_incoherencia_clase_descartes_no_da_estable():
-    assert ev.veredicto(_entrada("C0", 2.0))["estabilidad_tecnica"] == "no demostrable"
-    assert ev.veredicto(_entrada("C1", 0.0))["estabilidad_tecnica"] == "no demostrable"
+    for e in (_entrada("C0", ds=2), _entrada("C1", ds=0)):
+        r = ev.veredicto(e)
+        assert r["estabilidad_tecnica"] == "no demostrable" and r["incoherencias"]
+        _no_habilita(r)
 
 
 def test_entrada_incompleta_o_clase_desconocida_es_error():
     e = _entrada()
     del e["S"]["S7"]
-    with pytest.raises(ValueError):
+    with pytest.raises(ev.EntradaInvalida) as x:
         ev.veredicto(e)
-    with pytest.raises(ValueError):
+    assert x.value.campo == "S.S7"
+    with pytest.raises(ev.EntradaInvalida) as x:
         ev.veredicto(_entrada("C9"))
+    assert x.value.campo == "clasificacion.clase_periodo"
+
+
+# ------------------------------------------------------------------ 2b. los tres fallos reproducidos en f6dc685
+def test_fallo1_texto_false_en_k1_y_s1_se_rechaza(tmp_path, capsys):
+    e = _entrada("C1", ds=2, pq=625_000)
+    e["K"]["K1"] = "false"
+    e["S"]["S1"] = "false"
+    rc, r = _cli(tmp_path, capsys, e)
+    assert rc == 2 and r["campo"] == "K.K1" and "true, false o null" in r["error"]
+    assert r["habilita_condicion_3"] is False and "estabilidad_tecnica" not in r
+    e["K"]["K1"] = True
+    rc, r = _cli(tmp_path, capsys, e)
+    assert rc == 2 and r["campo"] == "S.S1"
+
+
+def test_fallo2_no_evaluable_con_s_verdaderos_no_habilita(tmp_path, capsys):
+    rc, r = _cli(tmp_path, capsys, _sin_medida("no_evaluable"))
+    assert rc == 1 and r["estabilidad_tecnica"] == "no demostrable"
+    assert any("S12" in x for x in r["incoherencias"]) and any("S13" in x for x in r["incoherencias"])
+    assert any("no_evaluable" in m for m in r["motivos_no_demostrable"])
+    _no_habilita(r)
+
+
+def test_fallo3_c1_con_100_por_millon_y_s13_verdadero_no_habilita(tmp_path, capsys):
+    rc, r = _cli(tmp_path, capsys, _entrada("C1", ds=100, pq=1_000_000))
+    assert rc == 1 and r["estabilidad_tecnica"] == "no demostrable"
+    assert any(x.startswith("S13 = true pero 100 descartes") for x in r["incoherencias"])
+    assert r["descartes_por_millon"] == 100.0 and r["S_no_cumplen"] == []   # no se reescribe ningún dato
+    _no_habilita(r)
+
+
+# ------------------------------------------------------------------ 2c. tipos de K y S
+@pytest.mark.parametrize("valor", [True, False, None])
+@pytest.mark.parametrize("campo", ["K3", "S9"])
+def test_k_y_s_admiten_true_false_null(campo, valor):
+    grupo = "k" if campo.startswith("K") else "s"
+    r = ev.veredicto(_entrada(**{grupo: {campo: valor}}))
+    assert r["estabilidad_tecnica"] == {True: ESTABLE, False: "carga insuficiente" if grupo == "k" else "no estable",
+                                        None: "no demostrable"}[valor]
+
+
+@pytest.mark.parametrize("valor", ["false", "true", "null", "", 0, 1, 0.0, 1.0, [], [True], {}, {"v": True}])
+@pytest.mark.parametrize("campo", ["K1", "S13"])
+def test_k_y_s_rechazan_otros_tipos(campo, valor):
+    grupo = "k" if campo.startswith("K") else "s"
+    with pytest.raises(ev.EntradaInvalida) as x:
+        ev.veredicto(_entrada(**{grupo: {campo: valor}}))
+    assert x.value.campo == f"{campo[0]}.{campo}"
+
+
+def test_criterio_no_reconocido_o_grupo_mal_formado_es_error():
+    e = _entrada()
+    e["K"]["K4"] = True                     # K4 ya no existe: K4a (criterio) y K4b (informativo, fuera del veredicto)
+    with pytest.raises(ev.EntradaInvalida) as x:
+        ev.veredicto(e)
+    assert x.value.campo == "K.K4"
+    e = _entrada()
+    e["S"] = [True] * 15
+    with pytest.raises(ev.EntradaInvalida) as x:
+        ev.veredicto(e)
+    assert x.value.campo == "S"
+
+
+# ------------------------------------------------------------------ 2d. métricas
+@pytest.mark.parametrize("ruta", ["descartes_por_millon", "suricata", "clasificacion", "suricata.descartes",
+                                  "suricata.paquetes", "suricata.estado", "clasificacion.motivos"])
+def test_metrica_o_campo_ausente_es_error(ruta):
+    e = _entrada("C1", ds=2)
+    if "." in ruta:
+        a, b = ruta.split(".")
+        del e[a][b]
+    else:
+        del e[ruta]
+    with pytest.raises(ev.EntradaInvalida) as x:
+        ev.veredicto(e)
+    assert x.value.campo == ruta
+
+
+@pytest.mark.parametrize("valor,motivo", [(-1, "negativo"), (-0.5, "negativo"), (True, "número"), (False, "número"),
+                                          (float("nan"), "finito"), (float("inf"), "finito"), ("3.2", "número"),
+                                          ([3.2], "número"), (None, "ausente")])
+def test_dpm_invalido_es_error(valor, motivo):
+    with pytest.raises(ev.EntradaInvalida) as x:
+        ev.veredicto(_entrada("C1", ds=2, dpm=valor))
+    assert x.value.campo == "descartes_por_millon" and motivo in str(x.value)
+
+
+@pytest.mark.parametrize("campo", ["paquetes", "descartes"])
+@pytest.mark.parametrize("valor,motivo", [(-1, "negativo"), (True, "número"), (2.5, "entero"), (2.0, "entero"),
+                                          (float("nan"), "entero"), (float("inf"), "entero"), ("7", "número"),
+                                          (None, "ausente")])
+def test_contadores_invalidos_son_error(campo, valor, motivo):
+    e = _entrada("C1", ds=2)
+    e["suricata"][campo] = valor
+    with pytest.raises(ev.EntradaInvalida) as x:
+        ev.veredicto(e)
+    assert x.value.campo == f"suricata.{campo}" and motivo in str(x.value)
+
+
+def test_estado_de_suricata_no_reconocido_es_error():
+    with pytest.raises(ev.EntradaInvalida) as x:
+        ev.veredicto(_entrada(estado="ok"))
+    assert x.value.campo == "suricata.estado"
+
+
+def test_nan_e_infinito_en_el_json_son_error(tmp_path, capsys):
+    base = json.dumps(_entrada("C1", ds=2, pq=625_000))
+    for literal in ("NaN", "Infinity", "-Infinity"):
+        rc, r = _cli(tmp_path, capsys, base.replace('"descartes_por_millon": 3.2', f'"descartes_por_millon": {literal}'))
+        assert rc == 2 and r["campo"] == "descartes_por_millon" and r["habilita_condicion_3"] is False
+
+
+def test_dpm_que_no_cuadra_con_los_contadores_es_contradiccion():
+    r = ev.veredicto(_entrada("C1", ds=2, pq=625_000, dpm=1.0))
+    assert any("no coincide" in x for x in r["incoherencias"])
+    _no_habilita(r)
+    assert ev.veredicto(_entrada("C1", ds=2, pq=625_000, dpm=3.205))["habilita_condicion_3"] is True   # ± 0,01
+
+
+def test_paquetes_cero_con_medida_no_define_dpm():
+    r = ev.veredicto(_entrada("C0", ds=0, pq=0, dpm=0.0))
+    assert any("paquetes = 0" in x for x in r["incoherencias"])
+    _no_habilita(r)
+
+
+def test_numeros_con_suricata_sin_medida_es_contradiccion():
+    e = _sin_medida("C3", s={"S12": False, "S13": False})
+    e["descartes_por_millon"] = 0.0
+    r = ev.veredicto(e)
+    assert any("sin medida" in x for x in r["incoherencias"])
+
+
+# ------------------------------------------------------------------ 2e. coherencia de clase y S13
+def test_c0_coherente_habilita_y_c0_con_motivos_no():
+    assert ev.veredicto(_entrada("C0"))["habilita_condicion_3"] is True
+    r = ev.veredicto(_entrada("C0", motivos=["reinicio o parada: suricata"]))
+    assert any("C0 con motivos" in x for x in r["incoherencias"])
+    _no_habilita(r)
+
+
+def test_c0_con_descartes_no_habilita():
+    r = ev.veredicto(_entrada("C0", ds=5, motivos=[]))
+    assert any(x.startswith("clase C0 con suricata.estado descartes") for x in r["incoherencias"])
+    _no_habilita(r)
+    r = ev.veredicto(_entrada("C0", ds=5, estado="cero_explicito"))   # el estado tampoco cuadra con sus números
+    assert any("cero_explicito con 5 descartes" in x for x in r["incoherencias"])
+    _no_habilita(r)
+
+
+@pytest.mark.parametrize("ds,pq,s13,resultado,habilita", [
+    (1494, 100_000_000, True, ESTABLE, True),               # 14,94/M: cumple
+    (1495, 100_000_000, True, "no demostrable", False),     # 14,95/M exacto: NO cumple; S13 true contradice
+    (1495, 100_000_000, False, "no estable", False),        # 14,95/M declarado bien: no estable
+    (100, 1_000_000, False, "no estable", False),           # por encima, declarado bien
+    (100, 1_000_000, True, "no demostrable", False),        # por encima, S13 true contradice
+    (2, 625_000, False, "no demostrable", False),           # 3,2/M bajo el límite con S13 false: también contradice
+])
+def test_c1_frente_al_limite_s13(ds, pq, s13, resultado, habilita):
+    r = ev.veredicto(_entrada("C1", ds=ds, pq=pq, s={"S13": s13}))
+    assert r["estabilidad_tecnica"] == resultado and r["habilita_condicion_3"] is habilita
+
+
+def test_limite_s13_exacto_con_enteros_no_con_redondeo():
+    """1 495 de 100 000 000 da 14,95 exacto en enteros; 14,950000000000001 en coma flotante no debe colarse."""
+    r = ev.veredicto(_entrada("C1", ds=1495, pq=100_000_000, s={"S13": True}))
+    assert any("14,95" in x and ">=" in x for x in r["incoherencias"])
+
+
+@pytest.mark.parametrize("clase", ["C3", "no_evaluable"])
+def test_c3_y_no_evaluable_con_s_verdaderos_no_habilitan(clase):
+    for e in (_entrada(clase), _sin_medida(clase)):
+        r = ev.veredicto(e)
+        assert r["estabilidad_tecnica"] == "no demostrable"
+        _no_habilita(r)
+    # Indicadores bien puestos para una medida ausente: S12 y S13 no se cumplen -> «no estable» (protocolo §3.6 S12).
+    r = ev.veredicto(_sin_medida(clase, s={"S12": False, "S13": False}))
+    assert r["estabilidad_tecnica"] == "no estable" and r["S_no_cumplen"] == ["S12", "S13"] and not r["incoherencias"]
+    _no_habilita(r)
+
+
+def test_c3_con_fallo_de_s_sigue_siendo_no_estable():
+    r = ev.veredicto(_entrada("C3", s={"S5": False}))
+    assert r["estabilidad_tecnica"] == "no estable" and r["S_no_cumplen"] == ["S5"]
+    _no_habilita(r)
+
+
+def test_c2_coherente_conserva_su_limitacion():
+    r = ev.veredicto(_entrada("C2"))
+    assert r["habilita_condicion_3"] is True and any("clase C2" in x for x in r["limitaciones"])
+    assert ev.veredicto(_sin_medida("C2", s={"S12": False, "S13": False}))["habilita_condicion_3"] is False
+
+
+# ------------------------------------------------------------------ 2f. recorrido completo de «veredicto»
+def test_cli_veredicto_valido_rc0_y_contradiccion_rc1(tmp_path, capsys):
+    rc, r = _cli(tmp_path, capsys, _entrada("C1", ds=2, pq=625_000))
+    assert rc == 0 and r["version"] == ev.VERSION and r["habilita_condicion_3"] is True
+    rc, r = _cli(tmp_path, capsys, _entrada("C1", ds=2, pq=625_000, s={"S2": False}))
+    assert rc == 1 and r["estabilidad_tecnica"] == "no estable"
+
+
+@pytest.mark.parametrize("contenido,campo", [
+    ("[]", "(raíz)"), ("{", None), ("", None),
+    (json.dumps({**_entrada(), "extra": 1}), "extra"),
+    ('{"K": {}, "K": {}}', "K"),
+])
+def test_cli_entrada_invalida_rc2_sin_habilitar(tmp_path, capsys, contenido, campo):
+    rc, r = _cli(tmp_path, capsys, contenido)
+    assert rc == 2 and r["campo"] == campo and r["error"]
+    assert r["habilita_condicion_3"] is False and r["habilita"].startswith("nada")
+    assert "estabilidad_tecnica" not in r
+
+
+def test_cli_fichero_inexistente_rc2(tmp_path, capsys):
+    rc = ev.main(["veredicto", "--entrada", str(tmp_path / "no-existe.json")])
+    r = json.loads(capsys.readouterr().out)
+    assert rc == 2 and r["habilita_condicion_3"] is False
 
 
 # ------------------------------------------------------------------ 3. K4a / K4b

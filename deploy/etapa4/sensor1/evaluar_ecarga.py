@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Evaluación de E-carga v2 (estabilidad de la integración en sombra con carga suficiente). SOLO LECTURA.
 
-VERSION 2026-11-06.3. Reglas fijadas en PROTOCOLO-CARGA-v2.md ANTES de cualquier ejecución de E-carga.
+VERSION 2026-11-06.4. Reglas fijadas en PROTOCOLO-CARGA-v2.md ANTES de cualquier ejecución de E-carga.
+(.4: contrato de entrada estricto y contraste de coherencia en «veredicto»; perfiles/K4a/K4b sin cambios.)
 
   evaluar_ecarga.py perfiles --eve EVE [--eve EVE.1 …] --desde EPOCH --hasta EPOCH
                              [--perfil NOMBRE=IP …] [--erratico IP] [--factor-diseno 0.12] [--ritmo-erratico 5.0]
@@ -28,6 +29,22 @@ veredicto
   Separa cuatro dimensiones que NO se deducen unas de otras:
     estabilidad técnica (S1–S15 con K1–K5) · clase de calidad de captura (clasificador vigente, tal cual) ·
     I5 (no se evalúa en E-carga) · admisión en la población principal (solo C0).
+
+  Entrada (contrato estricto, PROTOCOLO-CARGA-v2 §4.5). Ningún campo de más ni de menos; claves no duplicadas:
+    {"K": {K1, K2, K3, K4a, K5: true|false|null},          null = sin medida; nada más es booleano
+     "S": {S1 … S15: true|false|null},
+     "clasificacion": {"clase_periodo": C0|C1|C2|C3|no_evaluable, "motivos": [texto, …]},
+     "suricata": {"estado": cero_explicito|descartes|ausente|desactualizada|error_lectura|cobertura_insuficiente,
+                  "paquetes": entero >= 0, "descartes": entero >= 0},   null solo si el estado no es una medida
+     "descartes_por_millon": número finito >= 0}               null solo si el estado no es una medida
+  Entrada inválida -> rc 2, JSON con «error» y «campo», sin habilitar nada.
+
+  Coherencia (no se corrige ningún dato; cada contradicción se lista en «incoherencias» y el resultado pasa a «no
+  demostrable», salvo «carga insuficiente», que se mantiene):
+    S12 frente al estado de Suricata; S13 frente a descartes × 10⁶ / paquetes < 14,95 (exacto, con enteros; 14,95
+    no cumple); descartes_por_millon frente a ese cociente (± 0,01); C0 = cero_explicito, 0 descartes y sin motivos;
+    C1 = estado «descartes» con descartes > 0 y con motivos; C2/C3 con motivos. C3 y no_evaluable nunca dan
+    «estable con carga suficiente». rc 0 solo si «habilita_condicion_3» es true.
 """
 import argparse
 import datetime as dt
@@ -37,7 +54,7 @@ import math
 import sys
 import zlib
 
-VERSION = "2026-11-06.3"
+VERSION = "2026-11-06.4"
 INTERVALO_S = 8.0
 TRAMO_S = 600.0
 VENTANA_RAFAGA = 5          # intervalos (40 s): >= duración mínima de una ráfaga del generador (20 s) y con margen
@@ -136,16 +153,151 @@ RESULTADOS = ("estable con carga suficiente", "no estable", "carga insuficiente"
 K = ("K1", "K2", "K3", "K4a", "K5")
 S = tuple(f"S{i}" for i in range(1, 16))
 CLASES = ("C0", "C1", "C2", "C3", "no_evaluable")
+# Estados de la medida de Suricata (EVE) de salud_captura.medida_suricata_eve 2026-11-06.1, sin cambios.
+ESTADOS_EVE = ("cero_explicito", "descartes", "ausente", "desactualizada", "error_lectura", "cobertura_insuficiente")
+MEDIDOS = ("cero_explicito", "descartes")
+# S13: descartes por millón < 14,95 (estricto). Se evalúa con enteros: descartes × 10⁸ < 1 495 × paquetes.
+S13_NUM, S13_DEN = 1495, 100          # 14,95 = 1 495 / 100
+TOL_DPM = 0.01                        # diferencia admitida entre el dpm declarado y descartes × 10⁶ / paquetes
+CAMPOS = {"K", "S", "clasificacion", "suricata", "descartes_por_millon"}
+NO_HABILITA = "nada: la condición (3) sigue pendiente"
+
+
+class EntradaInvalida(ValueError):
+    """Entrada que no cumple el contrato (PROTOCOLO-CARGA-v2 §4.5). Lleva el campo que falla."""
+
+    def __init__(self, campo, motivo):
+        super().__init__(f"{campo}: {motivo}")
+        self.campo = campo
+
+
+def _sin_duplicados(pares):
+    claves = [k for k, _ in pares]
+    for k in claves:
+        if claves.count(k) > 1:
+            raise EntradaInvalida(k, "clave duplicada en el JSON")
+    return dict(pares)
+
+
+def _numero(v, campo, entero=False, nulo=False):
+    """Número real finito y >= 0. bool no es número; NaN/∞ no valen; null solo si se admite."""
+    if v is None:
+        if nulo:
+            return None
+        raise EntradaInvalida(campo, "falta el valor (null): un dato ausente no equivale a cero")
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        raise EntradaInvalida(campo, f"debe ser un número, no {type(v).__name__} ({v!r})")
+    if entero and not isinstance(v, int):
+        raise EntradaInvalida(campo, f"debe ser un entero, no {v!r}")
+    if not math.isfinite(v):
+        raise EntradaInvalida(campo, f"no es finito ({v!r})")
+    if v < 0:
+        raise EntradaInvalida(campo, f"no puede ser negativo ({v!r})")
+    return v
+
+
+def validar(d):
+    """Contrato de entrada estricto. No convierte nada: "false", 0/1, listas u objetos no son booleanos."""
+    if not isinstance(d, dict):
+        raise EntradaInvalida("(raíz)", f"debe ser un objeto JSON, no {type(d).__name__}")
+    for c in sorted(CAMPOS - set(d)):
+        raise EntradaInvalida(c, "campo obligatorio ausente")
+    for c in sorted(set(d) - CAMPOS):
+        raise EntradaInvalida(c, "campo no reconocido")
+    for grupo, claves in (("K", K), ("S", S)):
+        g = d[grupo]
+        if not isinstance(g, dict):
+            raise EntradaInvalida(grupo, f"debe ser un objeto, no {type(g).__name__}")
+        for x in claves:
+            if x not in g:
+                raise EntradaInvalida(f"{grupo}.{x}", "criterio ausente (para «sin medida» se escribe null)")
+            if g[x] is not True and g[x] is not False and g[x] is not None:
+                raise EntradaInvalida(f"{grupo}.{x}", f"solo admite true, false o null, no {g[x]!r}")
+        for x in sorted(set(g) - set(claves)):
+            raise EntradaInvalida(f"{grupo}.{x}", "criterio no reconocido")
+    cl = d["clasificacion"]
+    if not isinstance(cl, dict):
+        raise EntradaInvalida("clasificacion", f"debe ser un objeto, no {type(cl).__name__}")
+    for c in ("clase_periodo", "motivos"):
+        if c not in cl:
+            raise EntradaInvalida(f"clasificacion.{c}", "campo obligatorio ausente")
+    if not isinstance(cl["clase_periodo"], str) or cl["clase_periodo"] not in CLASES:
+        raise EntradaInvalida("clasificacion.clase_periodo", f"clase no reconocida: {cl['clase_periodo']!r}")
+    if not isinstance(cl["motivos"], list) or not all(isinstance(m, str) for m in cl["motivos"]):
+        raise EntradaInvalida("clasificacion.motivos", "debe ser una lista de textos")
+    su = d["suricata"]
+    if not isinstance(su, dict):
+        raise EntradaInvalida("suricata", f"debe ser un objeto, no {type(su).__name__}")
+    for c in ("estado", "paquetes", "descartes"):
+        if c not in su:
+            raise EntradaInvalida(f"suricata.{c}", "campo obligatorio ausente")
+    if not isinstance(su["estado"], str) or su["estado"] not in ESTADOS_EVE:
+        raise EntradaInvalida("suricata.estado", f"estado no reconocido: {su['estado']!r}")
+    medido = su["estado"] in MEDIDOS
+    # Con medida, los tres números son obligatorios; sin medida pueden ser null (y entonces no hay dpm).
+    _numero(su["paquetes"], "suricata.paquetes", entero=True, nulo=not medido)
+    _numero(su["descartes"], "suricata.descartes", entero=True, nulo=not medido)
+    _numero(d["descartes_por_millon"], "descartes_por_millon", nulo=not medido)
+
+
+def coherencia(d):
+    """Contrasta indicadores con métricas y clase. Devuelve contradicciones; no corrige ningún dato."""
+    s, su = d["S"], d["suricata"]
+    clase, motivos = d["clasificacion"]["clase_periodo"], d["clasificacion"]["motivos"]
+    est_eve, pq, ds, dpm = su["estado"], su["paquetes"], su["descartes"], d["descartes_por_millon"]
+    medido = est_eve in MEDIDOS
+    c = []
+    # Medida de Suricata frente a sus propios números
+    if est_eve == "cero_explicito" and ds != 0:
+        c.append(f"suricata.estado cero_explicito con {ds} descartes")
+    if est_eve == "descartes" and ds == 0:
+        c.append("suricata.estado descartes con 0 descartes")
+    if not medido and any(v is not None for v in (pq, ds, dpm)):
+        c.append(f"suricata.estado {est_eve} (sin medida) con números de descartes o paquetes")
+    s13_real = None
+    if medido:
+        if pq == 0:
+            c.append("suricata.paquetes = 0: los descartes por millón no están definidos")
+        else:
+            real = ds * 1_000_000 / pq
+            if abs(dpm - real) > TOL_DPM:
+                c.append(f"descartes_por_millon {dpm} no coincide con descartes × 10⁶ / paquetes = {real:.6f}")
+            s13_real = ds * 1_000_000 * S13_DEN < S13_NUM * pq      # < 14,95 exacto, con enteros
+    # S12 (descartes medidos) y S13 (< 14,95/M) frente a las métricas
+    if (medido and s["S12"] is not True) or (not medido and s["S12"] is True):
+        c.append(f"S12 = {json.dumps(s['S12'])} pero la medida de Suricata es {est_eve}")
+    if s13_real is None:
+        if s["S13"] is True:
+            c.append(f"S13 = true sin descartes por millón medidos (suricata.estado {est_eve})")
+    elif s["S13"] is not s13_real:
+        c.append(f"S13 = {json.dumps(s['S13'])} pero {ds} descartes de {pq} paquetes "
+                 f"({ds * 1_000_000 / pq:.6f}/M) {'<' if s13_real else '>='} 14,95/M")
+    # Clase frente a la medida (definiciones y precedencia del clasificador vigente, sin cambios)
+    if clase == "C0":
+        if est_eve != "cero_explicito" or ds != 0:
+            c.append(f"clase C0 con suricata.estado {est_eve} y {ds} descartes: C0 exige cero_explicito y 0 descartes")
+        if motivos:
+            c.append("clase C0 con motivos de degradación: C0 exige evidencia completa sin motivos")
+    elif clase == "C1":
+        if est_eve != "descartes" or not ds:
+            c.append(f"clase C1 con suricata.estado {est_eve} y {ds} descartes: C1 exige descartes de Suricata "
+                     "medidos y > 0")
+        if not motivos:
+            c.append("clase C1 sin motivos")
+    elif clase in ("C2", "C3"):
+        if not motivos:
+            c.append(f"clase {clase} sin motivos")
+    if clase == "C2" and not medido:
+        c.append(f"clase {clase} con Suricata {est_eve}: el clasificador da C3 a una medida de Suricata incompleta")
+    return c
 
 
 def veredicto(d):
-    k, s, cl = d.get("K") or {}, d.get("S") or {}, d.get("clasificacion") or {}
-    clase = cl.get("clase_periodo")
-    falta = [x for x in K if x not in k] + [x for x in S if x not in s]
-    if falta:
-        raise ValueError("faltan criterios en la entrada: " + ", ".join(falta))
-    if clase not in CLASES:
-        raise ValueError(f"clase de captura no reconocida: {clase!r}")
+    validar(d)
+    k, s = d["K"], d["S"]
+    cl = d["clasificacion"]
+    clase = cl["clase_periodo"]
+    dpm = d["descartes_por_millon"]
     k_no = [x for x in K if k[x] is False]
     k_nd = [x for x in K if k[x] is None]
     s_no = [x for x in S if s[x] is False]
@@ -158,14 +310,17 @@ def veredicto(d):
         est = "no estable"
     else:
         est = "estable con carga suficiente"
-    dpm = d.get("descartes_por_millon")
-    incoherencias = []
-    if clase == "C0" and dpm not in (0, 0.0):
-        incoherencias.append(f"clase C0 con descartes por millón {dpm!r}: revisar la clasificación")
-    if clase == "C1" and not dpm:
-        incoherencias.append("clase C1 sin descartes por millón > 0: revisar la clasificación")
-    if incoherencias and est == "estable con carga suficiente":
+    incoherencias = coherencia(d)
+    est0, motivos_nd = est, []
+    if incoherencias and est0 != "carga insuficiente":
         est = "no demostrable"
+        motivos_nd.append("los indicadores contradicen las métricas o la clase (ver «incoherencias»)")
+    # Un fallo de S con C3 sigue siendo «no estable» (p. ej. un reinicio); lo que C3 no permite es demostrar estabilidad.
+    if clase in ("C3", "no_evaluable") and est0 == "estable con carga suficiente":
+        est = "no demostrable"
+        motivos_nd.append(f"clase {clase}: la captura no es evaluable y no permite demostrar la estabilidad")
+    if est == "no demostrable":
+        motivos_nd = ([f"criterios sin medida: {', '.join(k_nd + s_nd)}"] if k_nd or s_nd else []) + motivos_nd
     pobl = {"C0": "cumple la condición de calidad de la población principal (C0) en esta ventana; "
                   "E-carga no produce episodios, así que no admite ninguno",
             "C1": "NO apta para la población principal: C1 (EVE degradado: descartes de Suricata medidos con "
@@ -173,16 +328,18 @@ def veredicto(d):
             "C2": "NO apta para la población principal: C2 (descartes de tcpdump). Se publica aparte con su clase",
             "C3": "NO apta: C3, no evaluable conforme al clasificador (falta evidencia o hay discontinuidad)",
             "no_evaluable": "NO apta: no evaluable (lectura fallida o insuficiente en el periodo)"}[clase]
-    habilita = ("condición (3) del criterio único para el control formal de la 4B"
-                if est == "estable con carga suficiente" else "nada: la condición (3) sigue pendiente")
+    ok = est == "estable con carga suficiente" and not incoherencias and clase not in ("C3", "no_evaluable")
+    habilita = "condición (3) del criterio único para el control formal de la 4B" if ok else NO_HABILITA
     lim = []
-    if est == "estable con carga suficiente" and clase != "C0":
+    if ok and clase != "C0":
         lim.append(f"estable pero con clase {clase}: la limitación de la clase se conserva en todo uso posterior")
     if dpm:
         lim.append(f"{dpm} descartes por millón: S13 (< 14,95) es un límite técnico; no demuestra C0 ni I5")
-    return {"version": VERSION, "estabilidad_tecnica": est, "K_no_cumplen": k_no, "K_sin_medida": k_nd,
+    return {"version": VERSION, "estabilidad_tecnica": est, "habilita_condicion_3": ok,
+            "motivos_no_demostrable": motivos_nd, "K_no_cumplen": k_no, "K_sin_medida": k_nd,
             "S_no_cumplen": s_no, "S_sin_medida": s_nd, "hallazgos_S_aunque_carga_insuficiente": s_no if k_no else [],
-            "clase_captura": clase, "motivos_clase": cl.get("motivos"), "descartes_por_millon": dpm,
+            "clase_captura": clase, "motivos_clase": cl["motivos"], "suricata": d["suricata"],
+            "descartes_por_millon": dpm,
             "i5": "no evaluado: I5 se mide en los 30 min previos al inicio real de la 4C, con lectura propia",
             "poblacion_principal": pobl, "habilita": habilita, "limitaciones": lim, "incoherencias": incoherencias}
 
@@ -219,12 +376,17 @@ def main(argv=None):
         return 0 if r["K4a"]["cumple"] else 1
     try:
         with open(x.entrada, encoding="utf-8") as f:
-            r = veredicto(json.load(f))
+            r = veredicto(json.load(f, object_pairs_hook=_sin_duplicados))
+    except EntradaInvalida as e:
+        print(json.dumps({"version": VERSION, "error": str(e), "campo": e.campo, "habilita_condicion_3": False,
+                          "habilita": NO_HABILITA}, ensure_ascii=False))
+        return 2
     except (OSError, ValueError) as e:
-        print(json.dumps({"version": VERSION, "error": str(e)}, ensure_ascii=False))
+        print(json.dumps({"version": VERSION, "error": f"entrada no legible: {e}", "campo": None,
+                          "habilita_condicion_3": False, "habilita": NO_HABILITA}, ensure_ascii=False))
         return 2
     print(json.dumps(r, ensure_ascii=False, indent=1))
-    return 0 if r["estabilidad_tecnica"] == "estable con carga suficiente" else 1
+    return 0 if r["habilita_condicion_3"] is True else 1
 
 
 if __name__ == "__main__":
