@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# [SENSOR1 m4rk] Muestreadores de E-carga v2 en Sensor1 (solo lectura, sin sudo). VERSION 2026-11-06.2.
+# [SENSOR1 m4rk] Muestreadores de E-carga v2 en Sensor1 (solo lectura, sin sudo). VERSION 2026-11-06.3.
 #   salud_captura.py muestrear (10 s)  ~/cyberflow-e4/herramientas-20261106 (VERSION 2026-11-06.1; idéntico al del paquete)
 #   muestreo_fino.py (1 s), obs_pcap.py (cada PCAP cerrado), muestreo_s14.py (1 s, S14 r3)  del paquete en el que está
 #   este guion: la ruta del paquete se deduce de la ubicación del guion (deploy/etapa4/ecarga/), sin nombres fijos.
@@ -28,7 +28,7 @@ comprobar() {
   (cd "$P" && sha256sum -c --strict --quiet SHA256SUMS) && ok "paquete $(basename "$P"): SHA256SUMS verifica" || no "paquete $P"
   [ "$(sha256sum < "$P/deploy/etapa4/sensor1/evaluar_ecarga.py" | cut -c1-64)" = "$EV_ESPERADO" ] \
     && ok "evaluar_ecarga.py sha256 = publicado" || no "evaluar_ecarga.py sha256"
-  v=$(python3 -I -c 'import importlib.util as u,sys;s=u.spec_from_file_location("e",sys.argv[1]);m=u.module_from_spec(s);s.loader.exec_module(m);print(m.VERSION)' "$P/deploy/etapa4/sensor1/evaluar_ecarga.py")
+  v=$(python3 -I -B -c 'import importlib.util as u,sys;s=u.spec_from_file_location("e",sys.argv[1]);m=u.module_from_spec(s);s.loader.exec_module(m);print(m.VERSION)' "$P/deploy/etapa4/sensor1/evaluar_ecarga.py")
   [ "$v" = 2026-11-06.4 ] && ok "evaluar_ecarga VERSION $v" || no "evaluar_ecarga VERSION $v"
   (cd "$H" && sha256sum -c --strict --quiet SHA256SUMS) && ok "herramientas-20261106: SHA256SUMS verifica" || no "herramientas-20261106"
   cmp -s "$H/salud_captura.py" "$P/scripts/etapa4/salud_captura.py" && ok "salud_captura.py de herramientas = paquete" \
@@ -63,7 +63,7 @@ comprobar() {
   procesos "salud_captura.py muestrear|muestreo_fino.py|obs_pcap.py|muestreo_s14.py"; rc=$?
   case $rc in 1) ok "ningún muestreador en marcha";; 0) no "ya hay muestreadores en marcha";; *) no "pgrep falló";; esac
   echo "== obs_pcap --en-seco"
-  python3 -I "$P/deploy/etapa4/sensor1/obs_pcap.py" --dir "$ANILLO" --salida "$O-seco-obs_pcap" --hasta-epoch "$FIN" --hasta-iso "$ISO" --en-seco
+  python3 -I -B "$P/deploy/etapa4/sensor1/obs_pcap.py" --dir "$ANILLO" --salida "$O-seco-obs_pcap" --hasta-epoch "$FIN" --hasta-iso "$ISO" --en-seco
   rc=$?; [ $rc = 0 ] && ok "obs_pcap --en-seco rc 0" || no "obs_pcap --en-seco rc $rc"
   [ -e "$O-seco-obs_pcap" ] && no "obs_pcap en seco creó $O-seco-obs_pcap" || ok "obs_pcap en seco no creó salida"
   echo "fallo=$fallo"; return $fallo

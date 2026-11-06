@@ -929,3 +929,87 @@ def test_s14_manual_ya_no_se_admite(tmp_path):
     args[i:i] = ["--manual", f"S14=true:{ev}"]
     rc, out, err = _cli(ruta("construir_entrada.py"), *args)
     assert rc == 2 and "S14" in err
+
+
+# ======================================================== sensor1_muestreadores.sh comprobar no escribe en el paquete
+# Defecto del 06-nov (21:05:27Z, P0 anticipado): con 2026-11-06.2, la consulta de VERSION importaba evaluar_ecarga.py con
+# `python3 -I -c` y CPython guardaba deploy/etapa4/sensor1/__pycache__/evaluar_ecarga.cpython-312.pyc DENTRO del paquete
+# (-I ignora PYTHONDONTWRITEBYTECODE). El paquete del banco es una copia ESCRIBIBLE: si la orden escribiera, se vería.
+FICHEROS_PAQUETE = ["deploy/etapa4/sensor1/evaluar_ecarga.py", "deploy/etapa4/sensor1/obs_pcap.py",
+                    "deploy/etapa4/sensor1/clasificar_periodo.py", "deploy/etapa4/sensor1/comparar_suricata.py",
+                    "deploy/etapa4/sensor1/verificar_sensor1.sh", "deploy/etapa4/cierre/muestreo_fino.py",
+                    "scripts/etapa4/salud_captura.py", "deploy/etapa4/ecarga/muestreo_s14.py",
+                    "deploy/etapa4/ecarga/evaluar_s14.py"]
+SIN_CACHE_ENV = ("PYTHONDONTWRITEBYTECODE", "PYTHONPYCACHEPREFIX")
+
+
+def paquete_escribible(tmp):
+    """Copia mínima y ESCRIBIBLE del paquete con el sensor1_muestreadores.sh de la versión probada y su SHA256SUMS."""
+    pkg = tmp / "cf-e4" / "paquete-banco"
+    for rel in FICHEROS_PAQUETE:
+        (pkg / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(REPO / rel, pkg / rel)
+    guion = pkg / "deploy/etapa4/ecarga/sensor1_muestreadores.sh"
+    shutil.copy(ruta("sensor1_muestreadores.sh"), guion)
+    sumas = [f"{hashlib.sha256((pkg / r).read_bytes()).hexdigest()}  ./{r}"
+             for r in sorted(FICHEROS_PAQUETE + ["deploy/etapa4/ecarga/sensor1_muestreadores.sh"])]
+    (pkg / "SHA256SUMS").write_text("\n".join(sumas) + "\n")
+    herr = tmp / "home" / "cyberflow-e4" / "herramientas-20261106"
+    herr.mkdir(parents=True)
+    shutil.copy(REPO / "scripts/etapa4/salud_captura.py", herr / "salud_captura.py")
+    (herr / "SHA256SUMS").write_text(
+        f"{hashlib.sha256((herr / 'salud_captura.py').read_bytes()).hexdigest()}  salud_captura.py\n")
+    assert os.access(pkg, os.W_OK) and os.access(pkg / "deploy/etapa4/sensor1", os.W_OK)
+    return pkg, guion
+
+
+def inventario(raiz):
+    """Todo lo que hay bajo raiz (ficheros, directorios y enlaces) con tipo, modo, tamaño, mtime_ns y sha256."""
+    inv = {}
+    for dirpath, dirnames, filenames in os.walk(raiz):
+        for n in dirnames + filenames:
+            p = Path(dirpath) / n
+            st = p.lstat()
+            h = hashlib.sha256(p.read_bytes()).hexdigest() if stat.S_ISREG(st.st_mode) else None
+            inv[str(p.relative_to(raiz))] = (stat.S_IFMT(st.st_mode), st.st_mode & 0o7777, st.st_size, st.st_mtime_ns, h)
+    return inv
+
+
+def env_sin_supresores(tmp):
+    env = {k: v for k, v in os.environ.items() if k not in SIN_CACHE_ENV}
+    env.update(HOME=str(tmp / "home"), LANG="C.UTF-8", PATH=f"{BANCO}:/usr/local/bin:/usr/bin:/bin",
+               FAKE_DIR=str(tmp / "fake"))
+    (tmp / "fake" / "proc").mkdir(parents=True, exist_ok=True)
+    return env
+
+
+def test_banco_detecta_escritura_de_cache(tmp_path):
+    """Control: en esta copia escribible, la consulta de 2026-11-06.2 (sin -B) SÍ deja caché; el banco puede verla."""
+    pkg, _ = paquete_escribible(tmp_path)
+    antes = inventario(pkg)
+    r = subprocess.run(["python3", "-I", "-c", "import importlib.util as u,sys;s=u.spec_from_file_location('e',sys.argv[1]);"
+                        "m=u.module_from_spec(s);s.loader.exec_module(m);print(m.VERSION)",
+                        str(pkg / "deploy/etapa4/sensor1/evaluar_ecarga.py")],
+                       env=env_sin_supresores(tmp_path), capture_output=True, text=True)
+    assert r.returncode == 0 and r.stdout.strip() == "2026-11-06.4"
+    nuevos = sorted(set(inventario(pkg)) - set(antes))
+    assert any("__pycache__" in n and n.endswith(".pyc") for n in nuevos), nuevos
+
+
+def test_regresion_comprobar_no_escribe_en_el_paquete(tmp_path):
+    """comprobar, tres veces seguidas sobre la copia escribible: inventario y hashes idénticos y VERSION OK cada vez."""
+    pkg, guion = paquete_escribible(tmp_path)
+    env = env_sin_supresores(tmp_path)
+    antes = inventario(pkg)
+    for i in range(1, 4):
+        r = subprocess.run(["bash", str(guion), "comprobar", str(tmp_path / "ev" / f"e-{i}"), "1794197760",
+                            "2026-11-09T04:16:00Z"], env=env, capture_output=True, text=True, timeout=120)
+        out = r.stdout + r.stderr
+        assert "OK    evaluar_ecarga VERSION 2026-11-06.4" in out, out      # la consulta de versión se conserva
+        assert "OK    evaluar_ecarga.py sha256 = publicado" in out, out
+        despues = inventario(pkg)
+        anadidos = sorted(set(despues) - set(antes))
+        quitados = sorted(set(antes) - set(despues))
+        cambiados = sorted(k for k in set(antes) & set(despues) if antes[k] != despues[k])
+        assert (anadidos, quitados, cambiados) == ([], [], []), f"pasada {i}: {anadidos} {quitados} {cambiados}"
+        assert not (tmp_path / "ev" / f"e-{i}-seco-obs_pcap").exists()
