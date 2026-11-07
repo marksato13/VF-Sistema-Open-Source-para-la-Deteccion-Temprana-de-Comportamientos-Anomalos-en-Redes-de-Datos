@@ -9,8 +9,10 @@ las salidas REALES de la ventana, con un fichero de trazabilidad por cada valor.
       --bastion       DIR/bastion_s.json                        derivar_bastion.py
       --pcap          DIR/pcap_s.json                           derivar_pcap.py 2026-11-06.2
       --s14           DIR/s14.json                              evaluar_s14.py 2026-11-06.2 (r3 §3.6.1, r4 §3.6.1.1)
-      [--manual S7=true:FICHERO] [--manual S11=…] [--manual S15=…]
+      --s7            DIR/s7.json                               derivar_s7.py 2026-11-07.1 (regla de r1 §4.3)
+      [--manual S11=…] [--manual S15=…]
 
+VERSION 2026-11-07.1: S7 sale de derivar_s7.py y ya no es manual, para que su valor llegue tal cual a la entrada.
 VERSION 2026-11-06.3: exige evaluar_s14 2026-11-06.2 (la .1 no contaba el hueco anterior a una saturación y
 daba S14 true con un episodio posible de 8 s). VERSION 2026-11-06.2: S14 sale de evaluar_s14.py (ya no es manual); S2/S3 exigen derivar_pcap 2026-11-06.2 (la .1
 aprobaba observaciones incompletas) y copian su motivo a la trazabilidad.
@@ -19,7 +21,7 @@ aprobaba observaciones incompletas) y copian su motivo a la trazabilidad.
 Reglas (no cambian ningún criterio; solo dicen de dónde sale cada valor):
   * Una fuente que falta, no se lee o es de otro periodo deja sus criterios en null (sin medida). Nunca true.
   * Ningún criterio se rellena por defecto: lo que no se deriva ni se da con --manual queda null.
-  * --manual solo para S7, S11 y S15, siempre con un fichero de evidencia existente, cuyo sha256 se anota.
+  * --manual solo para S11 y S15, siempre con un fichero de evidencia existente, cuyo sha256 se anota.
   * K4b no entra en la entrada (es informativo); se copia a la trazabilidad.
   * La clasificación debe traer la medida EVE (`suricata.fuente` = eve_stats) del MISMO periodo. Si no, no se construye
     la entrada (rc 2): el bloque `suricata` no se inventa.
@@ -35,12 +37,12 @@ from pathlib import Path
 K1_MIN, K2_MIN, K3_MIN = 596_789, 9, 50
 UMBRAL_RAFAGA, UMBRAL_FLUJO = 5000, 1000
 MEDIDOS = ("cero_explicito", "descartes")
-MANUALES = ("S7", "S11", "S15")
+MANUALES = ("S11", "S15")
 K = ("K1", "K2", "K3", "K4a", "K5")
 S = tuple(f"S{i}" for i in range(1, 16))
-VERSION = "construir_entrada 2026-11-06.3"
+VERSION = "construir_entrada 2026-11-07.1"
 VERSIONES_FUENTE = {"pcap": "derivar_pcap 2026-11-06.2", "bastion": "derivar_bastion 2026-11-06.2",
-                    "s14": "evaluar_s14 2026-11-06.2"}
+                    "s14": "evaluar_s14 2026-11-06.2", "s7": "derivar_s7 2026-11-07.1"}
 
 
 def sha(p):
@@ -134,7 +136,7 @@ def construir(a):
             "copiado si rc 0/1, mismo periodo y evaluador 2026-11-06.4; si no, null")
         tr["K4b_informativo"] = pf.get("K4b")
     for nombre, ruta, claves in (("bastion", a.bastion, ("S1", "S6", "S8", "S9", "S10")), ("pcap", a.pcap, ("S2", "S3")),
-                                 ("s14", a.s14, ("S14",))):
+                                 ("s14", a.s14, ("S14",)), ("s7", a.s7, ("S7",))):
         d = cargar(ruta, tr, nombre)
         if d is None:
             continue
@@ -181,6 +183,7 @@ def main(argv=None):
     ap.add_argument("--bastion")
     ap.add_argument("--pcap")
     ap.add_argument("--s14")
+    ap.add_argument("--s7")
     ap.add_argument("--manual", action="append", default=[])
     ap.add_argument("--salida-entrada", required=True)
     ap.add_argument("--salida-traza", required=True)

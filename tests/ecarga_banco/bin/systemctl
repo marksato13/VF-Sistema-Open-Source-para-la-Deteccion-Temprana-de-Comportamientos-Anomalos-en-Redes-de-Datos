@@ -2,7 +2,7 @@
 """systemctl simulado para el banco de E-carga (SIN acceso al laboratorio). Estado en $FAKE_DIR:
   units/<unidad>.json   propiedades (LoadState, ActiveState, SubState, MainPID, NRestarts, PartOf, ExecStart, UnitFileState)
   config.json           {"start": ok|fail|parcial|argv_malo, "stop": ok|fail|sin_efecto|fail_pero_para,
-                         "fail_show": null|"siempre"|"tras_start"}
+                         "fail_show": null|"siempre"|"tras_start", "start_retardo": segundos reales}
   proc/<pid>/cmdline    procesos simulados (CF_PROC apunta aquí)
   llamadas.log          cada invocación
 Una unidad que no existe responde como systemd: LoadState=not-found, ActiveState=inactive, MainPID=0.
@@ -10,6 +10,7 @@ Una unidad que no existe responde como systemd: LoadState=not-found, ActiveState
 import json
 import os
 import sys
+import time
 
 F = os.environ["FAKE_DIR"]
 U = os.path.join(F, "units")
@@ -127,6 +128,7 @@ def main(a):
         modo = c.get("start", "ok")
         if modo == "fail":
             print("Job for cyberflow-lab.target failed because a timeout was exceeded.", file=sys.stderr); return 1
+        time.sleep(float(c.get("start_retardo") or 0))
         arrancar(modo)
         open(os.path.join(F, "arrancado"), "w").write("1")
         return 0

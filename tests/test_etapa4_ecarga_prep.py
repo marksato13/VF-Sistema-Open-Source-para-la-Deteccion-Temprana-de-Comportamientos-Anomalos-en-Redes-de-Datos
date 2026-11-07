@@ -80,7 +80,8 @@ class Lab:
                     NRestarts="0", UnitFileState="static", PartOf="", ExecStart="")
         self.config()
         # paquete: generadores.sh con el hash del generador simulado (misma longitud que el original), guardia y muestreo
-        for n in ("generadores.sh", "muestreo_bastion.sh", "guardia.py"):
+        for n in ("generadores.sh", "muestreo_bastion.sh", "guardia.py", "arrancar_c1.sh", "puerta_c1.py", "derivar_s7.py",
+                  "s7_post.sh"):
             src = ruta(n, obligatorio=False)
             if src is None:
                 continue
@@ -314,7 +315,7 @@ def test_regresion_parada_fallida_y_recuperacion(lab):
     lab.marca("ssh_falla_parar", "1")
     rc, o, leer, jl, out = muestreo(lab, "real", 5)
     assert rc == 0, out
-    assert [x["resultado"] for x in jl if x["resultado"] != "solicitada"] == ["fallida", "confirmada"]
+    assert [x["resultado"] for x in jl if x["resultado"] not in ("solicitada", "comprobacion_final")] == ["fallida", "confirmada"]
     assert not (o / "PARADA-NO-CONFIRMADA").exists()
     assert lab.parado()
 
@@ -802,7 +803,37 @@ def _cli(script, *args):
     return r.returncode, r.stdout, r.stderr
 
 
-def fuentes(tmp, pcap_lineas, s14_lineas=None, pcap_log=None):
+def s7_trazas(d=None, a=None, entregas=None, feed=None, aceptar=None, feed_fijo=None, paso=30):
+    """Trazas y muestras sintéticas de S7, ventana [d, a). entregas: secuencias; aceptar: las aceptadas (por defecto todas),
+    en el orden dado; feed: función i -> texto de feed_seq de la muestra i; feed_fijo: lista de (t, texto) en vez de la serie."""
+    d = D if d is None else d
+    a = H if a is None else a
+    entregas = list(range(100, 104)) if entregas is None else entregas
+    aceptar = entregas if aceptar is None else aceptar
+    paso_e = (a - d) / (len(entregas) + 1)
+    rele = [{"evento": "reenvio", "secuencia": s, "destinos": {"srv-dmz": {"entregado_en": d + paso_e * (i + 1)}}}
+            for i, s in enumerate(entregas)]
+    agente = [{"evento": "recepcion", "secuencia": s, "estado": "aceptado", "recibido_en": d + paso_e * (i + 1) + 0.1}
+              for i, s in enumerate(aceptar)]
+    if feed_fijo is None:
+        feed = feed or (lambda i: str(500 + i))
+        n = int((a - d + 120) // paso) + 1
+        feed_fijo = [(d - 60 + paso * i, feed(i)) for i in range(n)]
+    muestras = "".join(f"### 2026-11-09T03:15:00Z {t:.0f}\nS feed_seq={v}\n" for t, v in feed_fijo)
+    return "\n".join(map(json.dumps, agente)) + "\n", "\n".join(map(json.dumps, rele)) + "\n", muestras
+
+
+def s7_fuente(tmp, **kw):
+    ag, re_, mu = s7_trazas(**kw)
+    for n, c in (("s7-agente.jsonl", ag), ("s7-rele.jsonl", re_), ("s7-muestras.txt", mu)):
+        (tmp / n).write_text(c)
+    rc, out, err = _cli(ruta("derivar_s7.py"), tmp / "s7-agente.jsonl", tmp / "s7-rele.jsonl", tmp / "s7-muestras.txt", D, H)
+    assert rc == 0, err
+    (tmp / "s7.json").write_text(out)
+    return json.loads(out)
+
+
+def fuentes(tmp, pcap_lineas, s14_lineas=None, pcap_log=None, s7=None):
     """Escribe fuentes sintéticas coherentes de una ventana C0 con carga suficiente y devuelve los argumentos."""
     tmp.mkdir(parents=True, exist_ok=True)
     (tmp / "clas.json").write_text(json.dumps({
@@ -829,8 +860,13 @@ def fuentes(tmp, pcap_lineas, s14_lineas=None, pcap_log=None):
     args += ["--pcap", tmp / "pcap.json"]
     ev = tmp / "ev.txt"
     ev.write_text("evidencia sintética del banco (no es un resultado de E-carga)\n")
-    manual = ["S7", "S11", "S15"]
+    manual = ["S11", "S15"]
     ce_txt = ruta("construir_entrada.py").read_text(encoding="utf-8")
+    if "--s7" in ce_txt:
+        s7_fuente(tmp, **(s7 or {}))
+        args += ["--s7", tmp / "s7.json"]
+    else:
+        manual.append("S7")                   # versión anterior: S7 era manual
     if "--s14" in ce_txt and s14_lineas is not None:
         (tmp / "s14.jsonl").write_text("\n".join(s14_lineas) + "\n")
         rc, out, err = _cli(ruta("evaluar_s14.py"), tmp / "s14.jsonl", "--desde", D, "--hasta", H,

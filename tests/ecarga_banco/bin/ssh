@@ -3,8 +3,12 @@
 #  clientes (10.10.20.20): ejecuta la orden en local (los guiones entran por stdin), con los dobles del banco.
 #     $FAKE_DIR/ssh_falla_parar = N  -> las N próximas órdenes que contienen «parar» fallan con rc 255
 #     $FAKE_DIR/ssh_falla_clientes   -> toda conexión a clientes falla con rc 255
+#     $FAKE_DIR/ssh_falla_comprobar = N -> las N próximas órdenes «comprobar-parado» fallan con rc 255
+#     $FAKE_DIR/ssh_corta_arrancar = S  -> «arrancar» sigue en el host, pero la conexión se corta a los S s (rc 255)
 #  Sensor1 (10.10.60.11) y srv-dmz (10.10.30.10): si existe $FAKE_DIR/ejecutar_remoto, ejecuta la orden en local
 #     (para probar las lecturas con fallos); si no, devuelve una muestra enlatada coherente.
+#     $FAKE_DIR/memdisp = kB  -> MemAvailable de Sensor1 en la muestra enlatada
+#     $FAKE_DIR/traza_agente  -> contenido de la traza del agente en srv-dmz; $FAKE_DIR/traza_agente_falla: rc 255
 h=""; while [ $# -gt 0 ]; do
   case "$1" in -o|-i|-p|-l) shift 2;; -*) shift;; *) h=$1; shift; break;; esac
 done
@@ -17,6 +21,16 @@ case "$h" in
       cat > /dev/null; echo "ssh: connect to host 10.10.20.20 port 22: Connection timed out" >&2; exit 255
     fi
     [ -e "$FAKE_DIR/ssh_falla_clientes" ] && { cat > /dev/null; echo "ssh: connect to host 10.10.20.20 port 22: No route to host" >&2; exit 255; }
+    if [[ $c == *comprobar-parado* ]] && [ -e "$FAKE_DIR/ssh_falla_comprobar" ] && [ "$(cat "$FAKE_DIR/ssh_falla_comprobar")" -gt 0 ]; then
+      echo $(( $(cat "$FAKE_DIR/ssh_falla_comprobar") - 1 )) > "$FAKE_DIR/ssh_falla_comprobar"
+      cat > /dev/null; echo "ssh: connect to host 10.10.20.20 port 22: Connection timed out" >&2; exit 255
+    fi
+    if [[ $c == *"-s arrancar"* ]] && [ -e "$FAKE_DIR/ssh_corta_arrancar" ]; then
+      g=$(mktemp "$FAKE_DIR/guion.XXXXXX"); cat > "$g"
+      setsid bash -c "$c" < "$g" > "$FAKE_DIR/arrancar_remoto.log" 2>&1 9>&- &
+      /bin/sleep "$(cat "$FAKE_DIR/ssh_corta_arrancar")"
+      echo "ssh: connection to 10.10.20.20 closed by remote host" >&2; exit 255
+    fi
     exec bash -c "$c" ;;
   *10.10.60.11)
     [ -e "$FAKE_DIR/ejecutar_remoto" ] && exec bash -c "$c"
@@ -25,11 +39,15 @@ case "$h" in
       set -- $u; echo "S $1 pid=$2 nr=0 active"; done
     echo "S v1 inactive/inactive enforce_aplicar=0"
     echo "S feed_seq=5897"
-    echo "S home_libre_kb=12455468 carga=0.35 0.22 0.22 memdisp_kb=6769344"
+    echo "S home_libre_kb=12455468 carga=0.35 0.22 0.22 memdisp_kb=$(cat "$FAKE_DIR/memdisp" 2>/dev/null || echo 6769344)"
     echo "S ruleset=24c320e3e9538573"
     echo "S eve_ultimo_stats=$(date -u +%Y-%m-%dT%H:%M:%S.000000+0000) 45000 1000 0"
     echo "S anillo_ultimo=live-$(date -u +%Y%m%d%H%M%S).pcap"; exit 0 ;;
   *10.10.30.10)
+    if [[ $c == *"cat /var/lib/cyberflow/agente/traza.jsonl"* ]]; then
+      [ -e "$FAKE_DIR/traza_agente_falla" ] && { echo "ssh: connect to host 10.10.30.10 port 22: No route to host" >&2; exit 255; }
+      cat "$FAKE_DIR/traza_agente"; exit $?
+    fi
     [ -e "$FAKE_DIR/ejecutar_remoto" ] && exec bash -c "$c"
     cat > /dev/null 2>&1
     echo "D agente pid=15020 nr=0 active aplicar_cmd=0 v1=inactive"

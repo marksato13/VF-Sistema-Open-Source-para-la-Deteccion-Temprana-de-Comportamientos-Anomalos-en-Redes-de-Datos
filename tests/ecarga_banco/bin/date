@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# date simulado (banco de E-carga): sin $FAKE_DIR/reloj es el date real; con él, la hora es la de ese fichero (epoch).
+if [ -n "${FAKE_DIR:-}" ] && [ -e "$FAKE_DIR/reloj" ]; then
+  read -r t < "$FAKE_DIR/reloj"
+  exec /bin/date -d "@${t%.*}" "$@"
+fi
+exec /bin/date "$@"
