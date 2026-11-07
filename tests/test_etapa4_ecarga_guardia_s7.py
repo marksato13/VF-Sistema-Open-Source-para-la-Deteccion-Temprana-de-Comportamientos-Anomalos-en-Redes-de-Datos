@@ -76,9 +76,15 @@ def orden_c1(lab, x, t_g, e):
     return ["bash", "-c", C1_ANTERIOR], e
 
 
+def t_g_proximo():
+    """T_g a más de 2 s. Con int(now) + 1 el margen es casi nulo en el final de cada segundo: arrancar_c1.sh llegaba tarde y
+    daba rc 2 «T_g ya pasó al llegar a C1». Es una carrera de la prueba, no del guion."""
+    return int(time.time()) + 3
+
+
 def c1(lab, x, t_g=None, **env):
     """Emite C1 como el procedimiento de la versión probada. rc, salida"""
-    t_g = int(time.time()) + 1 if t_g is None else t_g
+    t_g = t_g_proximo() if t_g is None else t_g
     cmd, e = orden_c1(lab, x, t_g, dict(lab.env, **{k: str(v) for k, v in env.items()}))
     r = subprocess.run(cmd, capture_output=True, text=True, env=e, timeout=120)
     return r.returncode, r.stdout + r.stderr
@@ -129,7 +135,7 @@ def test_regresion_parada_confirmada_no_es_definitiva(lab):
 
 def test_c1_arranque_normal_y_parada_a_su_hora(lab):
     x = carpeta(lab)
-    p = muestreo_bg(lab, x, 11, 9, CF_INTERVALO=1)
+    p = muestreo_bg(lab, x, 30, 25, CF_INTERVALO=1)
     assert guardia_lista(x)
     rc, out = c1(lab, x)
     assert rc == 0, out
@@ -335,7 +341,7 @@ def caso_cruce_lento(lab, retardo=4):
     p = muestreo_bg(lab, x, 16, 15, CF_INTERVALO=1)
     assert guardia_lista(x)
     e = dict(lab.env)
-    t_g = int(time.time()) + 1
+    t_g = t_g_proximo()
     cmd, e = orden_c1(lab, x, t_g, e)
     a = subprocess.Popen(cmd, env=e, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     assert esperar(lambda: "systemctl start" in lab.llamadas() or "sudo -n systemctl start" in lab.llamadas())
@@ -365,7 +371,7 @@ def test_regresion_cruce_arranque_parcial(lab):
     rc, out = c1(lab, x)
     p.communicate(timeout=60)
     assert lab.parado() and not lab.procesos(), out
-    assert rc == 3 and "arrancar rc=4" in lee(x / "manual" / "arranque.rc") and p.returncode == 0
+    assert rc == 3 and "arrancar rc=4" in lee(x / "manual" / "arranque.rc") and p.returncode == 0, lee(x / "manual" / "RESULTADO-C1")
 
 
 def test_cruce_ssh_cortado_y_arranque_remoto_tardio(lab):
@@ -390,7 +396,7 @@ def test_cruce_muestreador_muere_durante_el_arranque(lab):
     lab.config(start_retardo=2)
     p = muestreo_bg(lab, x, 30, 29, CF_INTERVALO=1)
     assert guardia_lista(x)
-    a = subprocess.Popen(["bash", str(lab.pkg / "arrancar_c1.sh"), str(x), str(int(time.time()) + 1)], env=lab.env,
+    a = subprocess.Popen(["bash", str(lab.pkg / "arrancar_c1.sh"), str(x), str(t_g_proximo())], env=lab.env,
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     assert esperar(lambda: "systemctl start" in lab.llamadas())
     p.kill()
@@ -535,10 +541,10 @@ def test_h2_resultado_se_escribe_tambien_en_segundo_plano(lab):
 # ================================================================== recorrido completo con los epoch de la franja
 def test_recorrido_completo_con_reloj_simulado(lab):
     """B4 -> C1 en T_g -> ventana -> parada a su hora -> fin -> D4/D5 -> veredicto, con los epoch publicados (r4 §3.2) y
-    15 s simulados por cada segundo real. Con dobles: no demuestra nada sobre los hosts."""
+    8 s simulados por cada segundo real. Con dobles: no demuestra nada sobre los hosts."""
     ruta("arrancar_c1.sh")
     T_G, PARADA, FIN, B4 = 1794193200, 1794197820, 1794197880, 1794193200 - 130
-    velocidad = 15.0
+    velocidad = 8.0
     lab.unidad("ppi-relay-eventos.service", LoadState="loaded", ActiveState="active", SubState="running", MainPID="1200", NRestarts="0")
     lab.marca("reloj", str(B4))
     lab.marca("reloj_externo")
@@ -564,7 +570,7 @@ def test_recorrido_completo_con_reloj_simulado(lab):
         rc, out = c1(lab, x, t_g=T_G, **{k: e[k] for k in ("CF_ESPERA", "CF_ESPERA_MAX", "CF_ESTABLE", "CF_T_ARRANQUE", "CF_T_PARADA")})
         assert rc == 0, out
         assert len(lab.procesos()) == 6
-        fin_out, _ = p.communicate(timeout=480)
+        fin_out, _ = p.communicate(timeout=900)
     finally:
         alto.set()
         h.join()
