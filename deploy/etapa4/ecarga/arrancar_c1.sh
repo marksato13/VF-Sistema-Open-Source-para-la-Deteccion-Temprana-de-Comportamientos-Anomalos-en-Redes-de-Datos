@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# [BASTIÓN gadmin] Paso C1 de E-carga v2: autoriza y emite la orden de arranque. VERSION 2026-11-07.2.
+# [BASTIÓN gadmin] Paso C1 de E-carga v2: autoriza y emite la orden de arranque. VERSION 2026-11-07.3.
 # SOLO con la orden de Mark. Sustituye al bloque manual de C1, que podía arrancar con una parada ya confirmada.
 #
 #   arrancar_c1.sh X T_G
 # X es la carpeta del ensayo (X/bastion con el muestreador, X/manual para la evidencia). Espera hasta T_G y entonces:
 #   1. toma el cerrojo X/bastion/ordenes.lock sin esperar: si está ocupado, hay una parada en curso y no arranca;
 #   2. dentro del cerrojo, puerta_c1.py decide. Si no autoriza, NO se emite ninguna orden (rc 2, motivo en c1-puerta.jsonl);
-#      después relee la hora: si ya superó T_G, tampoco se emite (rc 2). Sin tolerancia;
-#   3. emite `generadores.sh arrancar`, con tiempo máximo, sin soltar el cerrojo;
+#      después escribe el registro y, ya sin escribir nada más, comprueba por última vez la solicitud de parada y la hora:
+#      con solicitud o con la hora por encima de T_G tampoco se emite (rc 2). Sin tolerancia;
+#   3. emite `generadores.sh arrancar`, con tiempo máximo, sin soltar el cerrojo. Entre la última comprobación y el ssh no
+#      hay ninguna escritura: un disco lento antes de la comprobación deniega y después ya no puede retrasar la orden;
 #   4. al volver, relee: arrancar con rc distinto de 0, una solicitud de parada o el muestreador muerto obligan a parar
 #      aquí mismo y a dejar PARADA-SOLICITADA, que el muestreador también atiende.
 #
@@ -19,11 +21,14 @@
 # reabre la parada y la repite. Esa vigilancia dura hasta FIN.
 #
 # Evidencia en X/manual: c1-puerta.jsonl (decisiones), arranque.txt, arranque.rc, RESULTADO-C1 (una línea JSON).
+# Enviar no es confirmar. RESULTADO-C1 lo separa: `orden_enviada` dice que el ssh se lanzó, `t_envio` es la hora leída en la
+# última comprobación (lo más cerca del envío que se puede leer sin escribir entre medias) y `arranque_confirmado` solo es
+# true si `generadores.sh arrancar` devolvió rc 0, es decir, si el host de clientes confirmó el arranque.
 # rc: 0 arranque confirmado, sin solicitud de parada · 2 no autorizado: ninguna orden emitida ·
 #     3 arranque abortado y parada confirmada · 4 parada NO confirmada: INTERVENCIÓN NECESARIA
 set -u
 set -o pipefail
-VERSION=2026-11-07.2
+VERSION=2026-11-07.3
 X=${1:?X}; T_G=${2:?T_G}
 [[ $T_G =~ ^[0-9]+$ ]] || { echo "ABORTA: T_G no es un epoch"; exit 2; }
 AQUI="$(cd "$(dirname "$0")" && pwd)"
@@ -36,11 +41,12 @@ T_ARRANQUE=${CF_T_ARRANQUE:-90}      # s máximos de la orden de arranque (gener
 T_PARADA=${CF_T_PARADA:-90}
 INTENTOS_PARADA=${CF_C1_INTENTOS:-3}
 CLI="$SSH -o BatchMode=yes -o ConnectTimeout=10 -i $K/cyberflow-to-clientes adminclientes@10.10.20.20"
+ORDEN_ENVIADA=false; T_ENVIO=null; ARRANQUE_CONFIRMADO=false
 
 resultado() {  # resultado RESULTADO RC MOTIVO
   local m=${3//\\/\/}
-  printf '{"version": "%s", "resultado": "%s", "rc": %s, "motivo": "%s", "t": %s}\n' \
-    "$VERSION" "$1" "$2" "${m//\"/\'}" "$(date +%s)" > "$M/RESULTADO-C1"
+  printf '{"version": "%s", "resultado": "%s", "rc": %s, "motivo": "%s", "t": %s, "orden_enviada": %s, "t_envio": %s, "arranque_confirmado": %s}\n' \
+    "$VERSION" "$1" "$2" "${m//\"/\'}" "$(date +%s)" "$ORDEN_ENVIADA" "$T_ENVIO" "$ARRANQUE_CONFIRMADO" > "$M/RESULTADO-C1"
   cat "$M/RESULTADO-C1"
 }
 denegar() {  # denegar MOTIVO: ninguna orden se ha emitido
@@ -66,12 +72,17 @@ while [ "$(date +%s)" -lt "$T_G" ] && [ ! -e "$O/PARADA-SOLICITADA" ]; do sleep 
 exec 9>>"$O/ordenes.lock" || denegar "no se puede abrir el cerrojo"
 flock -n 9 || denegar "cerrojo ocupado: hay una parada en curso"
 puerta || denegar "$(motivos_puerta)"
-ahora=$(date +%s)
-[ "$ahora" -le "$T_G" ] || denegar "T_g ya pasó antes de emitir la orden (ahora=$ahora, T_G=$T_G)"
 
-date -u +%FT%T.%NZ | tee -a "$M/arranque.txt"
+{ date -u +%FT%T.%NZ; echo "ORDEN_PREPARADA: falta la última comprobación; todavía no se ha enviado nada"; } | tee -a "$M/arranque.txt"
+# Última comprobación: de aquí al ssh no se escribe nada, ni registro ni evidencia.
+[ ! -e "$O/PARADA-SOLICITADA" ] || denegar "solicitud de parada antes de emitir la orden"
+ahora_ns=$(date +%s.%N); ahora=${ahora_ns%.*}
+[ "$ahora" -le "$T_G" ] || denegar "T_g ya pasó antes de emitir la orden (ahora=$ahora, T_G=$T_G)"
+ORDEN_ENVIADA=true; T_ENVIO="\"$ahora_ns\""
 timeout "$T_ARRANQUE" $CLI 'bash -s arrancar' < "$AQUI/generadores.sh" 2>&1 9>&- | tee -a "$M/arranque.txt"
 rc=${PIPESTATUS[0]}
+[ "$rc" != 0 ] || ARRANQUE_CONFIRMADO=true
+echo "ORDEN_ENVIADA t_envio=$ahora_ns arrancar_rc=$rc arranque_confirmado=$ARRANQUE_CONFIRMADO" >> "$M/arranque.txt"
 echo "arrancar rc=$rc" | tee "$M/arranque.rc"
 
 motivo=""
