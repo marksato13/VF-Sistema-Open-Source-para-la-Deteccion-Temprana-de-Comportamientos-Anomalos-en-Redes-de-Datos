@@ -323,9 +323,10 @@ def test_c1_cerrojo_ocupado_por_una_parada(falso):
 
 
 # ------- T_g superado después de la comprobación inicial: reloj controlado y ssh simulado
-def caso_c1_tardio(lab, salto_espera=None, salto_puerta=None):
+def caso_c1_tardio(lab, salto_espera=None, salto_puerta=None, salto_registro=None, cortar_arranque=False):
     """Muestreador vivo, lectura válida y sin solicitud de parada, con el reloj en T_g - 1 y la parada en T_g + 40.
-    salto_espera lleva el reloj a T_g + N en la primera espera; salto_puerta, justo al terminar puerta_c1.py."""
+    salto_espera lleva el reloj a T_g + N en la primera espera; salto_puerta, justo al terminar puerta_c1.py;
+    salto_registro, justo después de leer la fecha del registro; cortar_arranque deja sin confirmar la orden enviada."""
     t_g = T0
     f = Falso(lab)
     (f.o / "muestreo.pid").write_text(f"{f.pid} 2026-11-09T02:58:00Z inicio muestreo v2026-11-07.1 modo=real "
@@ -335,6 +336,11 @@ def caso_c1_tardio(lab, salto_espera=None, salto_puerta=None):
     env = {}
     if salto_espera is not None:
         lab.marca("salto_sleep", f"1 {t_g + salto_espera}")
+    if salto_registro is not None:
+        lab.marca("salto_fecha_registro", str(t_g + salto_registro))
+    if cortar_arranque:
+        lab.marca("ssh_falla_clientes", "1")
+        env["CF_C1_INTENTOS"] = 1
     if salto_puerta is not None:
         d = lab.tmp / "python-puerta"
         d.mkdir()
@@ -370,6 +376,69 @@ def test_regresion_c1_reloj_supera_tg_durante_la_espera(lab, salto):
 @pytest.mark.parametrize("salto", [1, 45])
 def test_regresion_c1_reloj_supera_tg_al_evaluar_la_puerta(lab, salto):
     denegado_por_hora(caso_c1_tardio(lab, salto_puerta=salto))
+
+
+@pytest.mark.parametrize("salto", [1, 45])
+def test_regresion_c1_reloj_supera_tg_durante_el_registro(lab, salto):
+    """El fallo de 2026-11-07.2: la comparación iba antes del registro, y un salto mientras se escribía emitía la orden y daba rc 0."""
+    r = caso_c1_tardio(lab, salto_registro=salto)
+    denegado_por_hora(r)
+    assert r["resultado"]["orden_enviada"] is False and r["resultado"]["t_envio"] is None
+    assert r["resultado"]["arranque_confirmado"] is False
+    txt = lee(r["x"] / "manual" / "arranque.txt")
+    assert "ORDEN_PREPARADA" in txt and "ORDEN_ENVIADA" not in txt
+
+
+def test_regresion_c1_parada_solicitada_durante_el_registro(lab):
+    """La solicitud llega después de la puerta y antes de la última comprobación: tampoco se emite."""
+    t_g = T0
+    f = Falso(lab)
+    (f.o / "muestreo.pid").write_text(f"{f.pid} 2026-11-09T02:58:00Z inicio muestreo v2026-11-07.1 modo=real "
+                                      f"fin={t_g + 100} parada={t_g + 40} intentos_max=6\n")
+    f.lectura(t=t_g - 10)
+    lab.marca("reloj", str(t_g - 1))
+    d = lab.tmp / "python-puerta"
+    d.mkdir()
+    (d / "python3").write_text(f"""#!/bin/bash
+{sys.executable} "$@"
+r=$?
+case " $* " in *puerta_c1.py*) echo "1 guardia" > "{f.o}/PARADA-SOLICITADA" ;; esac
+exit $r
+""")
+    (d / "python3").chmod(0o755)
+    rc, out = c1(lab, f.x, t_g=t_g, PATH=f"{d}:{lab.env['PATH']}")
+    fin = json.loads(lee(f.x / "manual" / "RESULTADO-C1"))
+    f.p.kill()
+    f.p.wait()
+    assert rc == 2 and fin["resultado"] == "NO_AUTORIZADO" and "solicitud de parada" in fin["motivo"], out
+    assert lee(lab.fake / "ssh.log").count("-s arrancar") == 0 and starts(lab) == 0 and fin["orden_enviada"] is False
+
+
+def test_c1_control_dentro_del_segundo_de_tg(lab):
+    """T_g + 0,9 s sigue siendo el segundo de T_g (regla vigente: hora entera <= T_g), con la guardia válida: una sola orden."""
+    r = caso_c1_tardio(lab, salto_registro=0.9)
+    assert r["rc"] == 0 and r["ordenes"] == 1 and r["starts"] == 1, r["out"]
+    assert r["resultado"]["resultado"] == "ARRANCADO" and r["resultado"]["orden_enviada"] is True, r["out"]
+    assert r["resultado"]["arranque_confirmado"] is True
+    assert r["resultado"]["t_envio"].startswith(f"{r['t_g']}."), r["resultado"]
+
+
+def test_c1_nada_se_escribe_entre_la_ultima_comprobacion_y_el_envio(lab):
+    """Lectura del guion, no del comportamiento: entre la última comparación y el ssh solo hay asignaciones."""
+    lineas = lee(lab.pkg / "arrancar_c1.sh").splitlines()
+    i = next(n for n, l in enumerate(lineas) if 'T_g ya pasó antes de emitir' in l)
+    j = next(n for n, l in enumerate(lineas) if "'bash -s arrancar'" in l and "timeout" in l)
+    assert 0 < j - i <= 2 and i > next(n for n, l in enumerate(lineas) if "ORDEN_PREPARADA" in l and "tee" in l)
+    for l in lineas[i + 1:j]:
+        assert "tee" not in l and ">" not in l and "date" not in l and "$(" not in l, l
+
+
+def test_c1_orden_enviada_sin_confirmacion_remota(lab):
+    """Enviar no es confirmar: el ssh se corta tras enviar y RESULTADO-C1 lo separa."""
+    r = caso_c1_tardio(lab, cortar_arranque=True)
+    assert r["rc"] in (3, 4) and r["ordenes"] == 1, r["out"]
+    assert r["resultado"]["orden_enviada"] is True and r["resultado"]["arranque_confirmado"] is False, r["resultado"]
+    assert "arranque_confirmado=false" in lee(r["x"] / "manual" / "arranque.txt")
 
 
 def test_c1_control_llega_exactamente_a_tg(lab):
@@ -419,6 +488,8 @@ def test_regresion_cruce_arranque_lento_y_parada(lab):
     r = caso_cruce_lento(lab)
     assert r["vivos_al_final"] == 0 and r["parado"], r
     assert r["c1_rc"] == 3 and r["rc_muestreo"] == 0, r
+    fin = json.loads(lee(r["x"] / "manual" / "RESULTADO-C1"))
+    assert fin["orden_enviada"] is True and fin["t_envio"], fin        # pedir parar durante el arranque: la orden ya salió
     assert r["vivos_tras_c1"] == 0
     assert r["ordenes"][0].endswith("arrancar") and r["ordenes"][1].endswith("parar"), r["ordenes"]
     assert json.loads(lee(r["x"] / "manual" / "RESULTADO-C1"))["resultado"] == "ABORTADO_PARADO"

@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
 # date simulado (banco de E-carga): sin $FAKE_DIR/reloj es el date real; con él, la hora es la de ese fichero (epoch).
+#   $FAKE_DIR/salto_fecha_registro = EPOCH: al imprimir la fecha del registro (%FT%T.%N) lleva el reloj a EPOCH, una sola vez.
 if [ -n "${FAKE_DIR:-}" ] && [ -e "$FAKE_DIR/reloj" ]; then
   read -r t < "$FAKE_DIR/reloj"
+  case "$*" in
+    *%FT%T.%N*)
+      if [ -e "$FAKE_DIR/salto_fecha_registro" ]; then
+        /bin/date -d "@${t%.*}" "$@"
+        read -r e < "$FAKE_DIR/salto_fecha_registro"
+        echo "$e" > "$FAKE_DIR/reloj"
+        rm -f "$FAKE_DIR/salto_fecha_registro"
+        exit 0
+      fi ;;
+  esac
   exec /bin/date -d "@${t%.*}" "$@"
 fi
 exec /bin/date "$@"

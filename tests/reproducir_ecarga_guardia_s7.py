@@ -42,14 +42,17 @@ def h1():
 def h1b():
     print("\n## H1b. T_g superado después de la comprobación inicial, reloj y ssh simulados\n")
     print("Reloj en T_g - 1, muestreador vivo, lectura válida, sin solicitud de parada, parada en T_g + 40.\n")
-    print("| Caso | rc C1 | Órdenes de arranque | Start | Vivos | RESULTADO-C1 |")
-    print("|---|---:|---:|---:|---:|---|")
+    print("| Caso | rc C1 | Órdenes de arranque | Start | Vivos | RESULTADO-C1 | orden_enviada | arranque_confirmado |")
+    print("|---|---:|---:|---:|---:|---|---|---|")
     for nombre, kw in (("Salto en la espera a T_g + 45", {"salto_espera": 45}), ("Salto en la espera a T_g + 1", {"salto_espera": 1}),
                        ("Salto al evaluar la puerta a T_g + 45", {"salto_puerta": 45}), ("Salto al evaluar la puerta a T_g + 1", {"salto_puerta": 1}),
+                       ("Salto al escribir el registro a T_g + 1", {"salto_registro": 1}),
+                       ("Salto al escribir el registro a T_g + 45", {"salto_registro": 45}),
+                       ("Control: registro a T_g + 0,9 s, dentro del segundo de T_g", {"salto_registro": 0.9}),
                        ("Control: llega exactamente a T_g", {})):
         r = t.caso_c1_tardio(lab(), **kw)
         f = r["resultado"]
-        print(f"| {nombre} | {r['rc']} | {r['ordenes']} | {r['starts']} | {r['vivos']} | {f.get('resultado')}: {f.get('motivo')} |")
+        print(f"| {nombre} | {r['rc']} | {r['ordenes']} | {r['starts']} | {r['vivos']} | {f.get('resultado')}: {f.get('motivo')} | {f.get('orden_enviada', 'sin campo')} | {f.get('arranque_confirmado', 'sin campo')} |")
 
 
 def h2():
