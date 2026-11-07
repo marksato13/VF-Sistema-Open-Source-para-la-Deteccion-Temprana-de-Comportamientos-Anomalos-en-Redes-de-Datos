@@ -612,10 +612,18 @@ def test_recorrido_completo_con_reloj_simulado(lab):
     alto = threading.Event()
 
     def relojero():
-        t0 = time.monotonic()
+        """A 8x, un segundo simulado son 125 ms reales: la puerta tarda más y C1 daría rc 2 por T_g + 1 según la velocidad del
+        equipo. El reloj se retiene dentro del segundo de T_g hasta que se emite la orden. A T_g + 0,5 y no a T_g, porque
+        el sleep simulado de C1 espera hasta 0,2 s después de la hora que leyó."""
+        base, t0, retenido = B4, time.monotonic(), True
         while not alto.is_set():
+            t = base + (time.monotonic() - t0) * velocidad
+            if retenido and t >= T_G + 0.5:
+                t = T_G + 0.5
+                if "-s arrancar" in lee(lab.fake / "ssh.log"):
+                    base, t0, retenido = t, time.monotonic(), False
             q = lab.fake / "reloj.tmp"
-            q.write_text(f"{B4 + (time.monotonic() - t0) * velocidad:.3f}\n")
+            q.write_text(f"{t:.3f}\n")
             q.replace(lab.fake / "reloj")
             time.sleep(0.02)
 
