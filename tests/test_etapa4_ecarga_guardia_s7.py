@@ -409,7 +409,7 @@ def test_cruce_parada_no_confirmada_exige_intervencion(lab):
     ruta("arrancar_c1.sh")
     x = carpeta(lab)
     lab.config(start="parcial", stop="sin_efecto")
-    p = muestreo_bg(lab, x, 4, 3, CF_INTERVALO=1, CF_MAX_INTENTOS=2)
+    p = muestreo_bg(lab, x, 10, 9, CF_INTERVALO=1, CF_MAX_INTENTOS=2)  # la parada, bien después de T_g
     assert guardia_lista(x)
     rc, out = c1(lab, x, CF_C1_INTENTOS=2)
     p.communicate(timeout=90)
