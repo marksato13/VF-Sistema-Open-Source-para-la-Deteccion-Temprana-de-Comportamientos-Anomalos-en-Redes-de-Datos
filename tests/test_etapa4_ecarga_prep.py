@@ -1013,3 +1013,353 @@ def test_regresion_comprobar_no_escribe_en_el_paquete(tmp_path):
         cambiados = sorted(k for k in set(antes) & set(despues) if antes[k] != despues[k])
         assert (anadidos, quitados, cambiados) == ([], [], []), f"pasada {i}: {anadidos} {quitados} {cambiados}"
         assert not (tmp_path / "ev" / f"e-{i}-seco-obs_pcap").exists()
+
+
+# ======================================================== sensor1_muestreadores.sh: identificación de muestreadores (P11)
+# Defecto del 06-nov (23:24Z, P0 r2 anticipado): la .3 buscaba con «pgrep -af PATRÓN», que mira TODA la línea de órdenes;
+# ejecutado como «bash -c "$txt"» (mecanismo sin escritura del P0), el propio intérprete lleva los nombres en su argv y
+# pgrep lo encontraba: «ya hay muestreadores en marcha» sin ninguno. La .4 identifica por argv (programa + guion).
+# Aquí los procesos son REALES (contenedor sin red): muestreadores simulados = python ejecutando un guion con ese nombre.
+import re as _re  # noqa: E402
+
+PATH_REAL = "/usr/local/bin:/usr/bin:/bin"          # pgrep/ps reales (no los dobles del banco de generadores)
+OBJETIVOS = ["muestreo_fino.py", "obs_pcap.py", "muestreo_s14.py", "salud_captura.py muestrear"]
+
+
+def _texto_guion():
+    return ruta("sensor1_muestreadores.sh").read_text(encoding="utf-8")
+
+
+def _codigo_py():
+    m = _re.search(r"^MUESTREADORES_PY='\n(.*?)\n'$", _texto_guion(), _re.S | _re.M)
+    if not m:
+        pytest.skip("la versión probada no tiene MUESTREADORES_PY (identificación por argv nueva en 2026-11-06.4)")
+    return m.group(1)
+
+
+class Procesos:
+    """Lanza procesos reales y los termina al final de la prueba."""
+
+    def __init__(self, tmp):
+        self.tmp, self.ps = tmp, []
+
+    def lanzar(self, argv):
+        p = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.ps.append(p)
+        for _ in range(100):                               # argv visible en /proc (tras el exec)
+            try:
+                if Path(f"/proc/{p.pid}/cmdline").read_bytes().split(b"\0")[0] == argv[0].encode():
+                    break
+            except OSError:
+                pass
+            time.sleep(0.02)
+        assert p.poll() is None, argv
+        return p
+
+    def muestreador(self, nombre, carpeta="paquete-x/deploy"):
+        guion, *resto = nombre.split()
+        d = self.tmp / "procs" / carpeta
+        d.mkdir(parents=True, exist_ok=True)
+        (d / guion).write_text("import time\ntime.sleep(300)\n")
+        return self.lanzar([sys.executable, "-I", "-B", str(d / guion), *resto, "--salida", str(self.tmp / "x.jsonl")])
+
+    def cerrar(self):
+        for p in self.ps:
+            if p.poll() is None:
+                p.kill()
+            p.wait()
+
+
+@pytest.fixture
+def procs(tmp_path):
+    pr = Procesos(tmp_path)
+    yield pr
+    pr.cerrar()
+
+
+def _comprobar(tmp, modo="fichero", env_extra=None):
+    """Ejecuta comprobar de la versión probada (desde fichero o como el P0: «bash -c "$txt" RUTA ...»).
+    Devuelve (rc, salida, línea del veredicto de muestreadores)."""
+    pkg, guion = paquete_escribible(tmp)
+    env = env_sin_supresores(tmp)
+    env["PATH"] = PATH_REAL
+    env.update(env_extra or {})
+    dest = tmp / "ev" / f"e-{time.time_ns()}"
+    args = ["comprobar", str(dest), "1794197760", "2026-11-09T04:16:00Z"]
+    if modo == "fichero":
+        a = ["bash", str(guion), *args]
+    else:
+        a = ["bash", "-c", guion.read_text(encoding="utf-8"), str(guion), *args]
+    r = subprocess.run(a, env=env, capture_output=True, text=True, timeout=120)
+    out = r.stdout + r.stderr
+    v = [l for l in out.splitlines() if _re.match(r"^(OK|FALLO) +(ningún muestreador|ya hay muestreadores|"
+                                                   r"estado de los muestreadores|pgrep falló)", l)]
+    assert len(v) == 1, out
+    assert not dest.exists()
+    return r.returncode, out, v[0]
+
+
+AUSENCIA = "OK    ningún muestreador en marcha"
+PRESENCIA = "FALLO ya hay muestreadores en marcha"
+
+
+def test_regresion_muestreadores_sin_ninguno_por_el_mecanismo_del_p0(tmp_path):
+    """El defecto: sin ningún muestreador, «bash -c "$txt"» daba presencia. Con la .4, ausencia confirmada."""
+    rc, out, v = _comprobar(tmp_path, modo="bash-c")
+    assert v.startswith(AUSENCIA), v
+
+
+def test_muestreadores_sin_ninguno_desde_fichero(tmp_path):
+    rc, out, v = _comprobar(tmp_path, modo="fichero")
+    assert v.startswith(AUSENCIA), v
+
+
+@pytest.mark.parametrize("modo", ["fichero", "bash-c"])
+@pytest.mark.parametrize("nombre", OBJETIVOS)
+def test_cada_muestreador_presente_se_detecta(tmp_path, procs, nombre, modo):
+    p = procs.muestreador(nombre)
+    rc, out, v = _comprobar(tmp_path, modo=modo)
+    assert v.startswith(PRESENCIA) and rc == 1, v
+    if "MUESTREADORES_PY" in _texto_guion():
+        assert f"pid={p.pid} {nombre.split()[0]}" in v, v
+
+
+@pytest.mark.parametrize("modo", ["fichero", "bash-c"])
+def test_varios_muestreadores_simultaneos(tmp_path, procs, modo):
+    ps = [procs.muestreador(n, carpeta=f"c{i}") for i, n in enumerate(OBJETIVOS)]
+    rc, out, v = _comprobar(tmp_path, modo=modo)
+    assert v.startswith(PRESENCIA) and rc == 1, v
+    if "MUESTREADORES_PY" in _texto_guion():
+        for p in ps:
+            assert f"pid={p.pid} " in v, v
+
+
+def test_muestreador_en_ruta_con_espacios_se_detecta(tmp_path, procs):
+    p = procs.muestreador("muestreo_fino.py", carpeta="dir con espacios/y más")
+    rc, out, v = _comprobar(tmp_path, modo="bash-c")
+    assert v.startswith(PRESENCIA), v
+    if "MUESTREADORES_PY" in _texto_guion():
+        assert f"pid={p.pid} muestreo_fino.py" in v and "dir con espacios/y m\\u00e1s/muestreo_fino.py" in out
+
+
+def _ajenos(procs, tmp):
+    """Procesos que NO son muestreadores aunque su línea de órdenes contenga los nombres como texto."""
+    otro = tmp / "procs" / "otro dir"
+    otro.mkdir(parents=True, exist_ok=True)
+    (otro / "otro.py").write_text("import time\ntime.sleep(300)\n")
+    (otro / "muestreo_fino.py.bak").write_text("import time\ntime.sleep(300)\n")
+    (otro / "salud_captura.py").write_text("import time\ntime.sleep(300)\n")
+    procs.lanzar(["bash", "-c", "sleep 300; : salud_captura.py muestrear muestreo_fino.py obs_pcap.py muestreo_s14.py"])
+    procs.lanzar([sys.executable, "-c", "import time; time.sleep(300)", "muestreo_fino.py", "obs_pcap.py"])
+    procs.lanzar([sys.executable, "-I", str(otro / "otro.py"), "muestreo_s14.py", "salud_captura.py", "muestrear"])
+    procs.lanzar([sys.executable, "-I", str(otro / "muestreo_fino.py.bak")])
+    procs.lanzar([sys.executable, "-I", str(otro / "salud_captura.py"), "informe"])     # no es «muestrear»
+    procs.lanzar(["sleep", "300"])
+
+
+@pytest.mark.parametrize("modo", ["fichero", "bash-c"])
+def test_regresion_procesos_ajenos_con_los_nombres_en_el_texto(tmp_path, procs, modo):
+    """bash, python -c, otro guion con los nombres como argumentos, un .bak, salud_captura sin «muestrear»: ausencia."""
+    _ajenos(procs, tmp_path)
+    rc, out, v = _comprobar(tmp_path, modo=modo)
+    assert v.startswith(AUSENCIA), v
+
+
+def test_ajenos_no_ocultan_un_muestreador_real(tmp_path, procs):
+    _ajenos(procs, tmp_path)
+    p = procs.muestreador("obs_pcap.py")
+    rc, out, v = _comprobar(tmp_path, modo="bash-c")
+    assert v.startswith(PRESENCIA), v
+    if "MUESTREADORES_PY" in _texto_guion():
+        assert v.count("pid=") == 1 and f"pid={p.pid} obs_pcap.py" in v, v
+
+
+def _python_que_falla(tmp, cuerpo):
+    """python3 del PATH que falla SOLO en la consulta de muestreadores (el resto de python3 es el real)."""
+    b = tmp / "bin-falla"
+    b.mkdir(exist_ok=True)
+    real = shutil.which("python3", path=PATH_REAL)
+    (b / "python3").write_text("#!/usr/bin/env bash\n"
+                               f'for a in "$@"; do case "$a" in *"def muestreador("*) {cuerpo};; esac; done\n'
+                               f'exec {real} "$@"\n')
+    (b / "python3").chmod(0o755)
+    return {"PATH": f"{b}:{PATH_REAL}"}
+
+
+@pytest.mark.parametrize("cuerpo, rc_py", [
+    ('echo "DESCONOCIDO no se pudo enumerar /proc: [Errno 13] Permission denied"; exit 2', 2),
+    ('echo "Traceback (most recent call last):" >&2; echo "RuntimeError: x" >&2; exit 1', 1),
+    ("kill -9 $$", 137),
+])
+def test_consulta_fallida_es_desconocido_nunca_ausencia_ni_presencia(tmp_path, cuerpo, rc_py):
+    _codigo_py()
+    rc, out, v = _comprobar(tmp_path, modo="bash-c", env_extra=_python_que_falla(tmp_path, cuerpo))
+    assert v.startswith(f"FALLO estado de los muestreadores DESCONOCIDO (rc {rc_py})"), v
+    assert rc == 1                                           # comprobar no aprueba
+    assert "== obs_pcap --en-seco" in out                   # lo posterior se ejecutó y no ocultó el fallo
+    assert "\nfallo=1\n" in out
+
+
+def test_procesos_que_terminan_durante_la_consulta(tmp_path):
+    """Carga real de procesos efímeros mientras se consulta 25 veces: siempre ausencia (rc 0), nunca error."""
+    code = _codigo_py()
+    gen = subprocess.Popen(["bash", "-c", "while :; do /bin/true & /bin/true & wait; done"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        for _ in range(25):
+            r = subprocess.run([sys.executable, "-I", "-B", "-S", "-c", code], capture_output=True, text=True, timeout=30)
+            assert r.returncode == 0, r.stdout + r.stderr
+    finally:
+        gen.kill()
+        gen.wait()
+
+
+# ---- el código de identificación por dentro (fallos inyectados; no dependen de los procesos del contenedor)
+def _modulo():
+    g = {"__name__": "banco"}
+    exec(compile(_codigo_py(), "MUESTREADORES_PY", "exec"), g)
+    return g
+
+
+@pytest.mark.parametrize("argv, esperado", [
+    (["/home/m4rk/cyberflow/.venv/bin/python", "-I", "/h/herr/salud_captura.py", "muestrear", "--intervalo", "10"],
+     "salud_captura.py muestrear"),
+    (["python3", "-I", "/p/deploy/etapa4/cierre/muestreo_fino.py", "--salida", "f"], "muestreo_fino.py"),
+    (["python3.12", "-IB", "/p/x/obs_pcap.py"], "obs_pcap.py"),
+    (["/usr/bin/python3", "-X", "utf8", "-W", "ignore", "/a b/muestreo_s14.py"], "muestreo_s14.py"),
+    (["python3", "-Xutf8", "--", "muestreo_s14.py"], "muestreo_s14.py"),
+    (["python3", "--check-hash-based-pycs", "never", "obs_pcap.py"], "obs_pcap.py"),
+    (["python3", "-c", "import x", "muestreo_fino.py"], None),
+    (["python3", "-Ic", "x", "obs_pcap.py"], None),
+    (["python3", "-m", "muestreo_fino"], None),
+    (["python3", "/p/salud_captura.py", "informe"], None),
+    (["python3", "/p/salud_captura.py"], None),
+    (["python3", "/p/otro.py", "muestreo_fino.py"], None),
+    (["python3", "/p/muestreo_fino.py.bak"], None),
+    (["bash", "-c", "x muestreo_fino.py", "/p/sensor1_muestreadores.sh"], None),
+    (["/usr/bin/grep", "obs_pcap.py"], None),
+    (["vim", "muestreo_s14.py"], None),
+    (["python3-config", "muestreo_fino.py"], None),
+    (["python3"], None),
+    (["python3", "-I"], None),
+    ([], None),
+])
+def test_identificacion_por_argv(argv, esperado):
+    assert _modulo()["muestreador"](argv) == esperado
+
+
+class _Proc:
+    """/proc simulado: {pid: bytes | excepción a lanzar al abrir | ('lectura', excepción) al leer}."""
+
+    def __init__(self, tabla, vivos=None, listar_falla=None):
+        self.t, self.vivos, self.lf = tabla, set(tabla) if vivos is None else vivos, listar_falla
+
+    def listar(self, _):
+        if self.lf:
+            raise self.lf
+        return [str(p) for p in self.t] + ["self", "net", "1x"]
+
+    def abrir(self, ruta, modo):
+        pid = int(ruta.split("/")[-2])
+        v = self.t[pid]
+        if isinstance(v, BaseException):
+            raise v
+        if isinstance(v, tuple):
+            exc = v[1]
+
+            class F:
+                def __enter__(s): return s
+                def __exit__(s, *a): return False
+                def read(s): raise exc
+            return F()
+        import io
+        return io.BytesIO(v)
+
+    def existe(self, ruta):
+        return int(ruta.split("/")[-1]) in self.vivos
+
+
+def _main_con(proc, capsys):
+    m = _modulo()
+    leer = m["leer"]
+    m["leer"] = lambda: leer("/proc", proc.listar, proc.abrir, proc.existe)
+    rc = m["main"]()
+    return rc, capsys.readouterr().out
+
+
+MF = b"python3\0-I\0/p/muestreo_fino.py\0--salida\0x\0"
+BASH = b"bash\0-c\0... muestreo_fino.py obs_pcap.py ...\0/p/sensor1_muestreadores.sh\0"
+
+
+def test_unidad_ausencia(capsys):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 50: BASH, 51: b""}), capsys)
+    assert rc == 0 and "CONSULTA revisados=3 desaparecidos=0 ilegibles=0 presentes=0" in out
+
+
+def test_unidad_presencia(capsys):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 7: MF, 50: BASH}), capsys)
+    assert rc == 10 and "MUESTREADOR pid=7 muestreo_fino.py" in out and "pid=50" not in out
+
+
+def test_unidad_no_se_puede_enumerar_proc(capsys):
+    rc, out = _main_con(_Proc({}, listar_falla=PermissionError(13, "Permission denied")), capsys)
+    assert rc == 2 and out.startswith("DESCONOCIDO no se pudo enumerar /proc")
+
+
+def test_unidad_argv_ilegible_de_proceso_vivo_es_desconocido(capsys):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 9: PermissionError(13, "Permission denied")}), capsys)
+    assert rc == 2 and "ILEGIBLE 9:" in out and "DESCONOCIDO argv ilegible en 1 proceso(s) vivo(s)" in out
+
+
+def test_unidad_lectura_que_falla_a_mitad_en_proceso_vivo(capsys):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 9: ("lectura", OSError(5, "Input/output error"))}), capsys)
+    assert rc == 2 and "ILEGIBLE 9:" in out
+
+
+@pytest.mark.parametrize("v", [FileNotFoundError(2, "x"), ProcessLookupError(3, "x"), ("lectura", ProcessLookupError(3, "x"))])
+def test_unidad_proceso_que_termina_durante_la_lectura(capsys, v):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 9: v}), capsys)
+    assert rc == 0 and "desaparecidos=1" in out and "ilegibles=0" in out
+
+
+def test_unidad_error_de_permiso_de_un_proceso_que_ya_termino(capsys):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 9: PermissionError(13, "x")}, vivos={1}), capsys)
+    assert rc == 0 and "desaparecidos=1" in out
+
+
+def test_unidad_presencia_manda_aunque_haya_ilegibles(capsys):
+    rc, out = _main_con(_Proc({7: MF, 9: PermissionError(13, "x")}), capsys)
+    assert rc == 10 and "MUESTREADOR pid=7" in out and "ILEGIBLE 9:" in out
+
+
+def test_unidad_ningun_proceso_legible_no_es_ausencia(capsys):
+    rc, out = _main_con(_Proc({9: FileNotFoundError(2, "x")}), capsys)
+    assert rc == 2 and "DESCONOCIDO ningun proceso legible" in out
+
+
+def test_unidad_argv_con_bytes_no_utf8_y_espacios(capsys):
+    rc, out = _main_con(_Proc({7: b"python3\0/d\xffir con esp/obs_pcap.py\0"}), capsys)
+    assert rc == 10 and "pid=7 obs_pcap.py" in out and "\\udcff" in out     # se imprime escapado, sin excepción
+
+
+def test_comprobar_repetido_por_el_mecanismo_del_p0_no_escribe(tmp_path):
+    """Tres pasadas «bash -c "$txt"» sobre la copia escribible: ni ficheros nuevos ni cambios en el paquete."""
+    _codigo_py()
+    pkg, guion = paquete_escribible(tmp_path)
+    env = env_sin_supresores(tmp_path)
+    env["PATH"] = PATH_REAL
+    antes = inventario(pkg)
+    for i in range(3):
+        r = subprocess.run(["bash", "-c", guion.read_text(encoding="utf-8"), str(guion), "comprobar",
+                            str(tmp_path / "ev" / f"b-{i}"), "1794197760", "2026-11-09T04:16:00Z"],
+                           env=env, capture_output=True, text=True, timeout=120)
+        assert AUSENCIA in r.stdout, r.stdout
+        assert inventario(pkg) == antes, f"pasada {i}"
+        assert not (tmp_path / "ev" / f"b-{i}").exists()
+
+
+def test_guion_sin_pgrep_en_la_identificacion():
+    t = _texto_guion()
+    _codigo_py()
+    assert "pgrep" not in "\n".join(l.split("#")[0] for l in t.splitlines())
+    assert "VERSION 2026-11-06.4" in t.splitlines()[1]

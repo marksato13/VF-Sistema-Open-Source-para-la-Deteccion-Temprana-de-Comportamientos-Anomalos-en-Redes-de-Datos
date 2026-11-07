@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# [SENSOR1 m4rk] Muestreadores de E-carga v2 en Sensor1 (solo lectura, sin sudo). VERSION 2026-11-06.3.
+# [SENSOR1 m4rk] Muestreadores de E-carga v2 en Sensor1 (solo lectura, sin sudo). VERSION 2026-11-06.4.
 #   salud_captura.py muestrear (10 s)  ~/cyberflow-e4/herramientas-20261106 (VERSION 2026-11-06.1; idéntico al del paquete)
 #   muestreo_fino.py (1 s), obs_pcap.py (cada PCAP cerrado), muestreo_s14.py (1 s, S14 r3)  del paquete en el que está
 #   este guion: la ruta del paquete se deduce de la ubicación del guion (deploy/etapa4/ecarga/), sin nombres fijos.
@@ -19,10 +19,113 @@ EV_ESPERADO=53e9f7bd578123f6499289ebbb92d8d6c71a6e56b7c1c35a59463b98aad5c23f
 RETENCION_MIN=900
 ok() { echo "OK    $*"; }; no() { echo "FALLO $*"; fallo=1; }
 fallo=0
-procesos() {  # cmdline de los procesos que coinciden; rc 2 si pgrep falla (no «ninguno»)
-  local o rc; o=$(pgrep -af "$1" 2>&1); rc=$?
-  case $rc in 0) grep -v pgrep <<<"$o"; return 0;; 1) return 1;; *) echo "pgrep rc $rc: $o" >&2; return 2;; esac
-}
+# Muestreadores en marcha (2026-11-06.4). Se identifican por el PROGRAMA ejecutado y sus ARGUMENTOS (argv exacto de
+# /proc/<pid>/cmdline, separado por NUL), nunca por texto que aparezca dentro de una orden: «pgrep -af» (hasta la .3)
+# coincidía con el propio intérprete cuando este guion se ejecutaba como «bash -c "$txt"» (P0 r2, 06-nov 23:24Z).
+# Un proceso es MUESTREADOR si y solo si:
+#   - argv[0] es un intérprete python (nombre base python, python3, python3.12…);
+#   - tras las opciones del intérprete (-I -B -u…; -X/-W con su valor; «-c» o «-m» => no ejecuta un guion), el primer
+#     argumento es un guion cuyo nombre base es muestreo_fino.py, obs_pcap.py o muestreo_s14.py, o salud_captura.py
+#     seguido de «muestrear» (los cuatro de «arrancar», de cualquier paquete o ruta).
+#   Un bash, un grep, un editor o un «python -c» que lleven esos nombres como TEXTO no son muestreadores; no se excluye
+#   ningún proceso por ser bash ni por ser antecesor de esta consulta.
+# Estados (rc): 0 AUSENCIA confirmada · 10 PRESENCIA (una línea MUESTREADOR por proceso) · cualquier otro rc =
+#   DESCONOCIDO: no se pudo enumerar /proc, o el argv de algún proceso que sigue vivo no se pudo leer, o error interno.
+#   Un proceso que termina durante la consulta (su /proc/<pid> desaparece) no está en marcha: se cuenta y se informa.
+# Solo lee /proc; python con -I -B -S y código en -c: no escribe caché ni importa nada del paquete.
+MUESTREADORES_PY='
+import json, os, re, sys
+
+OBJETIVO = ("muestreo_fino.py", "obs_pcap.py", "muestreo_s14.py")
+INTERPRETE = re.compile(r"python[0-9.]*\Z")
+
+
+def muestreador(argv):
+    """Nombre del muestreador que ejecuta este argv, o None."""
+    if not argv or not INTERPRETE.match(os.path.basename(argv[0])):
+        return None
+    i = 1
+    while i < len(argv):
+        a = argv[i]
+        if a == "--":
+            i += 1
+            break
+        if a == "-" or not a.startswith("-"):
+            break
+        if a.startswith("--"):
+            i += 2 if a == "--check-hash-based-pycs" else 1
+            continue
+        for j, c in enumerate(a[1:], 1):
+            if c in "cm":
+                return None
+            if c in "XW":
+                if j == len(a) - 1:
+                    i += 1
+                break
+        i += 1
+    if i >= len(argv):
+        return None
+    nombre = os.path.basename(argv[i])
+    if nombre in OBJETIVO:
+        return nombre
+    if nombre == "salud_captura.py" and i + 1 < len(argv) and argv[i + 1] == "muestrear":
+        return "salud_captura.py muestrear"
+    return None
+
+
+def leer(proc="/proc", listar=os.listdir, abrir=open, existe=os.path.exists):
+    presentes, desaparecidos, ilegibles, revisados = [], 0, [], 0
+    for pid in sorted((p for p in listar(proc) if p.isdigit()), key=int):
+        ruta = os.path.join(proc, pid)
+        try:
+            with abrir(os.path.join(ruta, "cmdline"), "rb") as f:
+                crudo = f.read()
+        except (FileNotFoundError, ProcessLookupError):
+            desaparecidos += 1
+            continue
+        except OSError as e:
+            if existe(ruta):
+                ilegibles.append("%s: %s" % (pid, e))
+            else:
+                desaparecidos += 1
+            continue
+        revisados += 1
+        argv = [x.decode("utf-8", "surrogateescape") for x in crudo.split(b"\0")]
+        if argv and argv[-1] == "":
+            argv.pop()
+        n = muestreador(argv)
+        if n:
+            presentes.append((int(pid), n, argv))
+    return presentes, desaparecidos, ilegibles, revisados
+
+
+def main():
+    try:
+        presentes, desaparecidos, ilegibles, revisados = leer()
+    except OSError as e:
+        print("DESCONOCIDO no se pudo enumerar /proc: %s" % e)
+        return 2
+    for pid, n, argv in presentes:
+        print("MUESTREADOR pid=%d %s argv=%s" % (pid, n, json.dumps(argv)))
+    for x in ilegibles[:5]:
+        print("ILEGIBLE %s" % x)
+    print("CONSULTA revisados=%d desaparecidos=%d ilegibles=%d presentes=%d"
+          % (revisados, desaparecidos, len(ilegibles), len(presentes)))
+    if presentes:
+        return 10
+    if ilegibles:
+        print("DESCONOCIDO argv ilegible en %d proceso(s) vivo(s)" % len(ilegibles))
+        return 2
+    if revisados == 0:
+        print("DESCONOCIDO ningun proceso legible en /proc")
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+'
+muestreadores() { python3 -I -B -S -c "$MUESTREADORES_PY"; }
 comprobar() {
   local FIN=$1 ISO=$2 v libre mem a rc viejo edad
   (cd "$P" && sha256sum -c --strict --quiet SHA256SUMS) && ok "paquete $(basename "$P"): SHA256SUMS verifica" || no "paquete $P"
@@ -60,8 +163,13 @@ comprobar() {
   if a=$(ps -eo args 2>/dev/null) && [ -n "$a" ]; then
     grep -qE -- "--(enforce|aplicar)( |$)" <<<"$a" && no "hay procesos con --aplicar/--enforce" || ok "0 procesos con --aplicar/--enforce"
   else no "ps no se pudo leer"; fi
-  procesos "salud_captura.py muestrear|muestreo_fino.py|obs_pcap.py|muestreo_s14.py"; rc=$?
-  case $rc in 1) ok "ningún muestreador en marcha";; 0) no "ya hay muestreadores en marcha";; *) no "pgrep falló";; esac
+  m=$(muestreadores 2>&1); rc=$?
+  printf '%s\n' "$m" | sed 's/^/INFO  muestreadores: /'
+  case $rc in
+    0) ok "ningún muestreador en marcha (ausencia confirmada: $(grep -m1 '^CONSULTA ' <<<"$m" | cut -c10-))";;
+    10) no "ya hay muestreadores en marcha: $(grep '^MUESTREADOR ' <<<"$m" | cut -d' ' -f2-3 | tr '\n' ' ')";;
+    *) no "estado de los muestreadores DESCONOCIDO (rc $rc): $(grep -m1 -E '^(DESCONOCIDO|ILEGIBLE)|Error' <<<"$m" | cut -c1-200)";;
+  esac
   echo "== obs_pcap --en-seco"
   python3 -I -B "$P/deploy/etapa4/sensor1/obs_pcap.py" --dir "$ANILLO" --salida "$O-seco-obs_pcap" --hasta-epoch "$FIN" --hasta-iso "$ISO" --en-seco
   rc=$?; [ $rc = 0 ] && ok "obs_pcap --en-seco rc 0" || no "obs_pcap --en-seco rc $rc"
