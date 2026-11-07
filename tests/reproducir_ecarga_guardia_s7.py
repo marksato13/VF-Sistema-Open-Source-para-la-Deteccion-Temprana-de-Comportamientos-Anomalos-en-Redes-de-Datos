@@ -39,6 +39,19 @@ def h1():
     print("\nOrden de las órdenes al host: " + " -> ".join(o.split()[-1] for o in r["ordenes"]))
 
 
+def h1b():
+    print("\n## H1b. T_g superado después de la comprobación inicial, reloj y ssh simulados\n")
+    print("Reloj en T_g - 1, muestreador vivo, lectura válida, sin solicitud de parada, parada en T_g + 40.\n")
+    print("| Caso | rc C1 | Órdenes de arranque | Start | Vivos | RESULTADO-C1 |")
+    print("|---|---:|---:|---:|---:|---|")
+    for nombre, kw in (("Salto en la espera a T_g + 45", {"salto_espera": 45}), ("Salto en la espera a T_g + 1", {"salto_espera": 1}),
+                       ("Salto al evaluar la puerta a T_g + 45", {"salto_puerta": 45}), ("Salto al evaluar la puerta a T_g + 1", {"salto_puerta": 1}),
+                       ("Control: llega exactamente a T_g", {})):
+        r = t.caso_c1_tardio(lab(), **kw)
+        f = r["resultado"]
+        print(f"| {nombre} | {r['rc']} | {r['ordenes']} | {r['starts']} | {r['vivos']} | {f.get('resultado')}: {f.get('motivo')} |")
+
+
 def h2():
     print("\n## H2. Parada al salir del bucle, reloj simulado\n")
     print("T0 = 1794193200, PARADA = T0+60, FIN = T0+120, intervalo 30 s. El salto ocurre en la primera espera: de T0 a T0+125.\n")
@@ -116,6 +129,9 @@ def h3():
 
 if __name__ == "__main__":
     print(f"# Reproducción con la versión {VERSION}. Dobles y reloj simulado; sin hosts. {time.strftime('%FT%TZ', time.gmtime())}")
+    a = ruta("arrancar_c1.sh", obligatorio=False)
+    print("# arrancar_c1.sh: " + (a.read_text(encoding="utf-8").splitlines()[1].split("VERSION ")[-1] if a else "bloque manual"))
     h1()
+    h1b()
     h2()
     h3()

@@ -311,12 +311,73 @@ def test_c1_tg_ya_paso(falso):
 
 
 def test_c1_cerrojo_ocupado_por_una_parada(falso):
-    p = subprocess.Popen(["flock", str(falso.o / "ordenes.lock"), "sleep", "6"])
-    time.sleep(0.5)
+    """El cerrojo queda tomado hasta que C1 termina: el caso no depende de la velocidad del equipo."""
+    cerrojo = str(falso.o / "ordenes.lock")
+    p = subprocess.Popen(["flock", cerrojo, "sleep", "300"], start_new_session=True)
     try:
+        assert esperar(lambda: subprocess.run(["flock", "-n", cerrojo, "true"]).returncode != 0, 10)
         c1_denegado(falso, "cerrojo ocupado")
     finally:
-        p.kill()
+        os.killpg(p.pid, signal.SIGKILL)
+        p.wait()
+
+
+# ------- T_g superado después de la comprobación inicial: reloj controlado y ssh simulado
+def caso_c1_tardio(lab, salto_espera=None, salto_puerta=None):
+    """Muestreador vivo, lectura válida y sin solicitud de parada, con el reloj en T_g - 1 y la parada en T_g + 40.
+    salto_espera lleva el reloj a T_g + N en la primera espera; salto_puerta, justo al terminar puerta_c1.py."""
+    t_g = T0
+    f = Falso(lab)
+    (f.o / "muestreo.pid").write_text(f"{f.pid} 2026-11-09T02:58:00Z inicio muestreo v2026-11-07.1 modo=real "
+                                      f"fin={t_g + 100} parada={t_g + 40} intentos_max=6\n")
+    f.lectura(t=t_g - 10)
+    lab.marca("reloj", str(t_g - 1))
+    env = {}
+    if salto_espera is not None:
+        lab.marca("salto_sleep", f"1 {t_g + salto_espera}")
+    if salto_puerta is not None:
+        d = lab.tmp / "python-puerta"
+        d.mkdir()
+        (d / "python3").write_text(f"""#!/bin/bash
+{sys.executable} "$@"
+r=$?
+case " $* " in *puerta_c1.py*) echo {t_g + salto_puerta} > "$FAKE_DIR/reloj" ;; esac
+exit $r
+""")
+        (d / "python3").chmod(0o755)
+        env["PATH"] = f"{d}:{lab.env['PATH']}"
+    rc, out = c1(lab, f.x, t_g=t_g, **env)
+    fin = lee(f.x / "manual" / "RESULTADO-C1")
+    r = {"t_g": t_g, "rc": rc, "out": out, "starts": starts(lab), "x": f.x, "vivos": len(lab.procesos()),
+         "ordenes": lee(lab.fake / "ssh.log").count("-s arrancar"), "resultado": json.loads(fin) if fin else {}}
+    f.p.kill()
+    f.p.wait()
+    return r
+
+
+def denegado_por_hora(r):
+    assert r["rc"] == 2, r["out"]
+    assert r["ordenes"] == 0 and r["starts"] == 0 and r["vivos"] == 0, r["out"]
+    assert r["resultado"]["resultado"] == "NO_AUTORIZADO" and "T_g ya pasó antes de emitir" in r["resultado"]["motivo"], r["out"]
+    assert "T_g ya pasó antes de emitir" in lee(r["x"] / "manual" / "arranque.rc")
+
+
+@pytest.mark.parametrize("salto", [1, 45])
+def test_regresion_c1_reloj_supera_tg_durante_la_espera(lab, salto):
+    denegado_por_hora(caso_c1_tardio(lab, salto_espera=salto))
+
+
+@pytest.mark.parametrize("salto", [1, 45])
+def test_regresion_c1_reloj_supera_tg_al_evaluar_la_puerta(lab, salto):
+    denegado_por_hora(caso_c1_tardio(lab, salto_puerta=salto))
+
+
+def test_c1_control_llega_exactamente_a_tg(lab):
+    r = caso_c1_tardio(lab)
+    assert r["rc"] == 0 and r["ordenes"] == 1 and r["starts"] == 1, r["out"]
+    assert r["resultado"]["resultado"] == "ARRANCADO", r["out"]
+    assert json.loads(lee(r["x"] / "manual" / "c1-puerta.jsonl").splitlines()[-1])["ahora"] == r["t_g"]
+    assert lee(r["x"] / "manual" / "arranque.txt").startswith(time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(r["t_g"])))
 
 
 def test_puerta_rota_no_autoriza(falso):
@@ -366,7 +427,7 @@ def test_regresion_cruce_arranque_lento_y_parada(lab):
 def test_regresion_cruce_arranque_parcial(lab):
     x = carpeta(lab)
     lab.config(start="parcial")
-    p = muestreo_bg(lab, x, 9, 8, CF_INTERVALO=1)
+    p = muestreo_bg(lab, x, 12, 11, CF_INTERVALO=1)                  # la parada, bien después de T_g
     assert guardia_lista(x)
     rc, out = c1(lab, x)
     p.communicate(timeout=60)
@@ -409,7 +470,7 @@ def test_cruce_parada_no_confirmada_exige_intervencion(lab):
     ruta("arrancar_c1.sh")
     x = carpeta(lab)
     lab.config(start="parcial", stop="sin_efecto")
-    p = muestreo_bg(lab, x, 10, 9, CF_INTERVALO=1, CF_MAX_INTENTOS=2)  # la parada, bien después de T_g
+    p = muestreo_bg(lab, x, 13, 12, CF_INTERVALO=1, CF_MAX_INTENTOS=2)  # la parada, bien después de T_g
     assert guardia_lista(x)
     rc, out = c1(lab, x, CF_C1_INTENTOS=2)
     p.communicate(timeout=90)
