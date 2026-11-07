@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# [BASTIÓN gadmin] Paso C1 de E-carga v2: autoriza y emite la orden de arranque. VERSION 2026-11-07.1.
+# [BASTIÓN gadmin] Paso C1 de E-carga v2: autoriza y emite la orden de arranque. VERSION 2026-11-07.2.
 # SOLO con la orden de Mark. Sustituye al bloque manual de C1, que podía arrancar con una parada ya confirmada.
 #
 #   arrancar_c1.sh X T_G
 # X es la carpeta del ensayo (X/bastion con el muestreador, X/manual para la evidencia). Espera hasta T_G y entonces:
 #   1. toma el cerrojo X/bastion/ordenes.lock sin esperar: si está ocupado, hay una parada en curso y no arranca;
 #   2. dentro del cerrojo, puerta_c1.py decide. Si no autoriza, NO se emite ninguna orden (rc 2, motivo en c1-puerta.jsonl);
+#      después relee la hora: si ya superó T_G, tampoco se emite (rc 2). Sin tolerancia;
 #   3. emite `generadores.sh arrancar`, con tiempo máximo, sin soltar el cerrojo;
 #   4. al volver, relee: arrancar con rc distinto de 0, una solicitud de parada o el muestreador muerto obligan a parar
 #      aquí mismo y a dejar PARADA-SOLICITADA, que el muestreador también atiende.
@@ -22,7 +23,7 @@
 #     3 arranque abortado y parada confirmada · 4 parada NO confirmada: INTERVENCIÓN NECESARIA
 set -u
 set -o pipefail
-VERSION=2026-11-07.1
+VERSION=2026-11-07.2
 X=${1:?X}; T_G=${2:?T_G}
 [[ $T_G =~ ^[0-9]+$ ]] || { echo "ABORTA: T_G no es un epoch"; exit 2; }
 AQUI="$(cd "$(dirname "$0")" && pwd)"
@@ -65,6 +66,8 @@ while [ "$(date +%s)" -lt "$T_G" ] && [ ! -e "$O/PARADA-SOLICITADA" ]; do sleep 
 exec 9>>"$O/ordenes.lock" || denegar "no se puede abrir el cerrojo"
 flock -n 9 || denegar "cerrojo ocupado: hay una parada en curso"
 puerta || denegar "$(motivos_puerta)"
+ahora=$(date +%s)
+[ "$ahora" -le "$T_G" ] || denegar "T_g ya pasó antes de emitir la orden (ahora=$ahora, T_G=$T_G)"
 
 date -u +%FT%T.%NZ | tee -a "$M/arranque.txt"
 timeout "$T_ARRANQUE" $CLI 'bash -s arrancar' < "$AQUI/generadores.sh" 2>&1 9>&- | tee -a "$M/arranque.txt"
