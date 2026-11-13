@@ -208,9 +208,11 @@ están en [`docs/dataset/SHA256SUMS`](docs/dataset/SHA256SUMS), y el detalle, en
 [diccionario de variables](docs/dataset/DICCIONARIO_VARIABLES.md).
 
 > El modelo **operativo** (`if_limpio_2026_10`) se entrenó y calibró con **337 719 ventanas**
-> del Sensor1 (**334 941** tras la banda de guarda: 203 967 / 65 553 / 65 421). Esas ventanas
-> **no** forman parte de este dataset publicado; su hash, recuentos y listas de exclusión están en
-> [`docs/dataset/DATOS-OFICIALES-IF-LIMPIO.md`](docs/dataset/DATOS-OFICIALES-IF-LIMPIO.md).
+> del Sensor1 (**334 941** tras la banda de guarda: 203 967 / 65 553 / 65 421). Es un conjunto
+> aparte de `multilayer-v2`, publicado como Release:
+> **[descargar la data oficial (`datos-if-limpio-2026-10`)](https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/releases/tag/datos-if-limpio-2026-10)**
+> (CSV comprimido de 7,5 MB, listas de exclusión, manifiesto y `SHA256SUMS`). Hashes, recuentos
+> y comprobación en [`docs/dataset/DATOS-OFICIALES-IF-LIMPIO.md`](docs/dataset/DATOS-OFICIALES-IF-LIMPIO.md).
 
 ---
 

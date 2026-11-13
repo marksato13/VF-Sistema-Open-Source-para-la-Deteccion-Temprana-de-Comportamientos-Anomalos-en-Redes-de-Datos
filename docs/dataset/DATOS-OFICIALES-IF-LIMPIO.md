@@ -4,11 +4,21 @@
 (entrenamiento 203 967 + validación 65 553 + prueba 65 421). Con ella se entrenó el modelo desplegado y se calibró el
 umbral que usa el motor (α = 0,01 → `score_samples < -0.6223889502095352`). Sustituye como referencia a «≈337 980».
 
-Estas ventanas **no** forman parte del dataset publicado `multilayer-v2` (ver `README.md`, sección Datos): el fichero
-pesa 149 MB (supera el límite de GitHub) y es tráfico del laboratorio sin sanear. Se publican su hash, la cadena de
-recuentos y las dos listas de exclusión, para que cualquier copia del fichero pueda comprobarse.
+**Descarga (Release `datos-if-limpio-2026-10`):**
+<https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/releases/tag/datos-if-limpio-2026-10>
 
-## Fichero físico (no publicado)
+| Asset | SHA-256 |
+|---|---|
+| [`if-limpio-2026-10-particionado-limpio.csv.gz`](https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/releases/download/datos-if-limpio-2026-10/if-limpio-2026-10-particionado-limpio.csv.gz) (7,5 MB) | `84697fc3efc4c4c9eb07017582d52b4852d6b77712b3bbbdfe0fc29670ba827e` (descomprimido: `5ef83b32…1b573`) |
+| `exclusiones-entrenamiento-181.csv` / `validacion-kali-80-excluidas.csv` | iguales a las de `exclusiones-if-limpio/` |
+| `DATOS-OFICIALES-IF-LIMPIO.json`, `SHA256SUMS` | manifiesto y hashes |
+
+Comprobar: `gunzip -k if-limpio-2026-10-particionado-limpio.csv.gz && sha256sum -c SHA256SUMS`.
+El CSV pesa 149 MB sin comprimir (supera el límite de GitHub para el repositorio), por eso va como asset del Release
+y no dentro de `artifacts/`. Es un conjunto aparte del dataset `multilayer-v2`: variables derivadas por IP y ventana
+(no paquetes), con IP internas del laboratorio aislado.
+
+## Fichero físico
 
 | Campo | Valor |
 |---|---|
