@@ -1,11 +1,12 @@
-# Detección temprana de anomalías en redes, con respuesta inline
+# CyberFlow — Detección temprana de comportamientos anómalos en redes de datos
 
-> **Esta rama (`as-deployed-sensor-20261006`) es el snapshot de lo que corre en Sensor1**
-> —incluido el panel con tres vistas, visor de código y «Pruebas previas»—. La
-> **documentación canónica** del producto está en
-> [`main`](https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/tree/01b6f3fa71bb4daca320b8928ef912e5f4dc8dc2)
-> (`01b6f3f`). Las cards de `docs/dataset/` de esta rama son de la versión anterior; las
-> vigentes son las de `main`.
+**Sistema open source** de la tesis *«Detección temprana de comportamientos anómalos en
+redes de datos mediante modelos predictivos y un mecanismo de control en línea»*
+(Universidad Peruana Unión, 2026). «En línea» significa **mientras ocurre el tráfico**:
+el sensor observa una copia (SPAN) y la respuesta se aplica en el host protegido.
+
+> Esta es la rama **`main`**, con la documentación canónica. Lo que corre en Sensor1 se
+> conserva aparte en la rama `as-deployed-sensor-20261006`.
 
 Detecta tráfico anómalo con aprendizaje **no supervisado** y **responde de forma
 graduada** —PERMIT, LIMIT o BLOCK— aplicando `nftables` en el host protegido a
@@ -14,6 +15,7 @@ automática y sin bloqueos infinitos.
 
 [![DOI](https://img.shields.io/badge/DOI-pendiente-lightgrey.svg)](docs/dataset/DOI-ZENODO.md)
 [![Licencia](https://img.shields.io/badge/código-MIT-blue.svg)](LICENSE)
+[![Datos](https://img.shields.io/badge/datos-CC%20BY%204.0-green.svg)](LICENSE-DATA)
 
 ```
                  captura SPAN            decide            publica
@@ -189,6 +191,27 @@ Limitaciones **medidas**, con su contexto (no intercambiar entre versiones):
 
 ---
 
+## Datos
+
+El dataset publicado es **`multilayer-v2`** (congelado; los CSV no se modifican):
+
+| Archivo | Ventanas | Contenido | SHA-256 |
+|---|---|---|---|
+| [`artifacts/dataset/multilayer-v2-normal.csv`](artifacts/dataset/multilayer-v2-normal.csv) | 1 373 (220 episodios) | Tráfico normal: `train` 824 · `validation` 273 · `test` 276 | `3846d44c…9b28ab` |
+| [`artifacts/dataset/multilayer-v2-anomalies.csv`](artifacts/dataset/multilayer-v2-anomalies.csv) | 179 (132 episodios) | Anomalías, solo para evaluación (`evaluation_only`) | `d115ef98…d8078c3` |
+
+Cada fila es **una IP en una ventana de tiempo**, con su episodio, partición, etiqueta,
+campaña y las **28 variables** del contrato `multilayer-v2` (9 de capa 3, 8 de capa 4 y
+11 de capa 7). Un episodio nunca se reparte entre particiones. Los hashes completos
+están en [`docs/dataset/SHA256SUMS`](docs/dataset/SHA256SUMS), y el detalle, en el
+[datasheet](docs/dataset/DATASHEET_MULTILAYER_V2.md) y el
+[diccionario de variables](docs/dataset/DICCIONARIO_VARIABLES.md).
+
+> El modelo **operativo** se recalibró con tráfico del laboratorio del Sensor1. Esas
+> ventanas del sensor **no** forman parte de este dataset publicado.
+
+---
+
 ## Documentación
 
 | | |
@@ -211,7 +234,22 @@ Limitaciones **medidas**, con su contexto (no intercambiar entre versiones):
 
 ## Autores
 
-Rubén Mark Salazar Tocas · Uziel Elias Sauñe Fernandez
-Universidad Peruana Unión — E.P. de Ingeniería de Sistemas
+| | Nombre | Rol |
+|---|---|---|
+| **Autor** | Rubén Mark Salazar Tocas | Autor de correspondencia · `ruben.salazar@upeu.edu.pe` |
+| **Coautor** | Uziel Elias Sauñe Fernandez | Coautor |
+| **Asesor** | Ing. Nemias Saboya Ríos | Asesor de tesis |
+| **Asesor** | Ing. Fernando Manuel Asin Gómez | Asesor de tesis |
 
-Asesores: Ing. Nemias Saboya Ríos · Ing. Fernando Manuel Asin Gómez
+**Universidad Peruana Unión** · Facultad de Ingeniería y Arquitectura · E.P. de
+Ingeniería de Sistemas · Lima, Perú
+
+## Cómo citar
+
+> Salazar Tocas, R. M. y Sauñe Fernandez, U. E. (2026). *Sistema open source para la
+> detección temprana de comportamientos anómalos en redes de datos* [Software].
+> Universidad Peruana Unión.
+> https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos
+
+Los metadatos completos están en [`CITATION.cff`](CITATION.cff). Para citar solo el
+dataset, use la referencia del [datasheet](docs/dataset/DATASHEET_MULTILAYER_V2.md).
