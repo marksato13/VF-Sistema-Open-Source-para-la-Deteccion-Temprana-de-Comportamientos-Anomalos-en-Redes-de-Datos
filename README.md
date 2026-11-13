@@ -207,8 +207,10 @@ están en [`docs/dataset/SHA256SUMS`](docs/dataset/SHA256SUMS), y el detalle, en
 [datasheet](docs/dataset/DATASHEET_MULTILAYER_V2.md) y el
 [diccionario de variables](docs/dataset/DICCIONARIO_VARIABLES.md).
 
-> El modelo **operativo** se recalibró con tráfico del laboratorio del Sensor1. Esas
-> ventanas del sensor **no** forman parte de este dataset publicado.
+> El modelo **operativo** (`if_limpio_2026_10`) se entrenó y calibró con **337 719 ventanas**
+> del Sensor1 (**334 941** tras la banda de guarda: 203 967 / 65 553 / 65 421). Esas ventanas
+> **no** forman parte de este dataset publicado; su hash, recuentos y listas de exclusión están en
+> [`docs/dataset/DATOS-OFICIALES-IF-LIMPIO.md`](docs/dataset/DATOS-OFICIALES-IF-LIMPIO.md).
 
 ---
 
@@ -217,7 +219,8 @@ están en [`docs/dataset/SHA256SUMS`](docs/dataset/SHA256SUMS), y el detalle, en
 | | |
 |---|---|
 | [`docs/FICHA-TECNICA-DESPLIEGUE-VIGENTE.md`](docs/FICHA-TECNICA-DESPLIEGUE-VIGENTE.md) | **Fuente de verdad** del despliegue vigente |
-| [`docs/dataset/MODEL_CARD_IF_RECALIBRADO.md`](docs/dataset/MODEL_CARD_IF_RECALIBRADO.md) | Modelo operativo (IF recalibrado), alcance y límites |
+| [`docs/dataset/DATOS-OFICIALES-IF-LIMPIO.md`](docs/dataset/DATOS-OFICIALES-IF-LIMPIO.md) | **Data oficial del modelo operativo** (337 719 → 334 941) |
+| [`docs/dataset/MODEL_CARD_IF_RECALIBRADO.md`](docs/dataset/MODEL_CARD_IF_RECALIBRADO.md) | Modelo IF recalibrado (anterior), alcance y límites |
 | [`docs/dataset/MODEL_CARD_OCSVM.md`](docs/dataset/MODEL_CARD_OCSVM.md) | Modelo OCSVM — **histórico del laboratorio** |
 | [`docs/RECONCILIACION-MANIFIESTO-MOTOR.md`](docs/RECONCILIACION-MANIFIESTO-MOTOR.md) | Qué declara cada artefacto vs. qué corre |
 | [`docs/dataset/DATASHEET_MULTILAYER_V2.md`](docs/dataset/DATASHEET_MULTILAYER_V2.md) | Qué contiene el dataset y cómo se hizo |

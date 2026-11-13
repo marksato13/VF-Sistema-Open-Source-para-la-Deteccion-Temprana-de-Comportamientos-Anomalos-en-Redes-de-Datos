@@ -63,7 +63,8 @@ tráfico del laboratorio sin sanear. Lo que sí se publica es el **dataset deriv
 es lo que alimenta al modelo.
 
 **La recalibración del modelo desplegado.** El IF recalibrado se calibró con tráfico
-normal del Sensor1 (≈337 980 ventanas) que **no se publica**. De él queda la evidencia
+normal del Sensor1 que **no se publica**: data oficial del modelo vigente `if_limpio_2026_10` =
+**337 719 ventanas** (334 941 tras la banda de guarda), ver `docs/dataset/DATOS-OFICIALES-IF-LIMPIO.md`. De él queda la evidencia
 de calibración, su manifiesto y su hash; no se re-deriva desde este repositorio.
 
 **Las campañas.** Cada una está documentada con su manifiesto, contadores y hashes, pero

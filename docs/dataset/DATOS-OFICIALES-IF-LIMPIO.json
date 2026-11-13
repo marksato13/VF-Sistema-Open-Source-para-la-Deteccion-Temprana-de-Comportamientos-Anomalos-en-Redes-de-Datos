@@ -1,0 +1,41 @@
+{
+  "tipo": "datos-oficiales-modelo",
+  "verificado_utc": "2026-11-13",
+  "verificado_en": "Sensor1 10.10.60.11, solo lectura (conteo directo del CSV)",
+  "modelo": {
+    "detector": "if_limpio_2026_10",
+    "joblib_desplegado_sha256": "df547da098e51171aa267c8466edc6624bc1bd5c6b602639cc00bd4711a2fd60",
+    "manifiesto_vivo": "limpio-alfa001-B",
+    "alfa": 0.01,
+    "umbral_score_samples": -0.6223889502095352
+  },
+  "fichero_fisico": {
+    "ruta_sensor1": "/home/m4rk/cyberflow/artifacts/preliminar/limpio-2026-10/particionado-limpio.csv",
+    "sha256": "5ef83b32469238b74eb16c2c2ff422a7757711318c0c77646e67bb966e61b573",
+    "filas": 337980,
+    "bytes": 149543885,
+    "publicado": false,
+    "origen": {"ruta": "/home/m4rk/cyberflow/artifacts/aprendizaje/base/particionado-nota-L.csv",
+               "sha256": "bdf6f6419ec19e711c7add9e8b5f1440b896b32270c25d69b7e8267d4f9aba7a", "filas": 337980}
+  },
+  "exclusiones": [
+    {"motivo": "Kali 10.10.20.30 excluida del entrenamiento (eligible_training=False, 27-sep 21:35-22:05 UTC)", "filas": 181,
+     "lista": "exclusiones-if-limpio/exclusiones-entrenamiento-181.csv",
+     "sha256": "5403ed339b59587010b9a11862c5c925e939e5de7b94938b3939be8b94132301"},
+    {"motivo": "Kali 10.10.20.30 en validacion, excluida solo de la calibracion alfa (normalidad no confirmada; no se etiqueta como ataque)", "filas": 80,
+     "lista": "exclusiones-if-limpio/validacion-kali-80-excluidas.csv",
+     "sha256": "a8d1de2d84698f751ca25bcca7a16bfdb51f21ee58e46b99e863af5d687374dc"}
+  ],
+  "clave": ["campaign_id", "entity_ip", "window_end_utc"],
+  "recuentos": {
+    "fichero": 337980,
+    "data_oficial": 337719,
+    "descartadas_guarda": 2778,
+    "tras_particion_y_depuracion": 334941,
+    "entrenamiento": 203967,
+    "validacion_calibracion": 65553,
+    "prueba_normal": 65421,
+    "prueba_normal_kali_incluidas": 74
+  },
+  "comprobacion": "337980 - 181 - 80 = 337719; 337719 - 2778 = 334941 = 203967 + 65553 + 65421"
+}
