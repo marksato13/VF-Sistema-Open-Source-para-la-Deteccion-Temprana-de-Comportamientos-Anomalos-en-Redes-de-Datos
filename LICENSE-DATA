@@ -15,9 +15,15 @@ Resumen legible:      https://creativecommons.org/licenses/by/4.0/deed.es
 - `artifacts/dataset/partition-map-normal-v2.json`
 - `artifacts/model/manifest.json`
 - `artifacts/model/ocsvm_scaled.joblib`
-- Todo el contenido de `docs/`
+- Todo el contenido de `docs/`, incluidas `docs/dataset/DATOS-OFICIALES-IF-LIMPIO.*` y
+  las listas de `docs/dataset/exclusiones-if-limpio/`
+- Los assets del Release `datos-if-limpio-2026-10` (data oficial del modelo
+  `if_limpio_2026_10`: `if-limpio-2026-10-particionado-limpio.csv.gz`, listas de
+  exclusión, manifiesto y `SHA256SUMS`):
+  https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/releases/tag/datos-if-limpio-2026-10
 
-El **código fuente** (`scripts/`, `ansible/`, `tests/`, `configs/`) se publica
+El **código fuente** (`scripts/`, `ansible/`, `tests/`, `configs/`, `deploy/`,
+`dashboard/`, `demo/`) se publica
 por separado bajo la licencia MIT; ver `LICENSE`.
 
 ## Qué puedes hacer

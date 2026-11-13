@@ -41,7 +41,7 @@ Atacante ─┘                            └────────┘      �
 | | |
 |---|---|
 | **Extrae** | 31 variables de capas 2/3/4/7 por ventana e IP (extractor v3) |
-| **Puntúa** | Isolation Forest **recalibrado en la red**, umbral `score_samples < −0,568892`; el modelo consume **28** variables (contrato v2) |
+| **Puntúa** | Isolation Forest **`if_limpio_2026_10`**, entrenado con tráfico de la propia red (337 719 ventanas), umbral α = 0,01 → `score_samples < −0,6223889502`; el modelo consume **28** variables (contrato v2) |
 | **Responde** | PERMIT · LIMIT · BLOCK vía feed firmado y agente `nftables` en el host; caducidad escalonada 300 / 1800 / 3600 s, nunca ∞ |
 | **Muestra** | Panel web con **TLS + login + roles** (solo lectura); modo demo aparte |
 
@@ -176,7 +176,8 @@ Recoja tráfico normal de **su** red, extraiga variables y recalibre. Use solo d
 Limitaciones **medidas**, con su contexto (no intercambiar entre versiones):
 
 - **El falso positivo depende del conjunto y la configuración.** El **4,45 %** es del
-  Isolation Forest recalibrado sobre **test normal retenido**; el histórico F6 dio
+  Isolation Forest recalibrado **anterior** (`if_recalibrado_2026_09`, α = 0,05) sobre
+  **test normal retenido**; el histórico F6 dio
   **22,97–25,81 %** bajo otro modelo/escenario. El FPR del **sistema completo** (con
   heurísticos y enforcement) se mide aparte. Sobre tráfico pesado, recalibre antes.
 - **Detección por escenario, no global:** 64,3 % global (54/84 ventanas Kali), HTTP
@@ -235,7 +236,17 @@ están en [`docs/dataset/SHA256SUMS`](docs/dataset/SHA256SUMS), y el detalle, en
 
 ## Licencias
 
-**Código: MIT.** **Datos y documentación: ver [`LICENSE-DATA`](LICENSE-DATA).**
+Dos licencias, distintas a propósito:
+
+| Qué | Licencia | Fichero |
+|---|---|---|
+| **Código**: `scripts/`, `ansible/`, `tests/`, `configs/`, `deploy/`, `dashboard/`, `demo/` | **MIT** | [`LICENSE`](LICENSE) |
+| **Datos y documentación**: `artifacts/dataset/`, `artifacts/model/`, `docs/` y los assets del Release [`datos-if-limpio-2026-10`](https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/releases/tag/datos-if-limpio-2026-10) | **CC BY 4.0** | [`LICENSE-DATA`](LICENSE-DATA) |
+
+Con MIT puede usar, copiar, modificar y redistribuir el código, también con fines
+comerciales, conservando el aviso de copyright. Con CC BY 4.0 puede reutilizar los datos
+y la documentación citando a los autores (ver «Cómo citar»). Ambos se ofrecen **sin
+garantía**.
 
 ## Autores
 
@@ -256,5 +267,13 @@ Ingeniería de Sistemas · Lima, Perú
 > Universidad Peruana Unión.
 > https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos
 
-Los metadatos completos están en [`CITATION.cff`](CITATION.cff). Para citar solo el
-dataset, use la referencia del [datasheet](docs/dataset/DATASHEET_MULTILAYER_V2.md).
+Los metadatos completos están en [`CITATION.cff`](CITATION.cff) (botón «Cite this
+repository» de GitHub). Para citar solo un conjunto de datos:
+
+> Salazar Tocas, R. M. y Sauñe Fernandez, U. E. (2026). *Data oficial del modelo
+> `if_limpio_2026_10`: 337 719 ventanas de tráfico normal del Sensor1* [Conjunto de datos].
+> Universidad Peruana Unión.
+> https://github.com/marksato13/VF-Sistema-Open-Source-para-la-Deteccion-Temprana-de-Comportamientos-Anomalos-en-Redes-de-Datos/releases/tag/datos-if-limpio-2026-10
+
+El dataset `multilayer-v2` se cita con la referencia de su
+[datasheet](docs/dataset/DATASHEET_MULTILAYER_V2.md).
