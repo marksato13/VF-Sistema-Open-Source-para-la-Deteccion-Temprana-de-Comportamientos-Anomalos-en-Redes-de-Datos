@@ -747,9 +747,6 @@ HTML = """<!doctype html>
   .cv2-ficha.bien { border-color: #2f7d5b; }
   .cv2-ficha.mal { border-color: #a5463e; color: #f08a80; }
   .cv2-inc { margin-top: 0.35rem; }
-  .cv2-que { margin-top: 0.4rem; }
-  .cv2-que summary { cursor: pointer; color: var(--accent); width: fit-content; }
-  .cv2-que p { margin: 0.35rem 0 0; max-width: 78ch; line-height: 1.45; }
   @media (max-width: 640px) { .cv2-ficha { white-space: normal; } }
   .rg-abrir.sin-esc { right: 110px; }
   .tour-foco { position: fixed; z-index: 50; border-radius: 10px; border: 2px solid var(--accent);
@@ -1204,6 +1201,7 @@ HTML = """<!doctype html>
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10,8 16,12 10,16"/></svg><h2>Escenario en vivo</h2></div>
     <div class="prep" id="prep">
       <button type="button" class="btn-prep" id="prepBtn">Preparar demo</button>
+      <button type="button" class="btn-prep" id="limpiarBtn" hidden>Dejar limpio</button>
       <span class="prep-txt" id="prepTxt">Libera la Kali (10.10.20.30) y el cliente (10.10.20.21) en srv-dmz y comprueba que todo está en marcha. Púlsalo antes de cada demo.</span>
       <ul class="prep-lista" id="prepLista"></ul>
     </div>
@@ -2246,6 +2244,53 @@ async function prepPedir() {
   }
 }
 on('prepBtn', 'click', prepPedir);
+
+// «Dejar limpio» (cadena v2, 16-nov): deja el control D5 (reset_origen de la Kali); el
+// publicador lo consume, quita sus medidas vigentes y su escalada, republica el feed y acusa.
+// Además se borra el seguimiento de escenario del panel. No toca umbrales ni reglas.
+let limpTimer = null;
+function pintarLimpieza(items, listo) {
+  const ul = document.getElementById('prepLista'), txt = document.getElementById('prepTxt');
+  if (ul) ul.innerHTML = items.map(([est, t]) => '<li class="' + est + '"><span class="ic">'
+    + ({ ok: '✔', esp: '…', mal: '✘' }[est] || '·') + '</span><span>' + t + '</span></li>').join('');
+  if (txt && listo) txt.innerHTML = '<b>Limpio.</b> Elige un escenario y pulsa «Iniciar».';
+}
+async function limpiezaSondear(id, fin) {
+  clearTimeout(limpTimer);
+  let d = null;
+  try { d = await (await fetch('/api/demo/limpieza?id=' + encodeURIComponent(id))).json(); } catch (e) { /* reintenta */ }
+  const b = document.getElementById('limpiarBtn');
+  if (d) {
+    const ack = d.ack;
+    const items = [['ok', 'Petición dejada al publicador'],
+      ack ? (ack.ok ? ['ok', 'Publicador: estado de la Kali limpio, feed n.º ' + varEsc(String(ack.secuencia ?? '—'))
+                       + ' (' + ((ack.quitado || {}).vigentes || []).length + ' medida(s) retirada(s))']
+                    : ['mal', 'Publicador: ' + varEsc(ack.error || 'rechazada')])
+          : ['esp', 'Esperando al publicador…'],
+      d.kali_en_feed === false ? ['ok', 'Feed sin medidas sobre la Kali ni el cliente'] : ['esp', 'El feed aún tiene una medida sobre la Kali o el cliente']];
+    const listo = !!(ack && ack.ok && d.kali_en_feed === false);
+    pintarLimpieza(items, listo);
+    if (listo || (ack && !ack.ok)) { if (b) b.disabled = false; return; }
+  }
+  if (Date.now() > fin) { pintarLimpieza([['mal', 'Sin acuse del publicador en 60 s: revisa ppi-publicar-feed-v2']], false); if (b) b.disabled = false; return; }
+  limpTimer = setTimeout(() => limpiezaSondear(id, fin), 2000);
+}
+async function limpiarPedir() {
+  const b = document.getElementById('limpiarBtn');
+  if (b) b.disabled = true;
+  try {
+    const r = await fetch('/api/demo/limpiar', { method: 'POST', headers: { 'X-CyberFlow': '1' } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.motivo || (r.status === 403 ? 'Solo un administrador puede dejarlo limpio.' : 'HTTP ' + r.status));
+    esc = null; escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas();
+    pintarLimpieza([['ok', 'Petición dejada al publicador'], ['esp', 'Esperando al publicador…']], false);
+    limpiezaSondear(d.id, Date.now() + 60000);
+  } catch (e) {
+    pintarLimpieza([['mal', varEsc(e.message)]], false);
+    if (b) b.disabled = false;
+  }
+}
+on('limpiarBtn', 'click', limpiarPedir);
 (async () => {
   try {
     const d = await (await fetch('/api/demo/estado')).json();
@@ -3276,12 +3321,7 @@ function franjaV2HTML(cv) {
     + ficha('Agente: desconocido desde el sensor · efecto: sin evidencia', '', 'El agente de srv-dmz no envía acuse al sensor')
     + ficha('Panel de solo lectura')
     + '</div>'
-    + (inc.length ? '<div class="cv2-inc"><b class="est no">INCIDENCIA: ' + inc.map(varEsc).join(' · ') + '</b></div>' : '')
-    + (sombra ? '<details class="cv2-que"><summary>¿Qué es el modo sombra?</summary><p>'
-      + 'Todo funciona menos el último paso. El motor detecta, el publicador decide la medida (BLOCK o LIMIT), la firma y la publica en el feed, '
-      + 'y el agente del host la lee. Pero el agente <b>no la escribe en el cortafuegos</b>: solo registra lo que habría hecho. '
-      + 'Sirve para medir detección, decisión y latencias sin cortar tráfico real. Un falso positivo (p. ej. Zabbix) no tumba un servicio. '
-      + 'Lo contrario es el modo de aplicación (el agente con <code>--aplicar</code>): ahí la medida sí entra en nftables del host.</p></details>' : '');
+    + (inc.length ? '<div class="cv2-inc"><b class="est no">INCIDENCIA: ' + inc.map(varEsc).join(' · ') + '</b></div>' : '');
 }
 function pintarCadenaV2(cv) {
   const activa = !!(cv && cv.activa);
@@ -3289,6 +3329,11 @@ function pintarCadenaV2(cv) {
   // Solo se oculta, nunca se vuelve a mostrar: en modo v2 el servidor ya lo sirve oculto
   // y una respuesta fallida de /api/status no debe reactivarlo.
   if (b && activa) { b.hidden = true; b.disabled = true; }
+  const lb = document.getElementById('limpiarBtn'), pt = document.getElementById('prepTxt');
+  if (lb && activa && lb.hidden) {
+    lb.hidden = false;
+    if (pt) pt.textContent = 'Quita las medidas vigentes de la Kali (10.10.20.30) del feed y reinicia el seguimiento. Púlsalo antes de cada demo.';
+  }
   let f = document.getElementById('cadenaV2Franja');
   if (!activa) { if (f) f.remove(); return; }
   if (!f) {
@@ -8668,6 +8713,42 @@ def pedir_preparacion(ruta: Path, usuario: str, ahora: float) -> dict:
     return pet
 
 
+def pedir_limpieza_v2(ctl: Path, usuario: str, ahora: float) -> dict:
+    """«Dejar limpio» en la cadena v2: deja el control D5 (reset_origen de la Kali) que el
+    publicador consume sin reiniciarse. Si ya hay uno pendiente no se pisa."""
+    if ctl.exists():
+        return {"ok": False, "motivo": "ya hay una limpieza pendiente: espera el acuse del publicador"}
+    pet = {"accion": "reset_origen", "id": secrets.token_hex(16), "origen": DEMO_IPS[0],
+           "por": usuario, "t": ahora}
+    tmp = ctl.with_name(ctl.name + ".panel.tmp")
+    tmp.write_text(json.dumps(pet), encoding="utf-8")
+    tmp.replace(ctl)
+    try:   # copia de registro, como las del ejecutor de campañas
+        (ctl.parent / "solicitudes" / (pet["id"] + ".json")).write_text(json.dumps(pet), encoding="utf-8")
+    except OSError:
+        pass
+    return {"ok": True, "id": pet["id"]}
+
+
+def estado_limpieza_v2(ctl: Path, feed_v2: Path, ident: str, ahora: float) -> dict:
+    """Acuse del publicador para ESA petición y si el feed aún restringe la Kali o el cliente."""
+    ack = None
+    try:
+        a = json.loads(ctl.with_name(ctl.name + ".ack").read_text(encoding="utf-8"))
+        if isinstance(a, dict) and a.get("id") == ident:
+            ack = a
+    except (OSError, ValueError):
+        pass
+    kali = None
+    try:
+        feed = json.loads(feed_v2.read_text(encoding="utf-8"))
+        kali = any(isinstance(e, dict) and e.get("ip") in DEMO_IPS and float(e.get("hasta", 0)) > ahora
+                   for e in feed.get("entradas") or [])
+    except (OSError, ValueError, TypeError):
+        pass
+    return {"id": ident, "pendiente": ctl.exists(), "ack": ack, "kali_en_feed": kali}
+
+
 def estado_preparacion(ruta: Path, log_path: Path, feed_path: Path | None, acuse_dir: Path | None,
                        ahora: float) -> dict:
     """Lista de comprobación para empezar una demo: motor, feed, agente y cada IP sin regla."""
@@ -9293,7 +9374,7 @@ ROLES = ("admin", "lector")
 RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios", "/api/archivo",
                          "/api/vivo", "/api/vivo/flujo", "/api/trazabilidad",
                          "/api/aprendizaje", "/api/comparacion", "/api/despliegue",
-                         "/api/demo/estado"})
+                         "/api/demo/estado", "/api/demo/limpieza"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -10060,6 +10141,9 @@ def parse_args() -> argparse.Namespace:
         "--feed-estado", type=Path, default=Path.home() / "feed" / "estado.json",
         help="estado de la escalera del publicador: nivel de reincidencia por IP")
     parser.add_argument(
+        "--control-d5", type=Path, default=Path.home() / "feed-v2" / "d5" / "control" / "control.json",
+        help="«Dejar limpio» (v2): control D5 que consume publicar_feed_v2_d5 (--control-d5)")
+    parser.add_argument(
         "--cadena-v2-dir", type=Path, default=Path.home() / "feed-v2",
         help="salidas del publicador v2 (senales-if.jsonl, traza.jsonl, feed.json) que lee el "
              "panel en modo v2. Si faltan, el panel sigue en v2 y lo declara como incidencia")
@@ -10317,6 +10401,23 @@ def main() -> int:
                                  "%s=; Max-Age=0; Path=/; HttpOnly; Secure; "
                                  "SameSite=Strict" % COOKIE)
                 self.end_headers()
+                return
+
+            if path == "/api/demo/limpiar":
+                s = self._sesion()
+                if not s or s.get("rol") != "admin" or self.headers.get("X-CyberFlow") != "1":
+                    self.send_error(403)
+                    return
+                if _CADENA_V2 is None:
+                    self._send_json({"ok": False, "motivo": "solo con la cadena v2 (usa «Preparar demo»)"})
+                    return
+                try:
+                    r = pedir_limpieza_v2(args.control_d5, s["usuario"], time.time())
+                except OSError as ex:
+                    r = {"ok": False, "motivo": "el panel no puede escribir el control D5 (%s)" % ex.__class__.__name__}
+                auditar(args.auditoria, "dejar-limpio", s["usuario"], self._origen(), s["rol"],
+                        "id=%s ok=%s" % (r.get("id"), r.get("ok")))
+                self._send_json(r)
                 return
 
             if path == "/api/demo/preparar":
@@ -10608,6 +10709,11 @@ def main() -> int:
                     self._send_json(datos_vivo)
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"error": "%s: %s" % (type(exc).__name__, exc)})
+                return
+            if path == "/api/demo/limpieza":
+                params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+                self._send_json(estado_limpieza_v2(args.control_d5, args.cadena_v2_dir / "feed.json",
+                                                   urllib.parse.unquote(params.get("id", ""))[:64], time.time()))
                 return
             if path == "/api/demo/estado":
                 self._send_json(estado_preparacion(args.peticion_preparar, args.log_path, args.feed_path,
