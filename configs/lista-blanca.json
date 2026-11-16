@@ -1,5 +1,5 @@
 {
-  "_nota": "Lista blanca del panel: IPs de infraestructura conocida cuyas alertas se agrupan aparte. El panel solo agrupa la vista; NO cambia lo que publica el publicador ni lo que aplica el agente. Campos: ip, nombre, motivo, alta (fecha).",
+  "_nota": "Lista blanca: IPs de infraestructura conocida. El panel agrupa sus alertas aparte. El publicador solo deja de emitir medidas sobre ellas si corre publicar_feed_v2_d5_lb.py con --lista-blanca apuntando a este fichero (drop-in zz-lista-blanca.conf). Campos: ip, nombre, motivo, alta (fecha).",
   "version": 1,
   "entradas": [
     {

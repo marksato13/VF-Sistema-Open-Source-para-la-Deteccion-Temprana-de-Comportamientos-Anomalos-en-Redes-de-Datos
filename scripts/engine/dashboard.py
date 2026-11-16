@@ -739,6 +739,19 @@ HTML = """<!doctype html>
     border-radius: 999px; padding: 0.55rem 0.95rem; font: 600 0.82rem var(--sans); cursor: pointer;
     box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
   .tour-fab:hover { filter: brightness(1.08); }
+  /* Franja de la cadena v2 (16-nov): fichas compactas en la columna de contenido. */
+  .cv2-franja { margin: 0.5rem 0 0.9rem; font-size: 0.78rem; color: var(--text-dim); }
+  .cv2-fichas { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .cv2-ficha { border: 1px solid var(--border); border-radius: 999px; padding: 0.15rem 0.6rem; background: var(--surface); white-space: nowrap; }
+  .cv2-ficha.aviso { border-color: #b8892f; color: #e3b860; }
+  .cv2-ficha.bien { border-color: #2f7d5b; }
+  .cv2-ficha.mal { border-color: #a5463e; color: #f08a80; }
+  .cv2-inc { margin-top: 0.35rem; }
+  .cv2-que { margin-top: 0.4rem; }
+  .cv2-que summary { cursor: pointer; color: var(--accent); width: fit-content; }
+  .cv2-que p { margin: 0.35rem 0 0; max-width: 78ch; line-height: 1.45; }
+  @media (max-width: 640px) { .cv2-ficha { white-space: normal; } }
+  .rg-abrir.sin-esc { right: 110px; }
   .tour-foco { position: fixed; z-index: 50; border-radius: 10px; border: 2px solid var(--accent);
     box-shadow: 0 0 0 9999px rgba(4,8,16,0.62); pointer-events: none; transition: all .2s ease; }
   .tour-tip { position: fixed; z-index: 51; max-width: 340px; background: var(--surface-2);
@@ -3243,19 +3256,32 @@ let ACUSES_V1_HISTORICOS = false;
 // Texto de la franja (función pura: se prueba con Node). Las incidencias de las fuentes se
 // muestran tal cual; una fuente ausente NUNCA se presenta como cero medidas o normalidad.
 function franjaV2HTML(cv) {
+  // 16-nov: la misma información, en fichas cortas dentro de la columna de contenido
+  // (antes una línea corrida sobre la barra lateral) y con «¿Qué es el modo sombra?».
   const fu = cv.fuentes || {};
-  const est = k => (fu[k] && fu[k].ok) ? 'ok' : '<b>ausente o ilegible</b>';
+  const okF = k => !!(fu[k] && fu[k].ok);
+  const est = k => okF(k) ? 'ok' : '<b>ausente o ilegible</b>';
   const inc = cv.incidencias || [];
+  const sombra = cv.modo === 'sombra';
   const medidas = (fu.feed && fu.feed.ok) ? (cv.feed_entradas || 0) + ' medida(s) en el feed' : 'medidas en el feed: <b>desconocido</b>';
-  return '<b>Cadena v2</b> · política ' + varEsc(String(cv.politica || 'desconocida'))
-    + ' · modo ' + varEsc(String(cv.modo)) + (cv.modo === 'sombra' ? ' (las medidas son propuestas; no se ejecutan)' : '')
-    + (inc.length ? ' · <b class="est no">INCIDENCIA: ' + inc.map(varEsc).join(' · ') + '</b>' : '')
-    + ' · feed v2 n.º ' + varEsc(String(cv.feed_secuencia ?? '—'))
-    + (cv.feed_atrasado ? ' <b>atrasado</b>' : ' hace ' + Math.round(cv.feed_edad_s || 0) + ' s')
-    + ' · ' + medidas
-    + ' · fuentes: señales IF ' + est('senales_if') + ', traza ' + est('traza') + ', feed ' + est('feed')
-    + ' · agente: desconocido desde el sensor · efecto: sin evidencia'
-    + ' · panel de solo lectura';
+  const ficha = (txt, cls, tit) => '<span class="cv2-ficha' + (cls ? ' ' + cls : '') + '"' + (tit ? ' title="' + varEsc(tit) + '"' : '') + '>' + txt + '</span>';
+  const fuentesOk = okF('senales_if') && okF('traza') && okF('feed');
+  return '<div class="cv2-fichas">'
+    + ficha('<b>Cadena v2</b> · política ' + varEsc(String(cv.politica || 'desconocida')), '', 'Política de respuesta del publicador')
+    + ficha('Modo ' + varEsc(String(cv.modo)) + (sombra ? ' · las medidas son propuestas; no se ejecutan' : ''), sombra ? 'aviso' : '')
+    + ficha('Feed v2 n.º ' + varEsc(String(cv.feed_secuencia ?? '—'))
+            + (cv.feed_atrasado ? ' <b>atrasado</b>' : ' · hace ' + Math.round(cv.feed_edad_s || 0) + ' s'), cv.feed_atrasado ? 'mal' : '')
+    + ficha(medidas)
+    + ficha('Fuentes: señales IF ' + est('senales_if') + ', traza ' + est('traza') + ', feed ' + est('feed'), fuentesOk ? 'bien' : 'mal')
+    + ficha('Agente: desconocido desde el sensor · efecto: sin evidencia', '', 'El agente de srv-dmz no envía acuse al sensor')
+    + ficha('Panel de solo lectura')
+    + '</div>'
+    + (inc.length ? '<div class="cv2-inc"><b class="est no">INCIDENCIA: ' + inc.map(varEsc).join(' · ') + '</b></div>' : '')
+    + (sombra ? '<details class="cv2-que"><summary>¿Qué es el modo sombra?</summary><p>'
+      + 'Todo funciona menos el último paso. El motor detecta, el publicador decide la medida (BLOCK o LIMIT), la firma y la publica en el feed, '
+      + 'y el agente del host la lee. Pero el agente <b>no la escribe en el cortafuegos</b>: solo registra lo que habría hecho. '
+      + 'Sirve para medir detección, decisión y latencias sin cortar tráfico real. Un falso positivo (p. ej. Zabbix) no tumba un servicio. '
+      + 'Lo contrario es el modo de aplicación (el agente con <code>--aplicar</code>): ahí la medida sí entra en nftables del host.</p></details>' : '');
 }
 function pintarCadenaV2(cv) {
   const activa = !!(cv && cv.activa);
@@ -3268,10 +3294,12 @@ function pintarCadenaV2(cv) {
   if (!f) {
     f = document.createElement('div');
     f.id = 'cadenaV2Franja';
-    f.className = 'toolbar-hint';
+    f.className = 'cv2-franja';
     f.setAttribute('role', 'status');
-    const main = document.querySelector('main') || document.body;
-    main.insertBefore(f, main.firstChild);
+    // Dentro de la columna de contenido, bajo la cabecera (no sobre la barra lateral).
+    const wrap = document.querySelector('.wrap') || document.body;
+    const cab = wrap.querySelector(':scope > header');
+    wrap.insertBefore(f, cab ? cab.nextSibling : wrap.firstChild);
   }
   f.innerHTML = franjaV2HTML(cv);
 }
@@ -7766,7 +7794,13 @@ function renderRg() {
   if (!caja) return;
   const activo = escActivo();
   caja.hidden = !activo || rgOculto;
-  if (abrir) abrir.hidden = !activo || !rgOculto;
+  // 16-nov: el acceso al recorrido queda siempre a la vista. Sin seguimiento lleva a
+  // Escenario (allí se elige y se pulsa «Iniciar seguimiento»); con él, reabre la barra.
+  if (abrir) {
+    abrir.hidden = activo && !rgOculto;
+    abrir.classList.toggle('sin-esc', !activo);
+    abrir.textContent = activo ? 'Recorrido de la demo' : 'Recorrido de la demo ▸ elegir escenario';
+  }
   document.body.classList.toggle('con-rg', activo && !rgOculto);
   if (!activo || rgOculto) return;
   const s = ESC_CATALOGO.find(x => x.id === esc.id) || {};
@@ -7830,7 +7864,9 @@ on('rgSig', 'click', () => {
   else { mostrarSeccion('s-escenario', false); setTimeout(() => rgResaltar(document.getElementById('escPasos')), 100); }
 });
 on('rgCerrar', 'click', () => { rgOculto = true; try { sessionStorage.setItem('cf_rg_oculto', '1'); } catch (e) { /* */ } renderRg(); });
-on('rgAbrir', 'click', () => { rgOculto = false; try { sessionStorage.removeItem('cf_rg_oculto'); } catch (e) { /* */ } renderRg(); });
+on('rgAbrir', 'click', () => {
+  if (!escActivo()) { if (typeof mostrarSeccion === 'function') mostrarSeccion('s-escenario', true); return; }
+  rgOculto = false; try { sessionStorage.removeItem('cf_rg_oculto'); } catch (e) { /* */ } renderRg(); });
 setInterval(renderRg, 1000);
 renderRg();
 
