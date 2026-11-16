@@ -293,6 +293,17 @@ HTML = """<!doctype html>
   .al-motivo { font-size: 0.82rem; color: var(--text-dim); overflow-wrap: anywhere; }
   .al-mini { flex: none; }
   @media (max-width: 640px) { .al-card { grid-template-columns: 58px 1fr; } .al-mini { display: none; } }
+  /* Lista blanca: infraestructura conocida, agrupada aparte de las alertas. */
+  .lb-caja { margin-top: 1.1rem; border: 1px dashed var(--border); border-radius: 12px; padding: 0.75rem 0.9rem; background: var(--surface); }
+  .lb-caja h3 { margin: 0 0 0.25rem; font-size: 0.95rem; }
+  .lb-sub { margin: 0 0 0.6rem; font-size: 0.8rem; color: var(--text-dim); }
+  .lb-fila { display: grid; grid-template-columns: 1fr auto; gap: 0.6rem; align-items: center; padding: 0.5rem 0; border-top: 1px solid var(--border); }
+  .lb-ip { font-family: var(--mono); font-weight: 600; }
+  .lb-nom { color: var(--text-dim); font-size: 0.82rem; margin-left: 0.4rem; }
+  .lb-det { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.15rem; overflow-wrap: anywhere; }
+  .lb-aviso { color: var(--warn, #d9a441); }
+  .lb-tarjetas { display: grid; gap: 0.4rem; margin-top: 0.5rem; grid-column: 1 / -1; }
+  @media (max-width: 640px) { .lb-fila { grid-template-columns: 1fr; } }
   /* Pulso: lo que entra y lo que se acumula, con su edad. */
   .pulso { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.7rem; margin: 0.2rem 0 1.3rem; }
   .pulso-t { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.65rem 0.8rem 0.45rem; min-width: 0; }
@@ -1502,6 +1513,7 @@ HTML = """<!doctype html>
       <button type="button" class="btn-sec neutro" id="alertasMarg" aria-pressed="false" title="Anomalías solo del modelo con el score a menos de 0,05 del umbral">Marginales: ocultas</button>
     </div>
     <div class="alertas-lista" id="alertasLista"></div>
+    <div class="lb-caja" id="alertasListaBlanca" hidden></div>
   </section>
 
   <section id="s-bloqueos">
@@ -2758,6 +2770,7 @@ async function refresh() {
     ultimaActualizacion = Date.now();
     errorActualizacion = '';
     pintarSello();
+    cargarListaBlanca();
 
     window._fprRef = status.model ? status.model.test_fpr : null;
     renderHistogram(histogramData);
@@ -3040,12 +3053,76 @@ document.addEventListener('click', (ev) => {
   pintarBotonMarg();
   renderAlertas();
 });
+// --- Lista blanca (16-nov): infraestructura conocida (p. ej. Zabbix) agrupada aparte. ---
+// Viene de configs/lista-blanca.json por /api/lista-blanca. El panel solo AGRUPA la vista:
+// si el feed v2 sigue publicando una medida sobre esa IP, se dice en el bloque.
+let LISTA_BLANCA = new Map();
+let listaBlancaFeedLeido = false;
+let verLB = false;
+async function cargarListaBlanca() {
+  try {
+    const r = await (await fetch('/api/lista-blanca')).json();
+    LISTA_BLANCA = new Map((r.entradas || []).map(e => [String(e.ip), e]));
+    listaBlancaFeedLeido = !!r.feed_leido;
+  } catch (e) { /* sin lista: el panel sigue como siempre */ }
+  renderAlertas();
+}
+function enListaBlanca(ip) { return LISTA_BLANCA.has(String(ip || '')); }
+function tarjetaAlerta(d) {
+  const coma3 = v => (v == null ? '—' : Number(v).toFixed(3).split('.').join(','));
+  const acc = accionDeDecision(d);
+  const t = alertaTipos(d);
+  const tags = [];
+  if (t.modelo) tags.push('<span class="al-tag modelo">Anomalía del modelo</span>');
+  if (t.regla) tags.push('<span class="al-tag regla">Regla: ' + varEsc(t.regla) + '</span>');
+  if (enListaBlanca(d.entity_ip)) tags.push('<span class="al-tag">Lista blanca</span>');
+  const motivo = (d.heuristico && d.heuristico.motivo) ? varEsc(d.heuristico.motivo)
+    : (d.score != null ? 'score ' + coma3(d.score) + ' por debajo del umbral ' + coma3(d.threshold) : '');
+  const key = d.entity_ip + '|' + d.window_end_utc;
+  return `<div class="al-card al-${acc.toLowerCase()}">`
+    + `<div class="al-sev"><span class="badge acc-${acc.toLowerCase()}">${acc}</span></div>`
+    + `<div class="al-main"><div class="al-top"><span class="al-ip">${varEsc(d.entity_ip)}</span>`
+    + `<span class="al-hace" title="${varEsc(String(d.window_end_utc || ''))} UTC">${fmtTime(d.logged_at)} · ${haceTexto(d.logged_at)}</span></div>`
+    + `<div class="al-tags">${tags.join(' ')}</div>`
+    + `<div class="al-motivo">${motivo}</div></div>`
+    + `<div class="al-ver">${miniBarraScore(d.score)}<button type="button" class="btn-sec" data-ver-dec="${varEsc(key)}" data-ip="${varEsc(d.entity_ip)}">Ver decisión &rarr;</button></div></div>`;
+}
+function renderListaBlanca(alertasLB) {
+  const caja = document.getElementById('alertasListaBlanca');
+  if (!caja) return;
+  if (!LISTA_BLANCA.size) { caja.hidden = true; caja.innerHTML = ''; return; }
+  caja.hidden = false;
+  const filas = [...LISTA_BLANCA.values()].map(e => {
+    const suyas = alertasLB.filter(d => String(d.entity_ip) === e.ip);
+    const ult = suyas.length ? Math.max(...suyas.map(d => d.logged_at || 0)) : null;
+    const reglas = [...new Set(suyas.map(d => alertaTipos(d).regla || (alertaTipos(d).modelo ? 'modelo' : '')).filter(Boolean))];
+    const m = e.medida_feed;
+    const feedTxt = m
+      ? `<span class="lb-aviso"><span class="badge acc-${String(m.accion).toLowerCase()}">${varEsc(m.accion)}</span> el publicador aún la emite hacia ${varEsc(m.destino || '—')} (vigente hasta ${fmtTime(m.hasta)}): esta lista solo agrupa la vista.</span>`
+      : (listaBlancaFeedLeido ? 'sin medida vigente en el feed' : 'feed no disponible');
+    return `<div class="lb-fila"><div><span class="lb-ip">${varEsc(e.ip)}</span><span class="lb-nom">${varEsc(e.nombre)}</span>`
+      + `<div class="lb-det">${varEsc(e.motivo)}${e.alta ? ' · en la lista desde ' + varEsc(e.alta) : ''}</div>`
+      + `<div class="lb-det">${suyas.length} alerta(s) en los registros cargados${ult ? ' · última ' + fmtTime(ult) + ' (' + haceTexto(ult) + ')' : ''}${reglas.length ? ' · ' + varEsc(reglas.join(', ')) : ''} · ${feedTxt}</div></div>`
+      + (suyas.length ? `<button type="button" class="btn-sec neutro" data-lb-ver="1">${verLB ? 'Ocultar' : 'Ver'} sus alertas</button>` : '<span></span>')
+      + (verLB && suyas.length ? `<div class="lb-tarjetas">${suyas.slice(0, 20).map(tarjetaAlerta).join('')}</div>` : '')
+      + `</div>`;
+  }).join('');
+  caja.innerHTML = `<h3>Lista blanca · infraestructura conocida (${LISTA_BLANCA.size})</h3>`
+    + `<p class="lb-sub">Sus alertas se agrupan aquí y no en la lista de arriba. Se edita en <code>configs/lista-blanca.json</code> del sensor.</p>` + filas;
+}
+on('alertasListaBlanca', 'click', (ev) => {
+  if (ev.target.closest('[data-lb-ver]')) { verLB = !verLB; renderAlertas(); return; }
+  const b = ev.target.closest('[data-ver-dec]');
+  if (b) abrirDecision(b.dataset.ip, b.dataset.verDec);
+});
 function renderAlertas() {
   const lista = document.getElementById('alertasLista');
   const resumen = document.getElementById('alertasResumen');
   if (!lista || !resumen) return;
-  const coma3 = v => (v == null ? '—' : Number(v).toFixed(3).split('.').join(','));
-  const todas = (lastDecisions || []).filter(d => accionDeDecision(d) !== 'PERMIT');
+  const todasConLB = (lastDecisions || []).filter(d => accionDeDecision(d) !== 'PERMIT');
+  const alertasLB = todasConLB.filter(d => enListaBlanca(d.entity_ip));
+  renderListaBlanca(alertasLB);
+  const todas = todasConLB.filter(d => !enListaBlanca(d.entity_ip));
   const ahora = Date.now() / 1000;
   const h = todas.filter(d => ahora - (d.logged_at || 0) <= 3600);
   // El recuento de la hora viene de los contadores del servidor (ventana real
@@ -3065,6 +3142,7 @@ function renderAlertas() {
     + `<div class="al-num-t">alerta(s) con acción en la última hora`
     + `<small>${nRegla} por regla · ${c.revision_modelo || 0} anomalía(s) solo del modelo para revisión (sin acción) · `
     + `${c.infra_protegida || 0} en infraestructura protegida (no se actúa) · `
+    + (LISTA_BLANCA.size ? `${alertasLB.length} de la lista blanca en los registros cargados (abajo, aparte) · ` : '')
     + `${nMargH} marginal(es) ${verMarginales ? 'visibles' : 'agrupadas'} (score a menos de 0,05 del umbral)`
     + `</small></div>`;
   // Estados vacios: dependen de por que no hay filas. Una lista filtrada vacia
@@ -3097,23 +3175,7 @@ function renderAlertas() {
     else vacio('No hay alertas en los registros cargados (' + lastDecisions.length + ' decisiones, desde las ' + fmtTime(Math.min(...lastDecisions.map(d => d.logged_at || Infinity))) + '). Para periodos anteriores, consulta Decisiones.');
     return;
   }
-  lista.innerHTML = rows.map(d => {
-    const acc = accionDeDecision(d);
-    const t = alertaTipos(d);
-    const tags = [];
-    if (t.modelo) tags.push('<span class="al-tag modelo">Anomalía del modelo</span>');
-    if (t.regla) tags.push('<span class="al-tag regla">Regla: ' + varEsc(t.regla) + '</span>');
-    const motivo = (d.heuristico && d.heuristico.motivo) ? varEsc(d.heuristico.motivo)
-      : (d.score != null ? 'score ' + coma3(d.score) + ' por debajo del umbral ' + coma3(d.threshold) : '');
-    const key = d.entity_ip + '|' + d.window_end_utc;
-    return `<div class="al-card al-${acc.toLowerCase()}">`
-      + `<div class="al-sev"><span class="badge acc-${acc.toLowerCase()}">${acc}</span></div>`
-      + `<div class="al-main"><div class="al-top"><span class="al-ip">${varEsc(d.entity_ip)}</span>`
-      + `<span class="al-hace" title="${varEsc(String(d.window_end_utc || ''))} UTC">${fmtTime(d.logged_at)} · ${haceTexto(d.logged_at)}</span></div>`
-      + `<div class="al-tags">${tags.join(' ')}</div>`
-      + `<div class="al-motivo">${motivo}</div></div>`
-      + `<div class="al-ver">${miniBarraScore(d.score)}<button type="button" class="btn-sec" data-ver-dec="${varEsc(key)}" data-ip="${varEsc(d.entity_ip)}">Ver decisión &rarr;</button></div></div>`;
-  }).join('');
+  lista.innerHTML = rows.map(tarjetaAlerta).join('');
 }
 let alertasAccion = 'todas';
 on('alertasFiltro', 'click', (ev) => {
@@ -8357,6 +8419,56 @@ REGLA_LEGACY = {"auth_failure_heuristic": "fallos de autenticación repetidos"}
 NUNCA_BLOQUEAR = {"10.10.10.30", "10.10.60.11", "10.10.30.1", "10.10.40.1",
                   "10.10.60.1", "10.10.20.1", "10.10.10.20"}   # = publicar_feed.py
 
+# Lista blanca (16-nov-2026): IPs de infraestructura conocida (p. ej. Zabbix) cuyas alertas se
+# agrupan aparte en el panel. Es un fichero editable, no codigo: configs/lista-blanca.json.
+# El panel NO decide nada: solo agrupa la vista y dice si el feed v2 todavia publica una medida
+# sobre esa IP (lo que hace el publicador no cambia por editar este fichero).
+LISTA_BLANCA_PATH = RAIZ_REPO / "configs" / "lista-blanca.json"
+
+
+def leer_lista_blanca(ruta: Path = LISTA_BLANCA_PATH) -> list[dict]:
+    """Entradas validas de la lista blanca ({ip, nombre, motivo, alta}); [] si falta o es ilegible."""
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    out, vistas = [], set()
+    for e in (datos.get("entradas") or []) if isinstance(datos, dict) else []:
+        if not isinstance(e, dict):
+            continue
+        ip = str(e.get("ip", "")).strip()
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            continue
+        if ip in vistas:
+            continue
+        vistas.add(ip)
+        out.append({"ip": ip, "nombre": str(e.get("nombre", "")), "motivo": str(e.get("motivo", "")),
+                    "alta": str(e.get("alta", ""))})
+    return out
+
+
+def estado_lista_blanca(ruta: Path, feed_v2: Path | None, ahora: float) -> dict:
+    """Lista blanca + la medida que el feed v2 publica HOY sobre cada IP (None si ninguna)."""
+    entradas = leer_lista_blanca(ruta)
+    vig: dict[str, dict] = {}
+    feed_ok = False
+    if feed_v2 is not None:
+        try:
+            feed = json.loads(feed_v2.read_text(encoding="utf-8"))
+            feed_ok = True
+            for x in feed.get("entradas") or []:
+                if isinstance(x, dict) and float(x.get("hasta", 0)) > ahora:
+                    vig[str(x.get("ip", ""))] = x
+        except (OSError, ValueError, TypeError):
+            pass
+    for e in entradas:
+        m = vig.get(e["ip"])
+        e["medida_feed"] = ({"accion": m.get("accion"), "hasta": m.get("hasta"), "motivo": m.get("motivo"),
+                             "destino": m.get("destino")} if m else None)
+    return {"ruta": str(ruta), "feed_leido": feed_ok, "entradas": entradas}
+
 
 def accion_de(d: dict) -> tuple[str, str, str] | None:
     """(accion, motivo, origen) de una decision, o None si no pide accion."""
@@ -10355,6 +10467,10 @@ def main() -> int:
                 return
             if path == "/api/acciones":
                 self._send_json(historial_acciones(args.log_path, time.time()))
+                return
+            if path == "/api/lista-blanca":
+                self._send_json(estado_lista_blanca(
+                    LISTA_BLANCA_PATH, None if args.demo else args.cadena_v2_dir / "feed.json", time.time()))
                 return
             if path == "/api/despliegue":
                 self._send_json(inventario_despliegue())
