@@ -383,6 +383,18 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .topo-node .ttl { fill: var(--text); font: 700 13px var(--sans); }
   .topo-node .sub { fill: var(--text-dim); font: 600 11px var(--mono); font-variant-numeric: tabular-nums; }
   .topo-node .ico { color: var(--text); }
+  .topo-node .ico.ico-blanco { color: #fff; }
+  .topo-node .ico-bg { stroke: rgba(255,255,255,0.6); stroke-width: 1.5; }
+  .det-con-herr { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 1.2rem; align-items: start; }
+  @media (max-width: 900px) { .det-con-herr { grid-template-columns: 1fr; } }
+  .herr-col { display: grid; gap: 0.5rem; position: sticky; top: 0.5rem; }
+  .herr { display: flex; align-items: center; gap: 0.65rem; padding: 0.5rem 0.6rem; border: 1px solid var(--border);
+    border-radius: 12px; background: var(--surface-2); }
+  .herr-ico { width: 46px; height: 46px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none;
+    box-shadow: 0 4px 10px -6px rgba(0,0,0,0.5); }
+  .herr-t { display: flex; flex-direction: column; line-height: 1.25; }
+  .herr-t b { font-size: 0.9rem; color: var(--text); }
+  .herr-t small { font-size: 0.74rem; color: var(--text-dim); }
   .topo-node.ok .ico { color: var(--ok); }
   .topo-node.warn .ico { color: var(--amber); }
   .topo-node.bad .ico { color: var(--danger); }
@@ -436,7 +448,14 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
     color: var(--accent); background: #0b1220; border: 1px solid var(--border);
     border-radius: 6px; padding: 0.2rem 0.5rem; overflow-wrap: anywhere; }
   /* Perfiles de trafico legitimo, con icono. */
-  .perfiles { display: grid; gap: 0.35rem; margin: 0.4rem 0 0.2rem; }
+  .perfiles { display: grid; gap: 0.6rem; margin: 0.5rem 0 0.3rem; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .perfiles .perfil { display: flex !important; flex-direction: column; align-items: flex-start; gap: 0.35rem; padding: 0.75rem;
+    border: 1px solid var(--border); border-top: 3px solid var(--pc); border-radius: 12px; background: var(--surface-2); }
+  .perfiles .perfil-ico { width: 48px; height: 48px; border-radius: 14px; background: var(--pc); display: inline-flex !important;
+    align-items: center; justify-content: center; box-shadow: 0 4px 12px -6px var(--pc); }
+  .perfiles .perfil-n { font-size: 0.95rem; }
+  .perfiles .perfil-d { font-size: 0.82rem; }
+  .perfiles .perfil-ej { grid-column: auto !important; font-size: 0.7rem; }
   .perfil { display: grid; grid-template-columns: 24px auto 1fr; align-items: center; gap: 0.5rem;
     font-size: 0.82rem; }
   .perfil-ico { color: var(--accent); display: inline-flex; }
@@ -4566,6 +4585,16 @@ const TOPO_ICON = {
   firewall: '<rect x="2" y="3.3" width="14" height="11.4" rx="1"/><path d="M2 7.1h14M2 10.9h14M6.6 3.3v3.8M11.4 3.3v3.8M4.3 7.1v3.8M9 7.1v3.8M13.7 7.1v3.8M6.6 10.9v3.8M11.4 10.9v3.8"/>',
   switch:   '<rect x="1.6" y="5.4" width="14.8" height="7.2" rx="1.3"/><path d="M4 9h10"/><path d="M6.4 6.9 4 9l2.4 2.1M11.6 6.9 14 9l-2.4 2.1"/>',
   carpeta:  '<path d="M2 4.6h4.4l1.5 2H16v7.8H2Z"/><path d="M2 8.6h14"/>',
+  atacante: '<path d="M9 2a6 6 0 0 0-6 6c0 2 1 3.4 2.2 4.3V15h7.6v-2.7C14 11.4 15 10 15 8a6 6 0 0 0-6-6z"/><circle cx="6.8" cy="8.4" r="1.2"/><circle cx="11.2" cy="8.4" r="1.2"/><path d="M7.6 15v-1.6M10.4 15v-1.6"/>',
+  usuarios: '<circle cx="6.5" cy="6.5" r="2.6"/><path d="M1.8 15c.6-3 2.4-4.4 4.7-4.4S10.6 12 11.2 15"/><circle cx="12.6" cy="6" r="2.1"/><path d="M12 10.3c2.2 0 3.6 1.4 4.2 4"/>',
+  kali:     '<path d="M2.2 13.6c2.6-.4 4.4-1.6 5.4-3.6.8-1.6.6-3.6 2.2-5 1.4-1.2 3.6-1.4 5.8-.6-1.6.2-2.6.8-3 1.8 1.4.2 2.4 1 2.8 2.2-1.2-.6-2.4-.6-3.4 0-1.4 2.6-3.6 4.6-7 5.6"/><path d="M12.4 6.2h.01"/>',
+  radar:    '<circle cx="9" cy="9" r="7"/><circle cx="9" cy="9" r="3.6"/><path d="M9 9 14 4"/><circle cx="12.2" cy="11.6" r="0.9" fill="currentColor" stroke="none"/>',
+  terminal: '<rect x="1.8" y="3" width="14.4" height="12" rx="1.6"/><path d="M4.8 7.2 7.4 9.4 4.8 11.6M9 12h4"/>',
+  bicho:    '<ellipse cx="9" cy="10.4" rx="3.6" ry="4.6"/><path d="M9 5.8V15M5.4 8.6 2.4 7M12.6 8.6l3-1.6M5.4 11.6H2.2M12.6 11.6h3.2M6.6 6.4 5.2 3.4M11.4 6.4l1.4-3"/>',
+  flechas:  '<path d="M2.4 6h11.4M11.2 3.4 13.8 6l-2.6 2.6M15.6 12H4.2M6.8 9.4 4.2 12l2.6 2.6"/>',
+  python:   '<path d="M9 1.8c-3 0-3.4 1.3-3.4 2.4v1.6H9v.6H4.2C2.8 6.4 1.8 7.4 1.8 9.4s1 3.2 2.4 3.2h1.4v-2c0-1.4 1.2-2.4 2.6-2.4h3.6c1.2 0 2.2-1 2.2-2.2V4.2c0-1.2-1-2.4-5-2.4z"/><path d="M9 16.2c3 0 3.4-1.3 3.4-2.4v-1.6H9v-.6h4.8c1.4 0 2.4-1 2.4-3s-1-3.2-2.4-3.2"/><circle cx="7" cy="3.8" r="0.6" fill="currentColor" stroke="none"/><circle cx="11" cy="14.2" r="0.6" fill="currentColor" stroke="none"/>',
+  engranaje:'<circle cx="9" cy="9" r="2.6"/><path d="M9 1.8v2.4M9 13.8v2.4M1.8 9h2.4M13.8 9h2.4M3.9 3.9l1.7 1.7M12.4 12.4l1.7 1.7M3.9 14.1l1.7-1.7M12.4 5.6l1.7-1.7"/>',
+  llave:    '<circle cx="5.6" cy="9" r="3.4"/><path d="M9 9h7.2M13.6 9v2.8M15.8 9v2"/>',
   router:   '<circle cx="9" cy="9" r="7.2"/><path d="M9 4.4v3.2M9 10.4v3.2M4.4 9h3.2M10.4 9h3.2"/><path d="M7.9 5.5 9 4.4l1.1 1.1M7.9 12.5 9 13.6l1.1-1.1M5.5 7.9 4.4 9l1.1 1.1M12.5 7.9 13.6 9l-1.1 1.1"/>',
   entrante: '<path d="M1.8 9h8.6"/><path d="M7.2 5.6 10.6 9l-3.4 3.4"/><path d="M11.6 2.6h4.6v12.8h-4.6"/>',
   // Perfiles de trafico legitimo (clientes .21-.26).
@@ -4581,6 +4610,54 @@ const TOPO_ICON = {
   host_bastion:  '<path d="M3 15.4V6.6l6-3.8 6 3.8v8.8"/><path d="M2.2 15.4h13.6"/><path d="M7.3 15.4v-3.4h3.4v3.4"/>',
 };
 const HOST_ICON = { sensor: 'host_sensor', servidor: 'host_servidor', bastion: 'host_bastion' };
+// 17-nov: cada tipo de componente con su color (icono blanco sobre círculo de color).
+const ICO_COLOR = {
+  red: '#0284c7', entrante: '#0d9488', atacante: '#dc2626', usuarios: '#16a34a', host_servidor: '#7c3aed',
+  disco: '#7c3aed', router: '#4f46e5', firewall: '#4f46e5', switch: '#2563eb', espejo: '#2563eb', nic: '#475569',
+  captura: '#ea580c', lupa: '#f59e0b', fichero: '#64748b', cpu: '#9333ea', tabla: '#0891b2', reglas: '#d97706',
+  modelo: '#7c3aed', decision: '#1e3a8a', escudo: '#059669', ojo: '#0369a1', tijera: '#6b7280', ciclo: '#0d9488',
+  carpeta: '#ca8a04',
+};
+function icoCirculo(ico, cx, cy, r, color) {
+  const s = Math.round(r * 1.25);
+  return `<circle class="ico-bg" cx="${cx}" cy="${cy}" r="${r}" fill="${color || ICO_COLOR[ico] || '#475569'}"/>`
+    + `<g class="ico ico-blanco" transform="translate(${cx - s / 2}, ${cy - s / 2})"><svg width="${s}" height="${s}" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[ico] || ''}</svg></g>`;
+}
+// Herramientas de cada componente (columna de la derecha del detalle). Iconos propios con el color
+// de cada herramienta: no son los logotipos oficiales.
+const TOPO_HERR = {
+  atacante: [
+    { n: 'Kali Linux', d: 'VM atacante · 10.10.20.30', ico: 'kali', c: '#367bf0' },
+    { n: 'nmap', d: 'escaneo de puertos → BLOCK', ico: 'radar', c: '#1d4ed8' },
+    { n: 'curl', d: 'fuerza bruta / flood HTTP', ico: 'terminal', c: '#0b4f6c' },
+    { n: 'nikto', d: 'vulnerabilidades web', ico: 'bicho', c: '#15803d' },
+    { n: 'dig · DGA', d: 'DNS de alta entropía → LIMIT', ico: 'red', c: '#b45309' },
+    { n: 'arpspoof', d: 'ARP spoofing · trabajo futuro', ico: 'flechas', c: '#6b7280' },
+  ],
+  clientes: [
+    { n: 'Python', d: 'clientes_lab.py · servidor_lab.py', ico: 'python', c: '#3776ab' },
+    { n: 'systemd', d: 'cyberflow-lab.target · 6 servicios', ico: 'engranaje', c: '#30d475' },
+  ],
+  servidor: [
+    { n: 'Python HTTP/HTTPS', d: 'servidor_lab.py · 80 y 443', ico: 'python', c: '#3776ab' },
+    { n: 'nftables', d: 'sets con caducidad: LIMIT y BLOCK', ico: 'escudo', c: '#059669' },
+    { n: 'ed25519', d: 'el agente verifica la firma del feed', ico: 'llave', c: '#7c3aed' },
+  ],
+  gateway: [
+    { n: 'pfSense', d: 'router A/B en alta disponibilidad', ico: 'router', c: '#212d6b' },
+    { n: 'CARP · pfsync', d: 'VIP compartida entre A y B', ico: 'ciclo', c: '#4f46e5' },
+  ],
+  suricata: [ { n: 'Suricata', d: 'eventos L7 en eve.json (sin reglas)', ico: 'lupa', c: '#ef6c00' } ],
+  captura: [ { n: 'tcpdump', d: 'anillo de PCAP en el sensor', ico: 'captura', c: '#ea580c' } ],
+  modelo: [ { n: 'scikit-learn', d: 'Isolation Forest · umbral calibrado', ico: 'modelo', c: '#f7931e' } ],
+};
+function herramientasHTML(id) {
+  const l = TOPO_HERR[id];
+  if (!l) return '';
+  return '<aside class="herr-col"><div class="cod-sub">Herramientas</div>' + l.map(h =>
+    `<div class="herr"><span class="herr-ico" style="background:${h.c}"><svg width="30" height="30" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[h.ico] || ''}</svg></span>`
+    + `<span class="herr-t"><b>${h.n}</b><small>${h.d}</small></span></div>`).join('') + '</aside>';
+}
 
 // Dos vistas del mismo sistema. "esencial" es el camino del paquete en siete
 // pasos; "completa" anade los artefactos que se escriben en disco, la rama de
@@ -4627,9 +4704,9 @@ const TOPO_VISTAS = {
       { x: 1578, y: 32, w: 196, h: 456, txt: 'Observabilidad',       n: 4 },
     ],
     nodos: [
-      { id: 'atacante', x: 24, y: 70,  w: 176, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',   host: true, ip: '10.10.20.30',     desc: 'lanza los ataques' },
-      { id: 'clientes', x: 24, y: 140, w: 176, h: 48, icono: 'red',    titulo: 'Clientes',          host: true, ip: '10.10.20.21-.26', desc: '6 perfiles legítimos' },
-      { id: 'servidor', x: 24, y: 210, w: 176, h: 48, icono: 'disco',  titulo: 'Servidor',          host: true, ip: '10.10.30.10',     desc: 'objetivo HTTP/HTTPS' },
+      { id: 'atacante', x: 24, y: 70,  w: 176, h: 48, icono: 'atacante',   titulo: 'Atacante (Kali)',   host: true, ip: '10.10.20.30',     desc: 'lanza los ataques' },
+      { id: 'clientes', x: 24, y: 140, w: 176, h: 48, icono: 'usuarios',    titulo: 'Clientes',          host: true, ip: '10.10.20.21-.26', desc: '6 perfiles legítimos' },
+      { id: 'servidor', x: 24, y: 210, w: 176, h: 48, icono: 'host_servidor',  titulo: 'Servidor',          host: true, ip: '10.10.30.10',     desc: 'objetivo HTTP/HTTPS' },
       { id: 'gateway',  x: 24, y: 280, w: 176, h: 48, icono: 'router', titulo: 'Router', host: true, ip: '10.10.20.1',      desc: 'enruta entre VLAN' },
       { id: 'red',       x: 286, y: 70,  w: 176, h: 58, icono: 'red',    titulo: 'Red de la entidad',  tag: 'VLAN 10-100' },
       { id: 'span',      x: 286, y: 158, w: 176, h: 58, icono: 'switch', titulo: 'Espejo SPAN',        tag: 'SWITCH' },
@@ -4789,9 +4866,9 @@ const TOPO_VISTAS = {
       { x: 740, y: 32,  w: 720, h: 452, txt: 'Host ESXi · 172.17.25.2' },
     ],
     nodos: [
-      { id: 'atacante',  x: 24,  y: 60,  w: 176, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',  host: true, ip: '10.10.20.30',     desc: '' },
-      { id: 'clientes',  x: 24,  y: 118, w: 176, h: 48, icono: 'red',    titulo: 'Clientes',         host: true, ip: '10.10.20.21-.26', desc: '' },
-      { id: 'servidor',  x: 24,  y: 216, w: 176, h: 48, icono: 'disco',  titulo: 'srv-dmz · objetivo', host: true, ip: '10.10.30.10',   desc: '' },
+      { id: 'atacante',  x: 24,  y: 60,  w: 176, h: 48, icono: 'atacante',   titulo: 'Atacante (Kali)',  host: true, ip: '10.10.20.30',     desc: '' },
+      { id: 'clientes',  x: 24,  y: 118, w: 176, h: 48, icono: 'usuarios',    titulo: 'Clientes',         host: true, ip: '10.10.20.21-.26', desc: '' },
+      { id: 'servidor',  x: 24,  y: 216, w: 176, h: 48, icono: 'host_servidor',  titulo: 'srv-dmz · objetivo', host: true, ip: '10.10.30.10',   desc: '' },
       { id: 'r_bastion', x: 24,  y: 316, w: 176, h: 48, icono: 'ojo',    titulo: 'VM-GESTION',       host: true, ip: '10.10.10.30',     desc: '' },
       { id: 'r_dns',     x: 24,  y: 374, w: 176, h: 48, icono: 'red',    titulo: 'DNS / AD',         host: true, ip: '10.10.10.20',     desc: '' },
       { id: 'gateway',   x: 330, y: 70,  w: 196, h: 48, icono: 'router', titulo: 'Router A/B',     host: true, ip: 'enruta entre VLAN', desc: '' },
@@ -5985,9 +6062,9 @@ function renderTopologia(status) {
     const cy = n.y + n.h / 2;
     return `<g class="topo-node topo-host ${topoSel === n.id ? 'sel' : ''}" data-node="${n.id}" tabindex="0" role="button" aria-label="${n.titulo}">
       <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9"/>
-      <g class="ico" transform="translate(${n.x + 12}, ${cy - 11})"><svg width="22" height="22" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[n.icono]}</svg></g>
-      <text class="ttl" x="${n.x + 44}" y="${cy - 3}">${n.titulo}</text>
-      <text class="hostip" x="${n.x + 44}" y="${cy + 11}">${n.ip}</text>
+      ${icoCirculo(n.icono, n.x + 25, cy, 16)}
+      <text class="ttl" x="${n.x + 49}" y="${cy - 3}">${n.titulo}</text>
+      <text class="hostip" x="${n.x + 49}" y="${cy + 11}">${n.ip}</text>
       <title>${n.titulo} · ${n.ip}${n.desc ? ' · ' + n.desc : ''}</title>
     </g>`;
   }).join('');
@@ -6012,7 +6089,7 @@ function renderTopologia(status) {
       </g>`;
     }
     const etiqueta = n.tag
-      ? `<text class="tag" x="${n.x + 46}" y="${n.y + n.h - 5}">${n.tag}</text>` : '';
+      ? `<text class="tag" x="${n.x + 49}" y="${n.y + n.h - 5}">${n.tag}</text>` : '';
     const desplazar = n.tag ? -8 : 0;
     // Con "Ver archivos" activo, cada nodo con ficheros muestra un contador; el
     // detalle de cada uno se abre pulsando el nodo (aparecen como cuadraditos).
@@ -6021,9 +6098,9 @@ function renderTopologia(status) {
       ? `<text class="fbadge" x="${n.x + n.w - 24}" y="${n.y + n.h - 6}" text-anchor="end">▤ ${nfiles}</text>` : '';
     return `<g class="topo-node ${e.estado} ${n.clase || ''} ${nfiles ? 'tiene-archivos' : ''} ${topoSel === n.id ? 'sel' : ''}" data-node="${n.id}" tabindex="0" role="button" aria-label="${n.titulo}">
       <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9"/>
-      <g class="ico" transform="translate(${n.x + 13}, ${cy - 11 + desplazar})"><svg width="22" height="22" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[n.icono]}</svg></g>
-      <text class="ttl" x="${n.x + 46}" y="${cy - 3 + desplazar}">${n.titulo}</text>
-      <text class="sub" x="${n.x + 46}" y="${cy + 12 + desplazar}">${e.valor}</text>
+      ${icoCirculo(n.icono, n.x + 25, cy + desplazar * 0.5, 16)}
+      <text class="ttl" x="${n.x + 49}" y="${cy - 3 + desplazar}">${n.titulo}</text>
+      <text class="sub" x="${n.x + 49}" y="${cy + 12 + desplazar}">${e.valor}</text>
       ${etiqueta}${badge}
       <circle class="led" cx="${n.x + n.w - 13}" cy="${n.y + 13}" r="4" fill="${color}"/>
     </g>`;
@@ -6175,7 +6252,8 @@ window.addEventListener('resize', () => { if (topoZoom == null) aplicarZoom(); }
 // Perfiles de trafico legitimo, cada uno con su icono (nodo "Clientes").
 function perfilesHTML(perfiles) {
   if (!perfiles || !perfiles.length) return '';
-  const fila = p => `<div class="perfil"><span class="perfil-ico"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[p.icono] || ''}</svg></span>`
+  const COL = { ofimatica: '#2563eb', navegacion: '#0891b2', descargas: '#7c3aed', aplicacion: '#ea580c', ligero: '#16a34a', erratico: '#dc2626' };
+  const fila = p => `<div class="perfil" style="--pc:${COL[p.icono] || 'var(--accent)'}"><span class="perfil-ico"><svg width="30" height="30" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[p.icono] || ''}</svg></span>`
     + `<span class="perfil-n">${p.n}${p.ip ? '<small>' + p.ip + '</small>' : ''}</span>`
     + `<span class="perfil-d">${p.d || ''}</span>`
     + (p.ej ? `<span class="perfil-ej">p. ej. ${p.ej}</span>` : '') + `</div>`;
@@ -6225,7 +6303,8 @@ function renderTopoDetalle() {
   const filas = Object.entries(e.datos || {})
     .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   const cabIp = n.host && n.ip ? `<span class="state">${n.ip}</span>` : `<span class="state ${e.estado}">${e.valor}</span>`;
-  document.getElementById('topoDetail').innerHTML =
+  const herr = herramientasHTML(n.id);
+  const cuerpo =
     `<h3>${n.titulo}${cabIp}</h3>` +
     (t.que ? `<p>${t.que}</p>` : '') +
     (n.id === 'modelo' ? decisionModeloHTML() : '') +
@@ -6239,6 +6318,8 @@ function renderTopoDetalle() {
     filesHTML(n.id) +
     (t.nota ? `<p class="dim">${t.nota}</p>` : '') +
     (t.enlace ? `<p><a href="${t.enlace.href}"${t.enlace.vtab ? ` data-vtab="${t.enlace.vtab}"` : ''}>${t.enlace.txt} &rarr;</a></p>` : '');
+  document.getElementById('topoDetail').innerHTML = herr
+    ? `<div class="det-con-herr"><div class="det-cuerpo">${cuerpo}</div>${herr}</div>` : cuerpo;
 }
 
 // La regla de decision del modelo, hecha visible en el nodo "Modelo": una recta
