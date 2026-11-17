@@ -50,6 +50,9 @@ HTML = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CyberFlow &middot; motor en vivo</title>
+<script id="temaInicial">/* 17-nov: tema claro por omision; el boton «Tema» lo alterna y se recuerda. */
+try { document.documentElement.dataset.tema = localStorage.getItem('cf_tema') || 'claro'; }
+catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
 <link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%235eead4'/%3E%3C/svg%3E">
 <style>
   :root {
@@ -1112,6 +1115,50 @@ HTML = """<!doctype html>
   .topo-node.en-flujo .ico { color: var(--flujo, var(--accent)); }
   .topo-edge.flujo { stroke: var(--flujo, var(--accent)); stroke-width: 3; stroke-dasharray: 7 5; animation: flow 0.9s linear infinite; opacity: 1; }
   @media (prefers-reduced-motion: reduce) { .topo-edge.flujo { animation: none; } }
+
+  /* ---- Tema claro (17-nov, por omision) -------------------------------------
+     Mismas variables con tonos claros; abajo, los pocos colores fijos que el tema
+     oscuro tenia escritos a mano. Navy y oro de la marca UPeU como acentos. */
+  html[data-tema="claro"] {
+    color-scheme: light;
+    --bg: #f3f6fb; --surface: #ffffff; --surface-2: #eef2f8; --border: #d5ddea;
+    --text: #12315f; --text-dim: #55657d; --accent: #0b7a6e;
+    --ok: #15803d; --ok-soft: #e6f5ec;
+    --amber: #b45309; --amber-soft: #fdf1dc;
+    --danger: #c0262d; --danger-soft: #fdeaea;
+    --capa-a: #11805a; --capa-b: #1f6fcf; --capa-c: #b8366a; --capa-d: #6a5fd6;
+  }
+  html[data-tema="claro"] body { background: var(--bg); }
+  html[data-tema="claro"] .side { background: #ffffff; border-right: 1px solid var(--border); }
+  html[data-tema="claro"] .topo-cmd, html[data-tema="claro"] .sim-cmd,
+  html[data-tema="claro"] .esc-code { background: #0f2340; color: #e6eef8; }
+  html[data-tema="claro"] .topo-cmd *, html[data-tema="claro"] .sim-cmd * { color: inherit; }
+  html[data-tema="claro"] .esc-code .c { color: #9fb3cf; }
+  html[data-tema="claro"] .cv2-ficha.aviso { border-color: #d9a441; color: #8a5a00; }
+  html[data-tema="claro"] .cv2-ficha.mal { border-color: #d97a72; color: #a3221b; }
+  html[data-tema="claro"] .al-tag.modelo { color: #1f5fae; }
+  html[data-tema="claro"] .cmp-como li .n { background: #e3f1ef; }
+  html[data-tema="claro"] .cmp-como li code { color: #1f5fae; background: #f1f5fb; border-color: var(--border); }
+  html[data-tema="claro"] .cmp-run code { color: #8a5a00; }
+  html[data-tema="claro"] .cmp-lado .ev { color: var(--text-dim); }
+  html[data-tema="claro"] .rg { background: rgba(255,255,255,.97); border-color: var(--border);
+    box-shadow: 0 14px 40px rgba(18,49,95,.18); }
+  html[data-tema="claro"] .rg-pasos button { background: var(--surface-2); border-color: var(--border); }
+  html[data-tema="claro"] .rg-pasos button:hover { border-color: #9fb3cf; }
+  html[data-tema="claro"] .rg-pasos .num { background: #dfe6f1; }
+  html[data-tema="claro"] .rg-pasos li.actual button { background: #e3f1ef; }
+  html[data-tema="claro"] .rg-pasos li:not(:last-child)::after { background: var(--border); }
+  html[data-tema="claro"] .rg-cli { color: #7a4d00; background: #fdf1dc; border-color: #e7c27a; }
+  html[data-tema="claro"] .rg-cli .h { color: #a06a10; }
+  html[data-tema="claro"] .rg-abrir { background: #ffffff; }
+  html[data-tema="claro"] .ver-codigo { background: #eef2f8; border-color: var(--border); color: #1f5fae; }
+  html[data-tema="claro"] .ver-codigo:hover { background: #e3eaf5; }
+  html[data-tema="claro"] .flj-n { background: #f6f8fc; border-color: var(--border); color: var(--text); }
+  html[data-tema="claro"] .pmodal { background: rgba(18,49,95,.35); }
+  @keyframes escNuevaClaro { from { background: #d7f0ec; } }
+  .btn-tema { font: inherit; font-size: 0.78rem; padding: 0.3rem 0.65rem; border-radius: 8px; cursor: pointer;
+    background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+  .btn-tema:hover { color: var(--text); border-color: var(--accent); }
 </style>
 
 <div class="shell">
@@ -1156,6 +1203,7 @@ HTML = """<!doctype html>
         title="Operación: tareas del día a día (resumen, alertas, decisiones, respuestas). Desarrollo: añade mapa, datos, modelo y evaluación. Ninguna de las dos cambia nada en el sistema."></button><!--/ADMIN-->
       <button id="avisosBtn" class="btn-avisos" type="button" data-on="1"
         title="Alertas flotantes cuando una IP recibe LIMIT o BLOCK">Avisos: sí</button>
+      <button id="temaBtn" class="btn-tema" type="button" title="Cambiar entre tema claro y oscuro">Tema: claro</button>
       <span class="quien" id="quien"></span>
       <form method="post" action="/logout"><button class="btn-salir" type="submit">Salir</button></form>
     </div>
@@ -2317,6 +2365,17 @@ function pintarBotonAvisos() {
   b.textContent = avisosOn ? 'Avisos: sí' : 'Avisos: no';
 }
 pintarBotonAvisos();
+function pintarBotonTema() {
+  const b = document.getElementById('temaBtn');
+  if (b) b.textContent = 'Tema: ' + (document.documentElement.dataset.tema === 'oscuro' ? 'oscuro' : 'claro');
+}
+pintarBotonTema();
+on('temaBtn', 'click', () => {
+  const t = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+  document.documentElement.dataset.tema = t;
+  try { localStorage.setItem('cf_tema', t); } catch (e) { /* sin persistir */ }
+  pintarBotonTema();
+});
 on('avisosBtn', 'click', () => {
   avisosOn = !avisosOn;
   try { localStorage.setItem('cf_avisos', avisosOn ? '1' : '0'); } catch (e) { /* sin persistir */ }
