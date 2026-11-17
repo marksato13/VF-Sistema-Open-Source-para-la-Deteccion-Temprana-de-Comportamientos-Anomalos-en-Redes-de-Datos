@@ -3246,15 +3246,16 @@ function renderListaBlanca(alertasLB) {
     const feedTxt = m
       ? `<span class="lb-aviso"><span class="badge acc-${String(m.accion).toLowerCase()}">${varEsc(m.accion)}</span> el publicador aún la emite hacia ${varEsc(m.destino || '—')} (vigente hasta ${fmtTime(m.hasta)}): esta lista solo agrupa la vista.</span>`
       : (listaBlancaFeedLeido ? 'sin medida vigente en el feed' : 'feed no disponible');
-    return `<div class="lb-fila"><div><span class="lb-ip">${varEsc(e.ip)}</span><span class="lb-nom">${varEsc(e.nombre)}</span>`
-      + `<div class="lb-det">${varEsc(e.motivo)}${e.alta ? ' · en la lista desde ' + varEsc(e.alta) : ''}</div>`
+    // 17-nov: el motivo largo pasa al title; en pantalla, nombre y fecha de alta.
+    return `<div class="lb-fila"><div title="${varEsc(e.motivo)}"><span class="lb-ip">${varEsc(e.ip)}</span><span class="lb-nom">${varEsc(e.nombre)}</span>`
+      + (e.alta ? `<div class="lb-det">en la lista desde ${varEsc(e.alta)}</div>` : '')
       + `<div class="lb-det">${suyas.length} alerta(s) en los registros cargados${ult ? ' · última ' + fmtTime(ult) + ' (' + haceTexto(ult) + ')' : ''}${reglas.length ? ' · ' + varEsc(reglas.join(', ')) : ''} · ${feedTxt}</div></div>`
       + (suyas.length ? `<button type="button" class="btn-sec neutro" data-lb-ver="1">${verLB ? 'Ocultar' : 'Ver'} sus alertas</button>` : '<span></span>')
       + (verLB && suyas.length ? `<div class="lb-tarjetas">${suyas.slice(0, 20).map(tarjetaAlerta).join('')}</div>` : '')
       + `</div>`;
   }).join('');
-  caja.innerHTML = `<h3>Lista blanca · infraestructura conocida (${LISTA_BLANCA.size})</h3>`
-    + `<p class="lb-sub">Sus alertas se agrupan aquí y no en la lista de arriba. Se edita en <code>configs/lista-blanca.json</code> del sensor.</p>` + filas;
+  caja.innerHTML = `<h3 title="Sus alertas se agrupan aquí y no en la lista de arriba. Se edita en configs/lista-blanca.json del sensor.">`
+    + `Lista blanca · infraestructura conocida (${LISTA_BLANCA.size})</h3>` + filas;
 }
 on('alertasListaBlanca', 'click', (ev) => {
   if (ev.target.closest('[data-lb-ver]')) { verLB = !verLB; renderAlertas(); return; }
@@ -8464,8 +8465,7 @@ def resumen_salud(modo: str, services: dict, counters: dict, drops: dict,
         else:
             msg = "Servicios operativos · %d alerta(s) en la última hora" % (n_alert_modelo + n_alert_fb)
         return {"nivel": "warn", "msg": msg,
-                "sub": "Registradas en la última hora: " + " · ".join(partes)
-                       + ". Consulta su publicación y vigencia en Respuestas."}
+                "sub": " · ".join(partes)}
     if subiendo_drops:
         d = drops.get("delta")
         return {"nivel": "warn",
