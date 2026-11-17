@@ -983,6 +983,11 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   :root[data-tema="claro"] { --amber: #d9a800; --amber-soft: #fff3c4; }
   html[data-tema="claro"] .badge.acc-limit { background: #ffe066; color: #4d3900; }
   html[data-tema="claro"] .card.amber .value, html[data-tema="claro"] .wid.amber .w-val { color: #a07c00; }
+  /* Mapa: vista oculta (ojo tachado) y conmutador Lab / Operativa. */
+  #topoVista .vista-oculta { display: inline-flex; align-items: center; justify-content: center; opacity: 0.55; cursor: not-allowed; }
+  #topoVista .vista-oculta:hover { background: none; }
+  .topo-modo button { white-space: nowrap; }
+  .topo-lede { max-width: 980px; }
   /* Ojo del recorrido: círculo que despliega su texto al pasar el ratón. */
   .rg-abrir { display: inline-flex; align-items: center; gap: 0; padding: 9px !important; border-radius: 999px; transition: gap .2s, padding .2s; }
   .rg-abrir .rg-txt { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width .25s ease; }
@@ -1413,7 +1418,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   <!--ADMIN-->
   <section id="s-topologia">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg><h2>Mapa del sistema</h2></div>
-    <p class="lede-small">Pulsa un componente para ver su detalle.</p>
+    <p class="lede-small topo-lede" id="topoLede">Pulsa un componente para ver su detalle.</p>
     <div class="flujo-bar" id="flujoBar" hidden></div>
     <div class="topo-wrap" id="topoWrap">
       <div class="topo-canvas" id="topoCanvas">
@@ -1421,10 +1426,14 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
           <div class="range-toggle" id="topoVista">
             <button data-vista="red">1 · Red y captura</button>
             <button data-vista="completa" class="active">2 · Operacional</button>
-            <button data-vista="construccion">3 · Construcción y entrenamiento</button>
+            <button data-vista="construccion" class="vista-oculta" disabled title="Vista oculta" aria-label="Vista oculta"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.6 6.6C3.9 8.4 2 12 2 12s4 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button>
             <button data-vista="decision">4 · Decisión</button>
             <button data-vista="respuesta">5 · Respuesta</button>
             <button data-vista="carpetas">6 · Carpetas</button>
+          </div>
+          <div class="range-toggle topo-modo" id="topoModo" title="Lab: lo montado para el ensayo · Operativa: solo el flujo de una red real">
+            <button data-modo="lab">Vista lab</button>
+            <button data-modo="operativa">Vista operativa</button>
           </div>
           <div class="topo-zoom">
             <button id="topoMenos" title="Reducir" aria-label="Reducir">&minus;</button>
@@ -2935,7 +2944,8 @@ const TOUR_PASOS = [
   { sel: '#s-bloqueos', t: '4 · Revisar la respuesta', d: 'Respuestas separa lo registrado por el motor, lo publicado en el feed firmado y lo aplicado en el host, que este panel no comprueba. LIMIT degrada la tasa; solo BLOCK corta.' },
   { sel: '#kpis', t: 'Recorrido avanzado', d: 'Lo que sigue explica la arquitectura, el modelo y la evaluación. Puedes cerrar la guía aquí si solo vas a operar.' },
   { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo y heurísticos → decisión → respuesta en el host. Pulsa cualquier componente para ver qué hace.' },
-  { sel: '#topoVista', t: 'Seis vistas', d: 'De la red a las carpetas: cada botón es un diagrama del mismo sistema.' },
+  { sel: '#topoVista', t: 'Vistas', d: 'De la red a las carpetas: cada botón es un diagrama del mismo sistema.' },
+  { sel: '#topoModo', t: 'Lab u operativa', d: 'Lab muestra lo que se montó para el ensayo; Operativa, solo el flujo de una red real.' },
   { sel: '#topoArchivosBtn', t: 'Código auditable', d: 'En modo desarrollador, pulsa Ver archivos, elige un componente y un archivo; en su ficha pulsa ◎ Ver contenido. El visor es de solo lectura y solo muestra rutas permitidas.' },
   { sel: '#s-modelo', t: 'El detector activo y su umbral', d: 'El detector desplegado aprende la normalidad de esta red; el umbral se fijó con validación. Aquí ves el modelo activo y sus métricas, no una etiqueta fija de OCSVM.' },
   { sel: '#pruebasPrevias', t: 'Pruebas previas', d: 'Siete modelos se compararon en el estudio; la ablación sobre nueve episodios separa modelo solo (6), heurísticos solos (7) y ambos combinados (9). No confundas el 9/9 del sistema con el modelo solo.' },
@@ -3951,7 +3961,8 @@ function flujoActual() {
   return (flujoIp && c.find(x => x.ip === flujoIp)) || c[0] || null;
 }
 function flujoNodos(f) {
-  const origen = f.ip === '10.10.20.30' ? 'atacante' : (/^10\.10\.20\.2[1-6]$/.test(f.ip) ? 'clientes' : null);
+  const origen = topoModo === 'operativa' ? 'entrante'
+    : f.ip === '10.10.20.30' ? 'atacante' : (/^10\.10\.20\.2[1-6]$/.test(f.ip) ? 'clientes' : null);
   const l7 = flujoEsL7(f.origen);
   const n = [origen, 'red', 'span', 'nic'].concat(l7 ? ['suricata', 'eve', 'parser_eve'] : ['captura', 'pcap', 'motor']);
   n.push('variables', f.origen && f.origen !== 'modelo' ? 'heuristicos' : 'modelo', 'control');
@@ -4555,6 +4566,8 @@ const TOPO_ICON = {
   firewall: '<rect x="2" y="3.3" width="14" height="11.4" rx="1"/><path d="M2 7.1h14M2 10.9h14M6.6 3.3v3.8M11.4 3.3v3.8M4.3 7.1v3.8M9 7.1v3.8M13.7 7.1v3.8M6.6 10.9v3.8M11.4 10.9v3.8"/>',
   switch:   '<rect x="1.6" y="5.4" width="14.8" height="7.2" rx="1.3"/><path d="M4 9h10"/><path d="M6.4 6.9 4 9l2.4 2.1M11.6 6.9 14 9l-2.4 2.1"/>',
   carpeta:  '<path d="M2 4.6h4.4l1.5 2H16v7.8H2Z"/><path d="M2 8.6h14"/>',
+  router:   '<circle cx="9" cy="9" r="7.2"/><path d="M9 4.4v3.2M9 10.4v3.2M4.4 9h3.2M10.4 9h3.2"/><path d="M7.9 5.5 9 4.4l1.1 1.1M7.9 12.5 9 13.6l1.1-1.1M5.5 7.9 4.4 9l1.1 1.1M12.5 7.9 13.6 9l-1.1 1.1"/>',
+  entrante: '<path d="M1.8 9h8.6"/><path d="M7.2 5.6 10.6 9l-3.4 3.4"/><path d="M11.6 2.6h4.6v12.8h-4.6"/>',
   // Perfiles de trafico legitimo (clientes .21-.26).
   ofimatica:  '<rect x="3.6" y="2" width="10.8" height="14" rx="1.1"/><path d="M6 5.4h6M6 8h6M6 10.6h4"/>',
   navegacion: '<rect x="2" y="3.4" width="14" height="11.2" rx="1.3"/><path d="M2 6.6h14"/><circle cx="4.2" cy="5" r="0.5" fill="currentColor" stroke="none"/><circle cx="6" cy="5" r="0.5" fill="currentColor" stroke="none"/><path d="M9 8.4a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8M6.6 10.8h4.8M9 8.4v4.8"/>',
@@ -4617,9 +4630,9 @@ const TOPO_VISTAS = {
       { id: 'atacante', x: 24, y: 70,  w: 176, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',   host: true, ip: '10.10.20.30',     desc: 'lanza los ataques' },
       { id: 'clientes', x: 24, y: 140, w: 176, h: 48, icono: 'red',    titulo: 'Clientes',          host: true, ip: '10.10.20.21-.26', desc: '6 perfiles legítimos' },
       { id: 'servidor', x: 24, y: 210, w: 176, h: 48, icono: 'disco',  titulo: 'Servidor',          host: true, ip: '10.10.30.10',     desc: 'objetivo HTTP/HTTPS' },
-      { id: 'gateway',  x: 24, y: 280, w: 176, h: 48, icono: 'firewall', titulo: 'Firewall', host: true, ip: '10.10.20.1',      desc: 'enruta entre VLAN' },
+      { id: 'gateway',  x: 24, y: 280, w: 176, h: 48, icono: 'router', titulo: 'Router', host: true, ip: '10.10.20.1',      desc: 'enruta entre VLAN' },
       { id: 'red',       x: 286, y: 70,  w: 176, h: 58, icono: 'red',    titulo: 'Red de la entidad',  tag: 'VLAN 10-100' },
-      { id: 'span',      x: 286, y: 158, w: 176, h: 58, icono: 'switch', titulo: 'Espejo SPAN',        tag: 'CORE-STACK' },
+      { id: 'span',      x: 286, y: 158, w: 176, h: 58, icono: 'switch', titulo: 'Espejo SPAN',        tag: 'SWITCH' },
       { id: 'nic',       x: 286, y: 246, w: 176, h: 58, icono: 'nic',    titulo: 'Interfaz en escucha', tag: 'ens37 · SIN IP' },
       { id: 'captura',   x: 540, y: 110, w: 176, h: 58, icono: 'captura', titulo: 'tcpdump',           tag: 'SERVICIO' },
       { id: 'pcap',      x: 540, y: 192, w: 176, h: 46, icono: 'fichero', titulo: 'anillo live-*.pcap', tag: 'ARTEFACTO', clase: 'artefacto' },
@@ -4628,7 +4641,7 @@ const TOPO_VISTAS = {
       { id: 'motor',     x: 806, y: 110, w: 176, h: 58, icono: 'cpu',    titulo: 'Parser de paquetes', tag: 'TRAMA → FLUJO · L2·L3·L4' },
       { id: 'variables', x: 806, y: 220, w: 176, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s',   tag: 'POR IP Y VENTANA' },
       { id: 'parser_eve', x: 806, y: 330, w: 176, h: 58, icono: 'reglas', titulo: 'Parser de eventos', tag: 'JSON → L7 · HTTP·DNS·TLS', val: 'http · dns · tls' },
-      { id: 'descartes', x: 806, y: 420, w: 176, h: 48, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO', clase: 'sumidero' },
+      { id: 'descartes', x: 806, y: 420, w: 176, h: 48, icono: 'tijera', titulo: 'No se puntúa',       tag: 'CONTROL · DUPLICADOS', clase: 'sumidero' },
       { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Aprendizaje', tag: 'APROBACIÓN HUMANA · CADA NOCHE' },
       { id: 'modelo',    x: 1060, y: 158, w: 176, h: 58, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
       { id: 'heuristicos', x: 1060, y: 276, w: 176, h: 58, icono: 'reglas', titulo: 'Heurísticos',     tag: 'DETERMINISTAS' },
@@ -4781,8 +4794,8 @@ const TOPO_VISTAS = {
       { id: 'servidor',  x: 24,  y: 216, w: 176, h: 48, icono: 'disco',  titulo: 'srv-dmz · objetivo', host: true, ip: '10.10.30.10',   desc: '' },
       { id: 'r_bastion', x: 24,  y: 316, w: 176, h: 48, icono: 'ojo',    titulo: 'VM-GESTION',       host: true, ip: '10.10.10.30',     desc: '' },
       { id: 'r_dns',     x: 24,  y: 374, w: 176, h: 48, icono: 'red',    titulo: 'DNS / AD',         host: true, ip: '10.10.10.20',     desc: '' },
-      { id: 'gateway',   x: 330, y: 70,  w: 196, h: 48, icono: 'firewall', titulo: 'Firewall A/B',   host: true, ip: 'enruta entre VLAN', desc: '' },
-      { id: 'span',      x: 330, y: 216, w: 196, h: 58, icono: 'switch', titulo: 'CORE-STACK',       tag: 'NO ENRUTA · ESPEJA' },
+      { id: 'gateway',   x: 330, y: 70,  w: 196, h: 48, icono: 'router', titulo: 'Router A/B',     host: true, ip: 'enruta entre VLAN', desc: '' },
+      { id: 'span',      x: 330, y: 216, w: 196, h: 58, icono: 'switch', titulo: 'Switch',           tag: 'NO ENRUTA · ESPEJA' },
       { id: 'r_pg',      x: 760, y: 70,  w: 240, h: 58, icono: 'nic',    titulo: 'PG-CYBERFLOW-SPAN', tag: 'GRUPO DE PUERTOS', val: 'modo promiscuo' },
       { id: 'nic',       x: 760, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor1 · ens37',  tag: 'CAPTURA · SIN IP', val: 'modo promiscuo' },
       { id: 'r_sensor2', x: 990, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor2 · ens37',  tag: 'RÉPLICA · 10.10.60.12', val: 'recibe la misma copia' },
@@ -4823,7 +4836,7 @@ const TOPO_VISTAS = {
       { id: 'descartes',   x: 40,   y: 204, w: 190, h: 48, icono: 'tijera', titulo: 'IP excluida',      tag: 'SE CUENTA · NO SE PUNTÚA', clase: 'sumidero' },
       { id: 'modelo',      x: 330,  y: 70,  w: 200, h: 58, icono: 'modelo', titulo: 'Isolation Forest', tag: 'SOLO CON PAQUETES' },
       { id: 'heuristicos', x: 330,  y: 170, w: 200, h: 58, icono: 'reglas', titulo: 'Heurísticos',      tag: 'TAMBIÉN SIN PAQUETES (L7)' },
-      { id: 'd_alert',     x: 630,  y: 70,  w: 200, h: 58, icono: 'decision', titulo: 'ALERT del modelo', tag: 's(x) < −0,569397', val: 'pasa a LIMIT' },
+      { id: 'd_alert',     x: 630,  y: 70,  w: 200, h: 58, icono: 'decision', titulo: 'ALERT del modelo', tag: 's(x) < −0,569397', val: 'señal · sin medida' },
       { id: 'd_reglas',    x: 630,  y: 170, w: 300, h: 58, icono: 'reglas', titulo: 'Regla disparada',  tag: 'ABUSO HTTP · DNS → LIMIT', val: 'fuerza bruta · escaneo → BLOCK' },
       { id: 'registro',    x: 1060, y: 124, w: 200, h: 50, icono: 'fichero', titulo: 'motor_decision.log', tag: 'IP · VENTANA · SCORE · REGLA', clase: 'artefacto' },
       { id: 'd_nunca',     x: 40,   y: 330, w: 200, h: 58, icono: 'tijera', titulo: 'Nunca bloquear',   tag: 'FILTRO', val: 'bastión · sensor · DNS' },
@@ -4868,15 +4881,15 @@ const TOPO_VISTAS = {
       { id: 'feed',       x: 320,  y: 110, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',  tag: 'CICLO ≤ 10 s' },
       { id: 'relay',      x: 592,  y: 110, w: 176, h: 58, icono: 'espejo',  titulo: 'Relay',         tag: 'RÉPLICA', val: 'ciclo 10 s' },
       { id: 'agente',     x: 860,  y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'Agente',        tag: 'VERIFICA LA FIRMA' },
-      { id: 'p_nft',      x: 1110, y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'nftables',      tag: 'MEDIDO 15,3 s', val: 'LIMIT · BLOCK', clase: 'acc-block' },
+      { id: 'p_nft',      x: 1110, y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'nftables',      tag: 'SEÑAL → MEDIDA ~1,3 s', val: 'LIMIT · BLOCK', clase: 'acc-block' },
       { id: 'p_noaplica', x: 860,  y: 230, w: 176, h: 58, icono: 'tijera',  titulo: 'Firma inválida', tag: 'LO VIGENTE CADUCA', val: 'no aplica nada', clase: 'sumidero' },
       { id: 'p_caduca',   x: 1110, y: 230, w: 176, h: 58, icono: 'ciclo',   titulo: 'Caduca sola',   tag: 'TIMEOUT DEL SET', val: '300 · 1800 · 3600 s' },
       { id: 'p_manual',   x: 1356, y: 110, w: 176, h: 58, icono: 'ojo',     titulo: 'Retirada manual', tag: 'UNA PERSONA', val: 'nft delete element' },
     ],
     aristas: [
       { d: 'M216,139 L320,139',   desde: 'control', hasta: 'feed',       etiqueta: 'ciclo 10 s', ex: 268, ey: 130 },
-      { d: 'M496,139 L592,139',   desde: 'feed',    hasta: 'relay',      tipo: 'fijo', etiqueta: '+3 s', ex: 544, ey: 130 },
-      { d: 'M768,139 L860,139',   desde: 'relay',   hasta: 'agente',     tipo: 'fijo', etiqueta: '+3 s', ex: 814, ey: 130 },
+      { d: 'M496,139 L592,139',   desde: 'feed',    hasta: 'relay',      tipo: 'fijo', etiqueta: 'copia', ex: 544, ey: 130 },
+      { d: 'M768,139 L860,139',   desde: 'relay',   hasta: 'agente',     tipo: 'fijo', etiqueta: 'pull', ex: 814, ey: 130 },
       { d: 'M1036,139 L1110,139', desde: 'agente',  hasta: 'p_nft',      tipo: 'fijo', etiqueta: 'válida', ex: 1073, ey: 130 },
       { d: 'M948,168 L948,230',   desde: 'agente',  hasta: 'p_noaplica', tipo: 'descarte' },
       { d: 'M1198,168 L1198,230', desde: 'p_nft',   hasta: 'p_caduca',   tipo: 'fijo' },
@@ -4963,6 +4976,59 @@ function validacionDetalleHTML() {
 }
 
 let topoVista = 'completa';
+// 17-nov: Vista lab = lo montado para el ensayo; Vista operativa = solo el flujo de una red real.
+// En operativa no se sabe de antemano si el tráfico es un ataque: la Kali y los clientes se
+// funden en «Tráfico entrante» y desaparece lo que solo existe en el laboratorio.
+let topoModo = 'lab';
+try { if (localStorage.getItem('cf_topo_modo') === 'operativa') topoModo = 'operativa'; } catch (e) { /* lab */ }
+const TOPO_SIEMPRE_OCULTOS = new Set(['reentrenamiento']);   // el aprendizaje no se muestra (17-nov)
+const TOPO_OP_OCULTOS = {
+  red: ['atacante', 'clientes', 'r_sensor2', 'r_cmp'],
+  completa: ['atacante', 'clientes', 'descartes', 'wazuh'],
+};
+const TOPO_OP_ENTRANTE = {
+  red: { nodo: { id: 'entrante', x: 24, y: 60, w: 176, h: 106, icono: 'entrante', titulo: 'Tráfico entrante', host: true, ip: 'origen sin clasificar', desc: 'legítimo o ataque: lo decide el sensor' },
+         arista: { d: 'M200,113 C268,113 268,236 330,236', desde: 'entrante', hasta: 'span', tipo: 'fijo', etiqueta: '1 · entra', ex: 262, ey: 104 },
+         grupo: 'Entrada · sin clasificar',
+         packet: 'M200,113 L330,240 L400,216 L400,118 L456,118 L456,216 L330,250 L200,240' },
+  completa: { nodo: { id: 'entrante', x: 24, y: 70, w: 176, h: 118, icono: 'entrante', titulo: 'Tráfico entrante', host: true, ip: 'origen sin clasificar', desc: 'legítimo o ataque: lo decide el sensor' },
+              arista: { d: 'M200,129 C250,129 262,99 286,99', desde: 'entrante', hasta: 'red', tipo: 'fijo', etiqueta: 'entra', ex: 240, ey: 112 },
+              grupo: 'Red · entrada y servicios' },
+};
+const TOPO_LEDE = {
+  red: 'Por dónde pasa el tráfico y cómo llega su copia al sensor: el switch espeja el troncal del router; el sensor escucha sin IP y no está en el camino.',
+  completa: 'El recorrido de un paquete de punta a punta: captura, variables cada 10 s, modelo y reglas, decisión, feed firmado y agente en el host.',
+  decision: 'Cómo se decide: el motor juzga cada ventana (modelo + reglas); el publicador agrupa por IP, elige lo más severo y fija la caducidad.',
+  respuesta: 'Del veredicto a la regla en el host: feed firmado, réplica en el bastión, agente que verifica la firma y nftables con caducidad.',
+  carpetas: 'Dónde vive cada pieza en el repositorio.',
+};
+const topoCacheOp = {};
+function topoV() {
+  if (topoVista === 'construccion' || !TOPO_VISTAS[topoVista]) topoVista = 'completa';
+  const base = TOPO_VISTAS[topoVista];
+  const clave = topoVista + '|' + topoModo;
+  if (topoCacheOp[clave]) return topoCacheOp[clave];
+  const fuera = new Set(TOPO_SIEMPRE_OCULTOS);
+  if (topoModo === 'operativa') (TOPO_OP_OCULTOS[topoVista] || []).forEach(id => fuera.add(id));
+  let nodos = base.nodos.filter(n => !fuera.has(n.id));
+  let aristas = base.aristas.filter(e => !fuera.has(e.desde) && !fuera.has(e.hasta));
+  let grupos = base.grupos, packet = base.packet;
+  const ent = topoModo === 'operativa' && TOPO_OP_ENTRANTE[topoVista];
+  if (ent) {
+    nodos = [ent.nodo].concat(nodos);
+    aristas = [ent.arista].concat(aristas);
+    grupos = grupos.map((g, i) => i === 0 ? Object.assign({}, g, { txt: ent.grupo }) : g);
+    if (ent.packet) packet = ent.packet;
+  }
+  return (topoCacheOp[clave] = Object.assign({}, base, { nodos, aristas, grupos, packet }));
+}
+function pintarTopoModo() {
+  document.querySelectorAll('#topoModo button').forEach(b => b.classList.toggle('active', b.dataset.modo === topoModo));
+  const l = document.getElementById('topoLede');
+  if (l) l.textContent = (TOPO_LEDE[topoVista] || '') + (topoVista === 'carpetas' ? ''
+    : topoModo === 'operativa' ? ' Vista operativa: solo el flujo que existiría en una red real.'
+    : ' Vista lab: incluye lo montado para el ensayo (Kali, clientes, réplica y comparador).') + ' Pulsa un componente para ver su detalle.';
+}
 // Ultimo estado de /api/aprendizaje (lo llena cargarAprendizaje). Los nodos del
 // aprendizaje en la topologia lo leen; con var y aqui arriba para que exista
 // desde el primer pintado, aunque llegue despues.
@@ -4977,12 +5043,16 @@ const filesAbiertos = new Set();
 const TOPO_TEXTO = {
   red: {
     que: 'El tráfico entre VLAN de la entidad. No se toca: CyberFlow solo observa una copia.',
-    nota: 'La red enruta a través del cortafuegos, así que todo el tráfico entre VLAN pasa por el troncal espejado.',
+    nota: 'La red enruta a través del router, así que todo el tráfico entre VLAN pasa por el troncal espejado.',
   },
   span: {
-    que: 'La sesión de espejo del conmutador copia el troncal del cortafuegos hacia el puerto del sensor.',
+    que: 'La sesión de espejo del switch copia el troncal del router hacia el puerto del sensor. Copia, no desvía: el sensor no está en el camino del tráfico.',
     nota: 'Desde el sensor no se puede leer el estado de la sesión: se infiere de que lleguen paquetes. Si deja de llegar tráfico, el problema puede estar aquí y el panel no lo distingue de una red en silencio.',
-    cmd: 'monitor session 1 source interface Gi1/0/23 , Gi2/0/23 both\\nmonitor session 1 destination interface Gi2/0/19 encapsulation replicate\\n! Gi1/0/23 y Gi2/0/23: troncales del Firewall A/B\\n! Gi2/0/19: hacia el hipervisor del sensor (172.17.25.2)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
+    cmd: 'monitor session 1 source interface Gi1/0/23 , Gi2/0/23 both\\nmonitor session 1 destination interface Gi2/0/19 encapsulation replicate\\n! Gi1/0/23 y Gi2/0/23: troncales del router A/B\\n! Gi2/0/19: hacia el hipervisor del sensor (172.17.25.2)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
+  },
+  entrante: {
+    que: 'Todo lo que cruza el troncal espejado: usuarios, servicios y, quizá, un atacante. En una red real nadie lo etiqueta de antemano: el sensor solo ve tráfico y decide, ventana a ventana, si es normal (PERMIT) o anómalo (LIMIT o BLOCK).',
+    nota: 'En la vista lab este nodo se separa en la Kali (ataques del ensayo) y los clientes (tráfico legítimo generado): allí sí se sabe cuál es cuál, y eso es lo que permite medir aciertos y falsos positivos.',
   },
   atacante: {
     que: 'La VM Kali (10.10.20.30, VLAN 20). Lanza los ataques del ensayo con herramientas estándar de pentesting; cada familia mueve variables distintas que el sensor ve por el espejo. El panel solo MUESTRA estos comandos (sección Simulación); nunca los ejecuta.',
@@ -5034,7 +5104,7 @@ const TOPO_TEXTO = {
     nota: 'Tabla AISLADA (policy accept): solo cae lo que trae el feed; nunca gateways ni DNS. El sudoers del agente solo permite «nft» sin contraseña, nada más. Fail-safe: si la firma no verifica, no toca la tabla. Aparece con pocos paquetes PROPIOS porque el motor atribuye cada flujo a quien lo inicia, no al destino.',
   },
   gateway: {
-    que: 'La segmentación del laboratorio: un cortafuegos pfSense en alta disponibilidad (par A/B con VIP CARP) que enruta entre VLAN y es la puerta de enlace de cada una (VLAN 20 clientes/Kali · 30 DMZ · 60 sensor · 10 gestión). Todo el tráfico entre VLAN cruza el troncal, que es el que se espeja (SPAN) hacia el sensor.',
+    que: 'El router de la red: enruta entre VLAN y es la puerta de enlace de cada una. En el laboratorio es un pfSense en alta disponibilidad (par A/B con VIP CARP) (VLAN 20 clientes/Kali · 30 DMZ · 60 sensor · 10 gestión). Todo el tráfico entre VLAN cruza el troncal, que es el que se espeja (SPAN) hacia el sensor.',
     flujoTit: 'Reglas implementadas (lo que el ensayo comprobó)',
     flujo: [
       {paso: 'Atacante → DMZ', fichero: 'VLAN 20 → VLAN 30', garantia: 'HTTPS (443) permitido. En la validación del 14-oct el puerto 80 también estaba ABIERTO E2E (ver nota), lo que permitió validar los ataques HTTP; ICMP bloqueado'},
@@ -5168,7 +5238,7 @@ const TOPO_TEXTO = {
     },
   },
   control: {
-    que: 'Fusiona las dos señales en UNA decisión por entidad y ventana. El motor registra PERMIT o ALERT (score bajo el umbral, o heurístico); la ALERT se traduce en acción: LIMIT (degradar la tasa) para la anomalía del modelo y para abuso HTTP o DNS, BLOCK (cortar) para fuerza bruta o escaneo confirmados.',
+    que: 'Fusiona las dos señales en UNA decisión por entidad y ventana. El motor registra PERMIT o ALERT (score bajo el umbral, o heurístico); la acción la pone la regla: LIMIT (degradar la tasa) para abuso HTTP o DNS, BLOCK (cortar) para fuerza bruta o escaneo. La anomalía del modelo, sola, queda como señal para revisión (política if_senal).',
     flujoTit: 'Cómo se decide la acción',
     flujo: [
       {paso: 'Dos entradas', fichero: 'motor_decision.py', garantia: 'score del modelo (anomalía→LIMIT) + heurístico (confirmado→BLOCK)'},
@@ -5241,7 +5311,7 @@ const TOPO_TEXTO = {
     enlace: { href: '#s-vivo', vtab: 'eve', txt: 'Ver los eventos en vivo y a qué variable aporta cada uno' },
   },
   descartes: {
-    que: 'Lo que se captura pero NO se puntúa: plano de control, copias del espejo y entidades declaradas fuera de alcance.',
+    que: 'Lo que se captura pero NO se puntúa. Casi todo es el latido del par de routers del laboratorio (CARP y pfsync, varios paquetes por segundo, día y noche); el resto son las copias dobles que el espejo enseña de una misma trama y las IP declaradas fuera de alcance. No es tráfico perdido: es ruido que, si se puntuara, el modelo tomaría por normal o por anómalo sin serlo.',
     nota: 'Declararlo con su cifra es parte del método. Sin número, «se excluyó» no es una medición sino una afirmación.',
   },
   variables: {
@@ -5416,7 +5486,7 @@ const TOPO_TEXTO = {
   },
   // ---- Vista DECISION ----
   d_alert: {
-    que: 'Una ventana con paquetes cuyo score queda por debajo del umbral. El modelo no bloquea: su alerta se traduce en LIMIT.',
+    que: 'Una ventana con paquetes cuyo score queda por debajo del umbral. Con la política vigente (if_senal) el modelo solo es señal: marca la ventana para revisión y confirma la regla, pero por sí solo no publica medida.',
     nota: 'Sin paquetes en la ventana el modelo no puntúa, para no alertar por silencio de red.',
   },
   d_reglas: {
@@ -5447,7 +5517,7 @@ const TOPO_TEXTO = {
   // ---- Vista RESPUESTA ----
   p_nft: {
     que: 'La regla ya aplicada en el núcleo del host protegido. Es el final del tiempo de respuesta.',
-    nota: 'La medición histórica fue de 51 a 141 s con temporizadores de 60 s. La cadena vigente de 10 s midió 15,3 s desde la decisión hasta nftables; el cálculo corrigió 35,990 s de desfase NTP del sensor.',
+    nota: 'En la Campaña B, de la señal a la medida aplicada pasaron unos 1,3 s, casi constantes; los escaneos quedaron bloqueados en 1,4–1,9 s de mediana desde el inicio. Históricamente, con temporizadores de 60 s, eran 51 a 141 s.',
   },
   p_noaplica: {
     que: 'Si la firma del feed no verifica, el agente no toca nada.',
@@ -5844,7 +5914,8 @@ function topoEstado(id, s) {
 
 function renderTopologia(status) {
   topoUltimo = status;
-  const v = TOPO_VISTAS[topoVista];
+  pintarTopoModo();
+  const v = topoV();
   const svg = document.getElementById('topo');
   const tabla = document.getElementById('topoTabla');
   if (v.tabla) {
@@ -5974,7 +6045,7 @@ let topoZoom = null;   // null = ajustar al ancho disponible
 // lienzo, para que se vea entero de un vistazo. El lienzo tiene una altura
 // acotada por CSS (min(76vh,760px)); en pantalla completa la hereda del padre.
 function escalaAjuste() {
-  const v = TOPO_VISTAS[topoVista];
+  const v = topoV();
   const caja = document.getElementById('topoScroll');
   const fw = (caja.clientWidth - 8) / v.w;
   // En modo normal ajustamos al ANCHO (el lienzo se encoge a la altura del
@@ -5986,7 +6057,7 @@ function escalaAjuste() {
 }
 
 function aplicarZoom() {
-  const v = TOPO_VISTAS[topoVista];
+  const v = topoV();
   const svg = document.getElementById('topo');
   svg.setAttribute('viewBox', `0 0 ${v.w} ${v.h}`);
   let escala = topoZoom;
@@ -6007,11 +6078,25 @@ on('topoVista', 'click', (ev) => {
   document.querySelectorAll('#topoVista button').forEach(x => x.classList.toggle('active', x === b));
   topoZoom = null;   // cada vista tiene otro tamano: se reajusta
   // Si el nodo seleccionado no existe en la vista nueva, se cae al primero.
-  if (!TOPO_VISTAS[topoVista].nodos.some(n => n.id === topoSel)) {
-    const prim = TOPO_VISTAS[topoVista].nodos.find(n => !n.host) || TOPO_VISTAS[topoVista].nodos[0];
+  if (!topoV().nodos.some(n => n.id === topoSel)) {
+    const prim = topoV().nodos.find(n => !n.host) || topoV().nodos[0];
     topoSel = prim ? prim.id : null;
   }
   if (topoUltimo) renderTopologia(topoUltimo);
+});
+
+on('topoModo', 'click', (ev) => {
+  const b = ev.target.closest('button[data-modo]');
+  if (!b) return;
+  topoModo = b.dataset.modo === 'operativa' ? 'operativa' : 'lab';
+  try { localStorage.setItem('cf_topo_modo', topoModo); } catch (e) { /* sin persistir */ }
+  if (!topoV().nodos.some(n => n.id === topoSel)) {
+    const prim = topoV().nodos.find(n => !n.host) || topoV().nodos[0];
+    topoSel = prim ? prim.id : null;
+  }
+  topoZoom = null;
+  flujoFirma = null;
+  if (topoUltimo) renderTopologia(topoUltimo); else pintarTopoModo();
 });
 
 on('topoMas', 'click', () => {
@@ -6128,7 +6213,7 @@ function codigoHTML(c) {
 
 function renderTopoDetalle() {
   if (!topoUltimo) return;
-  const lista = TOPO_VISTAS[topoVista].nodos;
+  const lista = topoV().nodos;
   const n = lista.find(x => x.id === topoSel) || lista[0];
   let e = topoEstado(n.id, topoUltimo);
   if (e.valor === '—' && n.val) e = Object.assign({}, e, { valor: n.val });
@@ -7081,7 +7166,7 @@ const RELACIONES = {
   's-alcance':     ['s-topologia', 's-modelo', 's-variables'],
   's-variables':   ['s-vivo', 's-decisiones', 's-modelo'],
   's-vivo':        ['s-variables', 's-decisiones', 's-topologia'],
-  's-modelo':      ['s-scores', 's-aprendizaje', 's-comparacion'],
+  's-modelo':      ['s-scores', 's-comparacion'],
   's-aprendizaje': ['s-modelo', 's-scores', 's-comparacion'],
   's-comparacion': ['s-modelo', 's-simulacion', 's-decisiones'],
   's-simulacion':  ['s-comparacion', 's-decisiones', 's-actividad'],
@@ -8136,6 +8221,11 @@ function aplicarModo(modo) {
   for (const id of OPS_FUERA_DEL_MENU) {
     const enlace = document.querySelector('#nav a[data-sec="' + id + '"]');
     if (enlace) enlace.hidden = !dev;
+  }
+  // 17-nov: Aprendizaje no se muestra en ningún modo.
+  for (const id of ['s-aprendizaje']) {
+    const sec = document.getElementById(id); if (sec) sec.hidden = true;
+    const enlace = document.querySelector('#nav a[data-sec="' + id + '"]'); if (enlace) enlace.hidden = true;
   }
   pintarGruposNav();
   const b = document.getElementById('modoBtn');
