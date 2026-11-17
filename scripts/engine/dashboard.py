@@ -283,8 +283,18 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .al-card { display: grid; grid-template-columns: 70px 1fr auto; align-items: center; gap: 0.8rem;
     background: var(--surface); border: 1px solid var(--border); border-left-width: 3px; border-radius: 10px;
     padding: 0.55rem 0.85rem; }
-  .al-card.al-block { border-left-color: var(--danger); }
-  .al-card.al-limit { border-left-color: var(--amber); }
+  /* 17-nov: toda la tarjeta lleva el color de su criticidad, con icono. */
+  .al-card { border-left-width: 5px; }
+  .al-card.al-block { border-left-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 9%, var(--surface)); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
+  .al-card.al-limit { border-left-color: var(--amber);
+    background: color-mix(in srgb, var(--amber) 11%, var(--surface)); border-color: color-mix(in srgb, var(--amber) 40%, var(--border)); }
+  .al-card.al-block .al-sev, .al-card.al-limit .al-sev { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+  .al-ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .al-block .al-ico { background: var(--danger); box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 22%, transparent); }
+  .al-limit .al-ico { background: var(--amber); box-shadow: 0 0 0 4px color-mix(in srgb, var(--amber) 25%, transparent); }
+  .al-sev .al-ico + .badge { font-size: 0.66rem; }
+  .al-tag svg { vertical-align: -2px; margin-right: 0.25rem; }
   .al-top { display: flex; align-items: baseline; gap: 0.6rem; }
   .al-ip { font: 700 0.92rem var(--mono); color: var(--text); }
   .al-hace { font-size: 0.8rem; color: var(--text-dim); }
@@ -1095,6 +1105,11 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .aa td .hace { display: block; color: var(--text-dim); font-size: 0.74rem; }
   .aa td.ir { text-align: right; white-space: nowrap; }
   .aa td.ir .btn-sec { margin-left: 0.3rem; }
+  .aa tr.row-block td { background: color-mix(in srgb, var(--danger) 9%, transparent); }
+  .aa tr.row-limit td { background: color-mix(in srgb, var(--amber) 11%, transparent); }
+  .aa tr.row-block td:first-child { box-shadow: inset 5px 0 0 var(--danger); }
+  .aa tr.row-limit td:first-child { box-shadow: inset 5px 0 0 var(--amber); }
+  .aa .badge svg { vertical-align: -2px; margin-right: 0.25rem; }
   .aa tr.caducada td { opacity: 0.62; }
   .aa tr.aa-nueva td { animation: aaLatido 1.6s ease-in-out infinite; }
   .aa .aa-sep td { color: var(--text-dim); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; padding-top: 0.6rem; border-bottom: none; }
@@ -3219,14 +3234,28 @@ function tarjetaAlerta(d) {
   const acc = accionDeDecision(d);
   const t = alertaTipos(d);
   const tags = [];
-  if (t.modelo) tags.push('<span class="al-tag modelo">Anomalía del modelo</span>');
-  if (t.regla) tags.push('<span class="al-tag regla">Regla: ' + varEsc(t.regla) + '</span>');
+  // Iconos (trazo, 24x24): criticidad y tipo de regla.
+  const svg = (p, s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const P_ACC = {
+    BLOCK: '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>',
+    LIMIT: '<path d="M12 14l3.5-3.5"/><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/>',
+  };
+  const P_REGLA = {
+    port_scan: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 12l6-6"/>',
+    port_scan_temprano: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 12l6-6"/>',
+    brute_force: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>',
+    http_abuse: '<path d="M3 7c3-2 6 2 9 0s6-2 9 0M3 12c3-2 6 2 9 0s6-2 9 0M3 17c3-2 6 2 9 0s6-2 9 0"/>',
+    dns_entropy: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  };
+  const P_MODELO = '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>';
+  if (t.modelo) tags.push('<span class="al-tag modelo">' + svg(P_MODELO, 11) + 'Anomalía del modelo</span>');
+  if (t.regla) tags.push('<span class="al-tag regla">' + svg(P_REGLA[t.regla] || P_ACC.BLOCK, 11) + 'Regla: ' + varEsc(t.regla) + '</span>');
   if (enListaBlanca(d.entity_ip)) tags.push('<span class="al-tag">Lista blanca</span>');
   const motivo = (d.heuristico && d.heuristico.motivo) ? varEsc(d.heuristico.motivo)
     : (d.score != null ? 'score ' + coma3(d.score) + ' por debajo del umbral ' + coma3(d.threshold) : '');
   const key = d.entity_ip + '|' + d.window_end_utc;
   return `<div class="al-card al-${acc.toLowerCase()}">`
-    + `<div class="al-sev"><span class="badge acc-${acc.toLowerCase()}">${acc}</span></div>`
+    + `<div class="al-sev">${P_ACC[acc] ? '<span class="al-ico">' + svg(P_ACC[acc], 18) + '</span>' : ''}<span class="badge acc-${acc.toLowerCase()}">${acc}</span></div>`
     + `<div class="al-main"><div class="al-top"><span class="al-ip">${varEsc(d.entity_ip)}</span>`
     + `<span class="al-hace" title="${varEsc(String(d.window_end_utc || ''))} UTC">${fmtTime(d.logged_at)} · ${haceTexto(d.logged_at)}</span></div>`
     + `<div class="al-tags">${tags.join(' ')}</div>`
@@ -3628,10 +3657,13 @@ function renderAlertasActivas() {
   const botones = ip => `<button type="button" class="btn-sec" data-aa-resp="${varEsc(ip)}">Respuesta &rarr;</button>`
     + `<button type="button" class="btn-sec" data-aa-dec="${varEsc(ip)}">Decisión &rarr;</button>`
     + (document.getElementById('topo') ? `<button type="button" class="btn-sec" data-aa-mapa="${varEsc(ip)}">Mapa &rarr;</button>` : '');
+  const icoAcc = a => a === 'block'
+    ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>'
+    : (a === 'limit' ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 14l3.5-3.5"/><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/></svg>' : '');
   const filas = vig.map(v => {
     const nueva = aaEsNueva(v, ahora), a = String(v.accion || '').toLowerCase();
     return `<tr class="row-${a}${nueva ? ' aa-nueva' : ''}"><td class="ip">${varEsc(v.ip)}${nueva ? '<span class="nueva-tag">NUEVA</span>' : ''}</td>`
-      + `<td><span class="badge acc-${a}">${varEsc(v.accion)}</span></td>`
+      + `<td><span class="badge acc-${a}">${icoAcc(a)}${varEsc(v.accion)}</span></td>`
       + `<td class="why"><span class="clamp">${regla(v.origen, v.motivo)}</span></td>`
       + `<td class="num col-ext">${v.desde ? fmtTime(v.desde) + '<span class="hace">' + haceTexto(v.desde) + '</span>' : '—'}</td>`
       + `<td class="num col-ext">${fmtTime(ahora + (v.expira_s || 0))}<span class="hace">en ${duracionTexto(Math.round(v.expira_s || 0))}</span></td>`
@@ -3640,7 +3672,7 @@ function renderAlertasActivas() {
   const filasCad = cad.map(e => {
     const a = String(e.accion || '').toLowerCase();
     return `<tr class="row-${a} caducada"><td class="ip">${varEsc(e.ip)}</td>`
-      + `<td><span class="badge acc-${a}">${varEsc(e.accion)}</span></td>`
+      + `<td><span class="badge acc-${a}">${icoAcc(a)}${varEsc(e.accion)}</span></td>`
       + `<td class="why"><span class="clamp">${regla(e.origen, e.motivo)}</span></td>`
       + `<td class="num col-ext">${fmtTime(e.inicio)}<span class="hace">${haceTexto(e.inicio)}</span></td>`
       + `<td class="num col-ext">${e.caduca ? 'caducó ' + fmtTime(e.caduca) + '<span class="hace">' + haceTexto(e.caduca) + '</span>' : 'caducada'}</td>`
