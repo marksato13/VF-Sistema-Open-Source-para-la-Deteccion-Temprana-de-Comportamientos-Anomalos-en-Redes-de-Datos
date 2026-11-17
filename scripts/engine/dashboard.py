@@ -383,7 +383,9 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .topo-node .ttl { fill: var(--text); font: 700 13px var(--sans); }
   .topo-node .sub { fill: var(--text-dim); font: 600 11px var(--mono); font-variant-numeric: tabular-nums; }
   .topo-node .ico { color: var(--text); }
-  .topo-node .ico.ico-blanco { color: #fff; }
+  .topo-node .ico.ico-blanco, .topo-node.ok .ico.ico-blanco, .topo-node.warn .ico.ico-blanco, .topo-node.bad .ico.ico-blanco,
+  .topo-node.acc-limit .ico.ico-blanco, .topo-node.acc-block .ico.ico-blanco, .topo-host .ico.ico-blanco,
+  .topo-node.en-flujo .ico.ico-blanco { color: #fff !important; }
   .topo-node .ico-bg { stroke: rgba(255,255,255,0.6); stroke-width: 1.5; }
   .det-con-herr { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 1.2rem; align-items: start; }
   @media (max-width: 900px) { .det-con-herr { grid-template-columns: 1fr; } }
