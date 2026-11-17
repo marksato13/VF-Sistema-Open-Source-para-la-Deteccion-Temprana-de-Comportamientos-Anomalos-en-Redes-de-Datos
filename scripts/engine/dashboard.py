@@ -1177,6 +1177,11 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   html[data-tema="claro"] .topo-node.artefacto .box { fill: #f7f9fc; }
   html[data-tema="claro"] .topo-node.sumidero .box { fill: #fbf4f6; }
   @keyframes escNuevaClaro { from { background: #d7f0ec; } }
+  .al-fichas { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.35rem; }
+  .al-ficha { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--text-dim);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 0.18rem 0.6rem; cursor: help; }
+  .al-ficha svg { color: var(--accent); flex: none; }
+  .al-ficha b { color: var(--text); font-variant-numeric: tabular-nums; }
   .btn-tema { font: inherit; font-size: 0.78rem; padding: 0.3rem 0.65rem; border-radius: 8px; cursor: pointer;
     background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
   .btn-tema:hover { color: var(--text); border-color: var(--accent); }
@@ -1573,7 +1578,6 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
 
   <section id="s-alertas">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg><h2>Alertas</h2></div>
-    <p class="sec-sub">Cada ventana en la que el sistema detectó algo: una <b>anomalía del modelo</b> (score por debajo del umbral) o una <b>regla disparada</b> (escaneo, fuerza bruta, abuso HTTP, DNS). A la derecha, la acción que provoca.</p>
     <div class="alertas-resumen" id="alertasResumen"></div>
     <div class="filtros">
       <label>Fuente
@@ -3280,13 +3284,25 @@ function renderAlertas() {
   // «para revision» y la infraestructura protegida nunca se actua: se cuentan aparte.
   const relev = (c.acciones_relevantes != null) ? c.acciones_relevantes : Math.max(0, totalHora - nMargH);
   const nRegla = (c.acciones_regla != null) ? c.acciones_regla : h.filter(d => alertaTipos(d).regla).length;
+  // 17-nov: el desglose va en fichas con icono; la explicación larga queda en el title.
+  const ICO = {
+    regla: '<path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/>',
+    modelo: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+    infra: '<path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/>',
+    lb: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+    marg: '<path d="M3 12h4l2-4 4 8 2-4h6"/>',
+  };
+  const ficha = (ico, n, txt, tit) => `<span class="al-ficha" title="${varEsc(tit)}">`
+    + `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${ICO[ico]}</svg>`
+    + `<b>${n}</b> ${txt}</span>`;
   resumen.innerHTML = `<div class="al-num ${relev ? 'hay' : ''}">${relev}</div>`
-    + `<div class="al-num-t">alerta(s) con acción en la última hora`
-    + `<small>${nRegla} por regla · ${c.revision_modelo || 0} anomalía(s) solo del modelo para revisión (sin acción) · `
-    + `${c.infra_protegida || 0} en infraestructura protegida (no se actúa) · `
-    + (LISTA_BLANCA.size ? `${alertasLB.length} de la lista blanca en los registros cargados (abajo, aparte) · ` : '')
-    + `${nMargH} marginal(es) ${verMarginales ? 'visibles' : 'agrupadas'} (score a menos de 0,05 del umbral)`
-    + `</small></div>`;
+    + `<div class="al-num-t">alertas con acción · última hora<div class="al-fichas">`
+    + ficha('regla', nRegla, 'por regla', 'Alertas que dispararon una regla (escaneo, fuerza bruta, abuso HTTP, DNS) y provocan LIMIT o BLOCK.')
+    + ficha('modelo', c.revision_modelo || 0, 'solo modelo', 'Anomalías solo del Isolation Forest: quedan para revisión, sin acción.')
+    + ficha('infra', c.infra_protegida || 0, 'infraestructura', 'Detecciones sobre infraestructura protegida: nunca se actúa sobre ellas.')
+    + (LISTA_BLANCA.size ? ficha('lb', alertasLB.length, 'lista blanca', 'Alertas de IPs en la lista blanca: se muestran abajo, aparte.') : '')
+    + ficha('marg', nMargH, 'marginales', 'Score a menos de 0,05 del umbral; ' + (verMarginales ? 'visibles.' : 'agrupadas.'))
+    + `</div></div>`;
   // Estados vacios: dependen de por que no hay filas. Una lista filtrada vacia
   // NUNCA permite concluir que el sistema este en PERMIT.
   const vacio = (txt, boton) => {
