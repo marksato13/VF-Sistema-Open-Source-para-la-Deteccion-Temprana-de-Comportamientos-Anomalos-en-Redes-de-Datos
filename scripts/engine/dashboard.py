@@ -969,7 +969,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .rg-abrir .rg-txt { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width .25s ease; }
   .rg-abrir:hover, .rg-abrir:focus-visible { gap: 8px; padding: 9px 14px !important; }
   .rg-abrir:hover .rg-txt, .rg-abrir:focus-visible .rg-txt { max-width: 260px; }
-  .rg-abrir.sin-esc { right: 92px; }
+  .rg-abrir.sin-esc { right: 150px; }
   /* Escoba de «Dejar limpio». */
   .btn-escoba { display: inline-flex; align-items: center; gap: 0.45rem; }
   .btn-escoba-sec { display: inline-flex; align-items: center; padding: 0.35rem 0.55rem; }
