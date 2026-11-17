@@ -4833,7 +4833,7 @@ const TOPO_VISTAS = {
     ],
     nodos: [
       { id: 'variables',   x: 40,   y: 120, w: 190, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s', tag: 'POR IP Y VENTANA' },
-      { id: 'descartes',   x: 40,   y: 204, w: 190, h: 48, icono: 'tijera', titulo: 'IP excluida',      tag: 'SE CUENTA · NO SE PUNTÚA', clase: 'sumidero' },
+      { id: 'd_excluida',  x: 40,   y: 204, w: 190, h: 48, icono: 'tijera', titulo: 'IP excluida',      tag: 'SE CUENTA · NO SE PUNTÚA', val: 'fuera de alcance', clase: 'sumidero' },
       { id: 'modelo',      x: 330,  y: 70,  w: 200, h: 58, icono: 'modelo', titulo: 'Isolation Forest', tag: 'SOLO CON PAQUETES' },
       { id: 'heuristicos', x: 330,  y: 170, w: 200, h: 58, icono: 'reglas', titulo: 'Heurísticos',      tag: 'TAMBIÉN SIN PAQUETES (L7)' },
       { id: 'd_alert',     x: 630,  y: 70,  w: 200, h: 58, icono: 'decision', titulo: 'ALERT del modelo', tag: 's(x) < −0,569397', val: 'señal · sin medida' },
@@ -4848,7 +4848,7 @@ const TOPO_VISTAS = {
       { id: 'd_block',     x: 1080, y: 440, w: 240, h: 58, icono: 'escudo', titulo: 'BLOCK',            tag: 'REVISIÓN HUMANA DESDE EL 3.º', val: '300 · 1800 · 3600 s', clase: 'acc-block' },
     ],
     aristas: [
-      { d: 'M135,178 L135,204',                      desde: 'variables',   hasta: 'descartes',  tipo: 'descarte' },
+      { d: 'M135,178 L135,204',                      desde: 'variables',   hasta: 'd_excluida', tipo: 'descarte' },
       { d: 'M230,149 C280,149 280,99 330,99',        desde: 'variables',   hasta: 'modelo',     etiqueta: '28 variables', ex: 276, ey: 106 },
       { d: 'M230,149 C280,149 280,199 330,199',      desde: 'variables',   hasta: 'heuristicos', etiqueta: '+ conteos', ex: 280, ey: 204 },
       { d: 'M530,99 L630,99',                        desde: 'modelo',      hasta: 'd_alert',    etiqueta: 'score &lt; umbral', ex: 580, ey: 90 },
@@ -4881,7 +4881,7 @@ const TOPO_VISTAS = {
       { id: 'feed',       x: 320,  y: 110, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',  tag: 'CICLO ≤ 10 s' },
       { id: 'relay',      x: 592,  y: 110, w: 176, h: 58, icono: 'espejo',  titulo: 'Relay',         tag: 'RÉPLICA', val: 'ciclo 10 s' },
       { id: 'agente',     x: 860,  y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'Agente',        tag: 'VERIFICA LA FIRMA' },
-      { id: 'p_nft',      x: 1110, y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'nftables',      tag: 'SEÑAL → MEDIDA ~1,3 s', val: 'LIMIT · BLOCK', clase: 'acc-block' },
+      { id: 'p_nft',      x: 1110, y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'nftables',      tag: 'MEDIDA EN ~1,3 s', val: 'LIMIT · BLOCK', clase: 'acc-block' },
       { id: 'p_noaplica', x: 860,  y: 230, w: 176, h: 58, icono: 'tijera',  titulo: 'Firma inválida', tag: 'LO VIGENTE CADUCA', val: 'no aplica nada', clase: 'sumidero' },
       { id: 'p_caduca',   x: 1110, y: 230, w: 176, h: 58, icono: 'ciclo',   titulo: 'Caduca sola',   tag: 'TIMEOUT DEL SET', val: '300 · 1800 · 3600 s' },
       { id: 'p_manual',   x: 1356, y: 110, w: 176, h: 58, icono: 'ojo',     titulo: 'Retirada manual', tag: 'UNA PERSONA', val: 'nft delete element' },
@@ -5025,7 +5025,7 @@ function topoV() {
 function pintarTopoModo() {
   document.querySelectorAll('#topoModo button').forEach(b => b.classList.toggle('active', b.dataset.modo === topoModo));
   const l = document.getElementById('topoLede');
-  if (l) l.textContent = (TOPO_LEDE[topoVista] || '') + (topoVista === 'carpetas' ? ''
+  if (l) l.textContent = (TOPO_LEDE[topoVista] || '') + (!TOPO_OP_OCULTOS[topoVista] ? ''
     : topoModo === 'operativa' ? ' Vista operativa: solo el flujo que existiría en una red real.'
     : ' Vista lab: incluye lo montado para el ensayo (Kali, clientes, réplica y comparador).') + ' Pulsa un componente para ver su detalle.';
 }
@@ -5049,6 +5049,10 @@ const TOPO_TEXTO = {
     que: 'La sesión de espejo del switch copia el troncal del router hacia el puerto del sensor. Copia, no desvía: el sensor no está en el camino del tráfico.',
     nota: 'Desde el sensor no se puede leer el estado de la sesión: se infiere de que lleguen paquetes. Si deja de llegar tráfico, el problema puede estar aquí y el panel no lo distingue de una red en silencio.',
     cmd: 'monitor session 1 source interface Gi1/0/23 , Gi2/0/23 both\\nmonitor session 1 destination interface Gi2/0/19 encapsulation replicate\\n! Gi1/0/23 y Gi2/0/23: troncales del router A/B\\n! Gi2/0/19: hacia el hipervisor del sensor (172.17.25.2)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
+  },
+  d_excluida: {
+    que: 'Una IP declarada fuera de alcance (por ejemplo, infraestructura propia): sus ventanas se cuentan, pero el motor no las puntúa ni decide sobre ellas.',
+    nota: 'No confundir con «No se puntúa» de la vista Operacional, que suma además el latido de los routers y las copias dobles del espejo.',
   },
   entrante: {
     que: 'Todo lo que cruza el troncal espejado: usuarios, servicios y, quizá, un atacante. En una red real nadie lo etiqueta de antemano: el sensor solo ve tráfico y decide, ventana a ventana, si es normal (PERMIT) o anómalo (LIMIT o BLOCK).',
