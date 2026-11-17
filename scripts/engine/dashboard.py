@@ -1155,6 +1155,11 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   html[data-tema="claro"] .ver-codigo:hover { background: #e3eaf5; }
   html[data-tema="claro"] .flj-n { background: #f6f8fc; border-color: var(--border); color: var(--text); }
   html[data-tema="claro"] .pmodal { background: rgba(18,49,95,.35); }
+  html[data-tema="claro"] .topo-host .box { fill: #eef6f5; }
+  html[data-tema="claro"] .topo-node.sel .box { fill: #e3f1ef; }
+  html[data-tema="claro"] .topo-node .box.rombo { fill: #e4ebf6; }
+  html[data-tema="claro"] .topo-node.artefacto .box { fill: #f7f9fc; }
+  html[data-tema="claro"] .topo-node.sumidero .box { fill: #fbf4f6; }
   @keyframes escNuevaClaro { from { background: #d7f0ec; } }
   .btn-tema { font: inherit; font-size: 0.78rem; padding: 0.3rem 0.65rem; border-radius: 8px; cursor: pointer;
     background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
@@ -5593,7 +5598,7 @@ function renderTopologia(status) {
       <g class="ico" transform="translate(${n.x + 12}, ${cy - 11})"><svg width="22" height="22" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[n.icono]}</svg></g>
       <text class="ttl" x="${n.x + 44}" y="${cy - 3}">${n.titulo}</text>
       <text class="hostip" x="${n.x + 44}" y="${cy + 11}">${n.ip}</text>
-      <text class="tag" x="${n.x + n.w - 10}" y="${n.y + n.h - 6}" text-anchor="end">${n.desc}</text>
+      <title>${n.titulo} · ${n.ip}${n.desc ? ' · ' + n.desc : ''}</title>
     </g>`;
   }).join('');
 
