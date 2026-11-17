@@ -1129,7 +1129,23 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
     --capa-a: #11805a; --capa-b: #1f6fcf; --capa-c: #b8366a; --capa-d: #6a5fd6;
   }
   html[data-tema="claro"] body { background: var(--bg); }
-  html[data-tema="claro"] .side { background: #ffffff; border-right: 1px solid var(--border); }
+  /* Barra lateral oscura (navy UPeU) aun en tema claro: las variables se redefinen
+     dentro de .side y todo lo que cuelga de ella las hereda. */
+  html[data-tema="claro"] .side {
+    --surface-2: #1b3a66; --border: #2a4a78; --text: #eef3fb; --text-dim: #a9bad4; --accent: #f8a900;
+    background: linear-gradient(180deg, #0f2747 0%, #0b1f3a 100%); color: var(--text);
+    border-right: none; box-shadow: 2px 0 14px rgba(18,49,95,.18);
+  }
+  html[data-tema="claro"] .side nav a.active { background: rgba(248,169,0,.14); }
+  /* Botones de la cabecera rellenos en navy; el activo, en verde azulado. */
+  html[data-tema="claro"] .btn-modo, html[data-tema="claro"] .btn-avisos,
+  html[data-tema="claro"] .btn-tema { background: #12315f; border-color: #12315f; color: #ffffff; }
+  html[data-tema="claro"] .btn-modo:hover, html[data-tema="claro"] .btn-avisos:hover,
+  html[data-tema="claro"] .btn-tema:hover { background: #1b4683; border-color: #1b4683; color: #ffffff; }
+  html[data-tema="claro"] .btn-modo[data-modo="desarrollo"],
+  html[data-tema="claro"] .btn-avisos[data-on="1"] { background: #0b7a6e; border-color: #0b7a6e; color: #ffffff; }
+  html[data-tema="claro"] .btn-salir { background: #ffffff; border-color: #c0262d; color: #c0262d; }
+  html[data-tema="claro"] .btn-salir:hover { background: #c0262d; color: #ffffff; }
   html[data-tema="claro"] .topo-cmd, html[data-tema="claro"] .sim-cmd,
   html[data-tema="claro"] .esc-code { background: #0f2340; color: #e6eef8; }
   html[data-tema="claro"] .topo-cmd *, html[data-tema="claro"] .sim-cmd * { color: inherit; }
@@ -1208,7 +1224,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
         title="Operación: tareas del día a día (resumen, alertas, decisiones, respuestas). Desarrollo: añade mapa, datos, modelo y evaluación. Ninguna de las dos cambia nada en el sistema."></button><!--/ADMIN-->
       <button id="avisosBtn" class="btn-avisos" type="button" data-on="1"
         title="Alertas flotantes cuando una IP recibe LIMIT o BLOCK">Avisos: sí</button>
-      <button id="temaBtn" class="btn-tema" type="button" title="Cambiar entre tema claro y oscuro">Tema: claro</button>
+      <button id="temaBtn" class="btn-tema" type="button" title="Cambiar entre tema claro y oscuro">☾ Tema oscuro</button>
       <span class="quien" id="quien"></span>
       <form method="post" action="/logout"><button class="btn-salir" type="submit">Salir</button></form>
     </div>
@@ -2372,7 +2388,11 @@ function pintarBotonAvisos() {
 pintarBotonAvisos();
 function pintarBotonTema() {
   const b = document.getElementById('temaBtn');
-  if (b) b.textContent = 'Tema: ' + (document.documentElement.dataset.tema === 'oscuro' ? 'oscuro' : 'claro');
+  if (!b) return;
+  const osc = document.documentElement.dataset.tema === 'oscuro';
+  // El botón dice a qué tema cambia, con su icono (sol / luna).
+  b.textContent = osc ? '☀ Tema claro' : '☾ Tema oscuro';
+  b.title = osc ? 'Cambiar al tema claro' : 'Cambiar al tema oscuro';
 }
 pintarBotonTema();
 on('temaBtn', 'click', () => {
