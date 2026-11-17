@@ -450,7 +450,8 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
     color: var(--accent); background: #0b1220; border: 1px solid var(--border);
     border-radius: 6px; padding: 0.2rem 0.5rem; overflow-wrap: anywhere; }
   /* Perfiles de trafico legitimo, con icono. */
-  .perfiles { display: grid; gap: 0.6rem; margin: 0.5rem 0 0.3rem; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .perfiles { display: grid; gap: 0.6rem; margin: 0.5rem 0 0.3rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 900px) { .perfiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .perfiles .perfil { display: flex !important; flex-direction: column; align-items: flex-start; gap: 0.35rem; padding: 0.75rem;
     border: 1px solid var(--border); border-top: 3px solid var(--pc); border-radius: 12px; background: var(--surface-2); }
   .perfiles .perfil-ico { width: 48px; height: 48px; border-radius: 14px; background: var(--pc); display: inline-flex !important;
