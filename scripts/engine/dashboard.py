@@ -931,7 +931,14 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .toast { pointer-events: auto; background: var(--surface-2); border: 1px solid var(--border); border-left: 5px solid var(--amber);
     border-radius: 10px; padding: 0.75rem 0.9rem 0.7rem; box-shadow: 0 10px 30px rgba(0,0,0,0.45); cursor: pointer;
     animation: toast-in .25s ease-out; }
-  .toast.block { border-left-color: var(--danger); }
+  .toast.block { border-left-color: var(--sev-block); border-color: color-mix(in srgb, var(--sev-block) 55%, var(--border));
+    background: color-mix(in srgb, var(--sev-block) 16%, var(--surface)); }
+  .toast.limit { border-left-color: var(--sev-limit); border-color: color-mix(in srgb, var(--sev-limit) 65%, var(--border));
+    background: color-mix(in srgb, var(--sev-limit) 22%, var(--surface)); }
+  .toast .t-ico { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .toast.block .t-ico { background: var(--sev-block); color: #fff; box-shadow: 0 0 0 4px color-mix(in srgb, var(--sev-block) 28%, transparent); }
+  .toast.limit .t-ico { background: var(--sev-limit); color: #3a2c00; box-shadow: 0 0 0 4px color-mix(in srgb, var(--sev-limit) 32%, transparent); }
+  html[data-tema="claro"] .toast { box-shadow: 0 10px 28px rgba(18,49,95,.22); }
   .toast .t-cab { display: flex; align-items: center; gap: 0.5rem; }
   .toast .t-ip { font-family: var(--mono); font-weight: 700; color: var(--text); font-size: 0.95rem; }
   .toast .t-x { margin-left: auto; background: none; border: none; color: var(--text-dim); font-size: 1.1rem; cursor: pointer; line-height: 1; }
@@ -2471,7 +2478,11 @@ function avisar(nuevas) {
     const el = document.createElement('div');
     el.className = 'toast ' + (g.acc === 'BLOCK' ? 'block' : 'limit');
     el.id = id;
-    el.innerHTML = '<div class="t-cab"><span class="badge acc-' + g.acc.toLowerCase() + '">' + g.acc + '</span>'
+    const tIco = g.acc === 'BLOCK'
+      ? '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>'
+      : '<path d="M12 14l3.5-3.5"/><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/>';
+    el.innerHTML = '<div class="t-cab"><span class="t-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">' + tIco + '</svg></span>'
+      + '<span class="badge acc-' + g.acc.toLowerCase() + '">' + g.acc + '</span>'
       + '<span class="t-ip">' + varEsc(g.ip) + '</span>'
       + '<button class="t-x" title="Cerrar" aria-label="Cerrar">×</button></div>'
       + '<div class="t-mot">' + varEsc(m.texto || 'acción del sistema') + '</div>'
