@@ -2820,9 +2820,9 @@ function renderHistogram(data) {
     const c3 = v => v.toFixed(3).split('.').join(',');
     sw.innerHTML = [
       widget('Decisiones puntuadas', data.n.toLocaleString('es'), 'navy', 'ventanas', 'últimas 500 como máximo'),
-      widget('Umbral vigente', c3(data.threshold), 'ok', 'umbral', 'α = 0,01'),
+      widget('Umbral vigente', c3(data.threshold), 'ok', 'umbral', 'por debajo = anomalía'),
       widget('Bajo el umbral', bajoUmbral.toLocaleString('es'), bajoUmbral ? 'bad' : '', 'modelo', pct + ' % del tráfico reciente'),
-      widget('Rango observado', c3(data.min) + ' … ' + c3(data.max), '', 'reloj', 'score mínimo y máximo'),
+      widget('Score mínimo', c3(data.min), '', 'reloj', 'máximo ' + c3(data.max)),
     ].join('');
   }
   // La misma escala del histograma la reusa la mini-barra de la tabla.
