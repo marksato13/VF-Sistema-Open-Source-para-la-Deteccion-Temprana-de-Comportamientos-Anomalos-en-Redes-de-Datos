@@ -284,15 +284,17 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
     background: var(--surface); border: 1px solid var(--border); border-left-width: 3px; border-radius: 10px;
     padding: 0.55rem 0.85rem; }
   /* 17-nov: toda la tarjeta lleva el color de su criticidad, con icono. */
+  :root { --sev-block: #e5383b; --sev-limit: #f2c200; }
+  html[data-tema="claro"] { --sev-block: #d62828; --sev-limit: #e8b400; }
   .al-card { border-left-width: 5px; }
-  .al-card.al-block { border-left-color: var(--danger);
-    background: color-mix(in srgb, var(--danger) 9%, var(--surface)); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
-  .al-card.al-limit { border-left-color: var(--amber);
-    background: color-mix(in srgb, var(--amber) 11%, var(--surface)); border-color: color-mix(in srgb, var(--amber) 40%, var(--border)); }
+  .al-card.al-block { border-left-color: var(--sev-block);
+    background: color-mix(in srgb, var(--sev-block) 16%, var(--surface)); border-color: color-mix(in srgb, var(--sev-block) 50%, var(--border)); }
+  .al-card.al-limit { border-left-color: var(--sev-limit);
+    background: color-mix(in srgb, var(--sev-limit) 20%, var(--surface)); border-color: color-mix(in srgb, var(--sev-limit) 60%, var(--border)); }
   .al-card.al-block .al-sev, .al-card.al-limit .al-sev { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
   .al-ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
-  .al-block .al-ico { background: var(--danger); box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 22%, transparent); }
-  .al-limit .al-ico { background: var(--amber); box-shadow: 0 0 0 4px color-mix(in srgb, var(--amber) 25%, transparent); }
+  .al-block .al-ico { background: var(--sev-block); box-shadow: 0 0 0 4px color-mix(in srgb, var(--sev-block) 28%, transparent); }
+  .al-limit .al-ico { background: var(--sev-limit); color: #3a2c00; box-shadow: 0 0 0 4px color-mix(in srgb, var(--sev-limit) 32%, transparent); }
   .al-sev .al-ico + .badge { font-size: 0.66rem; }
   .al-tag svg { vertical-align: -2px; margin-right: 0.25rem; }
   .al-top { display: flex; align-items: baseline; gap: 0.6rem; }
@@ -1105,10 +1107,10 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .aa td .hace { display: block; color: var(--text-dim); font-size: 0.74rem; }
   .aa td.ir { text-align: right; white-space: nowrap; }
   .aa td.ir .btn-sec { margin-left: 0.3rem; }
-  .aa tr.row-block td { background: color-mix(in srgb, var(--danger) 9%, transparent); }
-  .aa tr.row-limit td { background: color-mix(in srgb, var(--amber) 11%, transparent); }
-  .aa tr.row-block td:first-child { box-shadow: inset 5px 0 0 var(--danger); }
-  .aa tr.row-limit td:first-child { box-shadow: inset 5px 0 0 var(--amber); }
+  .aa tr.row-block td { background: color-mix(in srgb, var(--sev-block) 16%, transparent); }
+  .aa tr.row-limit td { background: color-mix(in srgb, var(--sev-limit) 22%, transparent); }
+  .aa tr.row-block td:first-child { box-shadow: inset 5px 0 0 var(--sev-block); }
+  .aa tr.row-limit td:first-child { box-shadow: inset 5px 0 0 var(--sev-limit); }
   .aa .badge svg { vertical-align: -2px; margin-right: 0.25rem; }
   .aa tr.caducada td { opacity: 0.62; }
   .aa tr.aa-nueva td { animation: aaLatido 1.6s ease-in-out infinite; }
