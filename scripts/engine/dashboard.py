@@ -964,6 +964,20 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   :root[data-tema="claro"] { --amber: #d9a800; --amber-soft: #fff3c4; }
   html[data-tema="claro"] .badge.acc-limit { background: #ffe066; color: #4d3900; }
   html[data-tema="claro"] .card.amber .value, html[data-tema="claro"] .wid.amber .w-val { color: #a07c00; }
+  /* Ojo del recorrido: círculo que despliega su texto al pasar el ratón. */
+  .rg-abrir { display: inline-flex; align-items: center; gap: 0; padding: 9px !important; border-radius: 999px; transition: gap .2s, padding .2s; }
+  .rg-abrir .rg-txt { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width .25s ease; }
+  .rg-abrir:hover, .rg-abrir:focus-visible { gap: 8px; padding: 9px 14px !important; }
+  .rg-abrir:hover .rg-txt, .rg-abrir:focus-visible .rg-txt { max-width: 260px; }
+  .rg-abrir.sin-esc { right: 92px; }
+  /* Escoba de «Dejar limpio». */
+  .btn-escoba { display: inline-flex; align-items: center; gap: 0.45rem; }
+  .btn-escoba-sec { display: inline-flex; align-items: center; padding: 0.35rem 0.55rem; }
+  .btn-escoba-sec:hover { color: var(--accent); border-color: var(--accent); }
+  .btn-escoba[hidden], .btn-escoba-sec[hidden] { display: none; }
+  .al-epi { font: 600 0.72rem var(--mono); color: var(--text-dim); background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 0.05rem 0.5rem; }
+  .btn-link { background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 0 0.2rem; text-decoration: underline; }
   /* Widgets con icono (Actividad, Respuestas, Scores). */
   .wids { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; margin-bottom: 1rem; }
   .wid { position: relative; display: flex; gap: 0.8rem; align-items: center; background: var(--surface);
@@ -1335,7 +1349,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
       <button type="button" class="rg-sig" id="rgSig">Siguiente &rarr;</button>
     </div>
   </div>
-  <button type="button" class="rg-abrir" id="rgAbrir" hidden>Recorrido de la demo</button>
+  <button type="button" class="rg-abrir" id="rgAbrir" hidden title="Recorrido de la demo" aria-label="Recorrido de la demo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span class="rg-txt">Recorrido de la demo</span></button>
 
   <!-- El resumen (KPIs, barra de salud y pulso) vive en la pagina Salud, no
        como franja repetida en todas: antes se veia identico en cada seccion y
@@ -1357,7 +1371,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10,8 16,12 10,16"/></svg><h2>Escenario en vivo</h2></div>
     <div class="prep" id="prep">
       <button type="button" class="btn-prep" id="prepBtn">Preparar demo</button>
-      <button type="button" class="btn-prep" id="limpiarBtn" hidden>Dejar limpio</button>
+      <button type="button" class="btn-prep btn-escoba" id="limpiarBtn" hidden title="Dejar limpio: quita las medidas de la Kali y limpia la vista de Alertas" aria-label="Dejar limpio"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 3 11.5 10.5"/><path d="M9.5 9.5l5 5"/><path d="M9.5 9.5 4 15c-1 1-1 3 0 4l1 1c1 1 3 1 4 0l5.5-5.5"/><path d="M6.5 17.5 9 15"/></svg><span>Limpiar</span></button>
       <span class="prep-txt" id="prepTxt">Libera la Kali (10.10.20.30) y el cliente (10.10.20.21) en srv-dmz y comprueba que todo está en marcha. Púlsalo antes de cada demo.</span>
       <ul class="prep-lista" id="prepLista"></ul>
     </div>
@@ -1678,6 +1692,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
         </span></label>
       <input type="text" id="alertasIp" class="ip-filter" placeholder="Filtrar por IP..." aria-label="Filtrar alertas por IP">
       <button type="button" class="btn-sec neutro" id="alertasLimpiar">Limpiar filtros</button>
+      <button type="button" class="btn-sec neutro btn-escoba-sec" id="alertasEscoba" title="Dejar limpio: quita las medidas de la Kali y limpia esta vista" aria-label="Dejar limpio"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 3 11.5 10.5"/><path d="M9.5 9.5l5 5"/><path d="M9.5 9.5 4 15c-1 1-1 3 0 4l1 1c1 1 3 1 4 0l5.5-5.5"/><path d="M6.5 17.5 9 15"/></svg></button>
       <button type="button" class="btn-sec neutro" id="alertasMarg" aria-pressed="false" title="Anomalías solo del modelo con el score a menos de 0,05 del umbral">Marginales: ocultas</button>
     </div>
     <div class="alertas-lista" id="alertasLista"></div>
@@ -2398,6 +2413,7 @@ async function prepPedir() {
     const r = await fetch('/api/demo/preparar', { method: 'POST', headers: { 'X-CyberFlow': '1' } });
     if (!r.ok) throw new Error(r.status === 403 ? 'Solo un administrador puede preparar la demo.' : 'HTTP ' + r.status);
     esc = null; escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas();
+    vistaLimpiaDesde(Date.now() / 1000);
     if (typeof rgOculto !== 'undefined') { rgOculto = false; }
     prepSondear(Date.now() + 120000);
   } catch (e) {
@@ -2437,6 +2453,19 @@ async function limpiezaSondear(id, fin) {
   if (Date.now() > fin) { pintarLimpieza([['mal', 'Sin acuse del publicador en 60 s: revisa ppi-publicar-feed-v2']], false); if (b) b.disabled = false; return; }
   limpTimer = setTimeout(() => limpiezaSondear(id, fin), 2000);
 }
+// Vista limpia: Alertas solo muestra lo posterior a la última limpieza. Es una marca de
+// este navegador; los registros del motor no se borran y «Ver historial» la deshace.
+let limpioDesde = 0;
+try { limpioDesde = Number(localStorage.getItem('cf_limpio_desde')) || 0; } catch (e) { /* sin marca */ }
+function vistaLimpiaDesde(t) {
+  limpioDesde = t || 0;
+  try { if (limpioDesde) localStorage.setItem('cf_limpio_desde', String(limpioDesde)); else localStorage.removeItem('cf_limpio_desde'); } catch (e) { /* sin persistir */ }
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  if (typeof toastVisto !== 'undefined') toastVisto.clear();
+  if (typeof renderAlertas === 'function') renderAlertas();
+  if (typeof pintarPillAlertas === 'function') pintarPillAlertas();
+}
+on('alertasEscoba', 'click', () => limpiarPedir());
 async function limpiarPedir() {
   const b = document.getElementById('limpiarBtn');
   if (b) b.disabled = true;
@@ -2537,8 +2566,12 @@ function avisar(nuevas) {
   }
   for (const g of grupos.values()) {
     const id = 'toast-' + g.ip.split('.').join('-') + '-' + g.acc;
+    if (limpioDesde && (g.d.logged_at || 0) < limpioDesde) continue;
+    const visto = toastVisto.get(id), ahoraT = Date.now() / 1000;
+    toastVisto.set(id, ahoraT);
     const viejo = document.getElementById(id);
-    if (viejo) viejo.remove();
+    if (viejo) { const mt = viejo.querySelector('.t-mot'); if (mt) mt.textContent = motivoDeDecision(g.d).texto || ''; continue; }
+    if (visto && ahoraT - visto < 120) continue;   // mismo episodio: no repetir la alarma
     const m = motivoDeDecision(g.d);
     const el = document.createElement('div');
     el.className = 'toast ' + (g.acc === 'BLOCK' ? 'block' : 'limit');
@@ -2575,6 +2608,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+const toastVisto = new Map();   // id de aviso -> última vez que llegó una ventana del episodio
 function card(label, value, cls) {
   return `<div class="card ${cls||''}"><div class="label">${label}</div><div class="value">${value}</div></div>`;
 }
@@ -3353,7 +3387,7 @@ function tarjetaAlerta(d) {
     dns_entropy: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
   };
   const P_MODELO = '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>';
-  if (t.modelo) tags.push('<span class="al-tag modelo">' + svg(P_MODELO, 11) + 'Anomalía del modelo</span>');
+  if (t.modelo || d._modelo) tags.push('<span class="al-tag modelo">' + svg(P_MODELO, 11) + 'Anomalía del modelo</span>');
   if (t.regla) tags.push('<span class="al-tag regla">' + svg(P_REGLA[t.regla] || P_ACC.BLOCK, 11) + 'Regla: ' + varEsc(t.regla) + '</span>');
   if (enListaBlanca(d.entity_ip)) tags.push('<span class="al-tag">Lista blanca</span>');
   const motivo = (d.heuristico && d.heuristico.motivo) ? varEsc(d.heuristico.motivo)
@@ -3362,7 +3396,9 @@ function tarjetaAlerta(d) {
   return `<div class="al-card al-${acc.toLowerCase()}">`
     + `<div class="al-sev">${P_ACC[acc] ? '<span class="al-ico">' + svg(P_ACC[acc], 18) + '</span>' : ''}<span class="badge acc-${acc.toLowerCase()}">${acc}</span></div>`
     + `<div class="al-main"><div class="al-top"><span class="al-ip">${varEsc(d.entity_ip)}</span>`
-    + `<span class="al-hace" title="${varEsc(String(d.window_end_utc || ''))} UTC">${fmtTime(d.logged_at)} · ${haceTexto(d.logged_at)}</span></div>`
+    + `<span class="al-hace" title="${varEsc(String(d.window_end_utc || ''))} UTC">${fmtTime(d.logged_at)} · ${haceTexto(d.logged_at)}</span>`
+    + (d._n > 1 ? `<span class="al-epi" title="Ventanas de 10 s del mismo episodio, agrupadas">${d._n} ventanas · desde ${fmtTime(d._desde)}</span>` : '')
+    + `</div>`
     + `<div class="al-tags">${tags.join(' ')}</div>`
     + `<div class="al-motivo">${motivo}</div></div>`
     + `<div class="al-ver">${miniBarraScore(d.score)}<button type="button" class="btn-sec" data-ver-dec="${varEsc(key)}" data-ip="${varEsc(d.entity_ip)}">Ver decisión &rarr;</button></div></div>`;
@@ -3396,6 +3432,21 @@ on('alertasListaBlanca', 'click', (ev) => {
   const b = ev.target.closest('[data-ver-dec]');
   if (b) abrirDecision(b.dataset.ip, b.dataset.verDec);
 });
+// Una sola tarjeta por episodio: ventanas seguidas de la misma IP, acción y regla
+// (huecos de hasta 2 min) se funden en la más reciente, con su número de ventanas.
+function agruparEpisodios(rows) {
+  const ord = rows.slice().sort((a, b) => (b.logged_at || 0) - (a.logged_at || 0));
+  const out = [], abiertos = new Map();
+  for (const d of ord) {
+    const t = alertaTipos(d);
+    const k = d.entity_ip + '|' + accionDeDecision(d) + '|' + (t.regla || (t.modelo ? 'modelo' : ''));
+    const g = abiertos.get(k);
+    if (g && (g._desde - (d.logged_at || 0)) <= 120) { g._n += 1; g._desde = d.logged_at || g._desde; g._modelo = g._modelo || t.modelo; continue; }
+    const nuevo = Object.assign({}, d, { _n: 1, _desde: d.logged_at || 0, _modelo: t.modelo });
+    abiertos.set(k, nuevo); out.push(nuevo);
+  }
+  return out;
+}
 function renderAlertas() {
   const lista = document.getElementById('alertasLista');
   const resumen = document.getElementById('alertasResumen');
@@ -3403,7 +3454,7 @@ function renderAlertas() {
   const todasConLB = (lastDecisions || []).filter(d => accionDeDecision(d) !== 'PERMIT');
   const alertasLB = todasConLB.filter(d => enListaBlanca(d.entity_ip));
   renderListaBlanca(alertasLB);
-  const todas = todasConLB.filter(d => !enListaBlanca(d.entity_ip));
+  const todas = todasConLB.filter(d => !enListaBlanca(d.entity_ip) && (!limpioDesde || (d.logged_at || 0) >= limpioDesde));
   const ahora = Date.now() / 1000;
   const h = todas.filter(d => ahora - (d.logged_at || 0) <= 3600);
   // El recuento de la hora viene de los contadores del servidor (ventana real
@@ -3430,8 +3481,10 @@ function renderAlertas() {
   const ficha = (ico, n, txt, tit) => `<span class="al-ficha" title="${varEsc(tit)}">`
     + `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${ICO[ico]}</svg>`
     + `<b>${n}</b> ${txt}</span>`;
-  resumen.innerHTML = `<div class="al-num ${relev ? 'hay' : ''}">${relev}</div>`
-    + `<div class="al-num-t">alertas con acción · última hora<div class="al-fichas">`
+  const epis = agruparEpisodios(todas);
+  const nVista = limpioDesde ? epis.length : relev;
+  resumen.innerHTML = `<div class="al-num ${nVista ? 'hay' : ''}">${nVista}</div>`
+    + `<div class="al-num-t">${limpioDesde ? 'alertas desde la limpieza de las ' + fmtTime(limpioDesde) + ' <button type="button" class="btn-link" data-al-historial="1">Ver historial</button>' : 'alertas con acción · última hora'}<div class="al-fichas">`
     + ficha('regla', nRegla, 'por regla', 'Alertas que dispararon una regla (escaneo, fuerza bruta, abuso HTTP, DNS) y provocan LIMIT o BLOCK.')
     + ficha('modelo', c.revision_modelo || 0, 'solo modelo', 'Anomalías solo del Isolation Forest: quedan para revisión, sin acción.')
     + ficha('infra', c.infra_protegida || 0, 'infraestructura', 'Detecciones sobre infraestructura protegida: nunca se actúa sobre ellas.')
@@ -3449,6 +3502,7 @@ function renderAlertas() {
   }
   if (!decisionesCargadas) { vacio('Cargando alertas…'); return; }
   if (!(lastDecisions || []).length) { vacio('Todavía no se han recibido registros del motor.'); return; }
+  if (limpioDesde && !todas.length) { vacio('Todo limpio: sin alertas desde las ' + fmtTime(limpioDesde) + '.', ' <button type="button" class="btn-sec neutro" data-al-historial="1">Ver historial</button>'); return; }
   const ipQ = ((document.getElementById('alertasIp') || {}).value || '').trim();
   let rows = todas;
   const nMargLista = rows.filter(esMarginal).length;
@@ -3457,7 +3511,7 @@ function renderAlertas() {
   if (alertasFiltro === 'regla') rows = rows.filter(d => alertaTipos(d).regla);
   if (alertasAccion !== 'todas') rows = rows.filter(d => accionDeDecision(d) === alertasAccion);
   if (ipQ) rows = rows.filter(d => String(d.entity_ip).includes(ipQ));
-  rows = rows.slice(0, 80);
+  rows = agruparEpisodios(rows).slice(0, 80);
   if (!rows.length) {
     const limpiar = ' <button type="button" class="btn-sec neutro" data-al-limpiar="1">Limpiar filtros</button>';
     if (!verMarginales && nMargLista) vacio('Ahora solo hay anomalías marginales del modelo (' + nMargLista + '): score a menos de 0,05 del umbral.', ' <button type="button" class="btn-sec neutro" data-al-marg="1">Mostrarlas</button>');
@@ -3486,6 +3540,7 @@ on('alertasAccion', 'click', (ev) => {
   renderAlertas();
 });
 on('alertasIp', 'input', () => renderAlertas());
+document.addEventListener('click', ev => { if (ev.target.closest('[data-al-historial]')) vistaLimpiaDesde(0); });
 function limpiarFiltrosAlertas() {
   alertasFiltro = 'todas'; alertasAccion = 'todas';
   const ip = document.getElementById('alertasIp');
@@ -6949,9 +7004,21 @@ function renderSidebar(status) {
   const c = status.counters || {};
   const alertas = (c.acciones_relevantes != null) ? c.acciones_relevantes
     : (c.alert_model || 0) + (c.alert_auth_heuristic || 0);
+  ultimoPillHora = alertas;
+  pintarPillAlertas();
+}
+
+let ultimoPillHora = 0;
+function pintarPillAlertas() {
   const pill = document.getElementById('navAlertPill');
-  pill.hidden = alertas === 0;
-  pill.textContent = alertas;
+  const lb = document.getElementById('limpiarBtn'), ae = document.getElementById('alertasEscoba');
+  if (lb && ae) ae.hidden = lb.hidden;
+  if (!pill) return;
+  let n = ultimoPillHora;
+  if (limpioDesde) n = agruparEpisodios((lastDecisions || []).filter(d => accionDeDecision(d) !== 'PERMIT'
+    && !enListaBlanca(d.entity_ip) && (d.logged_at || 0) >= limpioDesde)).length;
+  pill.hidden = n === 0;
+  pill.textContent = n;
 }
 
 // --- Navegacion por paginas: una seccion a la vez --------------------------
@@ -8141,7 +8208,8 @@ function renderRg() {
   if (abrir) {
     abrir.hidden = activo && !rgOculto;
     abrir.classList.toggle('sin-esc', !activo);
-    abrir.textContent = activo ? 'Recorrido de la demo' : 'Recorrido de la demo ▸ elegir escenario';
+    const t = abrir.querySelector('.rg-txt');
+    if (t) t.textContent = activo ? 'Recorrido de la demo' : 'Recorrido de la demo ▸ elegir escenario';
   }
   document.body.classList.toggle('con-rg', activo && !rgOculto);
   if (!activo || rgOculto) return;
