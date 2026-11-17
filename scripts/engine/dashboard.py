@@ -2571,7 +2571,12 @@ function avisar(nuevas) {
     const visto = toastVisto.get(id), ahoraT = Date.now() / 1000;
     toastVisto.set(id, ahoraT);
     const viejo = document.getElementById(id);
-    if (viejo) { const mt = viejo.querySelector('.t-mot'); if (mt) mt.textContent = motivoDeDecision(g.d).texto || ''; continue; }
+    if (viejo) {
+      const mt = viejo.querySelector('.t-mot'); if (mt) mt.textContent = motivoDeDecision(g.d).texto || '';
+      // Mientras siga el episodio el aviso queda a la vista; se cierra 20 s después de la última ventana.
+      clearTimeout(viejo._cierre); viejo._cierre = setTimeout(() => viejo.remove(), g.acc === 'BLOCK' ? 20000 : 10000);
+      continue;
+    }
     if (visto && ahoraT - visto < 120) continue;   // mismo episodio: no repetir la alarma
     const m = motivoDeDecision(g.d);
     const el = document.createElement('div');
@@ -2596,7 +2601,7 @@ function avisar(nuevas) {
       el.remove();
     });
     cont.prepend(el);
-    setTimeout(() => el.remove(), g.acc === 'BLOCK' ? 20000 : 10000);
+    el._cierre = setTimeout(() => el.remove(), g.acc === 'BLOCK' ? 20000 : 10000);
   }
   while (cont.children.length > 2) cont.lastElementChild.remove();
 }
