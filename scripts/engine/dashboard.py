@@ -254,7 +254,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   @media (max-width: 860px) { .desp-flecha { transform: rotate(90deg); } }
   .apr-graf { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.8rem; margin-bottom: 1.1rem; }
   .apr-chart { display: block; width: 100%; height: 170px; }
-  #histogram { display: block; width: 100%; height: 190px; }
+  #histogram { display: block; width: 100%; height: 240px; }
   .hist-chart { display: block; width: 100%; }
   .apr-chart text, #histogram text, .hist-chart text { font: 600 10px var(--mono); fill: var(--text-dim); }
   .var-fila .vw { min-width: 190px; text-align: right; }
@@ -939,6 +939,64 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .toast.block .t-ico { background: var(--sev-block); color: #fff; box-shadow: 0 0 0 4px color-mix(in srgb, var(--sev-block) 28%, transparent); }
   .toast.limit .t-ico { background: var(--sev-limit); color: #3a2c00; box-shadow: 0 0 0 4px color-mix(in srgb, var(--sev-limit) 32%, transparent); }
   html[data-tema="claro"] .toast { box-shadow: 0 10px 28px rgba(18,49,95,.22); }
+  /* 17-nov: aviso como alarma -fondo intenso que palpita y anillo en el icono-. */
+  .toast.block { background: var(--sev-block); border-color: var(--sev-block); color: #fff;
+    animation: toast-in .25s ease-out, alarmaBlock 1.1s ease-in-out .25s infinite; }
+  .toast.limit { background: var(--sev-limit); border-color: var(--sev-limit); color: #2b2100;
+    animation: toast-in .25s ease-out, alarmaLimit 1.4s ease-in-out .25s infinite; }
+  .toast.block .t-ip, .toast.block .t-mot { color: #fff; }
+  .toast.block .t-meta, .toast.block .t-x { color: rgba(255,255,255,.85); }
+  .toast.limit .t-ip, .toast.limit .t-mot { color: #2b2100; }
+  .toast.limit .t-meta, .toast.limit .t-x { color: rgba(43,33,0,.75); }
+  .toast.block .t-ico { background: #fff; color: var(--sev-block); animation: alarmaIco 1.1s ease-out infinite; }
+  .toast.limit .t-ico { background: #2b2100; color: var(--sev-limit); animation: alarmaIco 1.4s ease-out infinite; }
+  .toast .badge { background: rgba(255,255,255,.22) !important; color: inherit !important; border: 1px solid rgba(255,255,255,.45); }
+  .toast.limit .badge { background: rgba(43,33,0,.12) !important; border-color: rgba(43,33,0,.3); }
+  .toast .t-alarma { font: 800 0.68rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; opacity: .9; }
+  @keyframes alarmaBlock { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sev-block) 70%, transparent), 0 10px 28px rgba(0,0,0,.3); filter: brightness(1); }
+    50% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--sev-block) 0%, transparent), 0 10px 28px rgba(0,0,0,.3); filter: brightness(1.18); } }
+  @keyframes alarmaLimit { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sev-limit) 70%, transparent), 0 10px 28px rgba(0,0,0,.25); filter: brightness(1); }
+    50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--sev-limit) 0%, transparent), 0 10px 28px rgba(0,0,0,.25); filter: brightness(1.08); } }
+  @keyframes alarmaIco { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,.75); } 100% { box-shadow: 0 0 0 10px rgba(255,255,255,0); } }
+  @media (prefers-reduced-motion: reduce) { .toast.block, .toast.limit, .toast .t-ico { animation: none; } }
+  /* LIMIT en amarillo en todo el panel (gráficos, leyendas, insignias). */
+  :root { --amber: #f2c200; }
+  :root[data-tema="claro"] { --amber: #d9a800; --amber-soft: #fff3c4; }
+  html[data-tema="claro"] .badge.acc-limit { background: #ffe066; color: #4d3900; }
+  html[data-tema="claro"] .card.amber .value, html[data-tema="claro"] .wid.amber .w-val { color: #a07c00; }
+  /* Widgets con icono (Actividad, Respuestas, Scores). */
+  .wids { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; margin-bottom: 1rem; }
+  .wid { position: relative; display: flex; gap: 0.8rem; align-items: center; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; padding: 0.9rem 1rem; overflow: hidden;
+    box-shadow: 0 1px 2px rgba(18,49,95,.06), 0 6px 18px rgba(18,49,95,.06); }
+  .wid::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--w-c, var(--accent)); }
+  .wid .w-ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex: none;
+    background: color-mix(in srgb, var(--w-c, var(--accent)) 15%, transparent); color: var(--w-c, var(--accent)); }
+  .wid .w-lab { font: 600 0.7rem var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
+  .wid .w-val { font: 800 1.75rem var(--sans); color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .wid .w-sub { font-size: 0.74rem; color: var(--text-dim); }
+  .wid.bad { --w-c: var(--sev-block); } .wid.bad .w-val { color: var(--sev-block); }
+  .wid.amber { --w-c: var(--amber); } .wid.amber .w-val { color: var(--amber); }
+  .wid.ok { --w-c: var(--ok); }
+  .wid.navy { --w-c: #3b6fb6; }
+  /* Gráfico de Decisiones ampliado. */
+  .dec-chart { position: relative; }
+  .dec-max-btn { position: absolute; top: 8px; right: 10px; z-index: 2; }
+  .dec-chart.dec-max { position: fixed; inset: 3vh 3vw; z-index: 600; margin: 0; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; padding: 2.6rem 1.2rem 1rem; box-shadow: 0 30px 80px rgba(0,0,0,.45); }
+  .dec-chart.dec-max svg { height: calc(94vh - 9rem); }
+  .dec-chart.dec-max text { font-size: 12px; }
+  .dec-fondo { position: fixed; inset: 0; z-index: 590; background: rgba(8,20,40,.55); backdrop-filter: blur(2px); }
+  .dec-zoom-info { position: absolute; top: 12px; left: 1.2rem; font-size: 0.78rem; color: var(--text-dim); }
+  /* Respuestas: filas teñidas por acción y bloque de ayuda plegable. */
+  #blocked tr:has(.acc-block) td, #histTabla tr:has(.acc-block) td { background: color-mix(in srgb, var(--sev-block) 9%, transparent); }
+  #blocked tr:has(.acc-limit) td, #histTabla tr:has(.acc-limit) td { background: color-mix(in srgb, var(--sev-limit) 14%, transparent); }
+  #blocked tr:has(.acc-block) td:first-child, #histTabla tr:has(.acc-block) td:first-child { box-shadow: inset 4px 0 0 var(--sev-block); }
+  #blocked tr:has(.acc-limit) td:first-child, #histTabla tr:has(.acc-limit) td:first-child { box-shadow: inset 4px 0 0 var(--sev-limit); }
+  details.ayuda { margin: 0.2rem 0 0.9rem; font-size: 0.82rem; color: var(--text-dim); }
+  details.ayuda summary { cursor: pointer; color: var(--accent); font-weight: 600; list-style: none; display: inline-flex; gap: 0.35rem; align-items: center; }
+  details.ayuda summary::-webkit-details-marker { display: none; }
+  details.ayuda[open] summary { margin-bottom: 0.4rem; }
   .toast .t-cab { display: flex; align-items: center; gap: 0.5rem; }
   .toast .t-ip { font-family: var(--mono); font-weight: 700; color: var(--text); font-size: 0.95rem; }
   .toast .t-x { margin-left: auto; background: none; border: none; color: var(--text-dim); font-size: 1.1rem; cursor: pointer; line-height: 1; }
@@ -1557,7 +1615,9 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
 
   <section id="s-scores">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg><h2>Distribución de scores</h2></div>
-    <p class="lede-small">Qué tan cerca del umbral está pasando el tráfico reciente (últimas 500 decisiones) &mdash; no solo si alertó o no, sino cuánto margen hubo. La línea marca el <b>umbral vigente</b>, el mismo que usan Decisiones y el motor. Un score inferior al umbral genera una señal del modelo; la decisión final combina otras reglas.</p>
+    <div class="wids" id="scoreWids"></div>
+    <details class="ayuda"><summary>ⓘ Cómo leer este gráfico</summary>
+    <p class="lede-small">Qué tan cerca del umbral está pasando el tráfico reciente (últimas 500 decisiones) &mdash; no solo si alertó o no, sino cuánto margen hubo. La línea marca el <b>umbral vigente</b>, el mismo que usan Decisiones y el motor. Un score inferior al umbral genera una señal del modelo; la decisión final combina otras reglas.</p></details>
     <div class="spark-wrap">
       <svg id="histogram" role="img" aria-label="Histograma de scores recientes con el umbral"></svg>
       <p class="toolbar-hint" id="histogramHint"></p>
@@ -1627,12 +1687,15 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   <section id="s-bloqueos">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><h2>Respuestas</h2></div>
     <p class="sec-sub"><b>LIMIT</b> degrada la tasa de una IP; solo <b>BLOCK</b> la corta.</p>
+    <div class="wids" id="respWids"></div>
+    <details class="ayuda"><summary>ⓘ Cómo leer esta vista</summary>
     <p class="resp-fuente" id="vigentesSub">Fuente: registro del motor y feed firmado por el sensor. La columna Evidencia añade lo que <b>cada host protegido dice tener</b> en su nftables (acuse que trae el relay cada 10 s): aplicada, liberada por un humano o fuera de alcance. El acuse es un informe del host, no una orden.</p>
+    <p class="toolbar-hint">Estados: <span class="est si">registrada</span> el motor la decidió · <span class="est si">publicada</span> está en el feed firmado · <span class="est si">srv-dmz: BLOCK aplicado</span> el host la tiene en nftables · <span class="est lib">liberada</span> un humano la quitó · <span class="est no">fuera de alcance</span> el host no la aplica (infraestructura).</p>
+    </details>
     <p class="act-h">Respuestas registradas como vigentes <span class="th-sub" id="vigentesN"></span></p>
     <div class="tbl-wrap">
       <table><thead><tr><th>Entidad</th><th>Acción</th><th>Motivo</th><th>Inicio del episodio · última renovación</th><th>Caduca</th><th>Evidencia</th></tr></thead><tbody id="blocked"></tbody></table>
     </div>
-    <p class="toolbar-hint">Estados: <span class="est si">registrada</span> el motor la decidió · <span class="est si">publicada</span> está en el feed firmado · <span class="est si">srv-dmz: BLOCK aplicado</span> el host la tiene en nftables · <span class="est lib">liberada</span> un humano la quitó · <span class="est no">fuera de alcance</span> el host no la aplica (infraestructura).</p>
     <p class="act-h" style="margin-top:1.2rem">Historial de las últimas 24 h <span class="th-sub" id="histSub"></span></p>
     <div class="spark-wrap" style="margin-bottom:0.8rem">
       <svg id="histChart" class="hist-chart" role="img" aria-label="Línea de tiempo de acciones por IP en las últimas 24 horas"></svg>
@@ -1675,6 +1738,8 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
     <p class="periodo-info" id="decPeriodoInfo"></p>
     <div class="dec-resumen" id="decResumen"></div>
     <div class="spark-wrap dec-chart" id="decChartWrap">
+      <button type="button" class="btn-sec dec-max-btn" id="decMaxBtn" title="Ver el gráfico a pantalla completa; rueda del ratón = zoom, doble clic = restablecer">⤢ Ampliar</button>
+      <span class="dec-zoom-info" id="decZoomInfo"></span>
       <svg id="decChart" role="img" aria-label="Score de cada decisión en el tiempo, con el umbral"></svg>
       <div class="chart-tip" id="decTip"></div>
       <div class="spark-legend">
@@ -2481,9 +2546,10 @@ function avisar(nuevas) {
     const tIco = g.acc === 'BLOCK'
       ? '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>'
       : '<path d="M12 14l3.5-3.5"/><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/>';
-    el.innerHTML = '<div class="t-cab"><span class="t-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">' + tIco + '</svg></span>'
+    el.innerHTML = '<div class="t-cab"><span class="t-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">' + tIco + '</svg></span>'
+      + '<span><span class="t-alarma">' + (g.acc === 'BLOCK' ? 'Alerta crítica' : 'Alerta') + '</span><br>'
+      + '<span class="t-ip">' + varEsc(g.ip) + '</span></span>'
       + '<span class="badge acc-' + g.acc.toLowerCase() + '">' + g.acc + '</span>'
-      + '<span class="t-ip">' + varEsc(g.ip) + '</span>'
       + '<button class="t-x" title="Cerrar" aria-label="Cerrar">×</button></div>'
       + '<div class="t-mot">' + varEsc(m.texto || 'acción del sistema') + '</div>'
       + '<div class="t-meta">' + varEsc(m.regla) + ' · ' + fmtTime(g.d.logged_at)
@@ -2511,6 +2577,21 @@ document.addEventListener('visibilitychange', () => {
 
 function card(label, value, cls) {
   return `<div class="card ${cls||''}"><div class="label">${label}</div><div class="value">${value}</div></div>`;
+}
+// 17-nov: widget con icono para Actividad, Respuestas y Scores.
+const W_ICO = {
+  ventanas: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/>',
+  block: '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>',
+  limit: '<path d="M12 14l3.5-3.5"/><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/>',
+  ips: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-4 4-6 7-6s6 2 7 6"/>',
+  modelo: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+  umbral: '<path d="M3 12h18" stroke-dasharray="3 3"/><path d="M6 18l4-9 4 5 4-9"/>',
+  reloj: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
+  escudo: '<path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+};
+function widget(label, value, cls, ico, sub) {
+  return `<div class="wid ${cls || ''}"><span class="w-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${W_ICO[ico] || ''}</svg></span>`
+    + `<div><div class="w-lab">${label}</div><div class="w-val">${value}</div>${sub ? `<div class="w-sub">${sub}</div>` : ''}</div></div>`;
 }
 function fmtTime(t) {
   return new Date(t * 1000).toLocaleTimeString('es-PE', { hour12: false });
@@ -2684,7 +2765,7 @@ function renderHistogram(data) {
     return;
   }
   // Lienzo en pixeles reales: el texto no se deforma y caben ejes de verdad.
-  const w = Math.max(320, svg.clientWidth || 900), h = 190;
+  const w = Math.max(320, svg.clientWidth || 900), h = 240;
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   const X0 = 46, X1 = w - 10, Y0 = 22, base = h - 28;
   const maxCount = ejeBonito(Math.max(...data.buckets.map(b => b.count), 1));
@@ -2734,6 +2815,16 @@ function renderHistogram(data) {
   svg.innerHTML = bars;
   const pct = data.n ? Math.round(100 * bajoUmbral / data.n) : 0;
   window._histResumen = { pct: pct, n: data.n, bajoUmbral: bajoUmbral };
+  const sw = document.getElementById('scoreWids');
+  if (sw) {
+    const c3 = v => v.toFixed(3).split('.').join(',');
+    sw.innerHTML = [
+      widget('Decisiones puntuadas', data.n.toLocaleString('es'), 'navy', 'ventanas', 'últimas 500 como máximo'),
+      widget('Umbral vigente', c3(data.threshold), 'ok', 'umbral', 'α = 0,01'),
+      widget('Bajo el umbral', bajoUmbral.toLocaleString('es'), bajoUmbral ? 'bad' : '', 'modelo', pct + ' % del tráfico reciente'),
+      widget('Rango observado', c3(data.min) + ' … ' + c3(data.max), '', 'reloj', 'score mínimo y máximo'),
+    ].join('');
+  }
   // La misma escala del histograma la reusa la mini-barra de la tabla.
   window._escalaScore = { min: data.min, max: data.max, umbral: data.threshold };
   // Referencia: la fraccion que quedo bajo el umbral al calibrar (FPR del
@@ -3056,12 +3147,13 @@ async function refresh() {
 
     const c = status.counters;
     ultimosCounters = c;
+    counters.classList.add('wids');
     counters.innerHTML = [
-      card('Ventanas analizadas', (c.total || 0).toLocaleString('es')),
-      card('BLOCK', c.block || 0, c.block > 0 ? 'bad' : ''),
-      card('LIMIT', c.limit || 0, c.limit > 0 ? 'amber' : ''),
-      card('IPs con acción', c.ips_con_accion || 0, c.ips_con_accion > 0 ? 'amber' : ''),
-      card('Anomalías del modelo', c.alert_model || 0, c.alert_model > 0 ? 'bad' : ''),
+      widget('Ventanas analizadas', (c.total || 0).toLocaleString('es'), 'navy', 'ventanas', 'tráfico puntuado'),
+      widget('BLOCK', c.block || 0, c.block > 0 ? 'bad' : '', 'block', 'IP cortada'),
+      widget('LIMIT', c.limit || 0, c.limit > 0 ? 'amber' : '', 'limit', 'tasa degradada'),
+      widget('IPs con acción', c.ips_con_accion || 0, c.ips_con_accion > 0 ? 'amber' : '', 'ips', 'atacantes distintos'),
+      widget('Anomalías del modelo', c.alert_model || 0, c.alert_model > 0 ? 'bad' : '', 'modelo', 'Isolation Forest'),
     ].join('');
 
     const alcanceEl = document.getElementById('alcance');
@@ -3579,6 +3671,17 @@ function renderHistorial(d) {
     + (corto ? ' · el registro leído empieza a las ' + fmtTime(d.desde) : '');
   const ips = [];
   eps.forEach(e => { if (ips.indexOf(e.ip) < 0) ips.push(e.ip); });
+  const rw = document.getElementById('respWids');
+  if (rw) {
+    const nB = eps.filter(e => e.accion === 'BLOCK').length, nL = eps.filter(e => e.accion === 'LIMIT').length;
+    const vig = (typeof AA_VIG !== 'undefined' && AA_VIG) ? AA_VIG.length : 0;
+    rw.innerHTML = [
+      widget('Vigentes ahora', vig, vig ? 'bad' : 'ok', 'escudo', vig ? 'IP con medida activa' : 'ninguna IP restringida'),
+      widget('Episodios BLOCK', nB, nB ? 'bad' : '', 'block', 'últimas ' + d.horas + ' h'),
+      widget('Episodios LIMIT', nL, nL ? 'amber' : '', 'limit', 'últimas ' + d.horas + ' h'),
+      widget('IPs afectadas', ips.length, ips.length ? 'navy' : '', 'ips', 'distintas en el periodo'),
+    ].join('');
+  }
   const filas = ips.slice(0, 10);
   const W = Math.max(320, svg.clientWidth || 900), FH = 24, Y0 = 8;
   const H = Y0 + Math.max(1, filas.length) * FH + 26;
@@ -4003,6 +4106,41 @@ function filasFiltradas() {
 // (sin paquetes: el modelo no puntua) van en un carril aparte abajo, no en cero.
 // El lienzo usa los pixeles reales del elemento, asi los puntos son redondos.
 let decPuntos = [];
+// Zoom del gráfico: rango de tiempo visible (null = todo) y modo ampliado.
+let decZoom = null, decRango = null;
+function decAmpliar(si) {
+  const w = document.getElementById('decChartWrap'), b = document.getElementById('decMaxBtn');
+  if (!w) return;
+  let fondo = document.getElementById('decFondo');
+  if (si) {
+    if (!fondo) {
+      fondo = document.createElement('div'); fondo.id = 'decFondo'; fondo.className = 'dec-fondo';
+      fondo.addEventListener('click', () => decAmpliar(false)); document.body.appendChild(fondo);
+    }
+  } else { if (fondo) fondo.remove(); decZoom = null; }
+  w.classList.toggle('dec-max', si);
+  if (b) b.textContent = si ? '✕ Cerrar' : '⤢ Ampliar';
+  renderDecChart();
+}
+on('decMaxBtn', 'click', () => decAmpliar(!document.getElementById('decChartWrap').classList.contains('dec-max')));
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && document.getElementById('decFondo')) decAmpliar(false); });
+(function () {
+  const svg = document.getElementById('decChart');
+  if (!svg) return;
+  svg.addEventListener('wheel', ev => {
+    if (!decRango) return;
+    ev.preventDefault();
+    const r = svg.getBoundingClientRect(), X0 = 64, X1 = r.width - 10;
+    const [a, b] = decZoom || decRango;
+    const fr = Math.min(1, Math.max(0, (ev.clientX - r.left - X0) / (X1 - X0)));
+    const tc = a + (b - a) * fr, esc = ev.deltaY < 0 ? 0.75 : 1.33;
+    const na = tc - (tc - a) * esc, nb = tc + (b - tc) * esc;
+    decZoom = (na <= decRango[0] && nb >= decRango[1]) ? null : [Math.max(decRango[0], na), Math.min(decRango[1], nb)];
+    renderDecChart();
+  }, { passive: false });
+  svg.addEventListener('dblclick', () => { decZoom = null; renderDecChart(); });
+})();
+
 function renderDecChart() {
   const svg = document.getElementById('decChart');
   if (!svg || !decGrafVisible) return;
@@ -4010,7 +4148,8 @@ function renderDecChart() {
   const fuente = decFuente();
   const datos = (query ? fuente.filter(d => d.entity_ip.includes(query)) : fuente)
     .filter(d => d.logged_at);
-  const W = Math.max(320, svg.clientWidth || 900), H = 170;
+  const W = Math.max(320, svg.clientWidth || 900), H = Math.max(170, svg.clientHeight || 170);
+  const grande = H > 220;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   const X0 = 64, X1 = W - 10, Y0 = 10, Y1 = H - 46, YS = H - 30;
   decPuntos = [];
@@ -4019,8 +4158,13 @@ function renderDecChart() {
     return;
   }
   const ahora = Date.now() / 1000;
-  const t0 = Math.min(...datos.map(d => d.logged_at));
-  const t1 = Math.max(decPeriodo ? Math.max(...datos.map(d => d.logged_at)) : ahora, t0 + 60);
+  let t0 = Math.min(...datos.map(d => d.logged_at));
+  let t1 = Math.max(decPeriodo ? Math.max(...datos.map(d => d.logged_at)) : ahora, t0 + 60);
+  decRango = [t0, t1];
+  if (decZoom) { t0 = Math.max(t0, decZoom[0]); t1 = Math.min(t1, decZoom[1]); if (t1 - t0 < 20) t1 = t0 + 20; }
+  const zi = document.getElementById('decZoomInfo');
+  if (zi) zi.textContent = decZoom ? 'Zoom ' + fmtTime(t0) + ' – ' + fmtTime(t1) + ' · doble clic para restablecer'
+    : (grande ? 'Rueda del ratón para acercar · Esc para cerrar' : '');
   const conScore = datos.filter(d => d.score != null);
   const umbral = conScore.length ? conScore[0].threshold : (window._escalaScore ? window._escalaScore.umbral : null);
   let lo = Math.min(...conScore.map(d => d.score)), hi = Math.max(...conScore.map(d => d.score));
@@ -4053,11 +4197,13 @@ function renderDecChart() {
     s += `<line x1="${x.toFixed(1)}" y1="${Y1}" x2="${x.toFixed(1)}" y2="${Y1 + 3}" stroke="var(--border)"/>`;
     s += `<text x="${x.toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${i === 4 && !decPeriodo ? 'ahora' : fmtTime(t)}</text>`;
   }
-  const estilo = { PERMIT: ['var(--accent)', 2, 0.4], LIMIT: ['var(--amber)', 3.8, 0.95], BLOCK: ['var(--danger)', 4.4, 1] };
+  const k = grande ? 1.6 : 1;
+  const estilo = { PERMIT: ['var(--accent)', 2 * k, 0.4], LIMIT: ['var(--amber)', 3.8 * k, 0.95], BLOCK: ['var(--sev-block)', 4.4 * k, 1] };
   // Los PERMIT primero: las acciones se dibujan encima y no quedan tapadas.
   ['PERMIT', 'LIMIT', 'BLOCK'].forEach(tipo => {
     datos.forEach(d => {
       if (accionDeDecision(d) !== tipo) return;
+      if (d.logged_at < t0 || d.logged_at > t1) return;
       const x = px(d.logged_at), y = d.score != null ? py(d.score) : YS;
       const e = estilo[tipo];
       s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${e[1]}" fill="${e[0]}" fill-opacity="${e[2]}"/>`;
