@@ -8465,7 +8465,7 @@ def resumen_salud(modo: str, services: dict, counters: dict, drops: dict,
         else:
             msg = "Servicios operativos · %d alerta(s) en la última hora" % (n_alert_modelo + n_alert_fb)
         return {"nivel": "warn", "msg": msg,
-                "sub": " · ".join(partes)}
+                "sub": " · ".join(partes) + " · detalle en Respuestas"}
     if subiendo_drops:
         d = drops.get("delta")
         return {"nivel": "warn",
