@@ -4107,7 +4107,7 @@ function filasFiltradas() {
 // El lienzo usa los pixeles reales del elemento, asi los puntos son redondos.
 let decPuntos = [];
 // Zoom del gráfico: rango de tiempo visible (null = todo) y modo ampliado.
-let decZoom = null, decRango = null;
+let decZoom = null, decRango = null, decX0 = 64;
 function decAmpliar(si) {
   const w = document.getElementById('decChartWrap'), b = document.getElementById('decMaxBtn');
   if (!w) return;
@@ -4130,7 +4130,7 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && document
   svg.addEventListener('wheel', ev => {
     if (!decRango) return;
     ev.preventDefault();
-    const r = svg.getBoundingClientRect(), X0 = 64, X1 = r.width - 10;
+    const r = svg.getBoundingClientRect(), X0 = decX0, X1 = r.width - 10;
     const [a, b] = decZoom || decRango;
     const fr = Math.min(1, Math.max(0, (ev.clientX - r.left - X0) / (X1 - X0)));
     const tc = a + (b - a) * fr, esc = ev.deltaY < 0 ? 0.75 : 1.33;
@@ -4151,7 +4151,8 @@ function renderDecChart() {
   const W = Math.max(320, svg.clientWidth || 900), H = Math.max(170, svg.clientHeight || 170);
   const grande = H > 220;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  const X0 = 64, X1 = W - 10, Y0 = 10, Y1 = H - 46, YS = H - 30;
+  const X0 = grande ? 90 : 64, X1 = W - 10, Y0 = 10, Y1 = H - 46, YS = H - 30;
+  decX0 = X0;
   decPuntos = [];
   if (!datos.length) {
     svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">Sin decisiones que graficar.</text>`;
@@ -4195,7 +4196,7 @@ function renderDecChart() {
   for (let i = 0; i <= 4; i++) {
     const t = t0 + (t1 - t0) * i / 4, x = px(t);
     s += `<line x1="${x.toFixed(1)}" y1="${Y1}" x2="${x.toFixed(1)}" y2="${Y1 + 3}" stroke="var(--border)"/>`;
-    s += `<text x="${x.toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${i === 4 && !decPeriodo ? 'ahora' : fmtTime(t)}</text>`;
+    s += `<text x="${x.toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${i === 4 && !decPeriodo && !decZoom ? 'ahora' : fmtTime(t)}</text>`;
   }
   const k = grande ? 1.6 : 1;
   const estilo = { PERMIT: ['var(--accent)', 2 * k, 0.4], LIMIT: ['var(--amber)', 3.8 * k, 0.95], BLOCK: ['var(--sev-block)', 4.4 * k, 1] };
