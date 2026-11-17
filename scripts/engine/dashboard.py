@@ -3985,7 +3985,7 @@ function renderFlujoBar() {
     bar.innerHTML = '<span>Sin IP que seguir: el flujo se resalta cuando hay un escenario en curso o una respuesta reciente.</span>';
     return;
   }
-  const titulo = id => ((TOPO_VISTAS.completa.nodos.find(n => n.id === id) || {}).titulo || id);
+  const titulo = id => ((TOPO_VISTAS.completa.nodos.concat([TOPO_OP_ENTRANTE.completa.nodo]).find(n => n.id === id) || {}).titulo || id);
   const opts = c.map(x => `<option value="${varEsc(x.ip)}"${f && f.ip === x.ip ? ' selected' : ''}>${varEsc(x.ip)} · ${varEsc(x.accion || 'sin acción')} · ${varEsc(x.fuente)}</option>`).join('')
     + `<option value=""${f ? '' : ' selected'}>— sin resaltar —</option>`;
   const acc = f && f.accion ? `<span class="badge acc-${f.accion.toLowerCase()}">${varEsc(f.accion)}</span>` : '';
@@ -4987,11 +4987,11 @@ const TOPO_OP_OCULTOS = {
   completa: ['atacante', 'clientes', 'descartes', 'wazuh'],
 };
 const TOPO_OP_ENTRANTE = {
-  red: { nodo: { id: 'entrante', x: 24, y: 60, w: 176, h: 106, icono: 'entrante', titulo: 'Tráfico entrante', host: true, ip: 'origen sin clasificar', desc: 'legítimo o ataque: lo decide el sensor' },
+  red: { nodo: { id: 'entrante', x: 24, y: 60, w: 176, h: 106, icono: 'entrante', titulo: 'Tráfico entrante', host: true, ip: 'sin clasificar', desc: 'legítimo o ataque: lo decide el sensor' },
          arista: { d: 'M200,113 C268,113 268,236 330,236', desde: 'entrante', hasta: 'span', tipo: 'fijo', etiqueta: '1 · entra', ex: 262, ey: 104 },
          grupo: 'Entrada · sin clasificar',
          packet: 'M200,113 L330,240 L400,216 L400,118 L456,118 L456,216 L330,250 L200,240' },
-  completa: { nodo: { id: 'entrante', x: 24, y: 70, w: 176, h: 118, icono: 'entrante', titulo: 'Tráfico entrante', host: true, ip: 'origen sin clasificar', desc: 'legítimo o ataque: lo decide el sensor' },
+  completa: { nodo: { id: 'entrante', x: 24, y: 100, w: 176, h: 58, icono: 'entrante', titulo: 'Tráfico entrante', host: true, ip: 'sin clasificar', desc: 'legítimo o ataque: lo decide el sensor' },
               arista: { d: 'M200,129 C250,129 262,99 286,99', desde: 'entrante', hasta: 'red', tipo: 'fijo', etiqueta: 'entra', ex: 240, ey: 112 },
               grupo: 'Red · entrada y servicios' },
 };
