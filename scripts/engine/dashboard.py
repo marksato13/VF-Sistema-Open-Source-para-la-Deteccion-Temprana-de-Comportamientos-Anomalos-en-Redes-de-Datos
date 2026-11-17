@@ -2474,6 +2474,7 @@ async function limpiarPedir() {
     const d = await r.json().catch(() => ({}));
     if (!r.ok || !d.ok) throw new Error(d.motivo || (r.status === 403 ? 'Solo un administrador puede dejarlo limpio.' : 'HTTP ' + r.status));
     esc = null; escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas();
+    vistaLimpiaDesde(Date.now() / 1000);
     pintarLimpieza([['ok', 'Petición dejada al publicador'], ['esp', 'Esperando al publicador…']], false);
     limpiezaSondear(d.id, Date.now() + 60000);
   } catch (e) {
