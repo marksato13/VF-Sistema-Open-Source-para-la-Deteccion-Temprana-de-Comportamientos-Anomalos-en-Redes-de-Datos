@@ -234,6 +234,9 @@ const fr = franjaV2HTML({activa: true, modo: 'sombra', politica: null, feed_atra
 ok(fr.includes('INCIDENCIA: traza.jsonl ausente'), 'incidencia visible');
 ok(fr.includes('medidas en el feed: <b>desconocido') && !fr.includes('0 medida(s)'), 'feed ausente no es cero');
 ok(fr.includes('traza <b>ausente o ilegible'), 'traza ausente nombrada');
+const sano = franjaV2HTML({activa: true, modo: 'sombra', politica: 'if_senal', feed_atrasado: false, feed_entradas: 0,
+  incidencias: [], fuentes: {senales_if: {ok: true}, traza: {ok: true}, feed: {ok: true}}});
+ok(sano === '', 'con todo sano la franja no se muestra');
 pintarCadenaV2(undefined);
 ok(boton.hidden === true && boton.disabled === true, 'sin /api/status el botón no reaparece');
 pintarCadenaV2(null);

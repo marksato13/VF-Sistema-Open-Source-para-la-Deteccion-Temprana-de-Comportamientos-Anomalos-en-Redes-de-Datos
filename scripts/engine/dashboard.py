@@ -3311,6 +3311,9 @@ function franjaV2HTML(cv) {
   const medidas = (fu.feed && fu.feed.ok) ? (cv.feed_entradas || 0) + ' medida(s) en el feed' : 'medidas en el feed: <b>desconocido</b>';
   const ficha = (txt, cls, tit) => '<span class="cv2-ficha' + (cls ? ' ' + cls : '') + '"' + (tit ? ' title="' + varEsc(tit) + '"' : '') + '>' + txt + '</span>';
   const fuentesOk = okF('senales_if') && okF('traza') && okF('feed');
+  // 16-nov: con todo sano la franja no se muestra (pedido de Mark); solo aparece si una fuente
+  // falta, el feed está atrasado o hay incidencias, para que un problema nunca quede oculto.
+  if (fuentesOk && !cv.feed_atrasado && !inc.length) return '';
   return '<div class="cv2-fichas">'
     + ficha('<b>Cadena v2</b> · política ' + varEsc(String(cv.politica || 'desconocida')), '', 'Política de respuesta del publicador')
     + ficha('Modo ' + varEsc(String(cv.modo)) + (sombra ? ' · las medidas son propuestas; no se ejecutan' : ''), sombra ? 'aviso' : '')
@@ -3347,6 +3350,7 @@ function pintarCadenaV2(cv) {
     wrap.insertBefore(f, cab ? cab.nextSibling : wrap.firstChild);
   }
   f.innerHTML = franjaV2HTML(cv);
+  f.hidden = !f.innerHTML;
 }
 function estadoEnHosts(ip) {
   if (ACUSES_V1_HISTORICOS) {
