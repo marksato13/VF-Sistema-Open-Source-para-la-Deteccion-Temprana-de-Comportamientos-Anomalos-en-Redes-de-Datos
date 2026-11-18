@@ -4727,12 +4727,11 @@ const TOPO_VISTAS = {
     // Flujo HORIZONTAL de izquierda a derecha: cada fase es una columna
     // (Hosts | Adquisicion | Analisis | Decision | Observabilidad) y el paquete
     // avanza de izquierda a derecha. Un punto lo recorre en vivo.
-    // Dos sobres, uno por cada rama de adquisición (tcpdump y Suricata), que se UNIFICAN en
-    // Variables / 10 s y de ahí un tercer sobre sigue ordenado por el tronco hasta la salida.
+    // Dos sobres que salen A LA VEZ desde la Interfaz en escucha, uno por cada rama de
+    // adquisición (tcpdump y Suricata), y se JUNTAN en el Modelo recalibrado.
     packets: [
-      { d: 'M374,99 L374,275 L628,139 L628,215 L894,139 L894,249', dur: '5s', begin: '0s' },     // rama tcpdump (L2·L3·L4)
-      { d: 'M374,99 L374,275 L628,303 L628,379 L894,359 L894,249', dur: '5s', begin: '-2.5s' },   // rama Suricata (L7)
-      { d: 'M894,249 L1148,187 L1424,187 L1680,183', dur: '4s', begin: '0s' },                    // tronco ya unificado
+      { d: 'M374,275 L628,139 L628,215 L894,139 L894,249 L1148,187', dur: '6s', begin: '0s' },   // rama tcpdump (L2·L3·L4)
+      { d: 'M374,275 L628,303 L628,379 L894,359 L894,249 L1148,187', dur: '6s', begin: '0s' },   // rama Suricata (L7)
     ],
     grupos: [
       { x: 12,   y: 32, w: 200, h: 456, txt: 'Hosts · VLAN 20/30' },
