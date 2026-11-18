@@ -4601,7 +4601,7 @@ const TOPO_ICON = {
   firewall: '<rect x="2" y="3.3" width="14" height="11.4" rx="1"/><path d="M2 7.1h14M2 10.9h14M6.6 3.3v3.8M11.4 3.3v3.8M4.3 7.1v3.8M9 7.1v3.8M13.7 7.1v3.8M6.6 10.9v3.8M11.4 10.9v3.8"/>',
   switch:   '<rect x="1.6" y="5.4" width="14.8" height="7.2" rx="1.3"/><path d="M4 9h10"/><path d="M6.4 6.9 4 9l2.4 2.1M11.6 6.9 14 9l-2.4 2.1"/>',
   carpeta:  '<path d="M2 4.6h4.4l1.5 2H16v7.8H2Z"/><path d="M2 8.6h14"/>',
-  atacante: '<path d="M9 2a6 6 0 0 0-6 6c0 2 1 3.4 2.2 4.3V15h7.6v-2.7C14 11.4 15 10 15 8a6 6 0 0 0-6-6z"/><circle cx="6.8" cy="8.4" r="1.2"/><circle cx="11.2" cy="8.4" r="1.2"/><path d="M7.6 15v-1.6M10.4 15v-1.6"/>',
+  atacante: '<circle cx="9" cy="9" r="6.3"/><path d="M9 1.3V4.2M9 13.8v2.9M1.3 9H4.2M13.8 9h2.9"/><circle cx="9" cy="9" r="1.5" fill="currentColor" stroke="none"/>',
   usuarios: '<circle cx="6.5" cy="6.5" r="2.6"/><path d="M1.8 15c.6-3 2.4-4.4 4.7-4.4S10.6 12 11.2 15"/><circle cx="12.6" cy="6" r="2.1"/><path d="M12 10.3c2.2 0 3.6 1.4 4.2 4"/>',
   kali:     '<path d="M2.2 13.6c2.6-.4 4.4-1.6 5.4-3.6.8-1.6.6-3.6 2.2-5 1.4-1.2 3.6-1.4 5.8-.6-1.6.2-2.6.8-3 1.8 1.4.2 2.4 1 2.8 2.2-1.2-.6-2.4-.6-3.4 0-1.4 2.6-3.6 4.6-7 5.6"/><path d="M12.4 6.2h.01"/>',
   radar:    '<circle cx="9" cy="9" r="7"/><circle cx="9" cy="9" r="3.6"/><path d="M9 9 14 4"/><circle cx="12.2" cy="11.6" r="0.9" fill="currentColor" stroke="none"/>',
