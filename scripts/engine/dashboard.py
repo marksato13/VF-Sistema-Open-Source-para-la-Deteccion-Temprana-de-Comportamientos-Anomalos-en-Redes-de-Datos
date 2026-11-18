@@ -440,7 +440,9 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .topo-host:hover .box { stroke: var(--accent); }
   .topo-host .ico { color: var(--accent); }
   .topo-host .hostip { fill: var(--accent); font: 600 11px var(--mono); }
-  .topo-pkt { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
+  .topo-pkt { filter: drop-shadow(0 0 4px var(--accent)); }
+  .topo-pkt rect { fill: var(--accent); stroke: #fff; stroke-width: 1; }
+  .topo-pkt path { fill: none; stroke: #0b1220; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
   @media (prefers-reduced-motion: reduce) { .topo-pkt { display: none; } }
   .topo-cmd { background: #0b1220; border: 1px solid var(--border); border-radius: 7px;
     padding: 0.5rem 0.6rem; margin: 0.5rem 0; font: 11px var(--mono); color: var(--text-dim);
@@ -6054,9 +6056,11 @@ function renderTopologia(status) {
     return `<path class="topo-edge ${vivo ? 'live' : 'dim'}" d="${e.d}"${PUNTA}/>` + label;
   }).join('');
 
-  // Un punto recorre la tuberia en bucle: hace visible que el dato fluye.
+  // Un sobre (paquete de datos) recorre la tuberia en bucle: hace visible que el dato fluye.
   const packet = v.packet
-    ? `<circle class="topo-pkt" r="5"><animateMotion dur="6s" repeatCount="indefinite" calcMode="linear" path="${v.packet}"/></circle>`
+    ? `<g class="topo-pkt"><rect x="-8.5" y="-6" width="17" height="12" rx="2.5"/>`
+      + `<path d="M-8.5,-5 L0,1.4 L8.5,-5"/>`
+      + `<animateMotion dur="6s" repeatCount="indefinite" calcMode="linear" path="${v.packet}"/></g>`
     : '';
 
   // Los hosts no pasan por topoEstado: se dibujan con su IP y su rol.
@@ -6191,6 +6195,55 @@ on('topoMenos', 'click', () => {
 on('topoReset', 'click', () => {
   topoZoom = null; aplicarZoom();
 });
+
+// 18-nov: mapa táctil. Pellizco con dos dedos y Ctrl/⌘ + rueda (o pellizco en el trackpad)
+// hacen zoom centrado donde apuntas; un dedo o la barra arrastran (scroll nativo). Los
+// botones +/−/Ajustar siguen para el ratón.
+(function () {
+  const caja = document.getElementById('topoScroll');
+  if (!caja || !window.PointerEvent) return;
+  caja.style.touchAction = 'pan-x pan-y';   // un dedo = desplazar; el pellizco lo tomamos nosotros
+  function zoomHacia(nuevo, cx, cy) {
+    const antes = escalaActual();
+    nuevo = Math.max(0.25, Math.min(3, nuevo));
+    if (Math.abs(nuevo - antes) < 0.001) return;
+    const r = caja.getBoundingClientRect();
+    const px = (caja.scrollLeft + (cx - r.left)) / antes;   // punto del diagrama bajo el cursor
+    const py = (caja.scrollTop + (cy - r.top)) / antes;
+    topoZoom = nuevo; aplicarZoom();
+    caja.scrollLeft = px * nuevo - (cx - r.left);            // mantenerlo bajo el cursor
+    caja.scrollTop = py * nuevo - (cy - r.top);
+  }
+  caja.addEventListener('wheel', ev => {
+    if (!ev.ctrlKey && !ev.metaKey) return;                 // rueda normal = desplazar
+    ev.preventDefault();
+    zoomHacia(escalaActual() * (ev.deltaY < 0 ? 1.12 : 1 / 1.12), ev.clientX, ev.clientY);
+  }, { passive: false });
+  const pts = new Map();
+  let distBase = 0, zoomBase = 1;
+  caja.addEventListener('pointerdown', ev => {
+    if (ev.pointerType === 'mouse') return;
+    pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      distBase = Math.hypot(a.x - b.x, a.y - b.y);
+      zoomBase = escalaActual();
+    }
+  });
+  caja.addEventListener('pointermove', ev => {
+    const p = pts.get(ev.pointerId);
+    if (!p) return;
+    p.x = ev.clientX; p.y = ev.clientY;
+    if (pts.size === 2 && distBase) {
+      const [a, b] = [...pts.values()];
+      ev.preventDefault();
+      zoomHacia(zoomBase * (Math.hypot(a.x - b.x, a.y - b.y) / distBase), (a.x + b.x) / 2, (a.y + b.y) / 2);
+    }
+  });
+  const soltar = ev => { pts.delete(ev.pointerId); if (pts.size < 2) distBase = 0; };
+  caja.addEventListener('pointerup', soltar);
+  caja.addEventListener('pointercancel', soltar);
+})();
 
 // Plegar/desplegar el panel de detalle: al ocultarlo el diagrama toma todo el
 // ancho (util para verlo a lo ancho). La preferencia es por-visor.
