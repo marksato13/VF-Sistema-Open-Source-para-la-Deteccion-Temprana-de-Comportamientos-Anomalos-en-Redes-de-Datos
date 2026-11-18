@@ -235,7 +235,8 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   }
   .topo-zoom button:hover { border-color: var(--accent); color: var(--accent); }
   .topo-zoom #topoNivel { min-width: 38px; text-align: center; }
-  .topo-scroll { overflow: auto; flex: 1; min-height: 0; max-height: 82vh; }
+  .topo-scroll { overflow: auto; flex: 1; min-height: 0; min-width: 0; max-width: 100%; max-height: 82vh; overscroll-behavior: contain; cursor: grab; }
+  .topo-scroll.arrastrando { cursor: grabbing; }
   .topo-scroll svg { display: block; }
   .card .value small { display: block; font: 400 0.72rem var(--sans); color: var(--text-dim); margin-top: 0.15rem; letter-spacing: 0; }
   .card.txt .value { font-size: 1rem; line-height: 1.3; overflow-wrap: anywhere; }
@@ -6198,10 +6199,10 @@ on('topoReset', 'click', () => {
   topoZoom = null; aplicarZoom();
 });
 
-// 18-nov: mapa táctil. Un dedo ARRASTRA el mapa en los dos sentidos (izquierda-derecha y
-// arriba-abajo); dos dedos hacen pellizco de zoom; Ctrl/⌘ + rueda (o pellizco en el trackpad)
-// también hace zoom centrado donde apuntas. Un toque sin mover sigue seleccionando el nodo.
-// Los botones +/−/Ajustar siguen para el ratón.
+// 18-nov: mapa táctil y con ratón. Arrastrar con un dedo o con el ratón mueve el mapa en los dos
+// sentidos (izquierda-derecha y arriba-abajo); dos dedos hacen pellizco de zoom; Ctrl/⌘ + rueda
+// (o pellizco en el trackpad) hace zoom centrado donde apuntas; la rueda normal o Shift+rueda
+// desplazan. Un toque/clic sin mover sigue seleccionando el nodo; los botones +/−/Ajustar siguen.
 (function () {
   const caja = document.getElementById('topoScroll');
   if (!caja || !window.PointerEvent) return;
@@ -6218,14 +6219,20 @@ on('topoReset', 'click', () => {
     caja.scrollTop = py * nuevo - (cy - r.top);
   }
   caja.addEventListener('wheel', ev => {
-    if (!ev.ctrlKey && !ev.metaKey) return;                 // rueda normal = desplazar
-    ev.preventDefault();
-    zoomHacia(escalaActual() * (ev.deltaY < 0 ? 1.12 : 1 / 1.12), ev.clientX, ev.clientY);
+    if (ev.ctrlKey || ev.metaKey) {                         // Ctrl/⌘ + rueda = zoom
+      ev.preventDefault();
+      zoomHacia(escalaActual() * (ev.deltaY < 0 ? 1.12 : 1 / 1.12), ev.clientX, ev.clientY);
+      return;
+    }
+    // Rueda normal: desplaza; Shift convierte la rueda vertical en horizontal.
+    const dx = ev.shiftKey ? (ev.deltaY || ev.deltaX) : ev.deltaX;
+    const dy = ev.shiftKey ? 0 : ev.deltaY;
+    if (dx) { caja.scrollLeft += dx; ev.preventDefault(); }
+    if (dy && (caja.scrollHeight > caja.clientHeight)) { caja.scrollTop += dy; }
   }, { passive: false });
   const pts = new Map();
-  let distBase = 0, zoomBase = 1, arrastrando = false;
+  let distBase = 0, zoomBase = 1, arrastrando = false, movido = false;
   caja.addEventListener('pointerdown', ev => {
-    if (ev.pointerType === 'mouse') return;
     pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, x0: ev.clientX, y0: ev.clientY });
     if (pts.size === 2) {
       const [a, b] = [...pts.values()];
@@ -6244,9 +6251,10 @@ on('topoReset', 'click', () => {
       zoomHacia(zoomBase * (Math.hypot(a.x - b.x, a.y - b.y) / distBase), (a.x + b.x) / 2, (a.y + b.y) / 2);
       return;
     }
-    if (pts.size === 1) {                                   // un dedo = arrastrar en los dos ejes
-      if (!arrastrando && Math.hypot(ev.clientX - p.x0, ev.clientY - p.y0) < 4) return;  // deja pasar el toque-selección
-      arrastrando = true;
+    if (pts.size === 1) {                                   // un dedo/ratón = arrastrar en los dos ejes
+      if (!arrastrando && Math.hypot(ev.clientX - p.x0, ev.clientY - p.y0) < 4) return;  // deja pasar el toque/clic de selección
+      arrastrando = true; movido = true;
+      caja.classList.add('arrastrando');
       ev.preventDefault();
       try { caja.setPointerCapture(ev.pointerId); } catch (e) { /* ignora */ }
       caja.scrollLeft -= dx;
@@ -6256,10 +6264,14 @@ on('topoReset', 'click', () => {
   const soltar = ev => {
     pts.delete(ev.pointerId);
     if (pts.size < 2) distBase = 0;
-    if (pts.size === 0) arrastrando = false;
+    if (pts.size === 0) { arrastrando = false; caja.classList.remove('arrastrando'); }
   };
   caja.addEventListener('pointerup', soltar);
   caja.addEventListener('pointercancel', soltar);
+  // Si hubo arrastre, no dejamos que el clic final seleccione un nodo por error.
+  caja.addEventListener('click', ev => {
+    if (movido) { ev.stopPropagation(); ev.preventDefault(); movido = false; }
+  }, true);
 })();
 
 // Plegar/desplegar el panel de detalle: al ocultarlo el diagrama toma todo el
