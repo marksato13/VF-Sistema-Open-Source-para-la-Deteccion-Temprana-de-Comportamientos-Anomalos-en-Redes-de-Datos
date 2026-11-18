@@ -85,9 +85,22 @@ def deseadas(entradas: list[dict]) -> dict[str, dict]:
     return out
 
 
-def planificar(des: dict[str, dict], actuales: dict[str, dict[str, float]], ahora: float) -> list[dict]:
-    """Operaciones del helper. actuales = {set: {ip: hasta_absoluto}}."""
+def planificar(des: dict[str, dict], actuales: dict[str, dict[str, float]], ahora: float,
+               sincronizar: bool = False) -> list[dict]:
+    """Operaciones del helper. actuales = {set: {ip: hasta_absoluto}}.
+
+    sincronizar (18-nov, opcional, --sincronizar): el feed firmado aceptado manda. Una IP
+    que esta en los sets pero ya NO esta en el feed se quita. Es lo que hace que «Limpiar»
+    del panel (reset_origen en el publicador -> la Kali sale del feed) libere tambien el
+    firewall del host sin que el panel toque ningun host. Sin la opcion, el comportamiento
+    validado (solo anadir; lo que sale del feed caduca solo) no cambia.
+    """
     ops: list[dict] = []
+    if sincronizar:
+        for s in ("bloqueados", "limitados"):
+            for ip in sorted(actuales.get(s, {})):
+                if ip not in des:
+                    ops.append({"op": "quitar", "set": s, "ip": ip})
     blo, lim = actuales.get("bloqueados", {}), actuales.get("limitados", {})
     for ip, e in sorted(des.items()):
         destino = SET_DE[e["accion"]]
@@ -255,7 +268,7 @@ class Agente:
         # (con su caducidad nativa) y `add element` sobre uno existente no la amplia.
         est = self.helper.listar()
         des = deseadas(v["entradas"])
-        plan = planificar(des, _actuales(est, ahora), ahora)
+        plan = planificar(des, _actuales(est, ahora), ahora, bool(getattr(self.a, "sincronizar", False)))
         ops += plan
         resultado = {"estado": "aceptado", "secuencia": v["secuencia"], "operaciones": len(plan),
                      "rechazadas": len(v["rechazadas"]), "ajenas": v["ajenas"]}
@@ -336,6 +349,9 @@ def main(argv=None) -> int:
                    help="orden del helper restringido (sin argumentos para el helper)")
     p.add_argument("--aplicar", action="store_true", help="sin esto: dry-run (no llama al helper para cambiar)")
     p.add_argument("--seguir", action="store_true", help="proceso continuo: reacciona al cambio del feed")
+    p.add_argument("--sincronizar", action="store_true",
+                   help="quita de los sets las IPs que ya no estan en el feed firmado aceptado "
+                        "(liberacion por «Limpiar» del panel); sin esto solo se anade y lo demas caduca solo")
     p.add_argument("--sondeo-segundos", type=float, default=0.5)
     p.add_argument("--observar-segundos", type=float, default=5.0,
                    help="--seguir: cada cuanto relee los sets (retiradas y primer efecto)")

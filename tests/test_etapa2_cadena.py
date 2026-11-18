@@ -417,6 +417,49 @@ def test_agente_observa_retirada(tmp_path, claves):
     assert ev[-1]["evento"] == "retirada" and ev[-1]["ip"] == "10.10.20.30"
 
 
+def test_agente_sin_sincronizar_lo_que_sale_del_feed_sigue(tmp_path, claves):
+    """Comportamiento validado (sin --sincronizar): sacar la IP del feed no la quita."""
+    priv, pubk = claves
+    a, h, _ = agente(tmp_path, pubk, "dmz")
+    a.procesar(*firmado(priv, feed_v2([entrada(accion="BLOCK")], seq=1)))
+    assert "10.10.20.30" in h.sets["bloqueados"]
+    a.procesar(*firmado(priv, feed_v2([], seq=2)))
+    assert "10.10.20.30" in h.sets["bloqueados"]
+
+
+def test_agente_sincronizar_libera_lo_que_sale_del_feed(tmp_path, claves):
+    """«Limpiar» del panel: la Kali sale del feed firmado -> el agente la quita de los sets.
+    Lo que sigue en el feed no se toca, y la IP vuelve a entrar si se publica de nuevo."""
+    priv, pubk = claves
+    a, h, _ = agente(tmp_path, pubk, "dmz")
+    a.a.sincronizar = True
+    otra = entrada(ip="10.10.20.40", accion="LIMIT", ev="o")
+    a.procesar(*firmado(priv, feed_v2([entrada(accion="BLOCK"), otra], seq=1)))
+    assert "10.10.20.30" in h.sets["bloqueados"] and "10.10.20.40" in h.sets["limitados"]
+    a.procesar(*firmado(priv, feed_v2([otra], seq=2)))
+    assert "10.10.20.30" not in h.sets["bloqueados"] and "10.10.20.30" not in h.sets["limitados"]
+    assert "10.10.20.40" in h.sets["limitados"]
+    a.procesar(*firmado(priv, feed_v2([otra, entrada(accion="LIMIT", ev="n")], seq=3)))
+    assert "10.10.20.30" in h.sets["limitados"]
+
+
+def test_agente_sincronizar_no_actua_con_feed_rechazado(tmp_path, claves):
+    """Un feed con firma invalida nunca libera nada (fail-safe)."""
+    priv, pubk = claves
+    a, h, _ = agente(tmp_path, pubk, "dmz")
+    a.a.sincronizar = True
+    a.procesar(*firmado(priv, feed_v2([entrada(accion="BLOCK")], seq=1)))
+    d, s = firmado(priv, feed_v2([], seq=2))
+    assert a.procesar(d + b" ", s)["motivo"] == "firma_invalida"
+    assert "10.10.20.30" in h.sets["bloqueados"]
+
+
+def test_cli_sincronizar_por_omision_apagado():
+    import inspect
+    assert "--sincronizar" in inspect.getsource(ag.main)
+    assert ag.planificar({}, {"bloqueados": {"10.10.20.30": T0 + 60}}, T0) == []
+
+
 def test_agente_sin_feed_v1(tmp_path, claves):
     priv, pubk = claves
     a, h, _ = agente(tmp_path, pubk, "dmz")
