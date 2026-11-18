@@ -3663,23 +3663,20 @@ function franjaV2HTML(cv) {
   const okF = k => !!(fu[k] && fu[k].ok);
   const est = k => okF(k) ? 'ok' : '<b>ausente o ilegible</b>';
   const inc = cv.incidencias || [];
-  const sombra = cv.modo === 'sombra';
   const medidas = (fu.feed && fu.feed.ok) ? (cv.feed_entradas || 0) + ' medida(s) en el feed' : 'medidas en el feed: <b>desconocido</b>';
   const ficha = (txt, cls, tit) => '<span class="cv2-ficha' + (cls ? ' ' + cls : '') + '"' + (tit ? ' title="' + varEsc(tit) + '"' : '') + '>' + txt + '</span>';
   const fuentesOk = okF('senales_if') && okF('traza') && okF('feed');
   // 16-nov: con todo sano la franja no se muestra (pedido de Mark); solo aparece si una fuente
   // falta, el feed está atrasado o hay incidencias, para que un problema nunca quede oculto.
   if (fuentesOk && !cv.feed_atrasado && !inc.length) return '';
-  return '<div class="cv2-fichas">'
-    + ficha('<b>Cadena v2</b> · política ' + varEsc(String(cv.politica || 'desconocida')), '', 'Política de respuesta del publicador')
-    + ficha('Modo ' + varEsc(String(cv.modo)) + (sombra ? ' · las medidas son propuestas; no se ejecutan' : ''), sombra ? 'aviso' : '')
-    + ficha('Feed v2 n.º ' + varEsc(String(cv.feed_secuencia ?? '—'))
-            + (cv.feed_atrasado ? ' <b>atrasado</b>' : ' · hace ' + Math.round(cv.feed_edad_s || 0) + ' s'), cv.feed_atrasado ? 'mal' : '')
-    + ficha(medidas)
-    + ficha('Fuentes: señales IF ' + est('senales_if') + ', traza ' + est('traza') + ', feed ' + est('feed'), fuentesOk ? 'bien' : 'mal')
-    + ficha('Agente: desconocido desde el sensor · efecto: sin evidencia', '', 'El agente de srv-dmz no envía acuse al sensor')
-    + ficha('Panel de solo lectura')
-    + '</div>'
+  // 18-nov (pedido de Mark): la franja NUNCA muestra el estado normal (política, «modo sombra»,
+  // «solo lectura», acuse del agente, nº de medidas). Solo asoma el FALLO real —fuente ausente,
+  // feed atrasado o incidencia— para que un problema no quede oculto durante la demo.
+  const fallos = [];
+  if (cv.feed_atrasado) fallos.push(ficha('Feed v2 atrasado', 'mal', 'El publicador v2 no refresca el feed'));
+  if (!(fu.feed && fu.feed.ok)) fallos.push(ficha(medidas, 'mal'));
+  if (!fuentesOk) fallos.push(ficha('Fuentes: señales IF ' + est('senales_if') + ', traza ' + est('traza') + ', feed ' + est('feed'), 'mal'));
+  return (fallos.length ? '<div class="cv2-fichas">' + fallos.join('') + '</div>' : '')
     + (inc.length ? '<div class="cv2-inc"><b class="est no">INCIDENCIA: ' + inc.map(varEsc).join(' · ') + '</b></div>' : '');
 }
 function pintarCadenaV2(cv) {
