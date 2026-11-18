@@ -370,7 +370,9 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   /* Pantalla completa: el diagrama manda y el detalle se queda al lado. */
   .topo-wrap:fullscreen { background: var(--bg); padding: 1rem; gap: 1rem; height: 100%; grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
   .topo-wrap:fullscreen .topo-canvas { height: 100%; min-height: 0; }
-  .topo-wrap:fullscreen .topo-scroll { height: auto; max-height: none; display: grid; place-items: center; }
+  /* safe center: centra el diagrama, pero si es más grande que la pantalla cae a la
+     esquina para que el borde izquierdo/superior SÍ se alcance al arrastrar. */
+  .topo-wrap:fullscreen .topo-scroll { height: auto; max-height: none; display: grid; justify-content: safe center; align-content: safe center; }
   .topo-wrap:fullscreen .topo-detail { overflow-y: auto; max-height: 34vh; }
 
   .topo-node { cursor: pointer; }
@@ -6196,13 +6198,14 @@ on('topoReset', 'click', () => {
   topoZoom = null; aplicarZoom();
 });
 
-// 18-nov: mapa táctil. Pellizco con dos dedos y Ctrl/⌘ + rueda (o pellizco en el trackpad)
-// hacen zoom centrado donde apuntas; un dedo o la barra arrastran (scroll nativo). Los
-// botones +/−/Ajustar siguen para el ratón.
+// 18-nov: mapa táctil. Un dedo ARRASTRA el mapa en los dos sentidos (izquierda-derecha y
+// arriba-abajo); dos dedos hacen pellizco de zoom; Ctrl/⌘ + rueda (o pellizco en el trackpad)
+// también hace zoom centrado donde apuntas. Un toque sin mover sigue seleccionando el nodo.
+// Los botones +/−/Ajustar siguen para el ratón.
 (function () {
   const caja = document.getElementById('topoScroll');
   if (!caja || !window.PointerEvent) return;
-  caja.style.touchAction = 'pan-x pan-y';   // un dedo = desplazar; el pellizco lo tomamos nosotros
+  caja.style.touchAction = 'none';            // tomamos arrastre y pellizco nosotros
   function zoomHacia(nuevo, cx, cy) {
     const antes = escalaActual();
     nuevo = Math.max(0.25, Math.min(3, nuevo));
@@ -6220,10 +6223,10 @@ on('topoReset', 'click', () => {
     zoomHacia(escalaActual() * (ev.deltaY < 0 ? 1.12 : 1 / 1.12), ev.clientX, ev.clientY);
   }, { passive: false });
   const pts = new Map();
-  let distBase = 0, zoomBase = 1;
+  let distBase = 0, zoomBase = 1, arrastrando = false;
   caja.addEventListener('pointerdown', ev => {
     if (ev.pointerType === 'mouse') return;
-    pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, x0: ev.clientX, y0: ev.clientY });
     if (pts.size === 2) {
       const [a, b] = [...pts.values()];
       distBase = Math.hypot(a.x - b.x, a.y - b.y);
@@ -6233,14 +6236,28 @@ on('topoReset', 'click', () => {
   caja.addEventListener('pointermove', ev => {
     const p = pts.get(ev.pointerId);
     if (!p) return;
+    const dx = ev.clientX - p.x, dy = ev.clientY - p.y;
     p.x = ev.clientX; p.y = ev.clientY;
-    if (pts.size === 2 && distBase) {
+    if (pts.size === 2 && distBase) {                       // pellizco = zoom
       const [a, b] = [...pts.values()];
       ev.preventDefault();
       zoomHacia(zoomBase * (Math.hypot(a.x - b.x, a.y - b.y) / distBase), (a.x + b.x) / 2, (a.y + b.y) / 2);
+      return;
+    }
+    if (pts.size === 1) {                                   // un dedo = arrastrar en los dos ejes
+      if (!arrastrando && Math.hypot(ev.clientX - p.x0, ev.clientY - p.y0) < 4) return;  // deja pasar el toque-selección
+      arrastrando = true;
+      ev.preventDefault();
+      try { caja.setPointerCapture(ev.pointerId); } catch (e) { /* ignora */ }
+      caja.scrollLeft -= dx;
+      caja.scrollTop -= dy;
     }
   });
-  const soltar = ev => { pts.delete(ev.pointerId); if (pts.size < 2) distBase = 0; };
+  const soltar = ev => {
+    pts.delete(ev.pointerId);
+    if (pts.size < 2) distBase = 0;
+    if (pts.size === 0) arrastrando = false;
+  };
   caja.addEventListener('pointerup', soltar);
   caja.addEventListener('pointercancel', soltar);
 })();
