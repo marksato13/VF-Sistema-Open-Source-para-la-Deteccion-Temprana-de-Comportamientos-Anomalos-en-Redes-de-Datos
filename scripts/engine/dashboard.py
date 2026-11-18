@@ -406,6 +406,11 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .herr-t { display: flex; flex-direction: column; line-height: 1.25; }
   .herr-t b { font-size: 0.9rem; color: var(--text); }
   .herr-t small { font-size: 0.74rem; color: var(--text-dim); }
+  .herr-capa { font: 700 0.68rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); margin: 0.55rem 0 0.1rem; padding-left: 0.1rem; }
+  .herr-demo { font: 700 0.6rem var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
+    color: #052e2b; background: var(--accent); border-radius: 5px; padding: 0.05rem 0.3rem; vertical-align: 1px; }
+  .herr-leyenda { font-size: 0.68rem; color: var(--text-dim); margin-top: 0.6rem; }
   .topo-node.ok .ico { color: var(--ok); }
   .topo-node.warn .ico { color: var(--amber); }
   .topo-node.bad .ico { color: var(--danger); }
@@ -448,7 +453,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .topo-host .hostip { fill: var(--accent); font: 600 11px var(--mono); }
   .topo-pkt { filter: drop-shadow(0 0 4px var(--accent)); }
   .topo-pkt rect { fill: var(--accent); stroke: #fff; stroke-width: 1; }
-  .topo-pkt path { fill: none; stroke: #0b1220; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+  .topo-pkt path { fill: none; stroke: #0b1220; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
   @media (prefers-reduced-motion: reduce) { .topo-pkt { display: none; } }
   .topo-cmd { background: #0b1220; border: 1px solid var(--border); border-radius: 7px;
     padding: 0.5rem 0.6rem; margin: 0.5rem 0; font: 11px var(--mono); color: var(--text-dim);
@@ -4639,11 +4644,13 @@ function icoCirculo(ico, cx, cy, r, color) {
 const TOPO_HERR = {
   atacante: [
     { n: 'Kali Linux', d: 'VM atacante · 10.10.20.30', ico: 'kali', c: '#367bf0' },
-    { n: 'nmap', d: 'escaneo de puertos → BLOCK', ico: 'radar', c: '#1d4ed8' },
-    { n: 'curl', d: 'fuerza bruta / flood HTTP', ico: 'terminal', c: '#0b4f6c' },
-    { n: 'nikto', d: 'vulnerabilidades web', ico: 'bicho', c: '#15803d' },
-    { n: 'dig · DGA', d: 'DNS de alta entropía → LIMIT', ico: 'red', c: '#b45309' },
-    { n: 'arpspoof', d: 'ARP spoofing · trabajo futuro', ico: 'flechas', c: '#6b7280' },
+    { n: 'ping (inundación)', d: 'flood ICMP → BLOCK', ico: 'flechas', c: '#0891b2', capa: 'L3 · Red', demo: true },
+    { n: 'nmap', d: 'escaneo de puertos → BLOCK', ico: 'radar', c: '#1d4ed8', capa: 'L4 · Transporte', demo: true },
+    { n: 'curl · fuerza bruta', d: 'logins fallidos 401 → BLOCK', ico: 'terminal', c: '#0b4f6c', capa: 'L7 · Aplicación', demo: true },
+    { n: 'curl · flood HTTP', d: 'muchas peticiones/s → LIMIT', ico: 'terminal', c: '#0e7490', capa: 'L7 · Aplicación', demo: true },
+    { n: 'dig · DGA', d: 'DNS de alta entropía → LIMIT', ico: 'red', c: '#b45309', capa: 'L7 · Aplicación', demo: true },
+    { n: 'nikto', d: 'vulnerabilidades web', ico: 'bicho', c: '#15803d', capa: 'L7 · Aplicación', demo: false },
+    { n: 'arpspoof', d: 'ARP spoofing · trabajo futuro', ico: 'nic', c: '#6b7280', capa: 'L2 · Enlace', demo: false },
   ],
   clientes: [
     { n: 'Python', d: 'clientes_lab.py · servidor_lab.py', ico: 'python', c: '#3776ab' },
@@ -4665,9 +4672,22 @@ const TOPO_HERR = {
 function herramientasHTML(id) {
   const l = TOPO_HERR[id];
   if (!l) return '';
-  return '<aside class="herr-col"><div class="cod-sub">Herramientas</div>' + l.map(h =>
+  const tarjeta = h =>
     `<div class="herr"><span class="herr-ico" style="background:${h.c}"><svg width="30" height="30" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[h.ico] || ''}</svg></span>`
-    + `<span class="herr-t"><b>${h.n}</b><small>${h.d}</small></span></div>`).join('') + '</aside>';
+    + `<span class="herr-t"><b>${h.n}${h.demo ? ' <span class="herr-demo">demo</span>' : ''}</b><small>${h.d}</small></span></div>`;
+  // Si las herramientas traen capa (p. ej. el atacante), se agrupan por capa del modelo OSI
+  // (L2/L3/L4/L7) y se marca con «demo» la que se lanza en la sustentación.
+  if (l.some(h => h.capa)) {
+    let html = '<aside class="herr-col"><div class="cod-sub">Ataques por capa</div>';
+    html += l.filter(h => !h.capa).map(tarjeta).join('');      // la plataforma (Kali), sin capa
+    const capas = [];
+    l.forEach(h => { if (h.capa && !capas.includes(h.capa)) capas.push(h.capa); });
+    for (const capa of capas) {
+      html += `<div class="herr-capa">${capa}</div>` + l.filter(h => h.capa === capa).map(tarjeta).join('');
+    }
+    return html + '<div class="herr-leyenda"><span class="herr-demo">demo</span> = la lanzas en la sustentación</div></aside>';
+  }
+  return '<aside class="herr-col"><div class="cod-sub">Herramientas</div>' + l.map(tarjeta).join('') + '</aside>';
 }
 
 // Dos vistas del mismo sistema. "esencial" es el camino del paquete en siete
@@ -4706,7 +4726,9 @@ const TOPO_VISTAS = {
     // Flujo HORIZONTAL de izquierda a derecha: cada fase es una columna
     // (Hosts | Adquisicion | Analisis | Decision | Observabilidad) y el paquete
     // avanza de izquierda a derecha. Un punto lo recorre en vivo.
-    packet: 'M374,70 L374,275 L540,139 L628,215 L894,139 L894,249 L1148,187 L1424,187 L1680,183',
+    // El sobre recorre el flujo y BAJA por la columna de adquisición, pasando por tcpdump,
+    // el pcap, Suricata y eve.json (las dos ramas), antes de seguir al análisis.
+    packet: 'M374,99 L374,275 L628,139 L628,379 L894,139 L894,249 L1148,187 L1424,187 L1680,183',
     grupos: [
       { x: 12,   y: 32, w: 200, h: 456, txt: 'Hosts · VLAN 20/30' },
       { x: 272,  y: 32, w: 460, h: 456, txt: 'Adquisición',          n: 1 },
@@ -6064,9 +6086,9 @@ function renderTopologia(status) {
 
   // Un sobre (paquete de datos) recorre la tuberia en bucle: hace visible que el dato fluye.
   const packet = v.packet
-    ? `<g class="topo-pkt"><rect x="-8.5" y="-6" width="17" height="12" rx="2.5"/>`
-      + `<path d="M-8.5,-5 L0,1.4 L8.5,-5"/>`
-      + `<animateMotion dur="6s" repeatCount="indefinite" calcMode="linear" path="${v.packet}"/></g>`
+    ? `<g class="topo-pkt"><rect x="-12" y="-8" width="24" height="16" rx="3"/>`
+      + `<path d="M-12,-6.5 L0,2 L12,-6.5"/>`
+      + `<animateMotion dur="9s" repeatCount="indefinite" calcMode="linear" path="${v.packet}"/></g>`
     : '';
 
   // Los hosts no pasan por topoEstado: se dibujan con su IP y su rol.
