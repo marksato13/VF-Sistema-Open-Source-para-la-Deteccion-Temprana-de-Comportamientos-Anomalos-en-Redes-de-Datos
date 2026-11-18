@@ -1525,7 +1525,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
 
     <div class="umb-box">
       <h3 class="umb-h">Umbrales y régimen de decisión</h3>
-      <p class="lede-small">Las 28 variables entran <strong>juntas</strong> a un modelo multivariante (IsolationForest): una ventana es anómala si su <strong>score combinado &lt; &minus;0,569397</strong> (umbral vigente, <code>if_limpio_2026_10</code>) &mdash; un único umbral, calibrado estadísticamente (percentil &alpha;&nbsp;=&nbsp;0,05 sobre el conjunto de oro). <strong>No hay un corte por variable</strong>: el valor de una sola solo cobra sentido combinado con el resto. Solo una parte de las variables lleva, además, un <strong>umbral heurístico explícito</strong> &mdash; criterio razonado y versionado, no calibrado como el del modelo:</p>
+      <p class="lede-small">Las 28 variables entran <strong>juntas</strong> a un modelo multivariante (IsolationForest): una ventana es anómala si su <strong>score combinado &lt; &minus;0,622389</strong> (punto operativo adoptado, &alpha;&nbsp;=&nbsp;0,01, <code>if_limpio_2026_10</code>) &mdash; un único umbral, calibrado estadísticamente (percentil &alpha;&nbsp;=&nbsp;0,01 de las puntuaciones de validación). El motor desplegado aún registra con &alpha;&nbsp;=&nbsp;0,05 (&minus;0,569397). <strong>No hay un corte por variable</strong>: el valor de una sola solo cobra sentido combinado con el resto. Solo una parte de las variables lleva, además, un <strong>umbral heurístico explícito</strong> &mdash; criterio razonado y versionado, no calibrado como el del modelo:</p>
       <div class="umb-tabla">
         <table>
           <thead><tr><th>Regla</th><th>Variables y umbral</th><th>Acción</th><th>Por qué ese valor</th></tr></thead>
@@ -1571,7 +1571,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   <section id="s-modelo">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg><h2>Modelo congelado</h2></div>
     <div class="grid" id="model"></div>
-    <p class="vig-hist" id="modeloVigHist"><b>Vigente:</b> el detector y el umbral de las tarjetas los lee el panel del manifiesto que usa el motor. <b>Histórico:</b> <code>if_recalibrado_2026_09</code> (umbral &minus;0,568892, FPR 4,45&#8239;% en el oro) estuvo desplegado hasta el 19-oct-2026; sus cifras aparecen solo como antecedente.</p>
+    <p class="vig-hist" id="modeloVigHist"><b>Punto operativo adoptado:</b> &alpha;&nbsp;=&nbsp;0,01, umbral &minus;0,622389 (score_samples; &minus;0,122389 en la escala de decisión), modelo <code>if_limpio_2026_10</code>. <b>Nota:</b> la tarjeta «Umbral vigente» muestra el valor que el <b>motor registra en vivo</b>; el motor desplegado aún opera en &alpha;&nbsp;=&nbsp;0,05 (&minus;0,569397), así que puede mostrar ese número hasta re-apuntarlo. <b>Histórico:</b> <code>if_recalibrado_2026_09</code> (umbral &minus;0,568892, FPR 4,45&#8239;% en el oro) estuvo desplegado hasta el 19-oct-2026; sus cifras aparecen solo como antecedente.</p>
     <div class="fam-wrap" id="modeloFamilias"></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="16.5" r="0.7" fill="currentColor" stroke="none"/></svg><span id="modeloDebil"><strong>Punto débil conocido:</strong> un PERMIT del modelo no descarta un ataque por sí solo; los heurísticos cubren lo que el modelo no ve.</span></div>
 
@@ -1581,7 +1581,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Modelo</th><th class="r">ROC-AUC</th><th class="r">AP</th><th class="r">FPR</th><th class="r">Recall (umbral propio)</th></tr></thead>
       <tbody>
-        <tr><td style="box-shadow:inset 3px 0 0 var(--ok)"><b>IF limpio · <code>if_limpio_2026_10</code> (vigente desde 19-oct)</b></td><td class="num r">0,9247</td><td class="num r">0,1858</td><td class="num r">4,53&#8239;%</td><td class="num r"><b>64,29&#8239;%</b></td></tr>
+        <tr><td style="box-shadow:inset 3px 0 0 var(--ok)"><b>IF limpio · <code>if_limpio_2026_10</code> (punto operativo, &alpha;&nbsp;=&nbsp;0,01)</b></td><td class="num r">0,9247</td><td class="num r">0,1858</td><td class="num r">0,87&#8239;%</td><td class="num r"><b>59,52&#8239;%</b></td></tr>
         <tr><td>IF recalibrado · <code>if_recalibrado_2026_09</code> (histórico, hasta 19-oct)</td><td class="num r">0,9228</td><td class="num r">0,2026</td><td class="num r">4,45&#8239;%</td><td class="num r">64,29&#8239;%</td></tr>
         <tr><td>IF scaled (lab)</td><td class="num r">0,8250</td><td class="num r">0,0043</td><td class="num r">30,34&#8239;%</td><td class="num r">91,67&#8239;%</td></tr>
         <tr><td>IF primary (lab)</td><td class="num r">0,8283</td><td class="num r">0,0044</td><td class="num r">29,07&#8239;%</td><td class="num r">82,14&#8239;%</td></tr>
@@ -1591,9 +1591,9 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
         <tr><td>Elliptic Envelope (lab)</td><td class="num r">0,3443</td><td class="num r">0,0014</td><td class="num r">86,90&#8239;%</td><td class="num r">42,86&#8239;%</td></tr>
       </tbody>
     </table></div>
-    <p class="toolbar-hint">El IF limpio detecta 54/84 ventanas etiquetadas y produce 2 961 falsas alarmas: precisión 1,79&#8239;%, F1 0,0348. El antecedente tiene mejor AP y menor FPR: no se afirma superioridad general ni equivalencia estadística. Figuras y scores completos: repositorio de orquestación, sección 4.1.</p>
-    <div class="note"><span><strong>Cómo se comparó.</strong> Mismas 65 505 ventanas, con el umbral propio de cada configuración. La evaluación es reutilizada, no un test ciego independiente. El origen de entrenamiento difiere: se mide transferencia a esta red, no superioridad intrínseca de un algoritmo. Se retiró Det@FPR5% porque fijaba el corte en negativos de prueba. La sensibilidad correcta usa validación; α=0,05 no demuestra un óptimo.</span></div>
-    <div class="note"><span><strong>El cálculo.</strong> El IF asigna scores menores a las observaciones más anómalas. El corte congelado es <code>score_samples(x) &lt; −0,5693969936322356</code>, percentil 5 de validación. ROC-AUC resume ordenamiento; AP es precisión media, no una garantía de precisión en el umbral. La prevalencia es 84/65 505 = 0,128&#8239;%. La validación contiene 80 ventanas Kali, 17 con actividad y normalidad no verificada.</span></div>
+    <p class="toolbar-hint">En el punto operativo adoptado (&alpha;&nbsp;=&nbsp;0,01) el IF limpio detecta 50/84 ventanas etiquetadas y produce 567 falsas alarmas: precisión 8,10&#8239;%, F1 14,27&#8239;%, FPR 0,87&#8239;%. No se afirma superioridad general ni equivalencia estadística frente al antecedente. Figuras y scores completos: repositorio de orquestación, sección 4.1.</p>
+    <div class="note"><span><strong>Cómo se comparó.</strong> Mismas 65 505 ventanas, con el umbral propio de cada configuración. La evaluación es reutilizada, no un test ciego independiente. El origen de entrenamiento difiere: se mide transferencia a esta red, no superioridad intrínseca de un algoritmo. Se retiró Det@FPR5% porque fijaba el corte en negativos de prueba. La sensibilidad correcta usa validación; α=0,01 es el punto operativo adoptado, no un óptimo demostrado.</span></div>
+    <div class="note"><span><strong>El cálculo.</strong> El IF asigna scores menores a las observaciones más anómalas. El corte congelado del punto operativo adoptado es <code>score_samples(x) &lt; −0,6223889502095352</code> (−0,122389 en la escala de la función de decisión), percentil 1 de validación. ROC-AUC resume ordenamiento; AP es precisión media, no una garantía de precisión en el umbral. La prevalencia es 84/65 505 = 0,128&#8239;%. La validación contiene 80 ventanas Kali, 17 con actividad y normalidad no verificada.</span></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Archivos y código</strong> (auditables desde <em>Mapa &rarr; Ver archivos</em>, con pseudocódigo y diagrama de flujo): <code>entrenar_preliminar.py</code> entrena y congela el umbral; <code>promover_preliminar.py</code> arma el Pipeline + manifiesto; <code>verificar_equivalencia_umbral.py</code> comprueba hash, orden y umbral; <code>compare_frozen_models_metrics.py</code> reproduce las métricas de los 7; <code>significancia_modelos.py</code> hace McNemar + Holm. Los 7 candidatos congelados están en <code>artifacts/model/candidates/*.joblib</code>.</span></div>
     <p class="lede-small"><strong>Ablación histórica del predecesor</strong> sobre 9 episodios (3 familias con 3 repeticiones). No trasladar estas cifras al modelo limpio: su campaña final sigue pendiente.</p>
     <div class="grid">
@@ -4814,7 +4814,7 @@ const TOPO_VISTAS = {
     nodos: [
       { id: 'm_datos',  x: 32,   y: 78, w: 196, h: 62, icono: 'disco',    titulo: 'Línea base real',       tag: 'SPAN · PCAP · eve', val: 'hecho' },
       { id: 'm_feat',   x: 262,  y: 78, w: 196, h: 62, icono: 'tabla',    titulo: '28 variables L3/L4/L7', tag: 'extractor congelado', val: 'hecho' },
-      { id: 'm_modelo', x: 492,  y: 78, w: 196, h: 62, icono: 'modelo',   titulo: 'IF + heurísticos',      tag: 'θ = −0,569397', val: 'hecho' },
+      { id: 'm_modelo', x: 492,  y: 78, w: 196, h: 62, icono: 'modelo',   titulo: 'IF + heurísticos',      tag: 'θ = −0,622389', val: 'hecho' },
       { id: 'm_eval',   x: 722,  y: 78, w: 196, h: 62, icono: 'lupa',     titulo: 'Replay vs Suricata',    tag: '9/9 vs 0/9 · N=3', val: 'parcial · falta C3' },
       { id: 'm_resp',   x: 952,  y: 78, w: 196, h: 62, icono: 'escudo',   titulo: 'PERMIT/LIMIT/BLOCK',    tag: 'feed firmado', val: 'hecho' },
       { id: 'm_desp',   x: 1182, y: 78, w: 196, h: 62, icono: 'nic',      titulo: 'Desplegado en sensor',  tag: 'systemd · replicable', val: 'hecho' },
@@ -4854,7 +4854,7 @@ const TOPO_VISTAS = {
       { id: 'c_cand',    x: 808,  y: 72,  w: 200, h: 64, icono: 'modelo',   titulo: 'Candidatos',           tag: 'IF · LOF · OCSVM · EE', val: '7 (laboratorio) · IF aquí' },
       { id: 'c_metr',    x: 1064, y: 72,  w: 200, h: 64, icono: 'lupa',     titulo: 'Comparar métricas',    tag: 'FPR · recall · F1 · AUC', val: 'criterio fijado antes' },
       { id: 'c_sel',     x: 1320, y: 72,  w: 200, h: 64, icono: 'decision', titulo: 'Selección', forma: 'rombo', rsub: 'IF → esta red' },
-      { id: 'c_cong',    x: 1320, y: 252, w: 200, h: 64, icono: 'cpu',      titulo: 'Congelar modelo', tag: 'α=0,05 · −0,569397', val: 'sha256 df547da0…' },
+      { id: 'c_cong',    x: 1320, y: 252, w: 200, h: 64, icono: 'cpu',      titulo: 'Congelar modelo', tag: 'α=0,01 · −0,622389', val: 'sha256 df547da0…' },
       { id: 'c_desp',    x: 1064, y: 252, w: 200, h: 64, icono: 'nic',      titulo: 'Despliegue',           tag: 'promover + verificar', val: 'manifiesto + hash' },
       { id: 'c_acum',    x: 808,  y: 252, w: 200, h: 64, icono: 'fichero',  titulo: 'Acumulación',          tag: 'temporizador · v3', val: 'cada 10 min' },
       { id: 'c_vivo',    x: 552,  y: 252, w: 200, h: 64, icono: 'escudo',   titulo: 'Motor en vivo',        tag: 'PERMIT · ALERT · BLOCK', val: 'marca IPs sospechosas' },
@@ -4950,7 +4950,7 @@ const TOPO_VISTAS = {
       { id: 'd_excluida',  x: 40,   y: 204, w: 190, h: 48, icono: 'tijera', titulo: 'IP excluida',      tag: 'SE CUENTA · NO SE PUNTÚA', val: 'fuera de alcance', clase: 'sumidero' },
       { id: 'modelo',      x: 330,  y: 70,  w: 200, h: 58, icono: 'modelo', titulo: 'Isolation Forest', tag: 'SOLO CON PAQUETES' },
       { id: 'heuristicos', x: 330,  y: 170, w: 200, h: 58, icono: 'reglas', titulo: 'Heurísticos',      tag: 'TAMBIÉN SIN PAQUETES (L7)' },
-      { id: 'd_alert',     x: 630,  y: 70,  w: 200, h: 58, icono: 'decision', titulo: 'ALERT del modelo', tag: 's(x) < −0,569397', val: 'señal · sin medida' },
+      { id: 'd_alert',     x: 630,  y: 70,  w: 200, h: 58, icono: 'decision', titulo: 'ALERT del modelo', tag: 's(x) < −0,622389', val: 'señal · sin medida' },
       { id: 'd_reglas',    x: 630,  y: 170, w: 300, h: 58, icono: 'reglas', titulo: 'Regla disparada',  tag: 'ABUSO HTTP · DNS → LIMIT', val: 'fuerza bruta · escaneo → BLOCK' },
       { id: 'registro',    x: 1060, y: 124, w: 200, h: 50, icono: 'fichero', titulo: 'motor_decision.log', tag: 'IP · VENTANA · SCORE · REGLA', clase: 'artefacto' },
       { id: 'd_nunca',     x: 40,   y: 330, w: 200, h: 58, icono: 'tijera', titulo: 'Nunca bloquear',   tag: 'FILTRO', val: 'bastión · sensor · DNS' },
@@ -5321,12 +5321,12 @@ const TOPO_TEXTO = {
     enlace: { href: '#s-vivo', vtab: 'eve', txt: 'Ver eventos parseados en vivo' },
   },
   modelo: {
-    que: 'Isolation Forest limpio ajustado en esta red, con umbral congelado en validación (score_samples < -0,569397).',
+    que: 'Isolation Forest limpio ajustado en esta red, con umbral congelado en validación (score_samples < -0,622389, punto operativo α = 0,01).',
     codigo: {
       archivo: 'modelo congelado en artifacts/ · entrenamiento en scripts/modeling/',
       pseudo: [
         'score ← modelo.score_samples(features)',
-        'si score < umbral (−0,569397): ALERT → LIMIT',
+        'si score < umbral (−0,622389): ALERT → LIMIT',
         'si no: PERMIT',
       ],
       editar: 'no se edita a mano: se reentrena y una persona lo promueve (ver Aprendizaje)',
@@ -5659,7 +5659,7 @@ const TOPO_TEXTO = {
     nota: 'La limpieza acota la ENTRADA (deduplicar el espejo, quitar plano de control), nunca las fórmulas. 27 de 28 variables muestran variación observable.',
   },
   m_modelo: {
-    que: 'F3 · Detector híbrido: IF limpio con θ=−0,569397 y cuatro heurísticos (fuerza bruta, escaneo, abuso HTTP y DNS inusual). La evaluación offline del IF no es la evaluación del híbrido. La campaña del modelo limpio tiene resultados parciales; falta una batería completa y consistente.',
+    que: 'F3 · Detector híbrido: IF limpio con θ=−0,622389 (α = 0,01) y cuatro heurísticos (fuerza bruta, escaneo, abuso HTTP y DNS inusual). La evaluación offline del IF no es la evaluación del híbrido. La campaña del modelo limpio tiene resultados parciales; falta una batería completa y consistente.',
     nota: 'El modelo se elige comparando 7 candidatos, no a ciegas; el umbral se calibra en validación con objetivo de falsos positivos y se CONGELA antes de mirar el test.',
   },
   m_eval: {
@@ -5726,19 +5726,19 @@ const TOPO_TEXTO = {
     que: 'Con qué métricas. Sobre tráfico normal: FPR en validación (para fijar el umbral) y en prueba (una sola vez). Sobre ataques: tasa de detección con la Kali. En el laboratorio, además: precisión, recall, F1, MCC, ROC-AUC y PR-AUC, con McNemar + Holm entre pares.',
     flujoTit: 'Métricas del IF vigente',
     flujo: [
-      {paso: 'FPR validación', fichero: 'ensayo-if-v2.json', garantia: '5,00 % (por construcción: α = 0,05)'},
-      {paso: 'FPR prueba', fichero: 'Tabla 6 (4.1)', garantia: '4,53 % sobre 65 421 ventanas normales; IF offline'},
-      {paso: 'Detección Kali', fichero: 'nota M', garantia: '54/84 = 64,3 % global; HTTP 35/43'},
+      {paso: 'FPR validación', fichero: 'ensayo-if-v2.json', garantia: '1,00 % (por construcción: α = 0,01)'},
+      {paso: 'FPR prueba', fichero: 'Tabla 6 (4.1)', garantia: '0,87 % sobre 65 421 ventanas normales; IF offline'},
+      {paso: 'Detección Kali', fichero: 'nota M', garantia: '50/84 = 59,5 % global'},
     ],
-    nota: 'El corte usa validación con α=0,05. El 4,53 % es del IF offline, no del híbrido; evaluación reutilizada, no test ciego independiente.',
+    nota: 'El corte usa validación con α=0,01. El 0,87 % es del IF offline, no del híbrido; evaluación reutilizada, no test ciego independiente.',
   },
   c_sel: {
-    que: 'El OCSVM del laboratorio marca 99,57 % del tráfico normal como anómalo. El IF limpio obtiene FPR 4,53 % y recall 54/84, pero precisión 1,79 %. Se mide transferencia a esta red; no superioridad intrínseca ni cumplimiento de una meta de aceptación independiente.',
+    que: 'El OCSVM del laboratorio marca 99,57 % del tráfico normal como anómalo. El IF limpio obtiene FPR 0,87 % y recall 50/84, precisión 8,10 % (α = 0,01). Se mide transferencia a esta red; no superioridad intrínseca ni cumplimiento de una meta de aceptación independiente.',
     nota: 'La ablación 6/9, 7/9 y 9/9 es histórica del predecesor. El modelo limpio requiere su campaña final; no trasladar esas coberturas.',
     enlace: { href: '#s-modelo', txt: 'Ver «Pruebas previas» y la ablación' },
   },
   c_cong: {
-    que: 'Pipeline con escalador e IF; percentil α=0,05 en validación: score_samples < −0,569397 (decision_function < −0,069397). No se reajusta durante la evaluación.',
+    que: 'Pipeline con escalador e IF; percentil α=0,01 en validación: score_samples < −0,622389 (decision_function < −0,122389). No se reajusta durante la evaluación.',
     flujoTit: 'Qué queda fijo',
     flujo: [
       {paso: 'Pipeline', fichero: 'if_limpio_2026_10_desplegable.joblib', garantia: 'sha256 df547da0…fd60'},
