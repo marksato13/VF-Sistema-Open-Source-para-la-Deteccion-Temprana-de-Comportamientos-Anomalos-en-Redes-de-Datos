@@ -1534,10 +1534,11 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
             <tr><td class="umb-r">brute_force</td><td>&ge;5 req HTTP/60s <b>y</b> &ge;80&nbsp;% de fallo de auth (401/403)</td><td><span class="badge acc-block">BLOCK</span></td><td>Ráfaga de logins casi todos fallidos: señal inequívoca. El modelo mide flojo justo en este patrón.</td></tr>
             <tr><td class="umb-r">http_abuse</td><td>&ge;100 req HTTP/60s sin patrón de fuerza bruta</td><td><span class="badge acc-limit">LIMIT</span></td><td>Volumen alto <b>ambiguo</b> (puede ser uso pesado legítimo): se degrada la tasa, no se corta.</td></tr>
             <tr><td class="umb-r">dns_entropy</td><td>&ge;20 consultas DNS/60s <b>y</b> (&ge;50&nbsp;% NXDOMAIN <b>ó</b> &ge;45&nbsp;% nombres únicos)</td><td><span class="badge acc-limit">LIMIT</span></td><td>El hueco donde el modelo sacó 0&nbsp;% (DNS de alta entropía). Los ratios se bajaron a 0,45 porque el SPAN duplica tramas y topa en ~0,5. FPR 0/527 sobre la línea base.</td></tr>
+            <tr><td class="umb-r">icmp_flood</td><td>&ge;50&nbsp;% de paquetes ICMP <b>y</b> &gt;100 paquetes/s (ventana de 10&nbsp;s)</td><td><span class="badge acc-block">BLOCK</span></td><td>Inundación de capa de red (DoS ICMP). Calibrado con 3,1&nbsp;M de ventanas reales: el máximo ICMP legítimo fue 43,6&nbsp;paq/s y los floods 318&ndash;3997&nbsp;paq/s. Cubre el hueco donde el modelo medía flojo en L3.</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="toolbar-hint">Los umbrales heurísticos son <b>criterio razonado, versionado (2026-10-06.2) y configurable</b> &mdash; no calibrados estadísticamente como el umbral del modelo. Las otras 20 variables no tienen corte fijo: su valor lo pondera el modelo junto con el resto.</p>
+      <p class="toolbar-hint">Los umbrales heurísticos son <b>criterio razonado, versionado (2026-11-03.2) y configurable</b> &mdash; no calibrados estadísticamente como el umbral del modelo. Las otras 20 variables no tienen corte fijo: su valor lo pondera el modelo junto con el resto.</p>
     </div>
   </section>
 
@@ -2127,19 +2128,32 @@ const ESC_CATALOGO = [
             decisiones: 'http_abuse: ≥ 600 peticiones en 60 s.',
             respuestas: 'LIMIT firmado en el feed v2, con caducidad.',
             host: 'Modo sombra: el servidor sigue atendiendo (la medida no se aplica).' } },
+  { id: 'brute', capa: 'L7 · Aplicación', tipo: 'ataque', nombre: 'Fuerza bruta HTTP',
+    simula: 'Ráfaga de logins fallidos contra un endpoint que exige autenticación (401).',
+    desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
+    comando: 'for i in $(seq 1 120); do curl -s -o /dev/null -u x:x http://10.10.30.10:8081/; done',
+    espera: 'Regla brute_force (≥ 5 req HTTP/60 s y ≥ 80 % de fallo de auth 401/403) → BLOCK hacia srv-dmz.',
+    guion: ['Muchos intentos de login casi todos fallidos (401): la huella de un ataque de credenciales.',
+            'El modelo mide flojo este patrón; quien lo caza es la regla brute_force (ratio de fallos de auth).',
+            'BLOCK firmado y con caducidad. Es el valor del híbrido: el heurístico tapa el hueco del modelo.'],
+    tour: { ataque: '120 intentos de login fallidos contra el endpoint 8081.',
+            actividad: 'La Kali sube con BLOCK.',
+            decisiones: 'brute_force: ≥ 80 % de 401 en 60 s.',
+            respuestas: 'BLOCK firmado en el feed v2, con caducidad.',
+            host: 'Con enforcement: la IP cae en nftables del servidor; en sombra solo se publica.' } },
   { id: 'l3', capa: 'L3 · Red', tipo: 'ataque', nombre: 'Inundación ICMP',
     simula: 'Un equipo satura al servidor con pings: denegación de servicio en capa de red.',
     desde: 'Kali · 10.10.20.30 (sin sudo)', ip: '10.10.20.30',
     comando: 'for k in 1 2 3 4; do ping -q -i 0.002 -s 1200 -w 60 10.10.30.10 >/dev/null & done; wait',
-    espera: 'El motor actual no tiene regla ICMP: solo el modelo lo ve (ALERT) y la política if_senal no publica medida. Muestra la señal del IF, no una respuesta.',
+    espera: 'Regla icmp_flood (ventana casi toda ICMP —≥ 50 %— con más de 100 paquetes/s): BLOCK hacia srv-dmz. Cubre el hueco de capa de red donde el modelo medía flojo.',
     guion: ['Capa de red: ≈ 2000 paquetes ICMP por segundo.',
-            'El modelo ve el volumen anómalo (ALERT); ninguna regla lo cubre.',
-            'Sin medida: con la política if_senal el modelo solo es señal. Es un límite declarado del alcance.'],
+            'El heurístico icmp_flood lo caza (y el modelo además lo marca como ALERT).',
+            'BLOCK con caducidad: la IP cae en nftables del servidor; el ping deja de pasar.'],
     tour: { ataque: '4 pings en paralelo: ≈ 2000 paquetes/s de ICMP.',
-            actividad: 'La Kali aparece con ALERT del modelo, sin acción.',
-            decisiones: 'Score del IF bajo el umbral; ninguna regla.',
-            respuestas: 'Sin medida en el feed.',
-            host: 'El ping sigue pasando.' } },
+            actividad: 'La Kali aparece con acción BLOCK (regla icmp_flood).',
+            decisiones: 'Ventana por ventana: regla icmp_flood, acción BLOCK.',
+            respuestas: 'BLOCK firmado en el feed v2, con caducidad.',
+            host: 'Con enforcement: la IP cae en nftables del servidor y el ping deja de pasar (100 % de pérdida); en sombra solo se publica.' } },
   { id: 'l7dns', capa: 'L7 · Aplicación', tipo: 'ataque', nombre: 'DNS de alta entropía (DGA)',
     simula: 'Malware que busca su servidor de control con nombres aleatorios.',
     desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
@@ -5334,14 +5348,15 @@ const TOPO_TEXTO = {
     nota: 'Calibrado en ESTA red. El modelo que venía del laboratorio, con su umbral, marcaba como anómalo casi todo el tráfico normal de aquí —inservible—; recalibrado con datos propios cumple el objetivo de falsos positivos. No fue solo mover el umbral: cambiaron a la vez el modelo (OCSVM→Isolation Forest), los datos (red propia) y el alcance, y el efecto de cada factor no se aisló. Score por debajo del umbral = anomalía → LIMIT.',
   },
   heuristicos: {
-    que: 'Reglas deterministas sobre las mismas variables de la ventana, complemento del modelo: fuerza bruta, escaneo de puertos, abuso HTTP y DNS de alta entropía.',
-    nota: 'Cubren huecos donde el modelo mide flojo (p.ej. DNS-entropy). El motor del sensor declara VERSION_UMBRALES 2026-10-06.2; la unidad del publicador todavía etiqueta el feed como 2026-10-06.1. La discrepancia de trazabilidad debe corregirse antes de atribuir una versión única al flujo. Los ratios de unicidad de 0,45 consideran copias del espejo SPAN; la rama de ráfaga de port_scan es posterior al piloto 1/3.',
-    flujoTit: 'Las cuatro reglas (umbrales; versión del motor 2026-10-06.2)',
+    que: 'Reglas deterministas sobre las mismas variables de la ventana, complemento del modelo: fuerza bruta, escaneo de puertos, abuso HTTP, DNS de alta entropía e inundación ICMP.',
+    nota: 'Cubren huecos donde el modelo mide flojo (p.ej. DNS-entropy). El motor del sensor declara VERSION_UMBRALES 2026-11-03.2; la unidad del publicador todavía etiqueta el feed como 2026-10-06.1. La discrepancia de trazabilidad debe corregirse antes de atribuir una versión única al flujo. Los ratios de unicidad de 0,45 consideran copias del espejo SPAN; la rama de ráfaga de port_scan es posterior al piloto 1/3.',
+    flujoTit: 'Las cinco reglas (umbrales; versión del motor 2026-11-03.2)',
     flujo: [
       {paso: 'Fuerza bruta', fichero: 'heuristicos.py', garantia: '≥5 req HTTP/60s y ≥80% de fallo de auth → BLOCK'},
       {paso: 'Escaneo de puertos', fichero: 'heuristicos.py', garantia: '≥20 intentos/30s, unicidad ≥0,45 y ≤30% completadas; O ráfaga ≥200/30s y ≤10% completadas → BLOCK'},
       {paso: 'Abuso HTTP', fichero: 'heuristicos.py', garantia: '≥100 req/60s con <80% de fallo de auth (no es fuerza bruta) → LIMIT'},
       {paso: 'DNS-entropy', fichero: 'heuristicos.py', garantia: '≥20 consultas/60s con ≥45% de nombres únicos o ≥50% de NXDOMAIN → LIMIT'},
+      {paso: 'Inundación ICMP', fichero: 'heuristicos.py', garantia: '≥50% de paquetes ICMP y >100 paq/s en 10s → BLOCK'},
     ],
     codigo: {
       archivo: 'scripts/engine/heuristicos.py',
@@ -5351,6 +5366,7 @@ const TOPO_TEXTO = {
         '  si intentos≥20 y completadas≤30%:        BLOCK (escaneo)',
         '  si req_http≥100:                          LIMIT (abuso HTTP)',
         '  si dns≥20 y (únicos≥45% o NXDOMAIN≥50%):  LIMIT (DNS)',
+        '  si icmp≥50% y paq/s>100:                 BLOCK (inundación ICMP)',
       ],
       editar: 'nano ~/cyberflow/scripts/engine/heuristicos.py && sudo systemctl restart ppi-motor',
     },
@@ -5494,7 +5510,7 @@ const TOPO_TEXTO = {
     archivos: [
       { n: 'dashboard.py',      host: 'sensor', d: 'este panel' },
       { n: 'motor_decision.py', host: 'sensor', d: 'decide cada ventana' },
-      { n: 'heuristicos.py',    host: 'sensor', d: 'las 4 reglas' },
+      { n: 'heuristicos.py',    host: 'sensor', d: 'las 5 reglas' },
       { n: 'publicar_feed.py',  host: 'sensor', d: 'publica el feed' },
       { n: 'feed.py',           host: 'sensor', d: 'firma ed25519' },
       { n: 'escalada.py',       host: 'sensor', d: 'caducidad por reincidencia' },
@@ -5504,7 +5520,7 @@ const TOPO_TEXTO = {
       pseudo: [
         'dashboard.py       — este panel',
         'motor_decision.py  — decide cada ventana',
-        'heuristicos.py     — las 4 reglas',
+        'heuristicos.py     — las 5 reglas',
         'publicar_feed.py   — publica el feed',
         'feed.py            — firma ed25519',
         'escalada.py        — caducidad por reincidencia',
@@ -5659,7 +5675,7 @@ const TOPO_TEXTO = {
     nota: 'La limpieza acota la ENTRADA (deduplicar el espejo, quitar plano de control), nunca las fórmulas. 27 de 28 variables muestran variación observable.',
   },
   m_modelo: {
-    que: 'F3 · Detector híbrido: IF limpio con θ=−0,622389 (α = 0,01) y cuatro heurísticos (fuerza bruta, escaneo, abuso HTTP y DNS inusual). La evaluación offline del IF no es la evaluación del híbrido. La campaña del modelo limpio tiene resultados parciales; falta una batería completa y consistente.',
+    que: 'F3 · Detector híbrido: IF limpio con θ=−0,622389 (α = 0,01) y cinco heurísticos (fuerza bruta, escaneo, abuso HTTP, DNS inusual e inundación ICMP). La evaluación offline del IF no es la evaluación del híbrido. La campaña del modelo limpio tiene resultados parciales; falta una batería completa y consistente.',
     nota: 'El modelo se elige comparando 7 candidatos, no a ciegas; el umbral se calibra en validación con objetivo de falsos positivos y se CONGELA antes de mirar el test.',
   },
   m_eval: {
@@ -6010,8 +6026,8 @@ function topoEstado(id, s) {
         'Detector vigente': e.detector_vigente } };
     }
     case 'heuristicos':
-      return { estado: '', valor: '4 reglas deterministas', datos: {
-        'Cubren': 'brute-force · port-scan · http-abuse · dns-entropy',
+      return { estado: '', valor: '5 reglas deterministas', datos: {
+        'Cubren': 'brute-force · port-scan · http-abuse · dns-entropy · icmp-flood',
         'Papel': 'complementan al modelo (0,08 % de falsos positivos)' } };
     case 'feed':
       return { estado: '', valor: 'firmado (ed25519)', datos: {
@@ -6638,7 +6654,7 @@ const GUIA_CODIGO = {
     ],
   },
   'heuristicos.py': {
-    explica: 'Las cuatro reglas deterministas sobre las variables de la ventana. Cada una devuelve una acción (BLOCK/LIMIT) o nada; evaluar() se queda con la más severa.',
+    explica: 'Las cinco reglas deterministas sobre las variables de la ventana. Cada una devuelve una acción (BLOCK/LIMIT) o nada; evaluar() se queda con la más severa.',
     editar: 'nano ~/cyberflow/scripts/engine/heuristicos.py && sudo systemctl restart ppi-motor',
     pseudo: [
       { t: 'Versión de los umbrales', ancla: 'VERSION_UMBRALES' },
@@ -6646,6 +6662,7 @@ const GUIA_CODIGO = {
       { t: 'Escaneo de puertos → BLOCK', ancla: 'def _port_scan' },
       { t: 'Abuso HTTP → LIMIT', ancla: 'def _http_abuse' },
       { t: 'DNS de alta entropía → LIMIT', ancla: 'def _dns_entropy' },
+      { t: 'Inundación ICMP → BLOCK', ancla: 'def _icmp_flood' },
       { t: 'Combina las reglas (la más severa)', ancla: 'def evaluar' },
     ],
   },
@@ -6859,20 +6876,21 @@ const GUIA_FLUJO = {
       { k: 'proc', t: 'Puntuar con el modelo (OCSVM)', ancla: 'score_samples' },
       { k: 'dec', t: 'Anomalía del modelo', cond: 'score < umbral', si: 'ALERT', no: 'PERMIT', ancla: '"ALERT" if score < threshold' },
       { k: 'dec', t: 'Ráfaga de 401 sobre un PERMIT', cond: 'http60 ≥ 5  y  fallo_auth ≥ 80%', si: 'ALERT (heurístico L7)', no: 'queda igual', ancla: 'auth_failure_heuristic' },
-      { k: 'proc', t: 'Adjuntar el veredicto de los 4 heurísticos', ancla: 'heuristicos.evaluar' },
+      { k: 'proc', t: 'Adjuntar el veredicto de los 5 heurísticos', ancla: 'heuristicos.evaluar' },
       { k: 'io', t: 'Escribir la decisión en motor_decision.log', ancla: 'args.log_path.open' },
       { k: 'dec', t: 'Aplicar la acción', cond: '--enforce  y  decisión == ALERT', si: 'bloquea / relay', no: 'solo observa', ancla: 'def apply_enforcement' },
       { k: 'archivo', t: 'publicar_feed.py lee el log cada 10 s', ir: 'publicar_feed.py' },
     ],
   },
   'heuristicos.py': {
-    titulo: 'evaluar(row): la MÁS severa de 4 reglas',
+    titulo: 'evaluar(row): la MÁS severa de 5 reglas',
     pasos: [
       { k: 'inicio', t: 'Variables L3/L4/L7 de la ventana', ancla: 'def evaluar' },
       { k: 'dec', t: 'Fuerza bruta', cond: 'req_http ≥ 5  y  fallo_auth ≥ 80%', si: 'BLOCK', no: '—', ancla: 'def _brute_force' },
       { k: 'dec', t: 'Escaneo de puertos', cond: '(intentos ≥ 20 · únicos ≥ 0,45 · compl ≤ 0,3)   Ó   (ráfaga ≥ 200 · compl ≤ 0,1)', si: 'BLOCK', no: '—', ancla: 'def _port_scan' },
       { k: 'dec', t: 'Abuso HTTP', cond: 'req ≥ 100  y  fallo_auth < 80%', si: 'LIMIT', no: '—', ancla: 'def _http_abuse' },
       { k: 'dec', t: 'DNS de alta entropía', cond: 'consultas ≥ 20  y  (NXDOMAIN ≥ 0,5  o  únicos ≥ 0,45)', si: 'LIMIT', no: '—', ancla: 'def _dns_entropy' },
+      { k: 'dec', t: 'Inundación ICMP', cond: 'icmp ≥ 50%  y  paq/s > 100', si: 'BLOCK', no: '—', ancla: 'def _icmp_flood' },
       { k: 'proc', t: 'Se queda con la más severa (BLOCK > LIMIT)', ancla: '_SEVERIDAD' },
       { k: 'archivo', t: 'El motor lo adjunta a la decisión', ir: 'motor_decision.py' },
     ],
@@ -10735,7 +10753,7 @@ def estado_artefactos(eve_path: Path, dataset: Path | None, manifest_path: Path,
                          "servidor HTTP/HTTPS del laboratorio: /estatico/<n>k y /api/*")],
         **artefactos_aprendizaje(r, config_usada, log_path, eve_path),
         "heuristicos": [rel("scripts/engine/heuristicos.py", "py",
-                            "las cuatro reglas y sus umbrales")],
+                            "las cinco reglas y sus umbrales")],
         "control": [rel("scripts/engine/responder_iptables.py", "py",
                         "bloqueo con interlock de calibracion"),
                     rel("scripts/engine/publicar_feed.py", "py",

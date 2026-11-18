@@ -25,7 +25,7 @@ from __future__ import annotations
 
 # Subir esta versión cada vez que cambien los umbrales; queda en el registro y en
 # el feed para poder reproducir por qué se tomó una decisión.
-VERSION_UMBRALES = "2026-10-06.2"
+VERSION_UMBRALES = "2026-11-03.2"
 # 2026-10-06.1: el espejo SPAN duplica cada trama, así que los ratios "todo único"
 # (puertos de un escaneo, nombres de un DGA) topan en ~0,5, no en 1,0. Los umbrales
 # de unicidad se bajan de 0,9/0,5 a 0,45. Validado: dns_entropy en el ataque, con
@@ -35,6 +35,13 @@ VERSION_UMBRALES = "2026-10-06.2"
 # Se añade una rama OR para la ráfaga inequívoca (>=200 intentos/30s con <=10 %
 # completados) que NO depende del ratio. FPR validado offline: +5 disparos en
 # 712 450 ventanas de línea base (0,011 %->0,012 %, neutro). Ver docs/MEJORA-PORT-SCAN.md.
+# 2026-11-03.2: se añade icmp_flood (L3). El modelo ve el volumen ICMP (ALERT) pero
+# ninguna regla lo cubría: era un hueco declarado de alcance en capa de red. La regla
+# dispara cuando una ventana de 10 s es casi toda ICMP (icmp_ratio >= 0,5) y la tasa de
+# paquetes supera 100/s. Calibrado con 3 119 148 ventanas reales del Sensor1: el máximo
+# ICMP legítimo medido fue 43,6 pps (.21) y los floods de la Kali 318-3997 pps, así que
+# 100 pps los separa con margen; el ratio descarta el tráfico alto que no es ICMP. BLOCK
+# (señal clara de DoS de red). Ver test_heuristico_icmp.py.
 
 # Umbrales por defecto. Se pueden sobreescribir por config (.toml [heuristicos]).
 UMBRALES_POR_DEFECTO: dict[str, dict] = {
@@ -74,6 +81,13 @@ UMBRALES_POR_DEFECTO: dict[str, dict] = {
         "min_nxdomain_ratio_60s": 0.5,
         "min_unique_dns_name_ratio_60s": 0.45,
         "accion": "LIMIT",
+    },
+    # Inundación ICMP (DoS de capa de red): una ventana casi toda ICMP con una tasa
+    # de paquetes muy por encima de lo legítimo. Señal clara -> BLOCK.
+    "icmp_flood": {
+        "min_packet_rate_10s": 100.0,
+        "min_icmp_ratio_10s": 0.5,
+        "accion": "BLOCK",
     },
 }
 
@@ -137,9 +151,19 @@ def _dns_entropy(row: dict, u: dict) -> str | None:
     return None
 
 
+def _icmp_flood(row: dict, u: dict) -> str | None:
+    pps = _n(row, "packet_rate_10s")
+    icmp = _n(row, "icmp_ratio_10s")
+    if pps >= u["min_packet_rate_10s"] and icmp >= u["min_icmp_ratio_10s"]:
+        return "%.0f paquetes/s, %.0f%% ICMP (inundación de capa de red)" % (
+            pps, 100 * min(1.0, icmp))
+    return None
+
+
 _REGLAS = (
     ("brute_force", _brute_force),
     ("port_scan", _port_scan),
+    ("icmp_flood", _icmp_flood),
     ("http_abuse", _http_abuse),
     ("dns_entropy", _dns_entropy),
 )
