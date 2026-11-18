@@ -211,16 +211,19 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   /* --- Topologia --- */
   /* El diagrama es HORIZONTAL (ancho): se apila -diagrama arriba a todo el
      ancho, detalle debajo- para que no quede estrecho al lado. */
+  /* minmax(0,1fr), no 1fr: con 1fr el track crece hasta el ancho del diagrama y empuja
+     toda la tarjeta (y la barra) fuera de la pantalla; con min 0 la tarjeta se queda del
+     ancho disponible y el mapa se desplaza DENTRO de .topo-scroll. */
   .topo-wrap {
-    display: grid; grid-template-columns: 1fr; gap: 1rem;
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem;
     align-items: start;
   }
   /* Panel de detalle plegado: el diagrama ocupa todo el ancho. */
-  .topo-wrap.sin-detalle { grid-template-columns: 1fr; }
+  .topo-wrap.sin-detalle { grid-template-columns: minmax(0, 1fr); }
   .topo-wrap.sin-detalle .topo-detail { display: none; }
   .topo-canvas {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 0.6rem 0.7rem 0.8rem; display: flex; flex-direction: column; min-height: 0;
+    padding: 0.6rem 0.7rem 0.8rem; display: flex; flex-direction: column; min-height: 0; min-width: 0;
   }
   .topo-bar {
     display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
