@@ -12,14 +12,23 @@ Seguridad:
 - **Nunca-bloquear:** gateways, DNS, sensor y bastión se saltan siempre.
 - **Caducidad:** BLOCK entra en un `set` de nftables con `timeout` nativo -> se
   quita solo aunque el agente muera.
+- **Alcance (opcional, `alcance.json` junto al agente):** `nunca` = redes que el
+  host jamás sanciona (infraestructura); `solo` = si no está vacío, el host
+  aplica únicamente a esas IPs y el resto queda en sombra (publicado, no aplicado).
+- **Liberación humana:** `--liberar IP` retira la IP de los sets y la anota en
+  `liberadas.json`; no se reaplica mientras la orden siga siendo la misma. Una
+  orden de mayor nivel (reincidencia) vuelve a aplicarse; si la IP sale del feed,
+  la liberación se olvida.
 
 Uso:
     agente_enforce.py --feed URL_o_fichero --firma URL_o_fichero \\
         --clave-publica pub.pem [--aplicar]   # sin --aplicar: dry-run
+    agente_enforce.py ... --aplicar --sudo --liberar 10.10.20.30
 """
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import subprocess
 import sys
@@ -59,9 +68,9 @@ def verificar_feed(datos: bytes, firma: bytes, pub_path: str) -> dict | None:
 def vigentes(feed_obj: dict, ahora: float, nunca: set[str]) -> dict[str, dict]:
     """IPs con acción vigente (hasta > ahora), sin las de nunca-bloquear.
 
-    Devuelve {ip: {"accion", "hasta"}} con la acción MÁS severa por IP.
+    Devuelve {ip: {"accion", "hasta", "nivel", "ordenes"}} con la acción MÁS severa por
+    IP; "ordenes" guarda cada orden del feed por su detector (para la liberación humana).
     """
-    sev = {"BLOCK": 2, "LIMIT": 1}
     out: dict[str, dict] = {}
     for e in feed_obj.get("entradas", []):
         ip = e.get("ip")
@@ -70,24 +79,185 @@ def vigentes(feed_obj: dict, ahora: float, nunca: set[str]) -> dict[str, dict]:
         if float(e.get("hasta", 0)) <= ahora:
             continue
         accion = e.get("accion")
-        if accion not in sev:
+        if accion not in SEV:
             continue
-        prev = out.get(ip)
-        if prev is None or sev[accion] > sev[prev["accion"]]:
-            out[ip] = {"accion": accion, "hasta": int(e["hasta"])}
+        orden = {"accion": accion, "hasta": int(e["hasta"]), "nivel": int(e.get("nivel") or 0)}
+        clave = str(e.get("detector") or accion)
+        ordenes = out.setdefault(ip, {})
+        prev = ordenes.get(clave)
+        if prev is None or (SEV[accion], orden["hasta"]) > (SEV[prev["accion"]], prev["hasta"]):
+            ordenes[clave] = orden
+    return {ip: mas_severa(o) for ip, o in out.items()}
+
+
+SEV = {"BLOCK": 2, "LIMIT": 1}
+
+
+def mas_severa(ordenes: dict[str, dict]) -> dict:
+    """La orden que el host aplica para una IP: la más severa; a igualdad, la que más dura."""
+    o = max(ordenes.values(), key=lambda x: (SEV[x["accion"]], x["hasta"]))
+    return {"accion": o["accion"], "hasta": o["hasta"], "nivel": o["nivel"], "ordenes": ordenes}
+
+
+def _redes(lista) -> list:
+    out = []
+    for x in lista or []:
+        try:
+            out.append(ipaddress.ip_network(str(x), strict=False))
+        except ValueError:
+            continue
     return out
+
+
+def en_redes(ip: str, redes: list) -> bool:
+    try:
+        a = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return any(a in r for r in redes)
+
+
+def filtrar_alcance(vig: dict[str, dict], alcance: dict | None,
+                    liberadas: dict[str, dict] | None, ahora: float = 0.0) -> tuple[dict, dict]:
+    """Separa lo que el host aplica de lo que deja en sombra, con el motivo.
+
+    - `nunca`: redes de infraestructura -> nunca se aplican.
+    - `solo`: si tiene algo, solo esas IPs/redes se aplican.
+    - liberadas: solo se aplican las órdenes NUEVAS tras la liberación humana.
+    """
+    alcance = alcance or {}
+    nunca, solo = _redes(alcance.get("nunca")), _redes(alcance.get("solo"))
+    liberadas = liberadas or {}
+    aplicar, sombra = {}, {}
+    for ip, v in vig.items():
+        if en_redes(ip, nunca):
+            sombra[ip] = "nunca"
+        elif solo and not en_redes(ip, solo):
+            sombra[ip] = "fuera-de-alcance"
+        elif ip in liberadas:
+            nv = ordenes_nuevas(v, liberadas[ip], ahora)
+            if nv:
+                aplicar[ip] = mas_severa(nv)     # solo lo nuevo: lo liberado no vuelve
+            else:
+                sombra[ip] = "liberada"
+        else:
+            aplicar[ip] = v
+    return aplicar, sombra
+
+
+MARGEN_RENOVACION = 20   # s: el sensor republica; solo una ofensa NUEVA mueve la caducidad más allá
+GRACIA_LIBERACION = 120  # s: el motor registra ventanas con retraso; la cola del MISMO episodio se absorbe
+
+
+def _en_gracia(lib: dict, ahora: float) -> bool:
+    return ahora < float(lib.get("desde", 0)) + float(lib.get("gracia", 0))
+
+
+def ordenes_nuevas(v: dict, lib: dict, ahora: float = 0.0) -> dict[str, dict]:
+    """Órdenes de la IP que el humano NO liberó.
+
+    La liberación recuerda cada orden por su detector (caducidad y nivel). Durante la
+    gracia todo se absorbe (ventanas tardías del mismo episodio). Después, es nueva una
+    orden de otro detector, una que escaló de nivel o una renovada más allá del margen."""
+    if _en_gracia(lib, ahora):
+        return {}
+    absorbidas = lib.get("ordenes") or {}
+    out = {}
+    for clave, o in (v.get("ordenes") or {v.get("accion", "?"): v}).items():
+        a = absorbidas.get(clave)
+        if (a is None or o.get("nivel", 0) > int(a.get("nivel", 0))
+                or o["hasta"] > int(a.get("hasta", 0)) + MARGEN_RENOVACION):
+            out[clave] = o
+    return out
+
+
+def misma_orden(v: dict, lib: dict, ahora: float = 0.0) -> bool:
+    """¿La IP sigue sin órdenes nuevas desde la liberación?"""
+    return not ordenes_nuevas(v, lib, ahora)
+
+
+LIBERACION_VALIDA_S = 600   # una petición «Preparar demo» del feed solo vale 10 min
+
+
+def liberaciones_nuevas(feed_obj: dict, vistas: dict, ahora: float) -> list[tuple[str, str]]:
+    """Peticiones de liberación del panel («Preparar demo») que vienen en el feed FIRMADO
+    y este host aún no aplicó. Devuelve [(id, ip)]. Una petición vieja o futura se ignora."""
+    out = []
+    for lib in feed_obj.get("liberaciones") or []:
+        if not isinstance(lib, dict):
+            continue
+        ip, ident, t = str(lib.get("ip") or ""), str(lib.get("id") or ""), lib.get("t")
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            continue
+        if (not ident or not isinstance(t, (int, float)) or "%s:%s" % (ident, ip) in vistas
+                or not (-60 <= ahora - t <= LIBERACION_VALIDA_S)):
+            continue
+        out.append((ident, ip))
+    return out
+
+
+def registrar_liberacion(v: dict | None, ahora: float, gracia: int) -> dict:
+    ordenes = (v or {}).get("ordenes") or {}
+    return {"desde": int(ahora), "gracia": int(gracia),
+            "ordenes": {k: {"hasta": o["hasta"], "nivel": o["nivel"]} for k, o in ordenes.items()}}
+
+
+def depurar_liberadas(liberadas: dict[str, dict], vig: dict[str, dict],
+                      ahora: float = 0.0) -> dict[str, dict]:
+    """Olvida liberaciones de IPs que ya no tienen orden. Durante la gracia, lo absorbido
+    sigue a las órdenes del feed (la cola del mismo episodio queda liberada).
+
+    Durante la gracia la liberación se CONSERVA aunque la IP no tenga orden: el motor
+    registra ventanas con ~2 min de retraso, así que la IP puede salir del feed justo al
+    liberarla y volver a entrar con la cola del mismo episodio (corrida 3, 3-nov: BLOCK
+    liberado 02:18:21 y reaplicado 02:18:55; LIMIT 02:24:30 → 02:25:05)."""
+    out = {}
+    for ip, d in liberadas.items():
+        if ip not in vig and not _en_gracia(d, ahora):
+            continue
+        d = dict(d)
+        if _en_gracia(d, ahora):
+            d["ordenes"] = dict(d.get("ordenes") or {})
+            for k, o in ((vig.get(ip) or {}).get("ordenes") or {}).items():
+                prev = d["ordenes"].get(k, {"hasta": 0, "nivel": 0})
+                d["ordenes"][k] = {"hasta": max(int(prev["hasta"]), o["hasta"]),
+                                   "nivel": max(int(prev["nivel"]), o["nivel"])}
+        out[ip] = d
+    return out
+
+
+def plan_liberar(ip: str) -> list[list[str]]:
+    """Retira la IP de ambos sets (si no está, nft falla y se ignora)."""
+    return [["nft", "delete", "element", "inet", "cyberflow", s, "{", ip, "}"]
+            for s in (SET_BLOCK, SET_LIMIT)]
+
+
+def _leer_json(path: Path) -> dict:
+    try:
+        d = json.loads(path.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
 
 
 def plan_nftables(vig: dict[str, dict], ahora: float,
                   actuales: dict[str, dict[str, float]] | None = None) -> list[list[str]]:
-    """Añade acciones sin acortar su caducidad nativa ni vaciar los sets."""
+    """Comandos nft para añadir acciones sin acortar su caducidad nativa.
+
+    Los sets no se vacían en cada pasada: si una decisión deja la ventana de
+    publicación, nftables conserva la entrada hasta el timeout firmado. `nft add
+    element` es idempotente para un elemento existente y mantiene su expiración.
+    """
     blocks = {ip: v for ip, v in vig.items() if v["accion"] == "BLOCK"}
     limits = {ip: v for ip, v in vig.items() if v["accion"] == "LIMIT"}
     actuales = actuales or {SET_BLOCK: {}, SET_LIMIT: {}}
     # Tabla PROPIA y AISLADA (`inet cyberflow`): coexiste con el firewall del host
     # sin tocarlo. La cadena tiene `policy accept` -> solo cae lo que esté en los
     # sets; jamás bloquea nada más. Los sets llevan `timeout` nativo (caducidad).
-    # Las reglas se recrean; los sets conservan su timeout firmado.
+    # Las reglas se recrean cada pasada (flush chain) para no duplicarse. Los sets
+    # NO se vacían: su timeout nativo es la autoridad para retirar cada acción.
     cmds: list[list[str]] = [
         ["nft", "add", "table", "inet", "cyberflow"],
         ["nft", "add", "set", "inet", "cyberflow", SET_BLOCK,
@@ -111,13 +281,18 @@ def plan_nftables(vig: dict[str, dict], ahora: float,
     return cmds
 
 
-def _plan_elemento(cmds, ip, valor, ahora, destino, opuesto, actuales):
-    """Amplía una sanción sin acortarla ni degradar un BLOCK vigente."""
+def _plan_elemento(cmds: list[list[str]], ip: str, valor: dict, ahora: float,
+                    destino: str, opuesto: str,
+                    actuales: dict[str, dict[str, float]]) -> None:
+    """Añade o amplía una entrada; nunca acorta un timeout ya aplicado."""
+    # Un LIMIT posterior no revoca un BLOCK que aún vive en el kernel. No existe
+    # downgrade automático: la sanción fuerte termina por timeout o retiro humano.
     if destino == SET_LIMIT and ip in actuales.get(SET_BLOCK, {}):
         return
     if ip in actuales.get(opuesto, {}):
         cmds.append(["nft", "delete", "element", "inet", "cyberflow", opuesto,
                      "{", ip, "}"])
+
     hasta_actual = actuales.get(destino, {}).get(ip)
     if hasta_actual is not None and valor["hasta"] <= hasta_actual + 1:
         return
@@ -130,6 +305,7 @@ def _plan_elemento(cmds, ip, valor, ahora, destino, opuesto, actuales):
 
 
 def _elementos_actuales(nombre: str, ahora: float, usar_sudo: bool) -> dict[str, float]:
+    """Lee expiraciones absolutas del set; un set aún inexistente equivale a vacío."""
     orden = (["sudo", "-n"] if usar_sudo else []) + [
         "nft", "-j", "list", "set", "inet", "cyberflow", nombre]
     r = subprocess.run(orden, check=False, capture_output=True, text=True)
@@ -146,10 +322,11 @@ def _elementos_actuales(nombre: str, ahora: float, usar_sudo: bool) -> dict[str,
 
 
 def _lote_nft(cmds: list[list[str]]) -> str:
+    """Renderiza una transacción nft: o se aplica completa o no cambia nada."""
     return "\n".join(" ".join(c[1:]) for c in cmds) + "\n"
 
 
-def _ejecutar_lote(cmds, usar_sudo):
+def _ejecutar_lote(cmds: list[list[str]], usar_sudo: bool) -> subprocess.CompletedProcess:
     orden = (["sudo", "-n"] if usar_sudo else []) + ["nft", "-f", "-"]
     return subprocess.run(orden, input=_lote_nft(cmds), check=False,
                           capture_output=True, text=True)
@@ -174,6 +351,15 @@ def main() -> int:
                    help="ejecuta cada 'nft' con 'sudo -n' (para el cron de un "
                         "usuario con sudo SIN contrasena solo para nft). Minimo "
                         "privilegio: se eleva el nft, no el proceso entero.")
+    aqui = Path(__file__).resolve().parent
+    p.add_argument("--alcance", default=str(aqui / "alcance.json"),
+                   help="JSON {nunca: [redes], solo: [redes]}; si no existe, se aplica a todo")
+    p.add_argument("--liberadas", default=str(aqui / "liberadas.json"),
+                   help="registro de liberaciones humanas")
+    p.add_argument("--liberar", metavar="IP", help="retira la IP de nftables y no la reaplica "
+                                                    "mientras la orden no escale")
+    p.add_argument("--gracia", type=int, default=GRACIA_LIBERACION,
+                   help="s en que la liberación absorbe la cola del mismo episodio (def. 120)")
     a = p.parse_args()
 
     try:
@@ -190,20 +376,71 @@ def main() -> int:
 
     ahora = time.time()
     vig = vigentes(feed_obj, ahora, NUNCA_BLOQUEAR)
-    actuales = {nombre: _elementos_actuales(nombre, ahora, a.sudo)
-                for nombre in (SET_BLOCK, SET_LIMIT)}
+    ruta_lib = Path(a.liberadas)
+    liberadas_prev = _leer_json(ruta_lib)
+    liberadas = depurar_liberadas(liberadas_prev, vig, ahora)
+
+    if a.liberar:
+        ip = a.liberar.strip()
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            print(json.dumps({"estado": "ip-invalida", "ip": ip}))
+            return 2
+        if a.aplicar:
+            for c in plan_liberar(ip):          # uno a uno: si no está en un set, no pasa nada
+                subprocess.run((["sudo", "-n"] if a.sudo else []) + c, check=False,
+                               capture_output=True, text=True)
+            liberadas[ip] = registrar_liberacion(vig.get(ip), ahora, a.gracia)
+            ruta_lib.write_text(json.dumps(liberadas, sort_keys=True), encoding="utf-8")
+        print(json.dumps({"estado": "liberada" if a.aplicar else "dry-run", "ip": ip,
+                          "orden_vigente": vig.get(ip)}, sort_keys=True))
+        return 0
+
+    # «Preparar demo» desde el panel: viaja firmado en el feed; aquí se aplica como una
+    # liberación humana más (quita la IP de los sets y absorbe la cola del episodio).
+    ruta_vistas = ruta_lib.with_name("peticiones_vistas.json")
+    vistas = _leer_json(ruta_vistas)
+    pedidas = liberaciones_nuevas(feed_obj, vistas, ahora)
+    if a.aplicar and pedidas:
+        for ident, ip in pedidas:
+            for c in plan_liberar(ip):
+                subprocess.run((["sudo", "-n"] if a.sudo else []) + c, check=False,
+                               capture_output=True, text=True)
+            liberadas[ip] = registrar_liberacion(vig.get(ip), ahora, a.gracia)
+            vistas["%s:%s" % (ident, ip)] = ahora
+        vistas = {k: t for k, t in vistas.items() if isinstance(t, (int, float)) and ahora - t < 86400}
+        try:
+            ruta_vistas.write_text(json.dumps(vistas, sort_keys=True), encoding="utf-8")
+        except OSError:
+            pass
+
+    vig, sombra = filtrar_alcance(vig, _leer_json(Path(a.alcance)), liberadas, ahora)
+    if a.aplicar and liberadas != liberadas_prev:
+        try:
+            ruta_lib.write_text(json.dumps(liberadas, sort_keys=True), encoding="utf-8")
+        except OSError:
+            pass
+    actuales = {
+        SET_BLOCK: _elementos_actuales(SET_BLOCK, ahora, a.sudo),
+        SET_LIMIT: _elementos_actuales(SET_LIMIT, ahora, a.sudo),
+    }
     cmds = plan_nftables(vig, ahora, actuales)
 
     errores: list[str] = []
     if a.aplicar:
         r = _ejecutar_lote(cmds, a.sudo)
         if r.returncode != 0:
-            # Releer si una entrada caducó entre el snapshot y el lote atómico.
+            # Un elemento puede caducar entre el snapshot JSON y el commit. Como
+            # el primer lote fue atómico, releer y replanificar una vez es seguro.
             ahora = time.time()
-            actuales = {nombre: _elementos_actuales(nombre, ahora, a.sudo)
-                        for nombre in (SET_BLOCK, SET_LIMIT)}
+            actuales = {
+                SET_BLOCK: _elementos_actuales(SET_BLOCK, ahora, a.sudo),
+                SET_LIMIT: _elementos_actuales(SET_LIMIT, ahora, a.sudo),
+            }
             cmds = plan_nftables(vig, ahora, actuales)
             r = _ejecutar_lote(cmds, a.sudo)
+        # El lote es atómico: si algo falla, nftables conserva el estado anterior.
         if r.returncode != 0:
             errores.append((r.stderr or r.stdout or "fallo nft").strip()[:160])
     salida = {
@@ -211,7 +448,9 @@ def main() -> int:
         "block": sorted(ip for ip, v in vig.items() if v["accion"] == "BLOCK"),
         "limit": sorted(ip for ip, v in vig.items() if v["accion"] == "LIMIT"),
         "comandos": len(cmds),
+        "liberadas_por_panel": [ip for _, ip in pedidas],
         "errores": len(errores),
+        "sombra": sombra,
     }
     if errores:
         salida["primer_error"] = errores[0]

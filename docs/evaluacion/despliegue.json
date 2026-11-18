@@ -27,7 +27,7 @@
       "componentes": [
         {"nombre": "Relay del feed firmado", "unidad": "ppi-relay-feed.timer", "cadencia": "cada 60 s", "fichero": "/home/gadmin/relay-feed.sh"}
       ],
-      "nota": "Relay tonto: copia el feed firmado del sensor a los hosts; no puede forjarlo."
+      "nota": "Retransmite el feed firmado; no firma decisiones ni puede alterarlas sin que el agente lo detecte."
     },
     {
       "rol": "agente",

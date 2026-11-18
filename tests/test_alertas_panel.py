@@ -11,6 +11,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts" / "engine"))
@@ -34,7 +35,12 @@ class ReglaDeAccion(unittest.TestCase):
         d = dec("10.10.20.30", 1, heur={"accion": "BLOCK", "heuristico": "port_scan", "motivo": "m"})
         self.assertEqual(db.accion_de(d)[0], "BLOCK")
 
-    def test_anomalia_del_modelo_limita(self):
+    def test_anomalia_del_modelo_solo_queda_para_revision(self):
+        # politica A (3-nov): sin regla que la confirme no pide accion
+        self.assertIsNone(db.accion_de(dec("1.1.1.1", 1, "ALERT")))
+
+    @mock.patch.object(db, "MODELO_SOLO_ACTUA", True)
+    def test_con_el_interruptor_la_anomalia_del_modelo_limita(self):
         self.assertEqual(db.accion_de(dec("1.1.1.1", 1, "ALERT"))[0], "LIMIT")
 
     def test_regla_legacy_bloquea_y_permit_no_pide_nada(self):
@@ -97,7 +103,8 @@ class AccionesVigentes(unittest.TestCase):
         c = db.compute_counters([
             dec("a", ahora - 5, heur={"accion": "BLOCK", "heuristico": "port_scan", "motivo": ""}),
             dec("b", ahora - 5, "ALERT"), dec("c", ahora - 5)], detector_modelo="if_recalibrado_2026_09")
-        self.assertEqual((c["block"], c["limit"], c["ips_con_accion"]), (1, 1, 2))
+        # «b» es una anomalia solo del modelo: con la politica A no es accion
+        self.assertEqual((c["block"], c["limit"], c["ips_con_accion"]), (1, 0, 1))
 
 
 class Simulador(unittest.TestCase):
@@ -110,8 +117,7 @@ class Simulador(unittest.TestCase):
 
     def test_cada_ataque_produce_la_accion_del_motor_de_reglas(self):
         esperado = {"escaneo": ("BLOCK", "port_scan"), "dns": ("LIMIT", "dns_entropy"),
-                    "fuerza-bruta": ("BLOCK", "brute_force"), "http": ("LIMIT", "http_abuse"),
-                    "modelo": ("LIMIT", "modelo")}
+                    "fuerza-bruta": ("BLOCK", "brute_force"), "http": ("LIMIT", "http_abuse")}
         with tempfile.TemporaryDirectory() as tmp:
             log = Path(tmp) / "demo.log"
             self.assertEqual(sim.main(["--log", str(log), "--ataque", "todos",
@@ -124,6 +130,8 @@ class Simulador(unittest.TestCase):
             self.assertTrue(any(db.accion_de(f)[0] == acc and db.accion_de(f)[2] == origen
                                 for f in rafagas), nombre)
         self.assertIsNone(db.accion_de(filas[0]))       # la ventana previa es normal
+        ip_modelo = sim.ATAQUES["modelo"]["ip"]           # politica A: solo revision
+        self.assertFalse(any(db.accion_de(f) for f in filas if f["entity_ip"] == ip_modelo))
 
 
 if __name__ == "__main__":

@@ -20,13 +20,16 @@ from __future__ import annotations
 
 import argparse
 import base64
+import bisect
 import hashlib
 import hmac
+import ipaddress
 import json
 import secrets
 import ssl
 import subprocess
 import sys
+import threading
 import time
 import tomllib
 import urllib.parse
@@ -34,25 +37,37 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+if str(Path(__file__).resolve().parent) not in sys.path:      # cargado por ruta (tests)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import cadena_v2  # noqa: E402  (mismo directorio; solo lectura de las trazas v2)
+
+# Cadena de respuesta v2 (4A). None = panel con la politica v1 de siempre (demo).
+_CADENA_V2: "cadena_v2.IndiceV2 | None" = None
+
 RAIZ_REPO = Path(__file__).resolve().parents[2]
 
 HTML = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CyberFlow &middot; motor en vivo</title>
+<script id="temaInicial">/* 17-nov: tema claro por omision; el boton «Tema» lo alterna y se recuerda. */
+try { document.documentElement.dataset.tema = localStorage.getItem('cf_tema') || 'claro'; }
+catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
 <link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%235eead4'/%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #0a0f1a;
-    --surface: #121a2b;
-    --surface-2: #1a2338;
-    --border: #253150;
-    --text: #dbe4f2;
+    /* 3-nov: fondo mas profundo y superficies con mas escalon entre si, para
+       que tarjetas, tablas y la barra del recorrido se separen al proyectar. */
+    --bg: #070b15;
+    --surface: #0f1729;
+    --surface-2: #17213a;
+    --border: #233152;
+    --text: #e3eaf6;
     /* 13-oct: subido de #7c8bad a #8d9cbd. El anterior daba 4,59:1 sobre las
        tarjetas (AA justo, sin margen) y se perdia proyectado; este da 5,68:1
        y sigue 2,3x mas tenue que --text, asi que la jerarquia se mantiene. */
-    --text-dim: #8d9cbd;
-    --accent: #5eead4;
+    --text-dim: #94a3c4;
+    --accent: #45dfc9;
     --ok: #4ade80; --ok-soft: #12271c;
     --amber: #f0b429; --amber-soft: #332508;
     --danger: #f87171; --danger-soft: #351515;
@@ -78,7 +93,10 @@ HTML = """<!doctype html>
   ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); background-clip: content-box; }
   ::-webkit-scrollbar-corner { background: transparent; }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
+    margin: 0; color: var(--text);
+    background: radial-gradient(1200px 600px at 85% -10%, rgba(69,223,201,.07), transparent 60%),
+                radial-gradient(900px 500px at -10% 110%, rgba(57,135,229,.06), transparent 60%), var(--bg);
+    background-attachment: fixed;
     font-family: var(--sans); font-size: 15px; line-height: 1.5;
   }
 
@@ -88,13 +106,27 @@ HTML = """<!doctype html>
      columna mas que la pantalla y el documento desborda en movil: el min-width:0
      deja que la pista encoja por debajo del contenido y la barra scrollee dentro. */
   .shell > * { min-width: 0; }
+  /* 18-nov: la barra es FIJA (no sticky): con sticky, al llegar al final de la página se quedaba
+     donde terminaba .shell y debajo asomaba el fondo. */
+  .shell { display: block; padding-left: 224px; }
   .side {
-    position: sticky; top: 0; align-self: start; height: 100vh;
+    position: fixed; left: 0; top: 0; bottom: 0; width: 224px; box-sizing: border-box; z-index: 30;
     border-right: 1px solid var(--border); background: var(--surface);
     padding: 1.3rem 0.9rem; display: flex; flex-direction: column; gap: 1rem;
     overflow-y: auto;
   }
   .side .brand { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; padding: 0 0.45rem; }
+  .side .brand { padding: 0.7rem 0.45rem 0.2rem; }
+  .side .brand-logo { display: block; width: 100%; max-width: 180px; height: auto; margin: 0 auto; }
+  .side .side-state { justify-content: center; align-self: center; margin: 0 0 0.6rem; padding: 0.22rem 0.8rem;
+    border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05);
+    font: 700 0.7rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
+  .side .side-state.ok { color: #6ee7b7; border-color: rgba(110,231,183,0.35); }
+  .side .side-state.warn { color: #fcd34d; border-color: rgba(252,211,77,0.4); }
+  .side .side-state.bad { color: #fca5a5; border-color: rgba(252,165,165,0.45); }
+  .side .side-state.ok .dot { animation: latido 2s ease-in-out infinite; }
+  @keyframes latido { 50% { opacity: 0.35; } }
+  @media (prefers-reduced-motion: reduce) { .side .side-state.ok .dot { animation: none; } }
   .side .brand small {
     display: block; font-family: var(--mono); font-size: 0.64rem; color: var(--text-dim);
     font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 0.15rem;
@@ -136,6 +168,13 @@ HTML = """<!doctype html>
      despues, para que una seccion de desarrollo oculta no reaparezca. */
   .wrap > section[id] { display: none; }
   .wrap > section[id].pag-activa { display: block; }
+  @media (prefers-reduced-motion: no-preference) {
+    .wrap > section[id].pag-activa { animation: cf-entra .18s ease-out; }
+    @keyframes cf-entra { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .btn-sec, .btn-prep, .esc-card, .nav a, .rg-pasos button { transition: background-color .15s, border-color .15s, color .15s, transform .15s; }
+    .esc-card:hover { transform: translateY(-1px); }
+  }
+  .tbl-wrap, .esc-filas, .cmp-card { contain: content; }
   .wrap > section[id][hidden] { display: none; }
   /* Pie de "Vistas relacionadas": enlaces a las vistas que siguen el hilo. */
   .rel-vistas { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
@@ -152,9 +191,9 @@ HTML = """<!doctype html>
        hijos, .wrap caia en una columna implicita 'auto' dimensionada al
        contenido (~827 px) y desbordaba a la derecha. Como bloques, cada hijo
        toma el ancho de la pantalla y la barra scrollea dentro de si. */
-    .shell { display: block; }
+    .shell { display: block; padding-left: 0; }
     .side {
-      position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border);
+      position: static; height: auto; width: auto; border-right: none; border-bottom: 1px solid var(--border);
       flex-direction: row; align-items: center; gap: 0.8rem; padding: 0.7rem 0.9rem; overflow-x: auto;
     }
     .side .brand small, .side .foot, .side-state span { display: none; }
@@ -172,16 +211,19 @@ HTML = """<!doctype html>
   /* --- Topologia --- */
   /* El diagrama es HORIZONTAL (ancho): se apila -diagrama arriba a todo el
      ancho, detalle debajo- para que no quede estrecho al lado. */
+  /* minmax(0,1fr), no 1fr: con 1fr el track crece hasta el ancho del diagrama y empuja
+     toda la tarjeta (y la barra) fuera de la pantalla; con min 0 la tarjeta se queda del
+     ancho disponible y el mapa se desplaza DENTRO de .topo-scroll. */
   .topo-wrap {
-    display: grid; grid-template-columns: 1fr; gap: 1rem;
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem;
     align-items: start;
   }
   /* Panel de detalle plegado: el diagrama ocupa todo el ancho. */
-  .topo-wrap.sin-detalle { grid-template-columns: 1fr; }
+  .topo-wrap.sin-detalle { grid-template-columns: minmax(0, 1fr); }
   .topo-wrap.sin-detalle .topo-detail { display: none; }
   .topo-canvas {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 0.6rem 0.7rem 0.8rem; display: flex; flex-direction: column; min-height: 0;
+    padding: 0.6rem 0.7rem 0.8rem; display: flex; flex-direction: column; min-height: 0; min-width: 0;
   }
   .topo-bar {
     display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
@@ -196,7 +238,8 @@ HTML = """<!doctype html>
   }
   .topo-zoom button:hover { border-color: var(--accent); color: var(--accent); }
   .topo-zoom #topoNivel { min-width: 38px; text-align: center; }
-  .topo-scroll { overflow: auto; flex: 1; min-height: 0; max-height: 82vh; }
+  .topo-scroll { overflow: auto; flex: 1; min-height: 0; min-width: 0; max-width: 100%; max-height: 82vh; overscroll-behavior: contain; cursor: grab; }
+  .topo-scroll.arrastrando { cursor: grabbing; }
   .topo-scroll svg { display: block; }
   .card .value small { display: block; font: 400 0.72rem var(--sans); color: var(--text-dim); margin-top: 0.15rem; letter-spacing: 0; }
   .card.txt .value { font-size: 1rem; line-height: 1.3; overflow-wrap: anywhere; }
@@ -229,7 +272,7 @@ HTML = """<!doctype html>
   @media (max-width: 860px) { .desp-flecha { transform: rotate(90deg); } }
   .apr-graf { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.8rem; margin-bottom: 1.1rem; }
   .apr-chart { display: block; width: 100%; height: 170px; }
-  #histogram { display: block; width: 100%; height: 190px; }
+  #histogram { display: block; width: 100%; height: 240px; }
   .hist-chart { display: block; width: 100%; }
   .apr-chart text, #histogram text, .hist-chart text { font: 600 10px var(--mono); fill: var(--text-dim); }
   .var-fila .vw { min-width: 190px; text-align: right; }
@@ -258,8 +301,20 @@ HTML = """<!doctype html>
   .al-card { display: grid; grid-template-columns: 70px 1fr auto; align-items: center; gap: 0.8rem;
     background: var(--surface); border: 1px solid var(--border); border-left-width: 3px; border-radius: 10px;
     padding: 0.55rem 0.85rem; }
-  .al-card.al-block { border-left-color: var(--danger); }
-  .al-card.al-limit { border-left-color: var(--amber); }
+  /* 17-nov: toda la tarjeta lleva el color de su criticidad, con icono. */
+  :root { --sev-block: #e5383b; --sev-limit: #f2c200; }
+  html[data-tema="claro"] { --sev-block: #d62828; --sev-limit: #e8b400; }
+  .al-card { border-left-width: 5px; }
+  .al-card.al-block { border-left-color: var(--sev-block);
+    background: color-mix(in srgb, var(--sev-block) 16%, var(--surface)); border-color: color-mix(in srgb, var(--sev-block) 50%, var(--border)); }
+  .al-card.al-limit { border-left-color: var(--sev-limit);
+    background: color-mix(in srgb, var(--sev-limit) 20%, var(--surface)); border-color: color-mix(in srgb, var(--sev-limit) 60%, var(--border)); }
+  .al-card.al-block .al-sev, .al-card.al-limit .al-sev { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+  .al-ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .al-block .al-ico { background: var(--sev-block); box-shadow: 0 0 0 4px color-mix(in srgb, var(--sev-block) 28%, transparent); }
+  .al-limit .al-ico { background: var(--sev-limit); color: #3a2c00; box-shadow: 0 0 0 4px color-mix(in srgb, var(--sev-limit) 32%, transparent); }
+  .al-sev .al-ico + .badge { font-size: 0.66rem; }
+  .al-tag svg { vertical-align: -2px; margin-right: 0.25rem; }
   .al-top { display: flex; align-items: baseline; gap: 0.6rem; }
   .al-ip { font: 700 0.92rem var(--mono); color: var(--text); }
   .al-hace { font-size: 0.8rem; color: var(--text-dim); }
@@ -271,6 +326,25 @@ HTML = """<!doctype html>
   .al-motivo { font-size: 0.82rem; color: var(--text-dim); overflow-wrap: anywhere; }
   .al-mini { flex: none; }
   @media (max-width: 640px) { .al-card { grid-template-columns: 58px 1fr; } .al-mini { display: none; } }
+  /* Lista blanca: infraestructura conocida, agrupada aparte de las alertas. */
+  .lb-caja { margin-top: 1.1rem; border: 1px dashed var(--border); border-radius: 12px; padding: 0.75rem 0.9rem; background: var(--surface); }
+  .lb-caja h3 { margin: 0 0 0.25rem; font-size: 0.95rem; }
+  .lb-sub { margin: 0 0 0.6rem; font-size: 0.8rem; color: var(--text-dim); }
+  .lb-plegable > summary { cursor: pointer; display: flex; align-items: center; gap: 0.45rem; font-weight: 650;
+    color: var(--text-dim); font-size: 0.86rem; list-style: none; user-select: none; }
+  .lb-plegable > summary::-webkit-details-marker { display: none; }
+  .lb-plegable > summary::after { content: '▸'; margin-left: 0.2rem; transition: transform .15s; }
+  .lb-plegable[open] > summary::after { transform: rotate(90deg); }
+  .lb-plegable > summary:hover { color: var(--accent); }
+  .lb-plegable[open] > summary { margin-bottom: 0.4rem; }
+  .lb-n { font: 600 0.72rem var(--mono); background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 0 0.45rem; }
+  .lb-fila { display: grid; grid-template-columns: 1fr auto; gap: 0.6rem; align-items: center; padding: 0.5rem 0; border-top: 1px solid var(--border); }
+  .lb-ip { font-family: var(--mono); font-weight: 600; }
+  .lb-nom { color: var(--text-dim); font-size: 0.82rem; margin-left: 0.4rem; }
+  .lb-det { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.15rem; overflow-wrap: anywhere; }
+  .lb-aviso { color: var(--warn, #d9a441); }
+  .lb-tarjetas { display: grid; gap: 0.4rem; margin-top: 0.5rem; grid-column: 1 / -1; }
+  @media (max-width: 640px) { .lb-fila { grid-template-columns: 1fr; } }
   /* Pulso: lo que entra y lo que se acumula, con su edad. */
   .pulso { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.7rem; margin: 0.2rem 0 1.3rem; }
   .pulso-t { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.65rem 0.8rem 0.45rem; min-width: 0; }
@@ -300,7 +374,9 @@ HTML = """<!doctype html>
   /* Pantalla completa: el diagrama manda y el detalle se queda al lado. */
   .topo-wrap:fullscreen { background: var(--bg); padding: 1rem; gap: 1rem; height: 100%; grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
   .topo-wrap:fullscreen .topo-canvas { height: 100%; min-height: 0; }
-  .topo-wrap:fullscreen .topo-scroll { height: auto; max-height: none; display: grid; place-items: center; }
+  /* safe center: centra el diagrama, pero si es más grande que la pantalla cae a la
+     esquina para que el borde izquierdo/superior SÍ se alcance al arrastrar. */
+  .topo-wrap:fullscreen .topo-scroll { height: auto; max-height: none; display: grid; justify-content: safe center; align-content: safe center; }
   .topo-wrap:fullscreen .topo-detail { overflow-y: auto; max-height: 34vh; }
 
   .topo-node { cursor: pointer; }
@@ -316,6 +392,25 @@ HTML = """<!doctype html>
   .topo-node .ttl { fill: var(--text); font: 700 13px var(--sans); }
   .topo-node .sub { fill: var(--text-dim); font: 600 11px var(--mono); font-variant-numeric: tabular-nums; }
   .topo-node .ico { color: var(--text); }
+  .topo-node .ico.ico-blanco, .topo-node.ok .ico.ico-blanco, .topo-node.warn .ico.ico-blanco, .topo-node.bad .ico.ico-blanco,
+  .topo-node.acc-limit .ico.ico-blanco, .topo-node.acc-block .ico.ico-blanco, .topo-host .ico.ico-blanco,
+  .topo-node.en-flujo .ico.ico-blanco { color: #fff !important; }
+  .topo-node .ico-bg { stroke: rgba(255,255,255,0.6); stroke-width: 1.5; }
+  .det-con-herr { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 1.2rem; align-items: start; }
+  @media (max-width: 900px) { .det-con-herr { grid-template-columns: 1fr; } }
+  .herr-col { display: grid; gap: 0.5rem; position: sticky; top: 0.5rem; }
+  .herr { display: flex; align-items: center; gap: 0.65rem; padding: 0.5rem 0.6rem; border: 1px solid var(--border);
+    border-radius: 12px; background: var(--surface-2); }
+  .herr-ico { width: 46px; height: 46px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none;
+    box-shadow: 0 4px 10px -6px rgba(0,0,0,0.5); }
+  .herr-t { display: flex; flex-direction: column; line-height: 1.25; }
+  .herr-t b { font-size: 0.9rem; color: var(--text); }
+  .herr-t small { font-size: 0.74rem; color: var(--text-dim); }
+  .herr-capa { font: 700 0.68rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); margin: 0.55rem 0 0.1rem; padding-left: 0.1rem; }
+  .herr-demo { font: 700 0.6rem var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
+    color: #052e2b; background: var(--accent); border-radius: 5px; padding: 0.05rem 0.3rem; vertical-align: 1px; }
+  .herr-leyenda { font-size: 0.68rem; color: var(--text-dim); margin-top: 0.6rem; }
   .topo-node.ok .ico { color: var(--ok); }
   .topo-node.warn .ico { color: var(--amber); }
   .topo-node.bad .ico { color: var(--danger); }
@@ -356,7 +451,10 @@ HTML = """<!doctype html>
   .topo-host:hover .box { stroke: var(--accent); }
   .topo-host .ico { color: var(--accent); }
   .topo-host .hostip { fill: var(--accent); font: 600 11px var(--mono); }
-  .topo-pkt { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
+  .topo-pkt { filter: drop-shadow(0 0 4px var(--accent)); }
+  .topo-pkt rect { fill: var(--accent); stroke: #fff; stroke-width: 1; }
+  .topo-pkt path { fill: none; stroke: #0b1220; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+  .topo-pkt .pkt-ficha { stroke: #0b1220; stroke-width: 1.2; opacity: 0.5; }
   @media (prefers-reduced-motion: reduce) { .topo-pkt { display: none; } }
   .topo-cmd { background: #0b1220; border: 1px solid var(--border); border-radius: 7px;
     padding: 0.5rem 0.6rem; margin: 0.5rem 0; font: 11px var(--mono); color: var(--text-dim);
@@ -369,7 +467,15 @@ HTML = """<!doctype html>
     color: var(--accent); background: #0b1220; border: 1px solid var(--border);
     border-radius: 6px; padding: 0.2rem 0.5rem; overflow-wrap: anywhere; }
   /* Perfiles de trafico legitimo, con icono. */
-  .perfiles { display: grid; gap: 0.35rem; margin: 0.4rem 0 0.2rem; }
+  .perfiles { display: grid; gap: 0.6rem; margin: 0.5rem 0 0.3rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 900px) { .perfiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .perfiles .perfil { display: flex !important; flex-direction: column; align-items: flex-start; gap: 0.35rem; padding: 0.75rem;
+    border: 1px solid var(--border); border-top: 3px solid var(--pc); border-radius: 12px; background: var(--surface-2); }
+  .perfiles .perfil-ico { width: 48px; height: 48px; border-radius: 14px; background: var(--pc); display: inline-flex !important;
+    align-items: center; justify-content: center; box-shadow: 0 4px 12px -6px var(--pc); }
+  .perfiles .perfil-n { font-size: 0.95rem; }
+  .perfiles .perfil-d { font-size: 0.82rem; }
+  .perfiles .perfil-ej { grid-column: auto !important; font-size: 0.7rem; }
   .perfil { display: grid; grid-template-columns: 24px auto 1fr; align-items: center; gap: 0.5rem;
     font-size: 0.82rem; }
   .perfil-ico { color: var(--accent); display: inline-flex; }
@@ -706,6 +812,16 @@ HTML = """<!doctype html>
     border-radius: 999px; padding: 0.55rem 0.95rem; font: 600 0.82rem var(--sans); cursor: pointer;
     box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
   .tour-fab:hover { filter: brightness(1.08); }
+  /* Franja de la cadena v2 (16-nov): fichas compactas en la columna de contenido. */
+  .cv2-franja { margin: 0.5rem 0 0.9rem; font-size: 0.78rem; color: var(--text-dim); }
+  .cv2-fichas { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .cv2-ficha { border: 1px solid var(--border); border-radius: 999px; padding: 0.15rem 0.6rem; background: var(--surface); white-space: nowrap; }
+  .cv2-ficha.aviso { border-color: #b8892f; color: #e3b860; }
+  .cv2-ficha.bien { border-color: #2f7d5b; }
+  .cv2-ficha.mal { border-color: #a5463e; color: #f08a80; }
+  .cv2-inc { margin-top: 0.35rem; }
+  @media (max-width: 640px) { .cv2-ficha { white-space: normal; } }
+  .rg-abrir.sin-esc { right: 110px; }
   .tour-foco { position: fixed; z-index: 50; border-radius: 10px; border: 2px solid var(--accent);
     box-shadow: 0 0 0 9999px rgba(4,8,16,0.62); pointer-events: none; transition: all .2s ease; }
   .tour-tip { position: fixed; z-index: 51; max-width: 340px; background: var(--surface-2);
@@ -763,8 +879,36 @@ HTML = """<!doctype html>
   .vig-barra i { display: block; height: 100%; }
   .vig-fuente { font-size: 0.74rem; color: var(--text-dim); font-family: var(--mono); }
   .sec-sub { color: var(--text-dim); font-size: 0.82rem; margin: -0.3rem 0 0.7rem; }
-  .cmp-fig { background: #0f1722; border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; margin-bottom: 0.9rem; }
-  .cmp-fig svg { width: 100%; height: auto; display: block; }
+  .cmp-lede { font-size: 15px; margin: 0 0 1rem; max-width: 72rem; }
+  .cmp-como { list-style: none; padding: 0; margin: 0 0 0.6rem; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .cmp-como li { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+  .cmp-como li .n { width: 24px; height: 24px; border-radius: 50%; background: #10283a; color: var(--accent); display: grid; place-items: center; font-family: var(--mono); font-weight: 700; font-size: 12px; }
+  .cmp-como li b { font-size: 14px; }
+  .cmp-como li small { color: var(--text-dim); font-size: 12.5px; line-height: 1.4; }
+  .cmp-como li code { margin-top: auto; font-family: var(--mono); font-size: 11px; color: #9fd0ff; background: #0b1322; border: 1px solid #1d2a44; border-radius: 6px; padding: 4px 6px; word-break: break-word; }
+  .cmp-run { color: var(--text-dim); font-size: 13px; margin: 0 0 1.2rem; }
+  .cmp-run code { font-family: var(--mono); color: #ffd58a; }
+  .cmp-h { font-size: 15px; margin: 0 0 0.6rem; }
+  .cmp-vivo { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 12px; margin-bottom: 1rem; }
+  .cmp-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .cmp-card header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+  .cmp-card header b { font-size: 14px; }
+  .cmp-card header .ip { font-family: var(--mono); color: var(--text-dim); font-size: 12.5px; }
+  .cmp-card header .cuando { margin-left: auto; font-family: var(--mono); color: var(--text-dim); font-size: 12px; }
+  .cmp-dos { display: grid; grid-template-columns: 1fr 1fr; }
+  .cmp-lado { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .cmp-lado + .cmp-lado { border-left: 1px solid var(--border); }
+  .cmp-lado .quien { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); font-weight: 600; }
+  .cmp-lado .cifra { font-family: var(--mono); font-size: 26px; font-weight: 700; line-height: 1.1; }
+  .cmp-lado .cifra small { font-size: 12px; font-weight: 500; color: var(--text-dim); margin-left: 6px; font-family: var(--sans); }
+  .cmp-lado ul { margin: 0; padding-left: 1rem; font-size: 12.5px; color: var(--text-dim); }
+  .cmp-lado ul li b { color: var(--text); font-family: var(--mono); font-weight: 600; margin-right: 4px; }
+  .cmp-lado .ev { margin-top: auto; font-family: var(--mono); font-size: 11px; color: #7f90b3; }
+  .cmp-card footer { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 13px; }
+  .cmp-card footer.bien { background: rgba(74,222,128,.07); }
+  .cmp-card footer.neutro { background: rgba(148,163,196,.06); }
+  .cmp-bateria { margin: 0.4rem 0 0.8rem; }
+  @media (max-width: 1100px) { .cmp-como { grid-template-columns: 1fr 1fr; } .cmp-vivo { grid-template-columns: 1fr; } }
   .cmp-notas { margin: 0.5rem 0 0; padding-left: 1.1rem; color: var(--text-dim); font-size: 0.8rem; line-height: 1.5; }
   td.cmp-bien { color: var(--ok); } td.cmp-mal { color: var(--danger); } td.cmp-nm { color: var(--text-dim); font-style: italic; }
   tr.cmp-total td { font-weight: 600; border-top: 2px solid var(--border); }
@@ -774,12 +918,162 @@ HTML = """<!doctype html>
   @media (max-width: 900px) { .act-cols { grid-template-columns: 1fr; } }
   .act-h { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin: 0 0 0.45rem; font-weight: 600; }
 
+  /* --- Escenario en vivo: un ataque por capa seguido de punta a punta --- */
+  .esc-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.6rem; margin: 0.8rem 0 1rem; }
+  .esc-card { text-align: left; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.7rem 0.8rem; color: var(--text); cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; font: inherit; }
+  .esc-card:hover { border-color: var(--accent); }
+  .esc-card.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .esc-card b { font-size: 14px; }
+  .esc-card small { color: var(--text-dim); font-size: 12px; }
+  .esc-capa { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+  .esc-card.fp .esc-capa { color: var(--amber); }
+  .esc-det { display: grid; grid-template-columns: 1fr; gap: 0.8rem; }
+  .prep { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; background: var(--surface);
+          border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 12px;
+          padding: 12px 14px; margin: 0 0 1rem; }
+  .btn-prep { background: var(--accent); color: #04131a; border: 0; border-radius: 9px; padding: 9px 16px;
+              font-weight: 700; font-size: 14px; cursor: pointer; }
+  .btn-prep:disabled { opacity: .55; cursor: progress; }
+  .prep-txt { color: var(--text-dim); font-size: 13px; flex: 1 1 320px; }
+  .prep-txt b { color: var(--text); }
+  .prep-lista { list-style: none; margin: 0; padding: 0; flex-basis: 100%; display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px 14px; }
+  .prep-lista:empty { display: none; }
+  .prep-lista li { font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
+  .prep-lista li .ic { font-family: var(--mono); font-weight: 700; width: 1.1em; }
+  .prep-lista li.ok .ic { color: #4ade80; }
+  .prep-lista li.esp .ic { color: #fbbf24; }
+  .prep-lista li.mal .ic { color: #f87171; }
+  .prep-lista li small { color: var(--text-dim); font-family: var(--mono); font-size: 11.5px; }
+  .prep.listo { border-left-color: #4ade80; }
+  @media (max-width: 900px) { .esc-det { grid-template-columns: 1fr; } }
+  .esc-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; }
+  .esc-box h3 { margin: 0 0 0.4rem; font-size: 14px; }
+  .esc-box p { margin: 0.3rem 0; font-size: 13.5px; }
+  .esc-box .k { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .esc-cmd { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0.4rem 0; }
+  .esc-cmd code { flex: 1; white-space: pre-wrap; word-break: break-all; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.45rem 0.6rem; font-family: var(--mono); font-size: 12.5px; }
+  .esc-guion ol { margin: 0.2rem 0 0 1.1rem; padding: 0; font-size: 13.5px; }
+  .esc-guion li { margin: 0.3rem 0; }
+  .esc-ctl { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 1rem 0 0.6rem; }
+  .esc-ctl label { font-size: 13px; color: var(--text-dim); display: flex; gap: 0.4rem; align-items: center; }
+  .esc-reloj { font-family: var(--mono); font-size: 22px; color: var(--accent); margin-left: auto; }
+  .esc-estado { font-size: 13px; color: var(--text-dim); }
+  .esc-pasos { list-style: none; margin: 0.4rem 0 1rem; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; }
+  @media (max-width: 1100px) { .esc-pasos { grid-template-columns: 1fr; } }
+  .esc-paso { background: var(--surface-2); border: 1px solid var(--border); border-top: 4px solid var(--border);
+    border-radius: 10px; padding: 0.6rem 0.7rem; font-size: 13px; min-height: 120px; }
+  .esc-paso h4 { margin: 0 0 0.3rem; font-size: 13.5px; display: flex; justify-content: space-between; gap: 0.4rem; }
+  .esc-paso .n { font-family: var(--mono); color: var(--text-dim); font-size: 11px; }
+  .esc-paso .t { font-family: var(--mono); color: var(--text-dim); font-size: 12px; display: block; margin-top: 0.3rem; }
+  .esc-paso .dnd { display: block; margin-top: 0.35rem; font-size: 11.5px; color: var(--text-dim); }
+  .esc-paso .esc-hist, .esc-hist { font-size: 11.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .esc-x { font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); margin-left: 0.35rem; }
+  .esc-paso.ok { border-top-color: var(--ok); }
+  .esc-paso.espera { border-top-color: var(--amber); animation: escPulso 1.6s ease-in-out infinite; }
+  .esc-paso.ext { border-top-color: var(--accent); border-style: dashed; }
+  .esc-paso.inactivo { opacity: 0.6; }
+  @keyframes escPulso { 50% { box-shadow: 0 0 0 3px var(--amber-soft); } }
+  .esc-filas { display: flex; flex-direction: column; gap: 0.3rem; max-height: 360px; overflow: auto; }
+  .esc-fila { display: grid; grid-template-columns: 78px 72px 74px 1fr; gap: 0.5rem; align-items: center; font-size: 12.5px;
+    padding: 0.3rem 0.5rem; border-radius: 6px; background: var(--surface-2); }
+  .esc-fila .hora { font-family: var(--mono); color: var(--text-dim); }
+  .esc-fila.nueva { animation: escNueva 2s ease-out; }
+  @keyframes escNueva { from { background: #134e4a; } }
+  .tag-marg { font-size: 10.5px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 4px; padding: 0 0.3rem; margin-left: 0.3rem; }
+  @media (prefers-reduced-motion: reduce) { .esc-paso.espera, .esc-fila.nueva { animation: none; } }
   /* Alertas flotantes: una por IP y accion, apiladas arriba a la derecha. */
-  .toasts { position: fixed; top: 16px; right: 16px; z-index: 400; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+  .toasts { position: fixed; bottom: 76px; right: 16px; z-index: 400; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
   .toast { pointer-events: auto; background: var(--surface-2); border: 1px solid var(--border); border-left: 5px solid var(--amber);
     border-radius: 10px; padding: 0.75rem 0.9rem 0.7rem; box-shadow: 0 10px 30px rgba(0,0,0,0.45); cursor: pointer;
     animation: toast-in .25s ease-out; }
-  .toast.block { border-left-color: var(--danger); }
+  .toast.block { border-left-color: var(--sev-block); border-color: color-mix(in srgb, var(--sev-block) 55%, var(--border));
+    background: color-mix(in srgb, var(--sev-block) 16%, var(--surface)); }
+  .toast.limit { border-left-color: var(--sev-limit); border-color: color-mix(in srgb, var(--sev-limit) 65%, var(--border));
+    background: color-mix(in srgb, var(--sev-limit) 22%, var(--surface)); }
+  .toast .t-ico { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .toast.block .t-ico { background: var(--sev-block); color: #fff; box-shadow: 0 0 0 4px color-mix(in srgb, var(--sev-block) 28%, transparent); }
+  .toast.limit .t-ico { background: var(--sev-limit); color: #3a2c00; box-shadow: 0 0 0 4px color-mix(in srgb, var(--sev-limit) 32%, transparent); }
+  html[data-tema="claro"] .toast { box-shadow: 0 10px 28px rgba(18,49,95,.22); }
+  /* 17-nov: aviso como alarma -fondo intenso que palpita y anillo en el icono-. */
+  .toast.block { background: var(--sev-block); border-color: var(--sev-block); color: #fff;
+    animation: toast-in .25s ease-out, alarmaBlock 1.1s ease-in-out .25s infinite; }
+  .toast.limit { background: var(--sev-limit); border-color: var(--sev-limit); color: #2b2100;
+    animation: toast-in .25s ease-out, alarmaLimit 1.4s ease-in-out .25s infinite; }
+  .toast.block .t-ip, .toast.block .t-mot { color: #fff; }
+  .toast.block .t-meta, .toast.block .t-x { color: rgba(255,255,255,.85); }
+  .toast.limit .t-ip, .toast.limit .t-mot { color: #2b2100; }
+  .toast.limit .t-meta, .toast.limit .t-x { color: rgba(43,33,0,.75); }
+  .toast.block .t-ico { background: #fff; color: var(--sev-block); animation: alarmaIco 1.1s ease-out infinite; }
+  .toast.limit .t-ico { background: #2b2100; color: var(--sev-limit); animation: alarmaIco 1.4s ease-out infinite; }
+  .toast .badge { background: rgba(255,255,255,.22) !important; color: inherit !important; border: 1px solid rgba(255,255,255,.45); }
+  .toast.limit .badge { background: rgba(43,33,0,.12) !important; border-color: rgba(43,33,0,.3); }
+  .toast .t-alarma { font: 800 0.68rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; opacity: .9; }
+  @keyframes alarmaBlock { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sev-block) 70%, transparent), 0 10px 28px rgba(0,0,0,.3); filter: brightness(1); }
+    50% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--sev-block) 0%, transparent), 0 10px 28px rgba(0,0,0,.3); filter: brightness(1.18); } }
+  @keyframes alarmaLimit { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sev-limit) 70%, transparent), 0 10px 28px rgba(0,0,0,.25); filter: brightness(1); }
+    50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--sev-limit) 0%, transparent), 0 10px 28px rgba(0,0,0,.25); filter: brightness(1.08); } }
+  @keyframes alarmaIco { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,.75); } 100% { box-shadow: 0 0 0 10px rgba(255,255,255,0); } }
+  @media (prefers-reduced-motion: reduce) { .toast.block, .toast.limit, .toast .t-ico { animation: none; } }
+  /* LIMIT en amarillo en todo el panel (gráficos, leyendas, insignias). */
+  :root { --amber: #f2c200; }
+  :root[data-tema="claro"] { --amber: #d9a800; --amber-soft: #fff3c4; }
+  html[data-tema="claro"] .badge.acc-limit { background: #ffe066; color: #4d3900; }
+  html[data-tema="claro"] .card.amber .value, html[data-tema="claro"] .wid.amber .w-val { color: #a07c00; }
+  /* Mapa: vista oculta (ojo tachado) y conmutador Lab / Operativa. */
+  #topoVista .vista-oculta { display: inline-flex; align-items: center; justify-content: center; opacity: 0.55; cursor: not-allowed; }
+  #topoVista .vista-oculta:hover { background: none; }
+  .topo-modo button { white-space: nowrap; }
+  .topo-lede { max-width: 980px; }
+  /* Ojo del recorrido: círculo que despliega su texto al pasar el ratón. */
+  .rg-abrir { display: inline-flex; align-items: center; gap: 0; padding: 9px !important; border-radius: 999px; transition: gap .2s, padding .2s; }
+  .rg-abrir .rg-txt { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width .25s ease; }
+  .rg-abrir:hover, .rg-abrir:focus-visible { gap: 8px; padding: 9px 14px !important; }
+  .rg-abrir:hover .rg-txt, .rg-abrir:focus-visible .rg-txt { max-width: 260px; }
+  .rg-abrir.sin-esc { right: 150px; }
+  /* Escoba de «Dejar limpio». */
+  .btn-escoba { display: inline-flex; align-items: center; gap: 0.45rem; }
+  .btn-escoba-sec { display: inline-flex; align-items: center; padding: 0.35rem 0.55rem; }
+  .btn-escoba-sec:hover { color: var(--accent); border-color: var(--accent); }
+  .btn-escoba[hidden], .btn-escoba-sec[hidden] { display: none; }
+  .al-epi { font: 600 0.72rem var(--mono); color: var(--text-dim); background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 0.05rem 0.5rem; }
+  .btn-link { background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 0 0.2rem; text-decoration: underline; }
+  /* Widgets con icono (Actividad, Respuestas, Scores). */
+  .wids { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; margin-bottom: 1rem; }
+  .wid { position: relative; display: flex; gap: 0.8rem; align-items: center; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; padding: 0.9rem 1rem; overflow: hidden;
+    box-shadow: 0 1px 2px rgba(18,49,95,.06), 0 6px 18px rgba(18,49,95,.06); }
+  .wid::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--w-c, var(--accent)); }
+  .wid .w-ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex: none;
+    background: color-mix(in srgb, var(--w-c, var(--accent)) 15%, transparent); color: var(--w-c, var(--accent)); }
+  .wid .w-lab { font: 600 0.7rem var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
+  .wid .w-val { font: 800 1.75rem var(--sans); color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .wid .w-sub { font-size: 0.74rem; color: var(--text-dim); }
+  .wid.bad { --w-c: var(--sev-block); } .wid.bad .w-val { color: var(--sev-block); }
+  .wid.amber { --w-c: var(--amber); } .wid.amber .w-val { color: var(--amber); }
+  .wid.ok { --w-c: var(--ok); }
+  .wid.navy { --w-c: #3b6fb6; }
+  /* Gráfico de Decisiones ampliado. */
+  .dec-chart { position: relative; }
+  .dec-max-btn { position: absolute; top: 8px; right: 10px; z-index: 2; }
+  .dec-chart.dec-max { position: fixed; inset: 3vh 3vw; z-index: 600; margin: 0; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; padding: 2.6rem 1.2rem 1rem; box-shadow: 0 30px 80px rgba(0,0,0,.45); }
+  .dec-chart.dec-max svg { height: calc(94vh - 9rem); }
+  .dec-chart.dec-max text { font-size: 12px; }
+  .dec-fondo { position: fixed; inset: 0; z-index: 590; background: rgba(8,20,40,.55); backdrop-filter: blur(2px); }
+  .dec-zoom-info { position: absolute; top: 12px; left: 1.2rem; font-size: 0.78rem; color: var(--text-dim); }
+  /* Respuestas: filas teñidas por acción y bloque de ayuda plegable. */
+  #blocked tr:has(.acc-block) td, #histTabla tr:has(.acc-block) td { background: color-mix(in srgb, var(--sev-block) 9%, transparent); }
+  #blocked tr:has(.acc-limit) td, #histTabla tr:has(.acc-limit) td { background: color-mix(in srgb, var(--sev-limit) 14%, transparent); }
+  #blocked tr:has(.acc-block) td:first-child, #histTabla tr:has(.acc-block) td:first-child { box-shadow: inset 4px 0 0 var(--sev-block); }
+  #blocked tr:has(.acc-limit) td:first-child, #histTabla tr:has(.acc-limit) td:first-child { box-shadow: inset 4px 0 0 var(--sev-limit); }
+  details.ayuda { margin: 0.2rem 0 0.9rem; font-size: 0.82rem; color: var(--text-dim); }
+  details.ayuda summary { cursor: pointer; color: var(--accent); font-weight: 600; list-style: none; display: inline-flex; gap: 0.35rem; align-items: center; }
+  details.ayuda summary::-webkit-details-marker { display: none; }
+  details.ayuda[open] summary { margin-bottom: 0.4rem; }
   .toast .t-cab { display: flex; align-items: center; gap: 0.5rem; }
   .toast .t-ip { font-family: var(--mono); font-weight: 700; color: var(--text); font-size: 0.95rem; }
   .toast .t-x { margin-left: auto; background: none; border: none; color: var(--text-dim); font-size: 1.1rem; cursor: pointer; line-height: 1; }
@@ -878,25 +1172,197 @@ HTML = """<!doctype html>
   .ws-detalle .kv { padding-left: 1.2rem; color: var(--text-dim); white-space: pre-wrap; word-break: break-all; }
   .ws-detalle .kv b { color: var(--text); font-weight: 500; }
   .ws-detalle pre { margin: 0.3rem 0 0 1.2rem; white-space: pre-wrap; word-break: break-all; color: var(--text-dim); }
+
+  /* Revision GUI 28-oct: tareas primero, menos ambiguedad, evidencia enlazada. */
+  /* Con margin:auto un item de grid no se estira: tomaba el ancho de su tabla
+     mas ancha y la cabecera se salia de la pantalla. Ancho fijo a la columna. */
+  .shell > .wrap { width: 100%; box-sizing: border-box; }
+  @media (min-width: 1500px) { .wrap { max-width: 1320px; } }
+  /* El titulo de la seccion ya esta en la cabecera: no repetirlo debajo. */
+  .wrap > section > .sec-head, .wrap > section > .sec-head-row > .sec-head { display: none; }
+  .wrap > section > .sec-head-row { justify-content: flex-end; }
+  h1 small { font-family: var(--sans); font-size: 0.86rem; text-transform: none; letter-spacing: 0; }
+  .stamp { text-align: right; }
+  .stamp-tz { display: block; font-size: 0.74rem; }
+  .nav-grupo[hidden], #nav a[hidden] { display: none; }
+  .kpi[data-ir] { cursor: pointer; }
+  .kpi[data-ir]:hover, .kpi[data-ir]:focus-visible { border-color: var(--accent); outline: none; }
+  .kpi .k-ir { font-size: 0.76rem; color: var(--accent); margin-top: 0.35rem; }
+  .al-tag.modelo { background: color-mix(in srgb, var(--capa-b) 24%, transparent); color: #9cc3f7; }
+  .al-tag.regla { background: var(--surface-2); color: var(--text); }
+  .filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; margin: 0.7rem 0 0.5rem; }
+  .filtros label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--text-dim); }
+  .filtros input[type="datetime-local"] { background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    border-radius: 7px; padding: 0.3rem 0.45rem; font: 0.8rem var(--sans); color-scheme: dark; }
+  .btn-sec { background: none; border: 1px solid var(--border); color: var(--accent); border-radius: 7px;
+    padding: 0.28rem 0.6rem; font: 0.78rem var(--sans); cursor: pointer; white-space: nowrap; }
+  .btn-sec:hover, .btn-sec:focus-visible { border-color: var(--accent); }
+  .btn-sec.neutro { color: var(--text-dim); }
+  .estado-vacio { padding: 0.8rem 0; color: var(--text-dim); }
+  .estado-vacio .btn-sec { margin-left: 0.5rem; }
+  .al-ver { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; }
+  .dec-resumen { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; font-size: 0.84rem; color: var(--text-dim); margin: 0.3rem 0 0.5rem; }
+  .dec-resumen b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .periodo-info { font-size: 0.8rem; color: var(--text-dim); margin: 0 0 0.4rem; }
+  .periodo-info.activo { color: var(--text); border-left: 3px solid var(--accent); padding-left: 0.55rem; }
+  td.ip, td.num { white-space: nowrap; }
+  .why .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  tr.dec-fila.abierta > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  .det4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.9rem 1.4rem; }
+  .det4 h4 { margin: 0 0 0.35rem; font: 600 0.72rem var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
+  .det4 p { margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--text); }
+  .det4 dl { grid-template-columns: 1fr; }
+  .resp-fuente { font-size: 0.82rem; color: var(--text-dim); border-left: 3px solid var(--border); padding: 0.3rem 0.6rem; margin: 0.4rem 0 0.9rem; }
+  .est { display: inline-block; font: 600 0.68rem var(--sans); padding: 1px 7px; border-radius: 999px; margin: 1px 4px 1px 0;
+    border: 1px solid var(--border); color: var(--text-dim); white-space: nowrap; }
+  .est.si { color: var(--text); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+  .est.no { border-style: dashed; }
+  .est.lib { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--border)); }
+  .alc-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.8rem; margin: 0.6rem 0 1rem; }
+  .alc-3 > div { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 0.95rem; }
+  .alc-3 h3 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+  .alc-3 ul { margin: 0; padding-left: 1.1rem; font-size: 0.86rem; line-height: 1.55; color: var(--text-dim); }
+  .alc-3 b { color: var(--text); font-weight: 600; }
+  details.diag, details.plegable { margin-top: 1rem; border: 1px solid var(--border); border-radius: 12px; padding: 0.55rem 0.9rem; background: var(--surface); }
+  details.diag > summary, details.plegable > summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+  details.diag[open] > summary, details.plegable[open] > summary { margin-bottom: 0.7rem; }
+  .vig-hist { font-size: 0.82rem; color: var(--text-dim); margin: 0.2rem 0 0.8rem; }
+  .vig-hist b { color: var(--text); }
+  .desp-sum { list-style: none; cursor: pointer; margin-bottom: 0.35rem; }
+  .desp-sum::-webkit-details-marker { display: none; }
+  .desp-comp .c-n .hace { display: block; font-size: 0.72rem; }
+  .desp-comp .c-u { text-align: right; }
+  .dec-chart[hidden] { display: none; }
+  /* G2 · Alertas activas en el Resumen: cada IP limitada o bloqueada, a un clic
+     de su respuesta y de su decision. Las nuevas (menos de 60 s) laten. */
+  .aa { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 1rem 0.6rem; margin: 0 0 1rem; }
+  .aa.con-activas { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
+  .aa-cab { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.45rem; }
+  .aa-cab h3 { margin: 0; font-size: 0.95rem; }
+  .aa-cab .n { font: 700 0.8rem var(--mono); padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--surface-2); color: var(--text-dim); }
+  .aa.con-activas .aa-cab .n { background: var(--danger); color: #fff; }
+  .aa-cab .th-sub { margin-left: auto; }
+  .aa table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .aa th { text-align: left; font-weight: 600; color: var(--text-dim); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--border); }
+  .aa td { padding: 0.38rem 0.5rem; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); vertical-align: middle; }
+  .aa td.ip { font-family: var(--mono); font-weight: 600; }
+  .aa td .hace { display: block; color: var(--text-dim); font-size: 0.74rem; }
+  .aa td.ir { text-align: right; white-space: nowrap; }
+  .aa td.ir .btn-sec { margin-left: 0.3rem; }
+  .aa tr.row-block td { background: color-mix(in srgb, var(--sev-block) 16%, transparent); }
+  .aa tr.row-limit td { background: color-mix(in srgb, var(--sev-limit) 22%, transparent); }
+  .aa tr.row-block td:first-child { box-shadow: inset 5px 0 0 var(--sev-block); }
+  .aa tr.row-limit td:first-child { box-shadow: inset 5px 0 0 var(--sev-limit); }
+  .aa .badge svg { vertical-align: -2px; margin-right: 0.25rem; }
+  .aa tr.caducada td { opacity: 0.62; }
+  .aa tr.aa-nueva td { animation: aaLatido 1.6s ease-in-out infinite; }
+  .aa .aa-sep td { color: var(--text-dim); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; padding-top: 0.6rem; border-bottom: none; }
+  .aa .aa-vacio { color: var(--text-dim); font-size: 0.86rem; margin: 0.2rem 0 0.3rem; }
+  .aa .nueva-tag { font: 700 0.66rem var(--mono); color: #fff; background: var(--danger); border-radius: 4px; padding: 0.05rem 0.3rem; margin-left: 0.35rem; }
+  @keyframes aaLatido { 0%, 100% { background: transparent; } 50% { background: color-mix(in srgb, var(--danger) 16%, transparent); } }
+  @media (prefers-reduced-motion: reduce) { .aa tr.aa-nueva td { animation: none; background: color-mix(in srgb, var(--danger) 12%, transparent); } }
+  @media (max-width: 760px) { .aa .col-ext { display: none; } }
+  /* G3 · Flujo de una IP sobre el Mapa: el camino origen -> agente se resalta
+     con el color de su accion y el resto del diagrama se atenua. */
+  .flujo-bar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--flujo, var(--accent)); border-radius: 10px; padding: 0.5rem 0.8rem; margin: 0 0 0.8rem; font-size: 0.86rem; }
+  .flujo-bar .ip { font-family: var(--mono); font-weight: 700; }
+  .flujo-bar select { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0.2rem 0.4rem; font: inherit; }
+  .flujo-bar .pasos { color: var(--text-dim); font-family: var(--mono); font-size: 0.76rem; }
+  svg.con-flujo .topo-node:not(.en-flujo), svg.con-flujo .topo-edge:not(.flujo), svg.con-flujo .topo-edge-label { opacity: 0.28; }
+  svg.con-flujo .topo-pkt { display: none; }
+  .topo-node.en-flujo .box { stroke: var(--flujo, var(--accent)); stroke-width: 2.6; }
+  .topo-node.en-flujo .ico { color: var(--flujo, var(--accent)); }
+  .topo-edge.flujo { stroke: var(--flujo, var(--accent)); stroke-width: 3; stroke-dasharray: 7 5; animation: flow 0.9s linear infinite; opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .topo-edge.flujo { animation: none; } }
+
+  /* ---- Tema claro (17-nov, por omision) -------------------------------------
+     Mismas variables con tonos claros; abajo, los pocos colores fijos que el tema
+     oscuro tenia escritos a mano. Navy y oro de la marca UPeU como acentos. */
+  html[data-tema="claro"] {
+    color-scheme: light;
+    --bg: #f3f6fb; --surface: #ffffff; --surface-2: #eef2f8; --border: #d5ddea;
+    --text: #12315f; --text-dim: #55657d; --accent: #0b7a6e;
+    --ok: #15803d; --ok-soft: #e6f5ec;
+    --amber: #b45309; --amber-soft: #fdf1dc;
+    --danger: #c0262d; --danger-soft: #fdeaea;
+    --capa-a: #11805a; --capa-b: #1f6fcf; --capa-c: #b8366a; --capa-d: #6a5fd6;
+  }
+  html[data-tema="claro"] body { background: var(--bg); }
+  /* Barra lateral oscura (navy UPeU) aun en tema claro: las variables se redefinen
+     dentro de .side y todo lo que cuelga de ella las hereda. */
+  html[data-tema="claro"] .side {
+    --surface-2: #1b3a66; --border: #2a4a78; --text: #eef3fb; --text-dim: #a9bad4; --accent: #f8a900;
+    background: linear-gradient(180deg, #0f2747 0%, #0b1f3a 100%); color: var(--text);
+    border-right: none; box-shadow: 2px 0 14px rgba(18,49,95,.18);
+  }
+  html[data-tema="claro"] .side nav a.active { background: rgba(248,169,0,.14); }
+  /* Botones de la cabecera rellenos en navy; el activo, en verde azulado. */
+  html[data-tema="claro"] .btn-modo, html[data-tema="claro"] .btn-avisos,
+  html[data-tema="claro"] .btn-tema { background: #12315f; border-color: #12315f; color: #ffffff; }
+  html[data-tema="claro"] .btn-modo:hover, html[data-tema="claro"] .btn-avisos:hover,
+  html[data-tema="claro"] .btn-tema:hover { background: #1b4683; border-color: #1b4683; color: #ffffff; }
+  html[data-tema="claro"] .btn-modo[data-modo="desarrollo"],
+  html[data-tema="claro"] .btn-avisos[data-on="1"] { background: #0b7a6e; border-color: #0b7a6e; color: #ffffff; }
+  html[data-tema="claro"] .btn-salir { background: #ffffff; border-color: #c0262d; color: #c0262d; }
+  html[data-tema="claro"] .btn-salir:hover { background: #c0262d; color: #ffffff; }
+  html[data-tema="claro"] .topo-cmd, html[data-tema="claro"] .sim-cmd,
+  html[data-tema="claro"] .esc-code { background: #0f2340; color: #e6eef8; }
+  html[data-tema="claro"] .topo-cmd *, html[data-tema="claro"] .sim-cmd * { color: inherit; }
+  html[data-tema="claro"] .esc-code .c { color: #9fb3cf; }
+  html[data-tema="claro"] .cv2-ficha.aviso { border-color: #d9a441; color: #8a5a00; }
+  html[data-tema="claro"] .cv2-ficha.mal { border-color: #d97a72; color: #a3221b; }
+  html[data-tema="claro"] .al-tag.modelo { color: #1f5fae; }
+  html[data-tema="claro"] .cmp-como li .n { background: #e3f1ef; }
+  html[data-tema="claro"] .cmp-como li code { color: #1f5fae; background: #f1f5fb; border-color: var(--border); }
+  html[data-tema="claro"] .cmp-run code { color: #8a5a00; }
+  html[data-tema="claro"] .cmp-lado .ev { color: var(--text-dim); }
+  html[data-tema="claro"] .rg { background: rgba(255,255,255,.97); border-color: var(--border);
+    box-shadow: 0 14px 40px rgba(18,49,95,.18); }
+  html[data-tema="claro"] .rg-pasos button { background: var(--surface-2); border-color: var(--border); }
+  html[data-tema="claro"] .rg-pasos button:hover { border-color: #9fb3cf; }
+  html[data-tema="claro"] .rg-pasos .num { background: #dfe6f1; }
+  html[data-tema="claro"] .rg-pasos li.actual button { background: #e3f1ef; }
+  html[data-tema="claro"] .rg-pasos li:not(:last-child)::after { background: var(--border); }
+  html[data-tema="claro"] .rg-cli { color: #7a4d00; background: #fdf1dc; border-color: #e7c27a; }
+  html[data-tema="claro"] .rg-cli .h { color: #a06a10; }
+  html[data-tema="claro"] .rg-abrir { background: #ffffff; }
+  html[data-tema="claro"] .ver-codigo { background: #eef2f8; border-color: var(--border); color: #1f5fae; }
+  html[data-tema="claro"] .ver-codigo:hover { background: #e3eaf5; }
+  html[data-tema="claro"] .flj-n { background: #f6f8fc; border-color: var(--border); color: var(--text); }
+  html[data-tema="claro"] .pmodal { background: rgba(18,49,95,.35); }
+  html[data-tema="claro"] .topo-host .box { fill: #eef6f5; }
+  html[data-tema="claro"] .topo-node.sel .box { fill: #e3f1ef; }
+  html[data-tema="claro"] .topo-node .box.rombo { fill: #e4ebf6; }
+  html[data-tema="claro"] .topo-node.artefacto .box { fill: #f7f9fc; }
+  html[data-tema="claro"] .topo-node.sumidero .box { fill: #fbf4f6; }
+  @keyframes escNuevaClaro { from { background: #d7f0ec; } }
+  .al-fichas { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.35rem; }
+  .al-ficha { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--text-dim);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 0.18rem 0.6rem; cursor: help; }
+  .al-ficha svg { color: var(--accent); flex: none; }
+  .al-ficha b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .btn-tema { font: inherit; font-size: 0.78rem; padding: 0.3rem 0.65rem; border-radius: 8px; cursor: pointer;
+    background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+  .btn-tema:hover { color: var(--text); border-color: var(--accent); }
 </style>
 
 <div class="shell">
 <aside class="side">
-  <div class="brand">CyberFlow<small>Motor en vivo</small></div>
-  <div class="side-state" id="sideState"><span class="dot"></span><span id="sideStateText">conectando&hellip;</span></div>
+  <div class="brand"><img class="brand-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAbgAAACECAYAAADiBT7RAADhC0lEQVR42ux9d5xdVbX/d+19zrl3ek8jhXRISOg1kNB7l1ClCEhRrNgQpFgQUWyIgiAiRUroRXoJvRg6gQABAullMpl67zl77/X7Y+/T7kx8Ph/6fD/n+BlDJjO3nHvOXnt917cQ/jWHBKABAC3TJgN6KyHEaBBCaCwnIVdpgSUoYgkWvdbR/9dnS2AlAXMNAIPBIz4EMEsAQxiYo/v964S9C1i7ogWypxVGNgBSgHgxVr210P0EuT958FQOHoPH4PH/20H/suLWNnUGkTwbMDsAaGAigAGyaysz0ENMKwEsAvHbxPymMP5fVW3DG1g0t5Rf1GcTMMf8hy7MA7//CRMK6KqZIIzZiok3AfPGIIwFoxVALYDA/XoXwK8ImN/pVfNvzVwHg0Vu8Bg8Bo/BAvffLW6iderJLMTlECRhNANQAJiZidLXIZkEERFs2SMQGwD8LoheJEMPFYrlR/s+WbA039nN4f+Mrm62BOYg6YQBFIZuumFkzM4M3gPEW4IxDiR8AGACiDk+uwxmk3wmRAALwOg7mPg4rJrfM9jJDR6Dx+AxWOD+u8WtZcqpLOXlDKOIyTCRBDMRCCAGc9I/sG3kwAThfoI9EAkG2RfKZg2A5wi4x5joHqx+Z1na1YCyi///P5/PbJHr1oZPGS2MPIIZ+4B5KwhZZ0uTATMbYqNBgplAxCBOP2OKu2WADEAMIQOY8D5eNf9Ad/7MYJEbPAaPwWOwwP3N4zwBXGDQsslWJPhZW58IAAlbzwhSyooRkAEbgO1CbdFLEBNgmMDEDCbhg4QrdnolCLdJiGvUitderIDv9P8nHVvyPuTQ6bsaNseD+QAWXpM9QRoAIjDAIHK7BiICiAQoOb1JJwejDQxzfOYjkCiwjr6FNW//tPI5B4/BY/AYPAYL3MAFDjRkypMgbwYYIYi8uDlgY4B1nXHD5kqTBHyf4PuA70NKaRs7Y2CYmZlBBGZmQwCYyAdJEIwB030s6BIsf3VupqPD/1HoUriTwthyS198Eh7GwCkAdgbZDQBYhAATAQJEJIQgEhLMzFopoBwCUQgoBcTIpJD2oWuriDwPbDRAZIjAMBwyyy2w5o0F7vkHiTyDx+AxeAwWuPV2Hq1Tj4AUN5ExEUhI2DYDxBpCejj5mMMwfuxIhKHCilVrsHzlGny0ZDl9smQ5lq1YCXR22ocrFEDFAqT0mI2GiYsigwGhmeARCQHWANH9guUleuUrjw7UBf0fgSM1AIghmx3F0N8E0eZsWy9FgGFAki1qICIoFRF6+4ByieH7VGhqwZhRG2DcmJHYYFgrhrQ2ormpkYvFItas7cRlf7iRVq1cDvIDsDEMQJOUPljdxivfPizHeB08Bo/BY/AYLHAVjzdhQkAdwUsQchOw0QwIIgHpeVDr2vHLX1yIr3z+6AF/f3V7Bz76eCleeX0+nnnhFTw/7w0seH8h0NUNFAIW1dUQQpI2mmEskMnMGiBBUkrbFeo/M9P3sPKND9xron/vriQtxN7Q6dtqNheCxK7MALGJbENHkoggPA/aMLinF1AKfn0dTd9oPGbusDXP2G4LTN14Io3eYDiqq4sDPtNDTzyHfQ86DigGMCzsToEsJ0VCz1Ar33l+sMgNHoPH4DFY4NazUMu2aYcZgTnMHBFIgghSSKiuDmw/a0c8ffc1FIahnRM5fkk8l5OezD1iqRTi1TffwYOPPYU773sUr74+HyiFQG0NvMCH0RrGGLZvhDQDAkJIYtNOROebFa9f+m/czZGDBDXGbNpIffwDIj6NSXhsTETMBEAQEYSQUFEIdHUBVUVss/UWOOLgfbDHLjNo6kYTIET+gaNIwdihJpgBIQSU0qiuLuL4L34H1159A7zGVtZaAYACiQCsbuFV848YhCkHj8Fj8BgscBhwfmSodepDkHIPNhyBYDsPQdDdXbj/jmtp791mIIwiBNKHgSWVxKM4AwYbthR3IkhPQrjVO1IaTz//Mv5045246/7H0LF0OVBTDa9YtAu1MTGnQpMUPkgCRt3DwFddN/fv1JkkRUQOmXagAX4KISbBGANmzYAkkO16wxDo7kH98CGYfcCeOP7IgzFjuy3jokbaFnlHlSSQY5cwJ/xTgAjGGPi+h/kLPsA2Ox+MPlVmFgGSPQZziYWY5s7VYJEbPAaPwWOwwOUW7LYpmwHiBSJ4zJYxKTxJunMtdtptFzxx1x+hIwUh3FNbwZblSyaviO2IDVYMbpjt4ux5ENKu6h99shRXX38brrj6RqxctBior2cZBDBKw5LjicFsmKRPbNYQmW+aFW/+MUfi+F87ZnnAXIWR21VJ1XsZgz7HzGDDIcAeARBSQmsNdHSgccQwnHjs4XT6iUdhwtiRAAClFLQ2EIISxmSs1qZUd5E5GJIEykqhEAQ49rRv4/prbmSvuQVKRSAmBSkD0uocs/qtHyWvcfAYPAaPweP/6CE/xUVbAosMqod8haQ3C6DIqoktIYJLJVxy4dmYOnk8jNEQRCAQqAJao6xay/Le7c8KAoNhuxVGS1MDdtlpWxx92AEIaqvx5vx3qW/NWoiqKkuUN4aIIBhGgaiWSByEmqE+elY8moEG+X+tuA2ZNo50eBuTPAjGKNstsSTXterOTni+j9NOPR7X/O5iHHnI3tTcVI8wDGEMQwiCIAESNEBxQ3IO002DE9AzQ0qJuto63DDnbiJfELMg94sCbFrRO/oPwHODM7jBY/AYPAY7uNzi3bbmZRJiGsAKbMklpq+LNp62CeY9MgeBL8HMEHDMhnghJurXcwz0QhmxuoBh2CAIrAPVex98jPN+/GvceOPtgJTwamqhjQaYGGQFzETCZzbXc4s6CfPnh/96GM4WN9k2fW9D/EcQhsFwyCDbtXkSOlJA1zrM2m0mLvr+t7HdltMIAMJyCCEEBNnzhoruLPtRVnZwRIRUUQ9ooxEqjR33PoJfffUtyKoasDFgu7cQknlHteqtZwd1cYPH4DF44P+2r+GnUgAFAPitK6cRiSnMxoDt94SUQDnEkQfvg6piAKU0iETiQMnMEK7K0d94Os7olYWVM8OTHpRSCMMQE8eNxp+v/BnuuPlKTJo0HqqjE0J6TEIAzALMko0OAfosrZYPYNhmba64CfzLmJJzlRgy7WRD5l4Aw8AIAfKIYLu2jg7UFXz86tcX4dF7rqfttpxGYRghilQ6i4w3Auw+HqLceeMBwMn03yzrVGuDmqoiDt5/H0IpghRxx0caJEiDZw/eGoPH4DF4/P9e4P7ezkQAQCS8WSAhwaTYLcAmKqPQ1IyD99vDPqEQjkCSmkdpV7w414HE7R31q3Sc/Kex7EshEUUKURjh4P12w3OPzMFxnzuSdftqsCo7kgoDgAfmEMLbhYy+D01bNvyLipwHzNGibeo3GLjSvn5WYHgkBAkpSK1px3YztsaTD96ML59yNLFRCMMIUopkXmksBScxhmFHyOEMHEnuBLEjmcRkEzAlwnrf9wAAe+4yA4X6ImkdWdk4WLhObx9gQsF1bzR4mwweg8fg8R9c4OYaACDDM7KoGAkB09eFzTeZgI0mbIgoiiBEFmJLGX9EmVUaiZg7ThtI+km7DnMKy7laKIggpEAUKTTX1eFPl/0Iv/nNT1AQErpchvCC+Oc9GB2CxNbkl+/AyO2qXJGjfx4sCSVap36Xhfgp2ETOdVOQFICJoNe24/QvnYLH7r2BNps6kcJy5Aq3yJyKTLFyL1W485Zx4rJkHcp8CNlenAhggiS7IZi28XiMnzAeuhRB2IIpwMaAMBEtxWn/wsSJwWPwGDwGj395geO/c45n0DyhHkTbgjl2Q4QgAkKD3XedxYEvYXQ67uKMTRfFEgFmKKUcvb3SRpEcSSK1Dh7wDQmCMgphFNEXTzqKHr7netpwg6HQHWsgpV2/AfbAJiTh7UJR702YMiXICMI/9ZmbaNvkDJbiR2x0BCJBAEkpYcolSKNx+eU/x29/djYFnnBwpMi9RYZlmRLbDUEcDMCZugVX6AxbIg4bruh6jUsXYBjW0EajtqYa22+zNVAqQYrEk1kxhBCkd8h254PH4DF4DB7/iR2cAABPFjYBYRRgNMCCAcAoEjU1tNeuMy3Y6Cj+SPRZrpA5qNL3PBQKBUjn1qF1DMnFMzru31Q4KULStQAQJCCFRKlcxo7bbIpH772epk3fhFTHWni+735QeMxcJuEdSO3e5baLmyU/7ZmbbJs2m4kuBbMiCMEMEp4H3deD+uoi7rjpKpx6/GEoh6EVZLucvGR3QezaYeQ7s+zPsJ2rMTM830MQBPB8L+Nx7cBL4c4gue4QwE7bbc4g5aKJAMDYJpmwvevOB9MFBo/BY/D4Ty1ws8gti9Mt5590PGtT5V6MG7sBpkweD6VUArnlZm3SkiaklHjz7fdxyx33Y8XK1fB9D0Hgw/M8KGXACaki/cOOljglVXBKsiBmBJ6PMIwwbsxIPHj3tdhuxx1IreuCFxTjyuCzjkJi+pxom3q61X3N8jIyAmEL1Szvb3/NlrCSC5HKL+ZotE7f3AB/tMWTrJuYH0D39aG1uQl/ueNa2m/3HVEqleAJMaB6LVvZKPs/194ZYyA9ac+V72HRJ0tw/U134p13P4Agke/kDCddsXCY8NSNJqBQXwelTUxWIbcB2cSdi8E53OAxeAwe/8kzOIANpmURTUEElCJM22QqmhvroHTKNveEAHnSYmsG0Mr+24W/+D2OOPQoTNvxQHzmuC9hzp0PoLunF0HBtyxD9xjkejnb2FCKZTqsM9u5eJ6dNw1va8Z9t1yB7XfaFtGalZAeWUd9GMlGKwb9zBu66TZO3MxuLmcs0WKu+ttfc7QrBHEbpDFk26EkcCMTagDWzBBERLp7HQ1pbab7br+GZmw9HeVyGb7vx2+moutK21TKMCGZbXcrpYTv++jo7MJ1t9yN/Y76IjbfdTaOPeoEXPqHGwEBKK3TQDhn0Aw3H9VaY9yYkWgbMpxMGBFRvItggHlDNK0aMTiHGzwGj8Hj/+rh/c8fYq6rXDzdFThhySN2qLbV5tOzlBIwGRgmwLjcN2NhtWUrVuOhuc9Bto7Aqo5e3H77w7j9zkex0dTJOP3E2TjhyINQX1eD2JYqZhYyp16WFHdwZP8eswhlTD5prMM9f76Mdj/oOH71pZfhNTZCa2Ozr4mqNfjG4vAtdylJfxV6Otvg+c1gPUIAwwDUgkwVQ9ZYATsrItEBQWuI0UFGr1EklqOqeelIXaalUe8tDJpMmkMm9oQQxGEfmhrrcdfNV2CbzaYgDEP4vp9alVFl70bI+roADGMsC1ICWL5yDX539Q247s+348OFnwDCA2prIVtH45EnX0BPbx8Kge+kBMjAw/bRtTbU3NyIMaNGYvEHH0EUCqTtnE6xkLUQehKAjwcL3OAxeAwe/4kFzqJqLZPrQDQqUWwTANZAIDB9yqSko7P6LQLDJAu6YQNPeHjy+b/ymmUr4TU0kFARqKEGAOGdd97FV758Dn5zxbX41lc+jxOOPgSeLxGFkdOFIS1m6yGeMDOkIIRhhJamBtx14+9p1n7H4qNPlrFXVQ0dhYJgFIBxZV1+jnS5D75oBXQNCF7aP8kMldMRZQwn+jIyqge9qxcvAWkmmkKsNRN5JDwINpB+gJuuvxzbbTENYTmE53uJXyTH3afI0CJdYZMkoVlDa4Mg8NHd24crrr4JP7/ieixduAgoBpAN9UzM0NCAL+nD99/DK2+8gx233Rwq0ta5LBnHkWNf2ucZN3Y0nnlMIS+nIwiD0SaBoecO3i2DB/6XTSkG58GDx78UorRLoldoBaHFhbVZ/ZuKUF1XQ6NGDk/0bynVP54hpVjcPfc/DlI9BBOBjYaOQugohCh48Joa8N77H+Lzp34Ts/Y7FnOf+Sv8wLf2XYZziF7yuPECHmvBAEgpUQ4jjN5gKG655peoqSqCoxAkPQAkYFgxMIKB8QAanHgsAhAxU8iMEMaEMCZkY0JmE8J+RcysIEQ1E01moikAFJMkIgFPAKqrC7/+2fnYc6dtUCqVXXGL3f5Nthoj5pfGgGGkFaS0c7a77n8M2+58EL7x9e9h6dIV8JqbIIpFGMPQTjgvCYg6u/Dks39NnEvgznlWOkCuCx4zchjACoIoFiiy25WMGrxFBo9/k2OwuA0e/ysdHAAMAbgGgIZ14YJWCq1trRja2gwXyZKzkYr/5nkS6zq78cRzrxAXamG0403GjSADShvIqmpQjcCzz76EXQ88Hl8/40RccNYZqC4WEDlBdE7cbPJswxikKwQ+wjDE1ptNwe9+cR4dd9xp8OoboFgwmG10jXNrBgmASJIrBpZpmL5+Z9Zix3/2e0k0AgGC2UB6AtGqlXTmd7+BU479DMphCN91bqkg0EbaEOW3qjbQVCEIAqxcsxZn/+hSvuqamwHW5LW1wWgNHZacSJvi3yfDAISPF19+I5UZgLIW1pZ84s5Na3NjPHlL5AYEAhsa4z5e/l/asfebRvYXS/5f2kz+dyQXc+M58ODC/nddJ7MJWPlvDKXPNf8Hr9n/9AI3G8AcSGWGGykIZNjq4ECsDNrahqCxoS4hRCSgm9XKgY2G9H28Pv9dLPnkY4hCMSda5sxyZowBjIGsrQUbg59d9Gt+4qnncdWlP6JNp05KXD8kke1k4j6EUpiSbTA2pPRQKpVx7Oz98dKrZ+DSS36HYMgw0tqAYAjMzEZbUosxVjtnOI7joRjCgxCAFPZPAoQQJKUgW+4IJCXU2jXY4+ADcfF5ZyIKI3juPDgqfoYdmdqR2c7UwBhGEAT86JMv4JQvfxcfLPgQsrmFAGO1bkwZQDGVzxsGUPDx7rvvoru7F8ViAEEChnW6Cch0c42NDYAQmQLIcbmz7Tfm8L8mF28W2WI6R/+diwGl0o655t803kemhKW55h/8fR6MLlrfZx+Twub8H3nZszzHWxgsdP/+Bc7umFhimGOXM0D2jtaM5tY2FAsByuUyKpXJGfQQL857A+jthCxWsdKcar8pb7IMANqxAv22Vvz1pVcwa++j+PJf/QhHHro3RVGEOCRNUMUVlDwWObsqH1EU4Sff+zrmvfwGnn10LlBVC4QRgwjwfFDRo+rqKlRXFVFXV4PamhoEhSJISNJKobe3hzu7utHV3YPevhJ0OYIJI8AYgu8DuoTWoW244pLzXNJdRnidKW5xq0qc5rYRCJ4v8dPf/BHfPf+nUNrAb24ipco5oXucvpCc2jjgNPCwdPkyLF62EhtN3BBKqXQW6jrb+Nw21NYCJHLaOluAueafDA+5rmausp1zZs5XO6kVvhwKQi0MAviaoTmERBkhuiB5Ndrf76yI9IkXvX+XBUQk+YNN4zYRwtvcGB6SMLFA0gAs7CfPBoYBIUCsYPRCeP5LWP3Ossr8wMEjPhdzFTAlQIvaFExjAFMLhg8iAwZBMkFLtyAZLUAMwQJgYQAWRljrCTYSkiyDS0sGNMc5K/aJJIGNHcATu2tLkEN87I8QGzATiBiaNMhYJEgYD4wyDL2LdQtfy1yvg5/n/w0WJWAYjUScdiUEhtHU1tKSLphEiVCNwanhMoDnX34TIM91EJzDpDg3YU4NmVUUkVffwOtKZRx1/Bfx7sJv8LnfPJ3sQk79imMM0cE9N4S1taoq+rjilz/A4Z89DUOGtvJGG22MKZPHY/yGo2n40Da0NNWjuroKNdVVKBb8dJZogL6wTH19Iff29WLtui4sW7mGPvp4Cd56+1289fY7ePu1N3DJJT/A2NEjEIYhPM9zurSsfyQnlmWCBBRreJ6HchTh5C+ei2uuvIaoqZlFUCSlouyorn/1dp0ZM8OTHjrXdWPx0hXYaOKGMIYhhUhDBTJIcXWxkGwMsql8BCrwP6fAVXQ1W/poXrelgNyGBbYAaCoYoxmmiYh8u1sRbklgAw8lAO1onrQQRG+QMW8YQU9izbvvZBaQ/+3Oxy5gTeP2JZJnEtFOTMKHpH72apxIQby8rZrRa9Ay4R5m/BTt788fXBQz57V5Qr0geSpDfQ7ARnYwIlMXpPg+lS5vUnpubiFSdEfAGb27UYOw1xizzPi9xj8rKu4CTi2Esq+M41VV2NdC9jJkYZgax81nEtcD5ndY+8G6wc/z/0iBA6GJY1f7uDMwmhsb6pJwsjxbkJKiF4Yh3nz7PSCoSgxOYi/m/otAKgEACFopEp4HUVvL5537Eyxdtoov+9m5xEaBDeUoNLF+jFwBgHYzrkhhk8njMO/pe1FVCAgDEvZtRdOak06IABQCD1XFAjU31WHkiKGYtvGE3G90dPagsd5KG4QQMCZ1bkn/TO+aSCn4gYeOzm4ccfI38NC9D8MbMhxaRWRU5G66/n4u5GZ4qXOn20CUQny8eGnK+KQU+HO2lHYN8CSIiDk54cnb97MjwU+h0MWJ6raraZ64DUF8BtS1L8jbhEkm59q1ucyOiePOl2tyqZqBaiIxEkSzWEiQ0WU0T3qBiO42rG9G+/uLK4op/4thSY2mCReSlGeBBNgYAzZRxnKV+wdBJZvAeKjaApInEOvDuGnc4Vj7wf3/Zqn0/zvFrWHC5iTkDQyxMdhYyjazAZuURMU6ez6T+XJ2gpvkTmYvjmRjzIkxwgA7yv5oqdvdU+7j5SzQLiC8qUT0YzB9luvHH4zOhe8PFrl/6wI3JLbGKMZLK2XMEYPAR56ub1LyiHO1/+jjpVi2bCkQ+IlWm9fLZsnjjmwpgtBE8JuacMWlV6BcLvFVl15IEgaa85hbdtaVivMISmlUFWz0jjGGYsIHkUgDDRIFRLogGWNneolOjTmN9BGExvoaGw+USQBAhqrPjvUYb+n9wMOK1R04+JjT+fm5z5DfOgSRK6ggaYs7/22iWfLYJAAmfLJsRZ7gQwNkfRszcMQOE31KhU0kAniA0DL5AAJOB9FebsdhVyQTafdsIq6yWdm73aAAzKztP7KBM7khogAkZjLRTGJ8F62T/sBKXoaOtxf9iyEhW4BaJh1LoLPAJnIXjwQg401W7jOj+AqJvVaT061hjAKJWiK6gVsmb481Cxb8hy6Ktj9qmDSWPLofJIbCmBLAHgDBgMyiQlS5d0jG1JydEGStcLM/m97IyfWZxFRx7srMFFH7j6l4NZfLaHf9CkwKJKeSh3t42ISZWP7+6sEi92/uZEIsRKoNyxSDyrhuZMTZ7gL66JMl6HJGyIbzvILs6sqV2XDxFeUKhVIawdDhuOaPN+KkL36be0pl+3jZx6RscUurjSCCUvb6kkLC86yXpRQ2qoZcojhlrunEScUla0thf8eT9kuQcNl3QGVsOedYjHGhAz5ZsgIHHX0ann/2JfhtQxBFUSrMzpSZeIFkoH/4aYY5CuFh+co1KckGNiQ2cfZ0P1cOQ0ugIcrvPi1t1HxacKRsmXwgtUx+hojuAtHe9uWYEIzInU2PGZ69LjntMSmGcOPGxtJbmSEZ8IjgNBcmApuQSDST8L4pPDNPNE8+BxhTdK9B4p9PljGondBGbC6yDCUQGDJZZYWAY+dSbEqePeeUj4giEHyAQ5BoIphL/8NF90SSfweioTC6DEIAIsEZbWoeNKREt8pEFds8DOhrm3oC9k/scr9Jyb45u1TF+iTO3pmcIFUWqyEJIABMGUJuhJB+uX7EaPD4d7Lq4hyrm2I9l8lcmZRo4KzA214dH3y0GMalVac9CK/HjZEz27F0r0VEkJ6HMCwDBPzpij9izh0PwPc8aGPcBZZ/RMMmKbIGJtWIUb7T4QqIwiQLEf0Xd2Ic7YMUc82+BVccSZCFLoXEBRdfhhcevgcIAjLGhcVaf0/HPM1CKalZNWfnje652L2H9rVrK2aZ8YOYRH+3rrsvRzpJ73HW/wMdEiXdTMPkDall8i1M4i6Q2B7METNHrkX0AJYxs1ZKD9ILID3fwqzGgJWC0RrG2BMnhID0JHlSkozbH/d8rthpNiZkUAtL+QNqKT6P5gnbuQ7S++fdTrPswCXA0RBiBBgKlL/HkmWW0kLnFkaKO/r8pUUAkWc7QdoDLeN2+RcVa/zbMVEbJh4MIfYiNiFAPhIk10ZACSEgpICQEkJKEkJCCvt9Gf+bSP+dSJAQBCEkKPu79mdIkgARsRACwvPcXE+4tBRrHiHso2QeV0DEr0UIik3NkZZYAuDDaEVER6F54rbuupSD5ejfdgbHGhRruTgDfXH/TOnY/d8VjMVLVwCaUxJKNviNs8AZZ8pZWkeFJ0lrDdXejkJTA444/gh84eTPYvqUidBaQ0qZEivcczLls9IoY2Ycz+qyO8Js4c1+lzh1IMkWnfzkkPsHt1I2Mgguxkfjx+d+DVtvsQl++bs/4Z3X5wNVNfCKBcsczeTmpS8vEx8UzzWTeaP9S3dXV+oNmiM0pNuGdZ2dQMaz0tqeEADq+wddJGLIRYu2jY5jxk9BYgiziexps9rCbMQRAOhyGejrA5QCvACorkFQXY2iJ8A6RKQ0ypEiXVJA2REvAx9ULMLzPDLGwMQCQyZrFM1aQ4hNyeAxapr0ObP23Zvdda/wz9E6gYj2SiWHSQQEWDM4KgOSKJmJJoVOxHAYs1Ig30uhLytPYQgJMvJQBh77D3OXsVsuyacgs9VjYyxxxBjovpKT6wi3c4RlM8eLCFE+LbnffVpxhVMMT9qmHFoDxQIoKIBJgoige3oIKoxBDrasFQ8Q0u2QtR0fVxVR0TYCBEMkPEAfwcALg25B/8YyARCVs8Nau7gK9JVKlZdohvBhv718dbtlHK0n5o0yLMgkp5rcrguA7lgHr7Yax5x8DL52+uew6dSU6GG0zj5tUhySOQjnQ1MTT8jMpciZn8k2YgkbNAsTJjMiJPZdnOuaOJFIUIb1SM46q62lCacefziOmX0Afv+nOfjJL6/Eyo8+ZtHUCCJBxphc/A2SolsxbEggSkJfqezQR0rfcwX7q719Xe7NUfwgjK5/oMDZ4jZlSkAr9SUgcYbb7YQMeK5VAWC7bsMM3VMCQGgePgybTxlPW282FVM3nowNx4xES0sLaqurwGxQLpfR2dWD9o51WPjhYrzy5tt49sWXMf+dBYjWrAGqq+FVVREbw4YNXPckYEwEogJLugktkz2sWXDDP4GsYVfCMWOK6MJEmzzL6a5DKxSDAv3xysswYewolMMQniftnNeZYCulUCwW8dur/4wrf3c1vLoaaAcdW54NO8/XrAfsf4SQ26B2UivIbOm+I+L7VEJDcEQ/uvh8TN14EkrlCIHv22BlZmhjCMwQ7hwzs0MC2J53l0OZdTyCYZAgp921fg/d3b38te+ci6VLPoFXrIPq7qGjjz0Kn519EEqlkv2IDENIz26qARSCAPc/Ohe//OVvIaur3POmpBOHEG1r3+NcPViO/k07ODZYTpJi+5DEB6q9ozMb750gXtlubfWajpSi7qA1ym664rWWUwKF53lQPd2A1jjgkH1x9jdOw7abTwUAhGGUdEWEfPB3pXygksSWPme2mlEOZs2yO7N1KzswJKoMauWchyUNRFphho40DBvUVhfw9dOPw+yD9sIFF12KP/zpZuv6UltnXWEqU7uzid8VcK4lzuh+pD3KkE2WrFiZvqqYdGZfm9Ngzaa/U0hri9vQcUPEKr4Zwt+ZjYrcMNaLA1dJCICZVPtqUHUN9thrFxx35CHYdea2GDG09e+65vbYxf4ZRQpvzH8Xt919P/485258tGAhUFUkv1iE0spt4MkjNoZIaADXcNPk1Vi74MF/ynB/bU01vKg6i8sT2RpbV1+L/fbaGXW11X9zQd9ui034ynIZoqEW2lTEsxM1ZF73f4I/o9US+pgMiBYwNMCO3S9htKSmlnqc8NnZaGtp+qe+kEsv/wOWfvQBZJWBKnXj4H13wz57zOy/F88cDfU1+OWvrnDKxwQdInIbFgJGctuUGqya3z3ot/lvyqIUbNawIyklTYAQWLOmPVMF9YCEk3Vd3VabkqGv5wC37CTXYVlq9WqeNH0KfnTumTjsgN1tYYsiCCJIaTfOCXxIFehD5jmYaEDfsXTtiDV7lNHREfIDK1QkZw8UMJO59itMoTmhEtvvCyGgNUPrCKNGDMVVv/4hHXrQPvjGORfh7VfnQzY12Q7Y6BzsWnl3MTIx3zkoM+1M459dvHg5IDxkVRSu8K7Mdep/T3GrndQqlHgQUmzGRpfB8AHjOl2C9AJSPT0AAYcfPRtf+cKJ2GGbzZMHiaIoEbqToJTElgWrM91wICW22HQKtth0Cr755VNx3U2345JLr8Kid9+HaGyw15ZWsGQEY0BCkuDruGXyZlizYNmnXuTY5NMzMsafRAK9fX2oqS4ginSmo7Y/GymFYrGAcmgNC5gHWjLJB6Z4wPzwP2qlEqYZJJOIEPv/hsAWhe5Y14mm+jrb8QIDwPlZVDK/rmQ5PQPBlUoxPF9ARQoQPtivBYplKGXdjsrlxH4vWbZiY/Su7p7cC6CMibqwBLMi+lQRQPdgOfp3ZVGSXJvSGlzL7xFWrVqBrp5eCDuMTQtL5uIqlUo5liFbfm1Ku489K/0AplyG6evBF778eXrukTl02AG7UxRFiKIIMs46c1WWK/UGFZo65r9Bn+CM2372NSfQIw/syJljf3MFplmBwVaq2ckJUmO2hBRQWiOKIuy72ww89/BN+MKXT4bu6YEJyxBSWumPsz7jLI2EyApYmdj3fRae6Hfe46YgiiJ8tGQ54BcToQc5TJWYPvxveZIOH15NBbotKW4wvhNB2j0PMdTqlbzJJhvjgTuuw83XXIodttkcURQhDENEkYIQAp70IKWw1wzstSOESP6U0jJWBREioxGFEcrlEI0NtfjSqcfhpSfuxBe/fApMXwmmXIb0fSTMGzYRhGgj8IX2zM/+dBlsrsBxQlFyWnOtADawhAQJT7r34VnWrZQCnpeQE7Kc4/yiy+wBPeI/b6li2f+KI45vtPi68Txpv6SEjBnNQkC6v0vPsqOT//bc9x0RRUoJT0h4ngfP9xD4AQpFj6VnCSRgAzLKzuScgbuU6ecmpEieV0rpFkSTbmQTCUFWQGAGWZT/ngXOehRqYAkxa6dHseu6L7Fq5Sqsae+E70sYISqIFo5YoHR/KTHn0gHY8wRU+2qMHDEEd958FS776TlobqhFFEUVCwLlm/wsBEiZK6siOTtbDPMyALIGCTkIkjPUfl4PqNA/uodp4GLKubaLsnQau7gLgTAM0VBdhct+chZuvOYXaGuqh163Dp7nZ6DPzAYi8+DFYsEKiDhRDyd6QCkllq5YjSVLFgOBZ2V8tgoKgGEEPvo7zJYJmC0AGIoa/kRSzoThMgE+JZ6cNvNOd3XRF756Gj378BzstesOiMIIYRg59qRMiDDJ+YtRU+K8BMKdduHcX4QUkJ6AVnZD0NbajN/87HzcNedqDBvSCt3dzVJKTgqE0RrAMWibuJnzvfz0GGysBGKDjDyNPAm1jdGDeC6ayLQ43ocw0E8wk/xhAP/fyfz6n3zMRi6qKnfjVPD1Rf8GjCnDeKYB4ZoM7TklhCdks+TDAbFxqhnWgFGJ5GZAAYL7U0hR2TGmr5zdTc+DBe7ftYNzNEAsYWCtM8Zx7hgeVnd0YdmKVXbOH6lk0c7q/eP5HFPaOSVNjRAQBETt7TjosAPw7CNzcNDes1AOQyhld/uUQwvzC2Hi0hjPfkA5xqRtxjjnB9k/S67/jWCzBmhAJmZSqLLYCGeIJpQPNBXUf5NeaeUipYQ2jDCMcOQhe+O5R27FjJnbQ61aCU+IjHGycNOJ1FWmrq4ug1gSTKyHM3bwvuD9j9CxZiWkJ9kkHBgSYC6BzYf/tdnybAHM0aJ14ndB4jAYU2awH2vqpBTgqIxAAFdeeSku++n5qKkqIAwjW5iESPL8UkZqfiNEFQxUzvRHufNLgC99BxuVceDeu+CJ+2/G5MkToDranezCyR+E9MjgWLtyTvCA2bL/Kvr3GERD5r5YSWS0wHkRJ+Ug5ewFliVe/W3HDDJA9M8uNk7iMcvLnBOueDdigJ/5x87ZwF8it05Z30dnppAQuGLcg7KmbJZExvn7Mv69gdCTip0oZ2B8neMhWf41uw1LfP+bjJFDzE5OeV5Z9jU4i9Ik56Rai//6fM3y+n/Nzp6r/851+/d8DRa45FjhrwVhmeskDLP1ftM9Jbz/4aIkkyzZFWUuLC8I8r42zAAbSEEwUZl1TzfO/8F3ced1l2LU8CEIM4784Lgjy0s7rb6LM5lq5LRvmew1Sj3/sr/NFaq+3MfN2ULKuYWXM04u1E+/VykPcMJrp8Ujys/jcjtOTjcCnpQIwwjjx4zAw7f/ASecchxUZxeEF1h6ss0mt2QfNgwdUUtTM/J2aZl0BgDzXp0P0xdBSi/eVjBZbHAxqruX/G0N3GwJzNFombQryPshWEdsnSXscwkBjkooSoFbrrucTv7soQjD0GbWSZHrXokqNgnrXYDcjjweFiKz83ZWlQDg+z7KpTImT9gQcx+Yg8nTpsCU+1z2nxD2PGGWBSDeL7tOLmbj/K0Fmyp8LuPfs7qF3qDd8fDijX8qNq5wjGHOAcuu7auw6+nPKtbAolLm+em/WWT+i/VgdvzedGqCHZ+TCQVgSz8zqK74mdlyPWsKZR43e87+1pd7bysti5JNT55Elc2UdNsdEc/M3RSB03s0tyHlirFbBWyfbH6zwcZUwdBCMg7MFNHURjTRzTLnJ/Q5mUL8bmoGur4qztdc1f9rTvZc8d+4DmQGpeC/86vy99Znlu5lCuzf+Pq7NpCV1zL9/Zux2QM+tvcpdHACmBeBp70NomnWwE1Yt20NzHttPo6dvb9raChNv3YvpeALQIUgVMfDeHhBAaq3G7XV1XTlH36JIw/aE1FkvRg9T2bo/VxxAdoLSmQgUK64eCuohuAsHSCrHs+uMxXIiIjTEIgzw2NKF6xMQRWUt+hKxm0QOeZjaiVGabHMFF1297uUElGkEAQSf/zNj7Dh2DE4/9yLIGuKMMJDHJYOVoBRPHRIc2awlur24myDZ158GZABTEosYce7mIdFi0p/g05PwBxGy+Q6Erick9PgmhchIIwCgejP112OA/faGaVSCN+TFdybDP7bXwaZXjMV0HYiU6pYfLLXgvQ9GGNQKpfR29vnoCVtyQC2Uk5Gy+RTheEOOz3jRZD+W47RNpC9V6Lvsyn2aiKMaAYLCSgCJASZ4UxUHV+cgioKVuZ1VpoFmHTzRzneOuUm1PVonLgpirwU1NODZct684kKsyUwx/wDukVXtObAvjezOQw2JcamIB4LoA2MAqNDE03sAdEaMH/CwGsAXkJ7+BowpzSA0bU7Z3M0MLIKTcEEKbwhmo0ASwE4J1Eido79gKESYBZh3XsfAHMVWjeaBKN3dq4+lIP/qb93ifXiyhllpZCgIFDuzo9n/bE/7vq7PCEFQ3hwSQJp9mQeT8hJjZIizJxJAOOBvJoJ2NID5kXJ/TZmTBFdwVjJtCGTGQ7mRpAoAuwZ5h4BfGJYLAOHn2Ddoo8qkjVkNoQl+e7Q6a6argBUY7oZEe0MzzNu90tYsaIn83tiAEMpty78vRFQc/QA99EAPrVz1T9Qg3SG5Z1brz4FmcAsAcw1ZPAcSxzu5M/WpzQQeOXV1xEpazYsIKBZJ9ZUAFBXV8cgARIe2Gh4vg/V1YmRozfALdf8CttvMRXlstMMZckexA7S5HSOkdAA/4vST5VVLmtTRf3+PTaKJsqWn4G9VnIuSzmpXVaPwHkzvIoUz8rvJWo3983Y1iwMI5x35ilobqjFl796FmShAOMV7B7DnYSRI4bFPsUQ0mlfAQS+hyXLV2HevHlA0U+0QSn3zzxin3+9AlQBQBNwAcGbyCYKreNGjFozot5e+v3vf4mD997FMc1kZmzCufT1bCEjpoylGCf6oVgmIkQqL6uEfK0bPMMY2x2XlcZhx30Bn7z3PmRTC7Q21urL/nItkbgcgl1ZN2CjFqF54r0syj/C6o+XZW4YkdhwBXQewAeA5UiImCHluevSc8kpbAAIznYOuVlMRpeIgVii6dLplmphdzliFEl+ERF1AXXr0FK3GDBPsjEPYG3Ti8Cc6L9hMk25SJ+GCZuTR8eDzcEAjUkc+ZONQ8WgOnkPBmgOFgAT7mND16LjvdfsD27pA/Mi1IwbQkX5bYAOBLAhgzwimTyOQWo+nllOe9E86SUGg4zZDiQLgDFWcpJuKNM2vv+6xxXfZgBGqfxoIf4I3ElXcaRUYs4uYIyxoQTOVYgoT5mOYch0U50uQMKNEJgqXIyySQU6dPDJvAjY0kdDx34kxaHowjYAbWgEFQCZlBlySE0sqQL7PWie8A6Ax9nQ3eh47+lcUWsZvzMBnwXTZohKTZbUUkuAFvbkM4PrDRRMopNqrlsL4GXWfAPWLXxiACmERtO40RDiSAK2BaPJ+oKyhLGLM8cGjixKAN5k8F+wduED+Y1PRgrSNmaYMP4hzLQjYEa6iBkvrlNsh5Vu0WcDCAPmCKBFBH7c6PAOrPt4bbbIfQoFbi4DgBF4nmxdk8QMYzSo4OPN+e9gybKV2HDUcGil++3IR24wHBB24+Z5EmrNCmw0ZSPcefOVmDx+tF0YPWs1yFkSgituyIiqswxFrigfxNlOyW2oqNIFhFLxdjanLTP7yV2g2eajPw8/2aFxBaklhUXjhby/9WtubJObDzDg9N5SCJRLZXzp5KNRXV2Fz5/yFRAEqFgPJiZRzxg7ZoPkRtbaLgxKawSBj5deeRMrFi+FX1eHyHAsQ5TMRjPjpaw7x8CRJVOmEJnT2SjlzISTzilatZw+/5Uv4vPHfAblchme5/WDgip1iPGipY29Tjx/PZenMYiUsgEzUmZOn2O5ZSj3X/nuRfzXJ59BbFxNRNkYdUacQBjDB0RjIOQXyYj9uWny0Vi74NlkoW6cNJ0E305SjnexRwbMCnmGHDFBpHHy+Y1SDp7k/AY+fmlCUHLxxMtpKpcwDCYfhBYQtYAxDuTNFMKcg9auN8GTrzUFuhpL31nzX5hMZ7rRSVsTcBbA+wPCtzeL0WATm1+nHGhKjDvyUBbRZJCcTNBnoGXCjUz6Qqye9y6axk8lkneAxESbesGGwSqL2uXd/JPNQDVIzKL4PcOoNNcmRm+I+zUWRP01O24DJaX4H/GJwrAMhF3EUcGOUaSosLZznSMP5OCcCF+TWzpx5q2LVkNsNFzAfJ658zCQN83+lHHtpVGpiK7CAxMQEFQD0JYAtiTB30DTxJcI5krD+iES3lkEcSrnHCBim1cGC6RucrmOksYC2II8nIyWCdewCL7kkA0JQIvm8WcxiW+CRFO/WYLIAGzprGcXgvkSmsc/zYzTsHbhW7lOv2nC6ULT+SzEkPhWzG/+KCdqTvS/di3eiYHPEoLvccv4r2LNwrvi1/lpCL0dlYjeAPMnRDSGmTWYyfMLaF++Gi+98hY2HDUcSmv4vgcJgnYX4qhhrUDYCV/WU297J7bcbmvcccNvMWr4kKRz436sRMp7zVeOyRKHfsQj6IwbCjKdgYmjCyFI9IcZaKBuOHdiU1svyuqeUtPctANhCBKp+48jeyT6XRui1w8b4ewsIN5VZt607/kIyyFOOvoQVBcLOO60b8OQhIZBU2M9Rm0wHEYbuKByQKTzt/sefAIcMUAeyG54DEAeYN5BdfeCvzF/IwCGSJ8DEkWwsd0bACE9Uj3dmLz5Fvjp+d+EiiIIIXNMVKpY8OO7XmsN35OQnmUJtneswwcfLMKyZStIG4OammqMGDEcG47aADU1VcksUSvt3Jns+VTaFrfrbrkbv7vs9/Bbh0BpnXXCzQjUWFao/TXYKBDGkOB7uHHiruiY9xoaJo0liTuIMI61KRPBY7vjEMnQh1PlPXNK9yQnGaGcXjudITPyyAAJGuA6yPX5Jl7qyKLXlhhEtAmILqay/hI1T/qFqe69HIsX9yWz0ko4aPjwaipXf49gzmSSvr0wdMjkUuvSjjzxuUr/mpqP2/dqlBtweyB5PBk6kFomXMRMJ4HERBhdsvNZotyKmts4Uha61WBj3N8FgUT66VV6xK6PHMaZTYPAx58swZln/4ijsARjNMWOS7GjSfxIUvqW2KUiqCiEEEA5VHjt7fcJdW02qSNePzIFNOt8lECj8Wc/gGopBlGp2z8HrE9mIYba02yi1EreOQUMILBNelS2nmDu/pUQtDVDbk0Q60Cige1Cp5BMKTlJlLaQbGb3z1mEyy1IQpxAKtyQ26YcgFXzu6ll4lUgeRKMYWId9gPMOHV6Qnb0QSCQ3JHYPMwNE/fFuvdeBQBqmnAhCXEWMwNGh2nyQ3Z7z8m1RpzzunDLCDFIbEjAndw0/lSsXfh7ANL7lHziJFa83oMh054jkqNB7EY6HoEN/vLQY5h94O72lRiGYk58KkePHEZefRN6u3qx+bZb4S+3XI4hzQ0Iowi+J5NZF3F6M2SHugNikZnuIIUyYqKLZSV6Xn5+qpWy8zXrspE+T86TMrUXjzsvEiKHxVdmRBlt4Pt+5nm0SyUnSCFd92dszx6ncyeQqMgYLPOAcxsIwBMBwijCUYfuC88v4MiTzgSF3Ri+wXgMbWuBUirzXAxPSqxu78DDjz3OVF2ENkm+uCESYDaP2Plbv4UxEwczeSsQzWY2Gs6Ci5lArEBscOnPLkBDXa0LepWJeDtPyEk/J600/MBHOQz51jvuxc2334d5b7yLZStWgXt77IP7BQT1DRg9vA07bDEFnzloH+y7167wAz8JlNXGIAgCvPLmAv7il78FWfChtF17qdI+IN485DZEIIB9MJWJRDOkvpYbxswiD9cQ0TgwyiD4HC/IxDkiUCrc5uT/4kas32cXSwXyFCdobQhGcVbh7pSE8eIeA+qUtYwjw4oBAyFGsRA/p76aY7ll8ilYM+evGdjG+nA2jp1OobwWQm7KbAwbHZFN5/SIM5pMYQXq5IoKcerLajKkGbKu/pY5ZHQIEk1M4id2pdMKQMCZmVfS7VSMBXKaaIJMnGfjeEdh8WQ2zsqdMlCpyUKAKfxrjIGUEmvWduDWW+60Xqcx/Jo02pxnlSVM5syD1tSApAeWARDUOJlOhqHJWTSHcvFhnJu9CrfNZbaZf+Jsmz+nQ2sSRjKpB+69UMpAyq0HDgmIWS+C7RBe2ehEamDWkZXFCi+3QaZMsaiI88oQwO1J0lyCEDuTLl9OzRMWMMmTXCGSDPJy5hGUol3EFW5PFvQISYjhRHw/N4yeImThIAhxFliHThDtVWYkph7HKVciRTSy3Q0rAERCXsEN497Hug8e+5Sc1e2chgXdD/CR8XNqw4yqIj361Ato7+hCc32NJTMQJXqCKZPGQ5U6sfEmm+Ke6y/FkOYG27k5P7ec3RVXtNGEzCCZ0h6NkHz4Nk3AsupkpqCtWLkai5csx8o1azGkpRlbZqy+pBQQnBYbkWFNkfO4o9x8rr+JcXzR+L6PJUtXYM2atRg2tA1DhrTkXkdYjgDixPfOdnqU+XArUgQSk2eTWh2SgSclSqUyZh+wG1ZffBa+8LkTMWnS3qirqUI5DEG+dIbGIYJCgMeefAGL3l9Efn09RybpDyTYQEDcaavanPXokuaAgFOJhMdGh7brY0gpSbWvxOHHHYU9Zm2PcrkM3/czGrzUp5My5BtjDPzAx6NPPo9vnf1DvPz8ixbxrK4B+QFkQ6NDbAzCUg/eX9CO9199GddeexN22GknfP+cr2G3WdtDGwM2Bh3runDCyWegq6MDsqEZ5NIacnPNLChAnHzWadfMPjNpkJhOXmEOgB1ch+JnuioSQoAEZYIAKQc5JoiCsdFu2nB/Vt+AE04PkB4IllHM2W7AkdWZYZ07ks0fBBjC4vlag+Tmgs0TaJ30VbP63auAKQEwP0TTpB2F4NsB0cZuoSKi5IYTgkBCQmtFpq8PCCNn+CzS3b2UQKEAWfBBINImqfJghkdsNBgGZBlnVl7j0FYhAMNMFbNvl4KUGrW7QCFJFnJGWAa0tjdFsQpUqLZxV9J3npLafUSUFBbKQL9SSBSbmhFpbUPiuZIY0p/Xw5lZunEb5P5dY8Yuj1PJYy7JMsMN4KRnB8gwQDpyxcSL/10KQSQEtFIw5RKjHMIxweIoEsCXgO+T9K0qR2sdP7+r3qxtzHnCMyVPepbQmzCqk0UkN2619n7J/RHYZAxxDNtduzKAl6UrWJMpkQnsZUA4gFmbrErGgzEhhBhGMriRwRu7nZJ0nT2D4NZDpI+V1TjbAsdsDIw2uR2gzYoUkqQ4j4G5n1KBc0ahkh9DpLtAVGvnE5pkVR0++WAxHp37PGYftAdUOYT0LGSllcaIYW3Ye5998Msffw8bDGtFFIYoeBIGeS/kuMMh5GCMpLhxRiDM2hIM/Ezg6tqOTrz06pt4/Jl5eOaFV/DOu+9j9epV4FII4UvsMWs7/PZXF2LcmJEIowiBlE4zZtmQMejAhnOC8jwBJFP0hBVpf+f7v8SVf7gOXaUSGhsbMWHMKGy9xTTsscsM7LjdFmhsqE+A3tA5skDEC6PJLJJZGDVOR88mNNiLore3hNNPOAILP1qcePPFbgrC5YhqY/DHG25xEJkEQQEg42JZ5uuG8tNYmU5bKpiTGs0T6kG0L9s2XNrdPRHrMqoam3D2mWdkbuqshQwhr4BgaKURFAJc/Osr8d3zLoY2BK9tONhop8dmGK0o7ZIEqKoGorYOAOHZ5+Zh9/2PxpdPPwE/+f53UCwWcPJXzsbrL86DP2QYlGawNoDRiQSlwgMrxrBAvo9se+QuNg0Su5O1rM7t1IkIplwCIpUgaBXSffufhQIgPJBzMKlkTVKFXll6HiioJi8oIurqhOnuZqjIkaeTqDyC5wFVBfYLBbtGaJ0GbgIeWEcgqgLElaJ5wgjTPv/7aBm3GzHPYXATWEcWn6YE95dSsCqVCN3dQHURY8dtiI0nTcCoURtQdU0NSn19aF+zGh8vXoYFH3yM9mUrrUNLXS2R7epYOB6z3TBxClA5t3/T1+e6T51xWHAonOuuqFiElAFUpGD6SvAa6jFq1Ag01VYjCAK89+FHWNO+FkIKivccQhISMKICLUgQFKNJqwiGKG9rlLGEi3kCSeIGpRGpFJMSdZQQobJc7GwXlDNrj0M6+oUTg9l6kCWIkBREqqcXKJVAtdUYM3oETRg3FhtssAGqa+u5XOrDylXtWLJ0CX3wwUJ0xl6ydfXs+T60NvGaRDEjN968qfYO66pDgqy0SKTvwbj0A99nqq2txByF8wGF2+bHYmWAGLqnxyWgU34DIAiorgJxipgQkcf2vtorHitae06OyQJQHevsa6FMC2iM25m6IV8QgGprkSRl282MpdKR2I5bx2/qfYpxFgJL3ljMQ6Y9TKBDLSZFEsYwdA9dee1NmH3QHom/IEmLOdRUV+O2a3+L6qqChdI8zyZxcya+Bm5xjwWcGd1YdhccB4zGkGBXdy8ef/oF3H7Pw3h07jNY/PFSIDJAEACBD/hVEEE1wBoP3v8EZr17NG6+5tfYYZvNEJYjeL50ZH7KkS8TK6w4Sw5pcKlxGq9ypHDiGWfhputuBxqbAFHAqtXrsGrpKjz35Iv49e+uxeixo7HrjtvgiIP3wS4zt0Wh4CcBpJKkvYwy91casUJJOnou2UAAhcAKnX92/pnWB8+43RAzQh0hCHzMe+0dPPbEcxD1tQmhgxnGkgv5Jn7//bLVo1RSdmdJYK6SUu5pQCNg7OCf2T6Hau/AQccfielTJtnuzfOcgDuWKJhkpigkIQxtcTvvokvx/bN/ANncAik96ChymREDDQFtkVLKgMDwaopgNvj1T3+Jjz5Zhs02n47rbrgT3pAR0CoCtEJTcwuaGurtrN7uTMleT8Zm8UkPvaUyVqxabY2g3VmnOMCZtbJhlWn+E7EhE/ZhwzEbYkhbKzTsjpu1gonKlp8hJJHnY8nKtVixbAU8v5Cb1aTzuHwnp8IQ3LcOfatCDBk5Crsesi+23nwTjBwxFL7vU09PCR9+shTzXnsbTz73AtZ+/DFQLMKvKpK2MogETmaGARETyQuoZfJIAh8GQU3MJgJZKAwcG2AbqDXt1Dp6FD77hRNx2IH7YNNpG6N2PebQS5evxJPP/BXX3HgrHnzocWupV10NyzmiBLojNx6SJoLq7sK3vvNtHLTv7iiXSySl5Oz9CzB++NPfYO4jj0Bpg2EbjsXJJ56BQ/fbHRPHj0EhCOD7Hn5/zY049eTTIOrqGEYn9EvKQMYDOCvk5oeVarRkk5qV6hJnTCPimCzOa+kqcoZpPUJOzqV/cL9Zu+dJqFIfmb4SJm82DcccdiD22n0mNp48AXW1Nf2GcFEYYcnyFfjrvNdw610P4K6H5qLU3gHZWA/WCmzjgsDGQECBoxDHnXQMNp40lhgC0guSDTRrA2MUPM/HK28toBvn3AEhPRs/lUCNRJSXnQJaQcBg+laboVgsggTBSydf1Nfbxy+//iYMTEIc4QTfNypLxxUEsIpQU1OkU04/A02NDc6pStp1xNg5ujGMICjguVfexB133QevUHDICKe8EKIAxpv+KYY/Osd5omvAfGiM4RmjIeqa8PjcZ/HSK29h682nIlIKvhAwGpCCIAues92iBGKoZCYyGAMhOsbYD1B6EoHr2N559wNcN+ce3HTn/fjg3Q/trrBQhKipcRo2J2Ng49iUAt7QEVi8bA32+cxJuOPGy7HrjlsnizQlTM2Uqq+RdhQZmTqkEOgthTjihC/hL7ffy/7Q4dBaExsGeQLkV4OEpfl//MlSXPOHm3DNtXMwffrGOP6og3HUZ/bH8GFtiVO+NXoROe1OTE5ItGAxNJKBZ5VSqKuuSaGGTDf1+2tvRtjdC6+pyc4e7SXmweiy8emW9bMn7feMoSOcBYtDxwXACiKQOOHo2enzZQDmdP5lb/MwVAiCgP9ww230/fMugt82BNqwy4F0NOikK64gfGeYrcrl2MmhI3D33Q/g7jvvh6irgVYRCRg23etw2ZW/wsH77YFSX59lZjqyj+0ODdgwOnt6sMt+h+ODDz4EFWrAxlAcx822UDgxoQB5HlhpDBveiqcevA0jhg2BMdrNdQFt4IqwQqEQ4LKrbsAZnz8BaK1CGKmE3CQ9mTCm40gjAOjtK6Gmvhrnnn82PnvEIRgxfMh6ZMnAx4uX0Zw77sVvLv8DPlrwIWRzsxsdJVeoQHzJCvF5tiYA1p7M2NBb6XmkS70QAL709S/gm185HaM2GIq8AXYc9GvnwlIKjBg2BEd+Zl8c+Zl9cf8jT+HM7/4Qb7/yGnnNTWxcsUo+PSFtkysl9t1zFnbYdvP1riQvvjofj993N33ui1/ED8/5Bka4+8EYY1Pu4VF9XR1DFEDkWY5lZg7KCXqQ8ZStrDfcP8A7Z67Oqbk6cd4yduD1Cbk8xnwnx/1Y3Rm+jN3weRJqbTsNHzsa53zrazjuqENQ64hU8WfAhnPza8/zsOHokdhw9Egcdsh+eGP+u/T9i36NW2+8GSgWWBaKbIwBCQ9SelBRhGOOPhx7zNr+b67kHes68cjDD2Nl+zoIv0AWwo81umkGlJQSqrsD+33mANz1599D65RZmq39ux10PB57ZC57tVXQKqSED5M6XzGY2At8Crs66cjjj8YlF37vvxR4//rya/mO666FaB0Kxam8w62MLKDrPkXT1jm2MtWNeAjAAghPgoRhEIRfYNXThZ/95mqHDBs7L+HUvEQKmRArUsctyk7WkAO32WK7gshCkULgwceeweEnfg1b7DobF/7wV/zBwk9Y1tbCa2qEKBRgGNCGoTlL1TZgo6HCPsjqIjp7+3DwEZ/Hw0++gEKhAKWNFYeKCip/YhyYFhUhgFIY4vATv46/3PMw/GEjECkTb/gSuFNru8uWQQC/uRGiphqvv/EOzjzzAmw+82B89Ts/wvx3FsL3PUucUDqXJcVUaauXj88hBztooxIigzYGhUKA+Qs+wPU33AZRU4RWKr7ZlDXNwwNY+sYC4DwxMDwJg+GTWgGeZdMhrJ5MCILq68OkKZOwwzabQymVCvIpI8OgODqG4Xke3l24iL7+rQsga6qgGQkRJKWo5jlDnLWKyUHE9lrwamvgNdS5X5Igv4pAkl574y2qqiqgtrYGdXXVVFdbjdqqAmqriqivrUWhGGDUBsOwz157gMuA9PzUIoxkwrSLg0mlEOCeTszYbmuMHDEE5XLJxh0pbRmdbHJuFq+99S5AVSBZSAyVLZlEu+QIa0YRf3/aJhvh4Ufuxbe+eipGWDYxlUtlKpdDlMshSqUyymVrTj165HCc+aXPY97TD+Kr3/oqdMQwLEDST+EiNnYco8PIhiQyxYuzVyiSLpUxbOhQ3Hvnn/Hri8/HqA2GIiyHCMMIyunGPCnhex48Ge+oARUphOUQURhin913wtMP3oIjPjsbam2HTfWIlxohbLMoA8Avoq9UgtZWgB+GIYVhiHIpRHd3L4wBujs76fjTv4Srf/MTjBjWhjCKoJR22sYUaoT0AOnn7waThQYrWMdcUeViC78MRpyN8qLMTB8ZETg7yN9kkgvyRO/02jXaZBaJCjzCVUxBgF6zkg6ZfSBefOJefOHko1FbVUDZfQaxvMqS4+yaYIOc7UbWerqGmDZlEuZc+xtc88fL0FTfQDo0JIIaO4aQAbis+fa77ofWGt3dvSiVQpTL9loql0OE5RA9Pb2oq63BZltsCZStHWIcRcjGgNg4vocdwUAQDj5gH1uEVYQwjCgKI0ShQk+PzUved4+dgXIfETGl4b4SJKSViAlp0zOMZpDivXfbCVpr9Pb1oeReX1gOUQ5DRFGEvr4SyuUQf771bqBYD+MCaNmpJuwaYghAp/h0U3dnC7z/QJmA39tVzTARQWsN0djGd9zzIF58+U0EhcB+th4lzgKJ9zrnIUjOZJ3lLhoB+IGPSCvccMvd2HHPI7H3oSdizs13oy9S8FqabVHTyuL4RiPJI8sIzSljVqy1hihWoatUxqFHnoZHnnoRQeBDKZUZJOcxCSJHuycgjDQOP/HruP+O++C3tCKKdGZPUeGYyQzDBkorGMOQ1dXwWlqwon0dfvXLK7HVbrNx0hln49U33oEf+Ba+cANV601D/XaL2ZtWJCQH9z93M/7g51egd+0qiKAqudBAQoLZSKaf2weZT+t1uyiLzUlQm6Mdkx3eE9BXxl577oG62moLFXPWTst1QsY4Txbrg3nBRb9C58oVoEJ1puPITFaT/D3K2D7EeG3eqYbZ2IKhItugsLYjpmIVbrn7QXR395L0JJQyNubEMJSxJA1yhWXfPWaBpAGr0noij1y6tlGAKWO3mdsm+k3hTEVjYpNRBsKxVR957AlGVSMb4WfjEnMMPGPsZk1rjb122RHbbzUdURRZ6YTv2c2OtDO8+O9SetAucaK5qQG/uPAsXHv5T1DQfTDlnlzmn9tceC5hlYgEkR+Q6unCmNEj8fC9N2Gf3XZEqVRGpJRzyRc5MkwakBHDmlarKD0PURihuaEON/3xUpx4ygkUrVkNTzqGsVHEJgJUGVBlS4+Uwrr220Wb/MBDsVgAYOjYIw/Bb392LrTSUEohkL5LI6GEfGD19aICaETOtT957bn6xv1YrDnWWk7ThvVEFvVXzWTqYj/v1MrXmPyUIJaCoLs66ezzv4vb/3wlRo4YijAMoQ27xAnKyRAqntV2fyJ2OIpQDkMc/9nD8cj9t2H0qBHQ3esgBUOFfYAAnnnueUSRRlDw4fsSnvTS68v3EARWIrHLjG2BqIdFspM3icCd2YbIRuU+1DTUYNstbQavJyV5SWoDoVgMAAC7ztwWVfUBdLnbzflMxsSAAWYiMKJyhCGjx2GnHbZmIkKxUEDg2eteCgFJtnhVVRXxznsf4M3XX4GsLiTELaQJNJKZS8ZEr37KsRu2izNVdDWMXgIiH2wMGwMhPUShxvd+ejnCMLKnTXMmEmc9k73M56q1BhtLHtGGce3Nd2Hb3Q/nz37ua3juuZchqmvgNTbajiWKiNkQD/CYeVqKLXjkYC+jFGSxCt2lMg475nQ89eJrCILAwYV5hlzCqHQd0hEnfR333X4v/NZWqCjKJchhIHNBTm8uwwytFITnwWtuRl8U4eqrbsB2ux+Gz3/le/hg0WJ78blCp+M8OwfRItMNp6MGgiS70wsKAR6a+zzm3Ho3ZFOb6xos+m4LnH5ArX7jSdu9zdEDM2UBQbypu9JNNuuPihJ77rJjYg7dTwqAtJMMfB+vv7UAc26/D6Khwc7KMq5LOaP4DD5UmZb+t51qiI1hllVV+HDBO3jm+b9CuDxBz+34hCOjFQIJrTW23WpTjJs4FqpUdrvADCnFQnsAGFEUoap1OHabNSPRWAkiSM9FpggrI/F9D8//9TV8+N5CEoEgFZVTRlmacZj8fvyeVKSSpIycXlBQUozjmUT8GCrSKPWVcewRB2HOTX+A7xes4lz6dodMghIHMNYgGKCvEy0Ntbjj5quwyUbjUS6VEfieXUgo80FwRhtMaSdNbK89ZoaQApE2CMMIl//yB9jn0IMp6uohGRQohYTjHTYqaOAMNiY2CsLkiWNRKAQJ0UOzI2T2G3SxG7cgnxpCqZtN7GgTX1/S9+H5AaTnJ91Q8uX77PkepHT/JiV8F5OTaq1ihZbIETRy12xmRYudTBI2Zxz+TMSelFDrOnD+98/BD793JsIwhIrs5sI+FSUzwX5RVxVyG3JF35MS5XKILaZvhHtv/SOGtDUT9/UQhAdZW4P333sX8xe8h8Cxm3MyB4Pkmps5Y2t4tfVQblMao2cx01UIIi6Vscm06dhowliEYUiCRF5lQYQwDDF140mYsunmMH2R2wgi54/rNsmEvk5sv/XmNKSthew81l1nwjVCbv0AgMfmPoueNR2Qbs6f02Vb9u3L6PjojU87V8p2cYte6yASF8XwP8FARyFkMcBDDz2Mt9/7EL7zCeQKd/VU9kKQGdakcYVNehJ33vcIdtrnaBx/4tf5tdcXwGtqhKyrBRvjFu7sQpmxAaI8zElZm3RKB/9aaciqKqzr6sGhR5yCv746H4VCYJ0wnAaOjdMBOe/Ho075Nu6+5U74rW12WL6euBzuh/hnxbJxJ6JAQsBraUYZElf9/gZsvctsnHfhpVjd3oEg8O3zK50SYLLQXUIOs64gxmGyv77iOuiebggvSOBZsJHQUdkz+nu2S7uA/pZjDYO3QCbvg0CsyiGGjhiBzTbZ2HbBgioy+CiZYcZQ67U33oZo3WprFM05/kiFBxdlU3IqwmKzbq404CZCkGBEIW6958FkZquh8zeFEbYLamzAbrvsDJQjeF7GJzazy5dCAH1d2HyTyZgwbiyrSDnIzCTnmUgmXp9/eehxwAhABikrL2s5l+QMpu8hZuD2e0/cfy6dwoAEv+CjXAqx/5674PeX/gS6rxuCtfPgNBnYQkLKAMwSv//9pdh8k41QLpdRcLl5CVO3wiwRjkSV5IFQ2kXEnYTdOBCuvPQijBwzEqavx0JR2S5G0ADkoRQO1EplBcKp9Ia5f1wODxA63D8CJJEelFa3Q61ahWj1akSr2xGtWYdoTQei1e0crVqFaNUqqFUrEK1eDbVmLaI1a6F7+lwALROY7UYhQzQbeDpaQY2lVOYBNvA8gah9DU474xSc9+0zUC6H1hAhUWJQZv+bymrWk7Ocmw/6XoByOcS0jSfiT3/4jTWyMBrS89HXvo6feval5JrNvW5LfoVSCptNn4KxEyaT6SvnusekIBGAsAd77rqTgzGRZFNmrVYMMwLfwx677AyEZTujowGuawcr7rXbTM4WXTbGSVTcBo/sXx985AmGF1g4Ph/yad+Uwe0AjId/0kFEH6QsaCLP96HaV/PXv3kGTdt4QpLAnexq4pNikFA+Nds5UmATB/DIE8/hBz/9LZ586gU7C2lsAthAu0WGUzZ6Vpo9cEJ45jnTTK7ULNkoBVlVjdXt7Tjo8M/joXuvx9RJY5P0Xstatbv0Y7/wHdz+51stLT2KkmzN3Png/IyZc0aveVIzOXGjirH35ia0d/Xg+xf8FNfddDvO+vrpOOm4wyCEXZhJOo+82FWwIoWABMEYgwu+fQaefekNrOvshPACGB0lVd0QjwTw8nq8jCh9ZNrInSVr8iMIqhxi3IRJGDGsLXWfyc4+YrKBYXieTUR44NGngWJ1Ap2mwkbOSZspO57nSm3RQOadlPt9bQxQXY97H3oCa9o70NhQl5yr+HRp1lYID2C/vXfFlVf83sKb/WY3roOKQuy9+ywIAVLKwIOMF0DnWmHgex7aOzrxwMOPgIoCRlsoNDvLpYznYa5bTWatGY+TzKw3EYcPwML0ix7K5TKOP/JgPP/SK7j8V5fBa26F1ip5G54AolWLcexpp+LQfXdDqVSC7/vQYBBJ291lConWBp4vE3hQRTYLTUqv38IupYcoCrHBsDb8+Adn49jjT4NfLCJSqfiQks4nh+tlXIhEauNFqfbT/ozOpUakexBKg0Uzc+lEqmKAluZGnPWdM6C0gpAehAws4UtrGBWRMdp19S7CC9Ky9V5+DY8+9iSEH98zysoEjOmfZpQxNM/ZeCWID1lIt2sdtpk1E7/6yXk2sFmKlMKRaPhSQXzlRiAvOKikrth1qVwqY+9dd8R3vvMN/PB736fCkKEMGeDxp57lr5x+AoGt/ta4poATYTyjuqoKO22/Bd57/RWStTV2TMNp566Mgayrxz67z0q0k2mxtdetMQaeu6/23GUGfvrTIrQ2qZN9xtVHhWVUtw3nvXablaASlj4vEk85w4wgCPDuwkV4/sUXIaoD6IzGzt0wHtiERtB9n5IXZX+H+eYJ29Sv7ez7hSPUkpQCavVSbDtzJn58ztess4AQkJS7ldJdCmdtmwIsWLgI3//JpfjznHsBZSDr6+yKqxXlHOZjSnrWiSSXXc+JDyRznsFAGdIIuWBUrRVkTR2WLluO/WefjMfuvR5jRw1HuVQGCUIQBDj1mz/E9X+4EX5rK6IoTGZGuYuz4rmy5Y+Qtyqq5FoxGFpFEJIg29rw4eIVOOX07+D6W+/Dhed+DTO22SxhWQkW+V1t6m0IFSlsuenG+P3Pv4fZh58Ir64WBp4T00qfSVzvD52+Q7Ti9TfX61/YMK0RXB6OvPcxQYWYOHbUwC4lGSKOYYbveZi/YCHeXfgRUKi2C1U/QUAGj8yQSfJdy0AGxv3sbJiNgV8sYPlH7+Ohx5/GUZ/ZH1GkIAVBZxLjhRRQSmHGtltg9PgJWLRoCUSxyhbgzHvRxkDUNGL3XXbqlw4Qy3hir88X/voaPnz/EwR11Qj7+hIYeaCIJduhmGQuxJktFxvAWAlSClGuB8tnzRBCQimF73/ny3T3XffysmWLQVV1dm8rBHSk0Dp2PC485+vQWsPzvKQQMOuc00WcWF0qh1i+bAV838MGGwxPZTkVBRuwZKYwtM46v/vDDnh27tPw6hqSGWyemSHy92NcmDLORYZ1gsQYY0k5UWjTMjJRaBRftZTJR3SIFbTRGLnBcFx4wXf+24vaw48/jUf/ci+E12jZmsw5G7AMHaVfADLnvKviz0hxobqKfnvJ+Qh8zybZ90Mm8pZfVtDMuYwREnHqfZ4lzc4Q1fM8RErh7K+fhjvvfQBvvfEmZF015r38MpavXI0hrc0J4hXDvza52D7H7jvPwNVX/SlfSt01qHt7sNEmU2jzaVMdEUnkjCiyM9AoUth6i2nYcPIULHznfYiqAKw5MbEQUsJ0d/PWO2yDcRuOIqWUi9PiRIwbk5o8KfHoE09j3bLVFLS1cKRy15Ox6cr6Rax5bwEyIPKnJRUQAMzadb3ng2gS2ChBQnAYomn4SFz7u59Q4Mt0p8DpwsCZnLLY2aK7r4QfXnI5ttn1MPz5+tshilWQdbUwSiUzJM4NmCs6ImLk3Un7a2Jin8DErCp+TLeoaqXg1TfyRx98zIed8HVe19UDP/ARBAHO/N5P8PtfXwG/rQ3WspcSk2ZeT2IqVcBsybNmush87ocbxTJsyGuhAK+lGU8++Txm7X8svvTNH2LFqna7A1cOjmQrX5AkIdyfQSFAuVzGYQfsgW9/52tQHevg+b7brhoNUJ1ic5ULUqw0Q7T/7atWEBpjJlA8v4RRGDt6ZD7Uk7GeQTvw9oL3EXW1O1p9Hnrqd36yKBQhH07LtJ55LefFOkSAIcy5+8Fk98/ZWWpGh9XS1Ihdd9kZCFUFnGKJMabUgwkTx2HTTTaGcXBsDDOKzMwTAO574GGg3JcX01aqpRJUx2SyyDhTNBmeL+H7PnzfhydlYvWWvcSsXMa+DilsunlbWwu++62vgMsaQvoEEhDSA3d34pQTj8PIEcOS4OD8JWeJOARCb18ZP/jxL7HFjL2w2Yw9MG2HPbHbvkfgwUeftMSnUFkNlU7nXSaed0mJU447CohKbAlnIlcBiFLtaCaTN2dUbAzD9/yEUVwsFiClRFVVAdAhoEqZzzslxdhzp5JzGHudxoxByx7MMwjLjqkXhvbPvt4SlNLo6um1MUtGuzGiZxmhOcAwJnPlr30hyJnJ25VGSsl67Sp8/sRjseWmmzhoMolmhnCe5Qlp2iWDxGtOEPgIAh9+EIAEJR1Mf1iWIR2SUiwWcM43zwBrwC9UY8nHS/Hq6/MhhEgKnJW7GejESQnYfpstUDdkOFQY5dilQgig1I3dZ26PYjFwNnzrP4zRqK2pxq47bQ+UuvqFNFttNtP+e+9GSQ1IuC0meXxB1ij+7nv+AngChgVV2nNaiQf+4vLx5KdZ4CQwR3tDp28LwhlgEzknI5hSCb/66fmYNH4MwjDKeTOSpGRIbOnlls1z1/2PYfs9juDvnX0ROntL8Jqa7Jt1UEsyu8sIM6lirpYTYGYs53iA7Ie8GSqlfRYBSkXwGurx8rPP4dDjv8Ttaztx7k9+i59f/Bv4TU1QYdkNj1L8PAeY5xbtSufByoDUrEsK5cfJzkJHRyFkbTWMEPjNr6/Etjsfij/feh+CQpAQcGzHZKCNhmZLX/ekhzCM8KNzvoo9DtwfqqMDUhAzG8FahyTktmJI+5csyWRWf6jSqCYQFWycHMeZWAxBGDKkNRcsxuB+HrjxXxctXgZolTGaHmCoULH7pQp7tuQ0M/djmXGFwEkbBlXXYO7cJ/Hx4uWJXi3rR5lkDQI4YK+dQT4DRnNCLol99vq6scuMbVBdVYRKiEcWfhIS0LCsx87uXjzw6FygKO0iRMhdt6lGjPOzYQIErHdnTH744MOP8NSzL2HeK2+iq7sXQWAJGLGGjw33YxJ6vmVYfvaoQ2nstE1JKw0RVEMboGboCHzu6EOT3sNok7j/xERRAtDd24uDjj4V5579Y7z93sdYV2Ks7Qr5sbkvYO+DjsOvf38tgmJgu1opkoWRtQbBFtn99toFIyZOhiqHacxM5nOifsOE9CYWBPi+h2demIczz/o+9j/8c9j94GNxwmln4ldXXA+qa4MRvkOF80kN8QaI8n69jrVp6fZ+jmQi4UvhGHsSvvTg+fZnLQHIwtDImE1XwoSMyjih+L6x5DgiAa0iNAzbgL5++olpAcyYjmvWbnbsrgHHUn3o0bn43vcvxhe/dhbOOv8n+MuDj4Mh4Qe+lTJxxfyRUg9OrTUO3m9P3mj6VIS9XeBI00OPP5U0FFTZBJBFfDYcPRJbTN8YKHUndoUJPBwUsfceOw+wguXhWmvjZe+rg/beFSgUYexFzzZNSkBpBa++EXs4VITiBB/3moTjPQSFAB8tWoJnXnoForYW2himfEKZx1pHxlh4EpjL4tODJgFMmRIY4DcQng+S8ApFUp3dfNSxh/Oxh+2beExqpRP3Ddb2Ro1Ncj/8eCmOPfVbOPioL+LNtxeS19rKwvOgdJQPKcx5U1KOjcmZuVo2dyybttvfTSC3t8xApgJEAipSEI2NeOyRpzB1p4P5Bxf/lkVTMxRkajOUjdmJHVCoMnyV08QPykeA83rz5anCEQHJzstrbcGiZStwzAlfwaGf/RLeXbgIgXMzUVrnLzjhiAAAfvezc9E6fAg4UiAZgARJY1gz+AIM3XiqczERFUOvunTyZdLBmABqndOCnV/ExANXQLK7UQDta9fmYB1e3/R8ABZqLv4rY5KcIAHc3xCAHSLQvngx/vLQ45DCdUFZYo5LlNDaYOYOW2P4yFGI+vpSwmjMWgxqcMB+e7nNmYQksjIJVxhUZLMPn31hHha+8z5kVV2aIs/95b4xW5HSADFERsH3fby1YCEOPuoUTJ+xP2buexS22u1QTN9qZ1zwo0uS+ax1BbJMzHjGJx2dXimFhrpaHHXI3uCOtfC4DO5Yil1mbIkJY0ejXC5DSJm7BmN41A98fO2s7+ORO+egMLQZMvAgiCEEw6uthixInHnm2Xj6+XkICkHCDuVUSwClFFpbmrDbzBmEUi9J6QFCJvMayvmDpCQF1pbAVVYKX/zGedhxz9n4+c+vwH13PYRH738Ef7rqOjz39HOgQhGGPBLSy5gt50kOScByJXDCGXTH/TdnZkKCUpKPtc8T+QAVo/KwasXcrzIDkGBISAJ3deCAfXfD2A1HWt9bIfNGDm5jq3UEz/fwxtvvYbf9j8ZeBx+PH37/5/jtpVfjoh/8DPsdcDh22nkffunlNxAEvp2JOpatJGl3BwxICCilUQh8HDf7QJjuXqKihyeemIvevpKNsSJyWkXrERxDwQAwa8Y2QFh2UDQzEbEulXjo6DHYbqvNnX6T+u3ns+c+vq9mbLclRoybCFUO3ek01p67rwsbTRyLyRPHJ7rLxH6QBIQnE/bkU8++hK5VHZB+If3c7JNp+yb4BXS8+0bMGxCfIjSpxRr/FBb+VmCOSPqSSyUMHzUCF597ZrLbNY7kElt2aa3hOR3GVTfcgW13n43rr5sDWV0FUVWAjkKyAkNyqok0uy2Gqjjj7NGvOFDOGC4XVYIKJ7k0qy0zI7OPb5ETzSRqamnlitVEvkcxtNQ/542TrpBy0faVerX8/ILynq85AJY4kziRqYhaKYgggKyrxR233oXtdj0Ul/3hJvi+hTK0E08nuylnXDt+w5G4+EdnQ/f2QEKB2ZA90aKOWPzWJgnMpopgJD//2i1wACFRyPh+ImtATZWzJqBcKmegR84DPZSNBEt1SpzMVYF8pgRnUiZ4IKjEJsowASLg2+99MBkuxjqvBApxwtmW5ibsPGM7Rm8nPOF2mp7HOgp51LgNsf3WWyS7bwPYWZ6Jv+yj33HnPUDYlxFcZxmZFXWcMokXUQTf9/Diy29g530Ox12334uecgThCRAZfLRkGc4/53wc8/mvOq9UZ7OVWYBNvAFyEO6+e+0GUfDAYSegNA7Ye/cE/hMx+1F4kJ6AgUEQ+Hj1rQX40413w28biTC0OlIHJ5JWEaRfhAoVX/LrKyy8q3VGomIfUzhSyq47bef8VSsmh64zzpoACClh2HavXzv7x/jtJRfB8wX8hnp4DfXwGhrhtbTCq6kGVEjQZbCOEtpT5uIZoMPK07VpoFU53kCyzuexZNaO5D3moOds55h2UoLIEpBsThVB+nTEIQciH2mbdvDSJW/4gY9XXnsLu+1+AB67/37Iqir4Lc3wmpvgtbTAa2jC88+/jD0POBovvvw6fN+3xA/hIHjtIEeTICV0wL57UKG5FTIo4K0FH+C9hYvgeV6GLENpQq57azNnbAtUNVi9KJy4u68Ls7bbEi3NjQhDnWsm+imhnGuJ1gqNDfXYaZvNQL2diaE8EYBSiffcdSaKxSCNvkrkFLbLjM/0PX+5H0CYX4KSzkGAQPfG8GQWUfqfHAKYY6pGbT6CGeex0ZpBQhKT7ummH577DRo5vI2U0pBCJJCi1gZaaw6CgBd+tBiHHPclfP4LZ2HV2i54TS32hjI25JQpH5JJA423OL36ErzYCYK5shfI2fRkTTOyhlLZvLJ82y9cECdXJs5XuIynqcD927NsnEcMqXHeqCVbyvJhr8llyKmGzjC8ljas7VN8xlfPwwFHn4F33vsQgW+7ORsVZB+14OZxnzviABxx1EEUrVphHeuZJRsVgcRM0fbWZy1UOVtmQGjKOspQMm4kzqYrsCOU5GCPzPv3gyCXoZc4TnC8fUkXiiwESZko5BwKxBWkk1wmlX14ZZhlXTU9+8wzeGv+ewgCezOlEB9l6w8O3n9PQlANIwJrMyUDoK9MO26zGZqb6lEqlZLCmOa6AUEhQMe6TvzlsWeA2rpEqwZB/S7a5PqSlLA4AWB1+zocc+LpWL3kYwTNTRDOKgnCg6iuR2HkJNx24534/sW/ged5UOXQGi07WrWVr9jiFYUK06dOxkabbIwoAoptI7DDdls5gbqXdNbMGloZRGXLSL719rvB61aCpDWJJuGDhGfZh0JCaQ1Z7eHJp5/Ghx8vcSJtTjoBIGWMbrbpJpB1LVBaAVolcgrO5jfGidraxia98vp8XPGH6+G3jYWBgNIRtPtSygrg+4Wkmkw+IyMPTw4w+s5DihjQzgu5pJABcasKxCd/HRltjZkJDFXuwejxY7D9tlvadUSQy5Y1tig5NxwIQk9vH0784rewatUa+K1DYaIyoqgMpRS0MdAQ8NuGU0dnN59w+jd5XVe3Y7jax4JJs/timHLCuDGYOmUctNIIu/rw1LMvxvFMuZlvmqACbDl9KjYYPRym1MtJdBEk7bfX7jm5SzbrMCsPolxwPLD3bjsRc4xuCXvvVdXhgH33dCEaDhXxbBaqdtIvPwiweMlyPPH0C6DqamtBmIdVPYLRRvCDWVtB8el4UILDsvkBBLUSa+MJoqh9NXbfZ1ccf/j+KJdDFAsFJ1RNRbC+7+NPN96JHXb/DN855x72amutJ5uK0pPEmQQGN+AkYe2OpBQQ0lonyZhRlAyy0909ZY3fstqhinDEFD7kihuCcl2e4Sy1m8ADUKe40kSX8kUvXriZM5lWTDl3AuFEwMn7E8IJLYWjjJFzDbdfSimQFPDq63DvnX/B9rseisv/eDP8wBIUVGRhFRUpECzsevEF38aQsWPJhGG8IBGYDZP4AUZs1GLF+7Pcq5c9FUPKxHA1XvCTkpfN0iNY82j3a42NDRX+W5UbhfUBlBXiN14PrssVn30ydA/Qs7oDd973kLMWUinNXBA8soxBYwx2nTUDw8ZOgApD+3mwBrTh3XaeOWDRpth3VQg899KrWPzRYsiCuxFjJ/SK9xMH4MLYXXcY2fn0FVdfj/dfexNBQxOicgjOdn5GIwpLkI21fMmvfstvvv0ePN+Dios1p04p0pfQRqOutgabb7EluC/CuHFjMHrUBm4+I9IOmBlGMwTb3ISHH38KRvci7OmBKYcwYQRTLsH0dEH3dMH0dkErpvbla/DBhx+nDNMELUmJByOGD0FLYw10WAbFkKjrbkRm0xInjADAjbfdA9O9DhSLrCm1Sst6HxHHbLUBVrNKqlT+Kks3TQMbBVSItQd4cO4/ZKYMozaB7N16hb5ebDZlMpoaGxBFETzPc91zeu8rreFJiWtvvA2vPvsc/JYhlsCWCvbdHtcgKvXAr6nC2y++QFddc6Pd7CiVvHzhpAnSMYSLhQBbb74pczlkSI2HHn087TJz17ItcGE5RGNjPbbfcjpQ7oPwfOgo5LohQzFzp+2Sc5Nj/DJnwp85WUtjgGHXmTugbsRIO/KRHnRYwoRJY7HFpptYDa1j1lsEAjkS2mNzn8HaZSsgg6r850lsSAjBwDyseu/1bO68+FSIJcM229oQH8dGKUBIRGVU19fgonO/ASltITKwNFelNHzfxydLV+Izx38FJ5z0Vaxc2wXZ3AylwjgHyqbmOsgitiiKnUZMuQTd2wfd3QfdU2LdW2LdV4IOIzZaMxHgSevXluZCZYfDlIMrqGL+RpnBDGfmBEmyeIZDQllxeqWAvN+MiPOP78xgpRCQnrTwBKwGz/T1QXd3QXd1Qnd1QXd3Q/eWYMIIbAgkPevG4PvOFN7ZYWlFOirDa6xHR28fn37KV/mgI0/lT5Ys50KxwLE1VVDwYZgxeoNhOPc7X4Xp7iTroCAFQArCH0Xa/xIAxpRV9joRZi2cCaUN4GAAhmA0dff0Zpq7fCxOYk7rvjdy+FA3IzAVmk/K/SdhoEJWsSWn9Q0uK6hVzKSYQIUAd95zH/pKVq+X3XVqF2CslEZLcyN2nbEFUdcaEgTovg7UtdZhlruxPXdtZb0/4xvxLw8+BoTdbtaUJQrlF0QhRbIoWM2QQGdXD667aQ5EXT0UPDv0cnlyMApsFFiVIYhQWr0Uf55zF9uNj328ZB7nvALj97fJxhsx9FqM26ANNdU1iMLQMZZTv0bpC/hVPpg1fnHRBXhk7hN4/P45ePyBW/Dkg7fgiftvxkP33oSH7r0Zj9x/G5548A488fg92GzaRoCx58QkLLi0I2luaMCwIUPAKqogIliT4QTiypCJXpz3mo3WUTpRrGSF8sh09JyT11Bq98cpbT2JZ9LO0s1YmzylteUAuC8T/7tWiBxbm5kBESCJlyGZo+Vnr8lECE8VU3RBgJbYbPPN4TKVk9eBTE6clJbZeO1Nd4CKBcSm1Rn3hhTFYQMTRUSBwPW33IHIhQaTm6nFELGNW7PHJlOmABrwqqvw3EuvYNmKVZaYlsRIIWF0x7+z6847AShYM+OeDmy92cYYtcGwRL8nshKBXDZe4gaQyAVGjxyObbeYBvQ5NmV3N3babmuqr6uxml6HinDMrBXpunrP/Q8zkcslzMzaCWTcJ3+zPTEpQc77FGJyoJl/YJNdKfI8gWh1B77y3TOx5fSNrDC64EFHVkwbBD7uffhJ/uKZ5+PjhYsgm1qsA0mkEkcG4UnHqtTQvSUbdMgaKPqorqtDS1MrGptbUF1VE8cdUbnchzWrV9Pajg70dHXD9IV221Ao2Gwp30spp8T54E1OTOv7WeFk7YEok7Zd6f9IGbp/+nc3w0P+9+G8+CxbKbJOCVFktxvVVWhqrEdzSwsa6+tQ9O0APdKM7r4S1nV2ob2jC70da2F6e+3nGQRAsegE1tYtRCkN4RcghozA3fc8hlfnf4DLf34B9tl9BxitEZZDCCEQliN8/thDcd0td+OF516ArKmFVkqQxZFOwZhNf4n5r62z+IdpB1E3wA2EeEghGCywak17QvHN0c4BCAgYThO9x284CijUWtf9fvRJqpDCcZ46ORA+TRkX6gGIQ0lnbjTL2mq89sqb9NK81zFzxlaJJVaW9RkvXPvvuQv+/KcbIISAKmtsP2sbbDh6JMIwhJRe3knEhdv29vbh/kefBApViYA2NvUnl52VMOaUTq4xw5Zk9carb+LddxdBFKpgjEru45wFW0ymKdbg6edeSrsMCNtoOFNie63bM7DB0BYCFEaOHAEpgIizMdn9obYdttn8v7UOaKXJOcdlBJKUMAGHtrWkZsZZ1x7F6YYoNgZXGp1dPUDmHCMjiEcmAzNe8Bm8fl2k079KIdIgzf/GUSwWgLALKPp2HG/shoMqmdGUNyLLGngSa0AAE8dvmBNGk4uQiRtCz/Pwzrsf4JU33gGqapM5ZZywnhpIZ2wQapox/71F+HDRYkwaPyaJDUs0bpnN9wYjhgJk4HkFXr1kGT373F/xmYP3sVB74vNprwvJ9u87br8tgrpqcNQDRIx99t4DUlgESAqGkI4EkjUs4P4dsnEM0T12nkGP3HUPC1aAkLTX7rtk/EXj+aYjDhoD3/exanU75j73MnFVjfOtpayjjk+sQ2PlAbkklP9BgZstgTlajth8N2N4LzJGCeFJHUYYPnkjfPMLxyMW7IWlCMViAaVyGeec/0tc8usrAenDa2yE0hYuE9KzOgcVAWu7AAaC1hZM23Qqtt5sKracNgmTxo/ByOFD0dLchNqaqjiagWAslb+zpw8d6zqxdPlqvPnOe3hu3ht46dX5ePu9D6DWtAOBD1FdzYKIkiTkTEJTfxcNypEAiCpxfTdQduLy9UL08Y1NBE8IKK2hOjsBbVDV1oKttt8KM7bZAltsMhkTx43C0CGtqKutRW1VkCMPqEihu7eENe0d+HjxMrzx1gLMe+0NzHvtLbzz3odQ7esAPwBqq5PhsTIMr7kZHy9Zjn0PORZf++IJ+MG530RNdRGlUhlSSvi+hwvP/jL22P9ogtHsIpcVSAxHX3QSgEsAENp5NVpoJUg0xOCqnQ0FWPTxktzs0M7iLISkSadyNGMwdeOJGDVyA3zyyccQhWJO0M0u7y+NKxnYgT2DB+VE7f1YlxkpAIMJFLAudeLm2+/CzBlbwWjjnNlNUiClO+e777IT2saMw5q1qwkGvM8+e8GTAnZMxWlQpg36hO/7eO6lV7BwwQKI6trM8D6LDQyQB4ckzxWvvfkOuK8MUQzYFkjH5BWU6jZjVC6oxgeLPkHHui401tVAGQVh0gxFcNpltLa2ACigrW1o3gEkZ1idnucojDLJ03mSFGc7FIb1bo7vkcwsijMz6eqaapfF13/JSZmxKdRIue6X+rFr83rHis0mpR6xSRESAp1d3Xh+3uvJfF8r5Qqy63YzhtlxV10sFHD3A48xhGe1iia9/ihDMkk2whWIQxKXYzQQeBg+dEga3FvpSMIGgMTb77yLcscaePUN7OZjOU0RscgQ7ADh+Qi7uvHewo8wafwYR8rIR27E111zUxMhCOy2W5fx0GOP4zMH75OwghMo3djPWEUK4zYchY0mbojXX38N1cOGY589dk2KNDuiWxZRIUauK4/t9uK53u67zITfNJTK5TKGjxuNmTtsA2PSmXB2tmnYQAKY+9RzWPXJIsiGRpuTa1NcAYIGpM/ML2HNggVZePJ/WODmWOMvpc4BSUshlQK6sxvfOuMsDG1r4VKpDCEEisUCvf7O+3zyF76Nl556DqKpGRACOgoddVhA9/XB9PSi2NqKnfbZHgfuvTN2m7kdNp40dsBn10Y7+xhKhtvNTfVobqrHuA1HYsftNsNpJ8xGqRzh9bcW4O4HHsfd9z+CN157B0YpRl0teZ4PrVXOZSApcpQXjVOGlY4BbHLycRuUmyARWZhWhSFUVxdEQx122m0nHHHwPthj5+0xwbmA9HuPSttMQE7nRI111WhsqMX4sSOxy05bu1mSxvwFC/HIky/g7gef5KdfeBlq1RqgpgpesQAT9kFIJhR8/OLiX+Pp51/GVb+9GNOnTEQYhugrlbDrTtvi0M8chFtvug1eYwu0ContlfR1NEy7Guve6ADeL4MmLwSJiXBqFpvq5Flnkoo8LKqg/xPZWUBDfR12mbElrvvjfJZV1VCsMwHHFVRSGmjOxv1kAllvzLzyMT8uNMYQVRdw118ewvfPPhNNjfWJRkl4gPUPYPT1ldDW2ozdd94RN/75RtS2NtKsHbfJOGUAIM+iJQ7mgg/c9+DjQLkPsrYeOZMFB7twhWyjcga0ePESwJTBqE/nLZlzkuM9SB8dnT1YtaYdjQ11Nmg0hieRGt4CQGtTA0C1qK1vzG2/TAaRoMz8ScqKWXZWhMh5rSPlZsk2WTv28o7ladbezuS6ccowj5mz1wtlPk/ObQZQ4Vm7XivIrPEDW3uyDz/6BHsdcDSQQKVxNaUK7omxiFESse6DahvthkUQ4AWAV8p1cMycC4XjAYQu5PtcU1Od5Hgnn0/Fi1+8bDmg+gA0DLDKUL8ZIQFAqRMrli/PFNyBp0+11VUgKchoDRSrMffZl9FXKqMQ+OCcZZe9LiKlUFNdxMyZs/DGi/Ow9a7TrZ7ZIUDpZ2rXPUkA3BybMo9lbf0s2WWTKZOx6WYb469zH8MOB+yD4cPaUCqV4fvWODlbnOOP4J4HHwWMtXdU+Y1N7Dl/h2NP5oKaxT/evcGgbfpeILEz2CghpNQ9nRgzeSJOOuYQOzB3IaTX3nwPz9zjcLz04qvwhgwHk8WyhedB93RDr1mD8ePG4IIffgcvP3EbHrr1Cpxx8lHYeNJYaKWd00CEKLK4uFIqlWFlRL5a26IXRQphOUIYRgg8iW222AQ//O6X8NdHb8ODd12Dw486GIEQUO3t1o7Ik4n/ZXKj9vOpzExSsrAmDeDWkbmBLQ7OUO3tqKsu4pQzTsRzD96MJ+76I07/3OGYMHYUlFJp7lEYufeokyJBTrsGBpQxNocrsu8viiL4HmHTqZNw5unHYu6dV9Lz91+HL3/t82hrqoZauQymVAJ5PuAV4Y/YEC+9sgAz9z0O1950N4IgcDoVjbO++nn2q2vBUa+LqGdFJEeIAh+eyaB/LeMca2emgaSFC9/D8pXtie0TDbThzlSqo484BOxVJeGf/fDhyqiSjF6Cs3gdZ0TSQrhMOeQXg/hmZ4BZQxaqsGThR3jsyeesm4NjmGrlEqXc3NiKvncBejswbfJ4TJk8AaGyWk67BiqwI0VIT6JUKuOBx54GirVJQGhKMcsTmci93mwuIQD09ZXs90kkBKJ45sLgPFsNBmFYsrKLONVA5F1T4h8tBD7HtOvk1EiCJ7x8OKdJTZVjkkBqkGA/b8Opa0k20iox+NYuZzET00SOBUpCJi8hcTJKzhH3a9Q4ZzTd32C4Ikkrs5mi1Os2s1kKigFEdTVkbQ1kXR1kXQ1kTTVkTdF9Vbl/q4esb4Cob4CsqXLq94zpswuLzb9WHsiTN+cZKnLDacoZiMfvr7e3D+As4N6/m00FRHHkjGZtktYmIz3KRx4lnp1GQxRr8N677+PlV9+0Lj0uu44yHrYxpLvXbjuCuYxddtyefN+3GluynTFJyyEgAsqRwoOPPpnMX2NnF2YkZJfA97Dv7jMBU0rYk6hgysefqedJtK/twCNPvgBU19v7irJbLfLYmBBs/jJQULP4H3RvROBvx9wZEhLc14cvnXQU6mqqEPg+Im1wxlk/wfGnfBvryhqyvsH6O3oCprcPumMtpm86FZdf/lP89fFbce43T8PGE8dARRHCcgTr1G4NeqVzShBx9ITIZD2llPVkwCsdu9K4ZOWwHCLwBPbcZXu6+Q+X0IuP3IwTTjoaAQG6o9OZr8pK35e8BU4+azM/9M7aArNxzhYCel0HfGKcdsbJ+Otjt+GKS87DNptb/7ZyOUz0gb5zU/CkgE+iYvCSZcO6Cy9mkQoBpdgVdRsIuPVmU+hXF32XXnv2flz8iwsxYdJE6M4+xLXEr6vldT3dfPyJX+bTvnYeK61ZSsmbTd8YhxywO/S6dRBe4EI+wQwcG8sFmPXzbneRyNm9QsArli7jN+YvcCxEzte0zCYkFiDvOnN7bDdjW9Jd60h4HlXac2WHyMiEVzJngL5kYTB2px+W7WeuLLRHUrrHSqNu7GMJgAxunHNXntwSN4M2phfGALvO3A5+w1DstOMMFAIf2nkCxozg7Ozk+b++igVvvwlZFRfujNwhZvdmkxNciGf2OqqurkqHGLlRv0gfI37FWqOqWEhE9rEBeDLzE17yuL2lMmBKXO7rTbUpBlaXmnmaeHWIQzWliPO90j9jt6EkfDP+ngvkzAZz+lYfyUTEMBGzKqfp29kJZtaMASlSQpkYpQypoMJvNb8oJminyQeekiWvsWFmY4w1WdYaxmg2ht2XceQb+2/siDjZi5FY54TelNHxJZvR7IIdn1ulKIoUVcpgE9ale7z6+lpAeHb0UWHolitqWYjXr0FLa2uuSHBsPp1hfff09bmncetj9xo8+PDjGVQhNQuItaJGG0yfOgl1Q0Zi5vZbJx15QmJyll9CCCxeuhzn/Ojn6O7utaQnQSBP2qBjnc7hd5k5A8WmUdh+q00BYyCzaAWsxpCNtceb+8yLWPrRQnjFYsZvM+FrCwB/Rft7/eDJf7DA2e7NG77FjhA0CzBKkJC6px2jJk3CCUd/BgDw1nsfYpcDjsVlv/gtZG0VyPOsDyY8qHU9mDxlMl39h1/jhUfm4NQTZqOxrgZhObQ5aiQgPZEWMeY8WpKNi0828zI3JCdKqbJCCEulZoMotJ3gplMn4Y+/+SGee+hmHHrEQdDdPdClPvi+l4Mcc6xhTnNvsjdknsFlMXEThtAda7HnPrvhmQdvxu9+dg4mTRiTZD7Zoib7QS8MQGMg78zMws79CYOCKBEuq0ghDBWGD22jb37pRPrrYzfTTy76Doa2NECtWsEq7LXu8PX1uOI3V2LW3kfhtfnvQwD4xpdPRVXzEDcvEbZagbdB2/xN3Dl5CcashQ3PtAQzrwBTZjz+9AvO01Hl2VQV0S7WX9DDTy74NmShCiJj8Fs5T8lSdFIxfLwg2BtYCAmoEEVP4sn7bsJvf3khOFJMEEwxqSCmmQvLVKW6Zjz81Av48OPFLhsru3Da5yz1lTB0SCt223037Dhj+4Q9ibjjco4h2mnd7n3wcZjuXkiRMm7j/KyB507ptRVfB8OHDnHKQpNOpWLdIWd0kGRZqM3NTWhrbQaMsW8vx9rVccHj9o4uACV0dnTkXoNxi2DiOuHID5bMtA6r17Rj5arVWLV6Dda0d6BjXSfWruvEmrUdWNO+FmvaO9Ce/PdadKxbh3WdXVjX2YW1HeuSf/9k8WLAKJiYKZ1IJShn9DtAdtYA0CNjfd4/RPkw01weRfb+Tce3PFD2DHN/KUjcbmWF2f3QG86ytjP117I+UOrr6zeXrez0Nhw1EgiqMiORflcOZ90TtDHw6hto4rix1pEz6ZJTh6f4elvbsQ6ILJRtmIFCLR556nnXoMaoAlm8wG2Cokihra2Vjjv+GJo8eUKyUY03ESZSCEsWFXz+pVfw16ce4wULP+CE0GOsvMWwNewwocakCeNwzLFHYfSoDRBpJ1mhFCUzbJLEiPsemguEqt+0gh3tlsC3V7In/wczuCmWOWmiU0FCMItI+oFQ7SG+eNJRaGmqx/Vz7sFXzvwe2td0wGtuhtERBAFq9Wo0jdiAvnHWGTjj5CNRX1MFYzTC0OK5wpNW7Jvf6KaUD6q4uOPUaNui5+NosuOCJGKEQJIS931mxhbTN8JtV1+COYfsi7POvxgL33oHsqnJPq7hCrp55RrMFS4l1sFbdXRgyMjhuPDcC3HSMQcDAMKy1Zl5UqYuhBlWWG4oHs9q1uOykO0f40ew7viOxUWAgHXlMIbRUFeLb51xAo45bD/+8SWX0eVXXQ/Vo9lrbII/dAPMe/Ud7LzfZ/GrH3+HjjvyYN5/n10w58+3wWtphVJGEVEg2OxlgNfQ/t4StGz0IkjsCTaGwFIZBgIfDzzyGL73jdPhuYs1NzvJ7Fg9z0cYRpi5w1Y46ztfwQ/P+j6CYUMRKQudkKD+vJLsni39TFiSAExEuq+M3193BXbYZjPaYZvNGGzwhVO/RLK6CvCKbgEXiWu/5/voXr4Ut975F3zzy6dYp3K34SAX0eG55KDvffN0jNtwjBOp+wCM7YaNzdsjBy0+/OgTQLEKOimWlLlmKC9roDQOJ2GuAZiy8USgqtpR3ykNXE0XVYYjZbGKsNH4DammuioxTWbm/nlzAJYsXQogwsrVq/tv0CquM6UNDjjiZLz73rsQfsEl1gsI6VtigVEwKkpgOyEtg5OFhJC+u4YNTFSGjiIYNrRqzVr26tugSqU0yLXCs9TwQBucAYawXCkFof7RRsS5bLvMPZzYOVPGdIcrIq3I7t44Rx7JU9LyRg3Z2SRzv3RvIgkog5Vr1ubsBLOvNz4vUzeejLqmFnT1djsfR+6fHp4JzOW+LozbaGNMGDcGRuuK4prvYZYuWwEobTsqw6DqOrz21gIs/PAjTBy/oTPZzhuVS1/CJ8LZXz8drS1NGY1aLmIQAPDI3BeYlMZjc5/DNltsykppkoJjzyOwb3WNrU2N+N43vgDfk/03BbEviRDo7OzGY088BRSrM0byiczLI9aRMeaBgeDJf6SDE8AFBs3TRjLzAWBtiMjTvV0Yt8nGOOPzn8V5F/8Ox574dbT3hPAamgAwTFgivWYl7X/g3vTcgzfhu1/5HOqrCgjD0PqlSbewxMDnQDg2eOBh6wDBhzSAHVKuELG9mDzpIQoVwjDC7AN2wwuP3ILTvngSdKkMoww8P8jDKLkbKYUKCAxy70GtWYO999sDzz18C0465mCXzqwgpZejz1PFri2ZnXAa6UMVFN9EtjDA+4vJAiIzZyFHjdbKIAoj3mBYG37z0/PxxANzsO2M7Um1dyAKy/Dra9HR2YnjT/wazv7Rr/GFk45BVW01EPWBYMid3t0zjPd7sncnGwOvKsAbL7/KL77ypk020DrjsYecoTCzdbUJyyHO/+YZOPbU4xEuXwxJbDPGKqCnvEtKsr1m6VujX93Tg1/86sc4dvb+6O0pobe3RKd/7khcedVlYI4dOIKcApeNBjzCdTfdgXJo7bHyhD22ui5jsMO2W2LY0NYk6cK4qA92TgtBEGDea29h/ltvwauugjHZYsaZFG12Av3+Qu8Ywpk+dSOM3HAD6HLJpRhXtCbx9S4kWDH22nWnRGTNsWWYKwtehoH7/qIlAKrwyZJliFwxlA5CsvefBBtGuS9CEPjwPIEVC9/nZSvXYsXKdqxYvhrLFi/FkkWf8NKPl/DypSuxfPlqLF++BkuXrOKly1bxsmUrsWTRx1j8wYdY/OFHWLp4Ga9YuYZXre5gSD/xyOOcPV1/dyGukNasv03LECKy4BTlZ2JZnCVVaVBW6pqzlkvtYrMROGn7l00tyb6OJPQz0zWmeXASMMAHH32cSQlIC3wMUkVRhNGjRmDm9lsSejpTr1AnQaKM4N0iCB64tw8H7rM7qooBwjgbM/P67NqSJnkk8z9meJLQu+ITPPnMC0ksDyo2ZPFdPHzYkGQmlzWzF0LA9z2s7ViHJ559EVxowt0PPgGtDSVSH3JsEIeuBZ7EmFEbpGL4BFFgN8e1MU7PvjAPixYugFdVdIORZKurQYKY6TWsXfj2QPDkP1DgZtmf92lPIlEPw4qYifv6sPUW03Hat3+M7597CWRDM0R1PeAXoXrKaG1pxZVX/w733HwFJk+wJq+RMak9Efd3+8gSZZLujSsdCCgXCZCcKPAABsoZFUCG4yylgCcFokihpakBv7vkXNx2w28xfGgbVEeHc5iPo6Yzc5VkMCAgvQCm1Acu9+IHF56D+2+5HONGj7BRGCSsGS9xP9fxnINKwmajfsEqzDywY0c/ZIWhWeUgIHvuGEII0kqjHIbYcdvN8cS9f8K5532dAkEU9Zbg19RDNjTiwvMvxlk/+Dmahg+HirRlItj3uRFadqhzHoZ3wOgOiwBYHINkAFVWuOpPNybiUukur6QWZqyA2N0YrDWuvuynOPPsb0P19kGXQki/CE/6EFImdOp4Bygd3EyCSLWvRUNtLW644Wp89dTjUC6HKBR9FIsBwjCik487HNf/6TLAMLNWLIR06dYaOoogi9V489WX8czz81y0SAVxyd2cSikYZXLGvNbXUyQzr4cefxaqT0FIPz/vY8aAbVJ2qReA50tESqG1uREH7LUr8bpO8jyfQB6lAmORdu7dq9EwpIUOPWh/F5+TdsyCrPEypIghR3r77QUEv57eXbSU2teug+/7iCIb2qmVgjEql1Vz6IH7AlXNCKprIfwAwpcQvmAReBCFAkSxyLJYxaJYYFFVDREEhHIZsuBDFgsQhcD+XBBABBm7MxJJ8oYls5j++9Y4LXsgIX8+2ZpBZOd7+SiLivTr3AebpaFzdo+cK3L9YBPKuPQgJaRl4cb44UlkzJbtgxtmgAzefGv+gIED6cbL/vnl0z8H+NUkhOeE5WmUEdh6EAovgAnLaB49Bl885QQneRHIhonGMLSUEmGk8NK8lwGfHMEn9et48NGnk9ebzJcz8gVmO+c3JjsXtWiHDb+VePr5l/Hxgjfg1fiYN+8levvdhZbEJp0ReIaZrjOG8YkxAFJ9X2z2/JdHn4IJCUJ6+ZER2FjEi29ZHzz5DxS4IfEqPZMhGZD2g6utx633PYrrr7kRsrkerMtEqkxq9UrssdfOeP6RW/nkzx4CpZSDgrw4HT2308kXtJRQkjC1mKG0RhRZBwKtLdtQOb8y5Yb2ldEZlMRFUe45sjbjsYNAFEU4dN9d8NR912LHHbdCtHwJJCvnIG4SH0h2rYxXrIEqhRg6dCjuvuUqnPP1kxFFkYv+kf387jjfYidzgViYq5VNAbDvT0NpZV0WjKWiq8j+maUl5yCTCppylmgIIvJdCGLgCVzwnTPw4O1XY/zoYYiWLQKxgmxrxfPPvYylqzpAVf+vve+Ol6o433/emTlnd28vVHtBVBQs2EswaizRmKBijd1YsXdji0aT2GLsJSb2ir0LKGABEUVBsYAgUi9we909Z+b9/TFzzp7dezWm/b4m2dfPBbll754277zv+5SK/JtjUw/Rakk8jV8sBeglCEXRyDDUGrKqEk899QI+/uRzpFIpBGFg0XiGY8WOqApNKm8QGNf/9mI8N+5+jBixCcKWJgSrVkB3tIGDnB34M9hoA93VhWBlA0x7M36235709mtP0GH774VcNgclbBVitOWydXf14NBf7IWH7r4ByPVABwFIpazkkVAQqTIwKzz6zCsFCSevyWfijYdxi5RJCMoKR//IZnN49fWJgOdZwitFg32T3/ZTb72c5O/S2la1WhucdcrxqFlrLehcAOn7DiXHDrwEKEnQ7c246NyxWGuNQbbF7xZVEhTLXmqtoXyFlY3N+OiTORBV5ViycAl/+tnceLceidoKIaAUwU/7gDE48Bc/Rb/VB5Nub3SzswBGG2LDxGyIjRXQJaOJe9pJmAAjtx0J3Z2DDg2ElwaTsNkncpQwoQNnFCYe7mVU1QcoJ6nf+l0VHhX7dhQS2JMLdx9IRwazZmZt1elZOwdY9OVULKg3SSGaDRfZeNj2a9rDBx/NQmub9ZRM7qisYDagnAHqHrvujON+dRRyy5fCk/aaitjzwFg4fq4Tuq0NN/z+cqyz5mCr4xltChPIyagaWvD1YusDl0rDOHqUNswoq8Q7772PVY3NjhPKBRiHCM6ZbzIV8iKjRPXCKxNgekLyPZ9yjSvx2sQpBVqXxdeTuZAfKljk70cp0NHZhYmTpgDpdOI14nLAg9HdRvDT39ae/AcS3JOuAKLVo5FW9KBqrS2cljWZnk7o1kZceOFYvPzYbVh/7dUQuIdQuCFmfgiMuMVQTNLVzr03UmRQnoLve0ilIuM/H6mUj5Tvx2aAnudZDyUpAePEOp2yQ/GgukAXMkH47OnJYf21V8frz92Pk04/EWF7F0j4IC8NJrs4EgSkJATLF2HEJutjyssPYd+f7IxcLmc5VZF8U8LLzaKD8lqN7HhCxlWEyrOoM9/zEseUP1bP9+CnPHi+F5MioySYf4BFASRYUHJykBdSNQbo6clilx1GYurEJzHm8IMQtneDIaEqKyx/UgcR0IMBUhCBie4ZFnwrMYzFfTv1FiHR3dKEK373x3zb1M1I48oi0XYUCapVEATYb69d8N7EJ/HkI3fil0cdhI03Wh/V1RVI+R78lI/afv2w+VZb4vSzx+KtiS/g+SfvxaYbrY9sLmdhyjJSxrev6fseerqzOGT/n9KDf7mVyiRAYbdVlYBxM4gqvPDqeKxc1WR3v1wIGor/iyoLd34JhMBY7chZn36BWR9/DJlR9kGM56kWJcXFyvG9R022bS4FjNHYYP21cefNfwD3dCJsXA7mEEIAQnowISO3YgWOPfV0Ovf0ExGEIVKplNss2E1s5G4Q5EIICLw3fSYWffElfM8Herpo0tvvxk9/LGfn4P1gRjYbYFD/elx+3snQrSsgYaC8lK2ohTWoFFKRly4jwwKcC3HbDVdjxhvP4L4//xH1dbUIW1pZCeK8xFjg7ifT2wmbehUyef4U9VHxFqez5IJcqJ7+LW3OQqh+gqwtSSiPhPIghAeSni3J+/r+Yi5a0v4p/36M1kCYA5sQKlOFrxYswaxPP3Nmo6Zglk+cr8KDIMRNv70QBxw+BrmVK6C7czAMYofuDVtagWwPbrjpGhx9yGirrqNsIhUkHA+SHZ/W/p5Xxr+B7sYmyFQZyFW+hgGV8njZogWY9v6HNsEZLqBW5HmSIm/xFW/a7KinqbkV49+cBFRUIGAJeOV4fdI7+U1c5LRBvUdJSauhyCDV8xRmfPQJvpwzByqtYCLn17jfT8TgmVg5b/63tSf/UaI3OSRA3O6jaLbk+Qjb27m6qppu/+Nvcdj+e1EQBAi0joelnERCGs63g2KuNVloLqwyhHSDfm00vv5mKeZ/sxgLv1nMy5YtR0trJ7IalEqlLAG6qhyDB/bH2msOxtprrI76+hok61YLLEHMccorbuRncyDA86Tl0EmJO278DTYaNgxn//oPthT3/HhHFDatwN4/3xv333Et+tdVI5vNWh5Y5Hb9LXYckb6dn/ILPr98xSos+GYpFixajqVLl6G5qRntHR1gY1BeUYaaqkoMGDQIQ9ZZC+utvTrWWG2AU93OH58lVFJ8PKYPb7WoovP9FIIwRP/6Wnrivj/hquGb4LIrryPjeSz9VOQcTbbfDU8gNcoA92HYMB9z5kzjfhu9ABI/t4gDSK1DyJoafnbcs/Tc4Qfh5z/dDblcziVjES9usVKEpgJB21wuB99TOHD0Pjhw9D7I5gKsamxGW1sHmJlqqisxcEC/+PqFQWi9y5LyS5Kc2oRLcikP3d09OOzAfdHR3UMn/upMeDVVrtrXUIrQ8OUcPPvi6/jV0Ycgl7ULhQOExxUB5b3e3Ton7GEr4JXxk5BtaYffv5+lKHBRq4v7gglxoVEvCXdvSgS5AAf/fE9UPfcwLr38d5j56RfQnV2AJKy+5jp0xlUX47yxx8RVXwGZ3HFB2KnUA8CTzzwH6CwMKSBThmdffROXnHc6lFQWCl/09pRSyOVyGHvCUVjZ1Iorr7weQA5IpWD9WAyQzUJ3r0R5fT/cfO/tOPawX6CnJ4ujDv4Ftt5iBE44+Sy888YUiPp+DCkBbQDBSLLdoipDkszTFYpBJvx9hMK4wAU9IeLkQHxJua+ifpHN7gYQipk/ZdZ/tBceQhBpgAYx8WUAeXlXI0JfVq2RHF2ySrStYpWv5Drb8ei457Dz9lsVgbA4oRFu329FeRnGPXQn/XnPn/Cf//IgfT53HnpyOdTW1WGHfffEuWecgO232szO+IWM+YumyPlAKYkw1HjwieeAtG/bk9EmmEFCSIQ9GuPffAf77rUbtNHwhPWJi1qSkYEyJSVs2PrWeb6H9z74GAu/WgCvrMyiqNMpvP/+dCxctBRrrj7IJTcqUIrKn6M8HUuSRBBmoZTEy6+9ibAzCz9d4TojSd89AYDHcR/k7n8mwQkAIYhUxC0iVzgrz0PY3IyhG2+Ax/76J95ikyGUy+WsoR/1JmYm9MDjXX6yUgOAVU0teGPKNEx4axren/kZ5n39DTqaW4Dubis5QQKQnptgGgIbQAlQWYYHDRpMQ4esh+222hQ/3mEkttliU9TWVMULQTYIoYQsQF0isUuPVOWDIMAZxx+MtdYYiCOPOwMdLU3wK8qQW7oSR51yAu656Up4JBDkApfcCpGeeU4KQxvbtvR8jwGgubUdb0//iCZOmYr33v8Qc+ct4MbmDiCnAR0inwE47yyqFJDOUE1dLYasPRhbjRiK3X60HX6887aor6uNZZYiKG9yMSkatIPZqneHgU24l55zAjbcYF0cf9ol1N7ewaosBR0EkSOpYaI7ZL/hDXrO7FcASDb6IiK9O4BULPhHCiKd4dPOuwzbb7MF9aurcfqUyKu/J4mxCW6TksryFp1li6cUVh88AKsPHlCwOcjlAsffzrtIx4ubRoyei7QQCUAYarw+4U3rJeXkiNiwFfVWGTzx7Cv41dGHuOQveiFW4yQXQ+bsYpYLArw+4Q0g5UE7VG8MTecCUc1CY9PErpVjLp/9OeFmwnvvPgp77DoKH836BIsWL0NlRYZHbDqM+vers8K0vcAW7lWFhSSmMiksWbYCL054F1QzAKFmluXVmD3zE3pzyjTsudtOyPbkoDyZfyYj3wiyifY3F56OrbfYFDfdcjdmzpqD9vY2SCV59TXXxKjtt6bTx56AzTbdCD3dWUt2785i2ND1MPHVcbjy2tvwuxvvIM4GLNJlzqLbxEk5agPrPsot+r4rUnJwmtxTUEJmjHtBkPMz+bhsEgB4Pprm3Zv01UPtetWCxLkg1Lj9YoQKizdaXFCbc2JjVBhGa6byDJ545mW69PwzMLB/XcwfizsbiTli6CSwjj/iADr+iAOwaPEydHZ1ob62Bv3711t0ds4KHlNBH5VjIfdQW3+/51+egA+nfwhZWWPbk8wxu1wbAH4ak9+aip6eHKQUefR5kn9bAJegGNzkAXhlwmRwjwbKFZg1vJSP5qVL8cZb7+GYw0YjF4YxQKVAPKNYlN2hJzu7uvHa+AnuuYofFnauqwpGNzPzE9/Vnvw7E5zNkmLw8BPYYBc2JiRAMhsoKRE2LMWPfrIrnrj/ZgzsV4tcLnDiv4UthrhaSxydqxTgedY0870PZuGBx57n516diCVfL7F9PN8jeAoinYYoK6OIjhKr6HNeG1EzsGx5A5Z9swSTX3sTf/Al1lx7New5anscsN+e2GXnbZF21VOUhAtspYyOgfhC2BnL6L12wavPPoCDjzwFSz7/AmdfcgFuuOo8hEGAACa+KQqEN9wfkYGhhOSebBZvTHkHjz/9Eia+PQNLFi9n5EKrJeQrkOdBpvzoJuAILUWJ19MmREvTSsxYthgzJk/Bnbf9Bauvvy5+sc8eOPqw0bzV5sMoquiiXTIb/tZVI1K9z+UCHLTfT7DGaoNwyBGn0qJFi1hV1yIMQsfQ4JQR/ITqv8le4cpP30HT3M9Qt+FtJMX5bHQORIqNgSirwKKv5uO4sRfyc4/cSVGLAokFlCifiGKFkijRqajVZmL396S0k5IiAQHvg6qU+AFtDNKZNK750z381CPPQNbVQ4chwSVbHRqI8jSmTn0Hn8z5EpsOG9pLQzICCeS9Au2//ZSPOZ/Pw0ezP2NZXgZj7L6YqfBG4KRuKfdezEWS7uJ+UArhniGBkZtvipGbbxr/RC4XJKr0hGlsgkyf0zkooXD3/Y+haelyqLo61kHWbkd72vn6W++hPXfbKeEiXUiJsWIClpS/7567Yt89d8WSZQ1oXNUEP5XCmmsMRnlZJu4c+L6yydlXVmUeoKt/fSZGbr4JzjzrIixZ1QpKpR13MQlj7+3OnrxPvhtdxb1sl+LNDVNs1VLIICsyQY3V/wkM+Hadc+4Z6G+ARdUxg4G4QJUnr2RCCXHhPsAj0RoFQKYr0Lh4Cd981/30u8vOQS4p9l1AfM+/Z5vECGuuMTjRrbG8MCkLoTQk8mj06BwHQYgrr7sVgAYlaScxjw4QGR9ffjEHn34+FyM338RRARJgFVNU9Lpj9jyF1tZ2vPb6eKBMQTNbMXtSAHy8OmEyjjlsNIyxiM144BF3cqJV234tcrP/4OM5+OzzeVDlZdCmgDpmCCQZ/C6a5i5xRZf5rorse5K7J4dywPD92NDteVqZXYzCxlXY78D98PK4ezCwXy3lsjmSUuTBZChi9Sd27cZwPDd7463p2OeQk7H9Xofh9tv+iiXLGqGqquDVVEFmUo6DYxc9HVpQidYOZEKABlgzM4FJKAlVnoaqrWRRluFFixv4z3c/wnvvfxxvs+uBuOn2+9HY1ALf952LrkYRzCW28lTSyjDtuPVmeHHcX3HLPbfghqvOgw5DN2+jBBGZICjfVpW2YkPDykZcf+t92Ponh2KfMSfigfuexJIlyyAzPryaCsiKMhKeRyBBmgkhMzQsz0rncghyOeggZ8WoDUMoBVlZAdV/EGRdfyxZ3oTbbr2ft9vzl9j/iNP43ekf2fOqlL1ZE7uw3pI49iFUUiKbzWGHrYZjwosPYePhm1LY1g7leWBmgtEhmCs04elU/2FDrIx8z+/YmHkg4dsnyIqverX1ePGpZ3HquZez53kOJdUb9UnxyIQLgDLs5pWCRPw3JfhTfYsPFi5ouVyAVMrHY0+/iEsuuQqqvg6GBUCCQTIGmyi/DJ3NHfzk86/FP8fJhSC5IrsNQ5QEJ05+F52rWiGlbxdvLuJHJbF3faECOWGMi+RiyzGZNghC5HI5BLkAYajdjj3fao58v5K+gL7vY978hbjpT3dApMA620msQ+igB7KqChNeegnPvTweqbTjuQlh27sJIIYl0QsEgZWEW33wQIwYvjE2GroeZdI+5XI5Z5ki8zN1R34nIdDV2Y399/kJfvWrY8i0riTJPYDOFcxgqKgiQF8iC9/pZcLkUIVFc5Rv8WIseoGCzgYJtq2uOe5jcggSppjISU5kk/uycCpqW1o/OBFrj+gwhKiswC233YVP5nyJdCqVt9WK51Um0WqFq3jJyRBaAJuILakoCSSPSXmCBAJtk8Utdz+AD95+B15ldQwIKT5TyvPR3dKFye9Mj8UaUOxnWUCCd+ublPjg408x94v5UOlMTDMwWoMyPt56a7K15HE6k7Zrk5RnS04XZPz+Xps4BUF7F4TwYpk6JMzLiPh5+9OjxN9qOX4/14CBm+3CwKPuYhoGkW1LttARxx9F4x68gzIpn4IgtJDr4hlEMezJ7mbZ8xTPX7iEDzv+HOy231F4+aWJgOfDq68j4SsyOqRQa9LGOF9DjmH75FAa3JkDN2fB7QEQWkFUFoDWmnUYWN01X0HV10BUVGD2p1/irHN+gy12ORC/v+leNDrYNFwri5MSB+4ieJ7lzG2+yVCMPf5QhGFY+LAkuDeBtkaavu9jVVMLfnv9HdjyR6Nx3jlX4JNZn0GUlUH1q7NoJgZCHZLRoW2rEIBQE7e7Y+oI4mkeJ0DSxnFGLMRbQ3gCqrocmkM88+Tz2HmPg3D0KRdi4eLl1r3azf1E4kEq2Gi6JKOUnT8OXX8tjH/mr9hiq80obF4FpQhMJBkUgOSAgMQzGDy0H1oXtjCZ4wDO5SW+7XzMq+uHO2+9my64/Dp7fp2OpIxoHklCbKItaAp2x4Uiv5RQ6iAnrRyBdvKUAoLWGul0Cs+9MhFH/epMJuXZ1owJ3KLo5LvYIlbhK3rqmefQ0dkdt3yiyisvCxepotuq1xiDl18bD0hNhovNMvOtM/52V81CjjJTkSynm0tImzSsUk1eTDfZ6oksxS2K1PL1Tjn7UrQ1rmKRKgfDbRCEBGQKlKrg86+4Hm3tndaXjgFholrFrWImul4C0gllRwus3ZFLK7EUI484lscKQ42y8gw+nzsft91xN0RZJbQ2lEzySWPQWHeVvp3z1sceplCLNKkoRH1ZeSerXhS6wycx+gV9RU9aHj4VKWVTrwQQVSHGFM8OI1NXJjaaSErqbG3B2PMut9JvRc8iYrEHLhIHyG8ikh+9zg8BuTCHlO9j+szZuOSKa6Aqq+wcK/neE3xbwwQohQlvTilQDkoec6EwtIih/K+8PhHc3QMiVaDpq9JpLFu0FFPf/8gp/hhQMSE+ISUW0Q16sgFeeW084BG0KfDCY2vLptuN4ZftZ7+9Pfl9EpwAnjToN3KwgXmECWXOyVB4SiBYuQJH/+pIPHDb1SAOY5dg64BMhe7LRa2CyODzvkefxba7jcGjDz/NIpOBqqoEG4MwyMU7GYswory5ZHSBjAGVeai6YX/UXr4bMnusD1njgZs7wM1Oc02p2Bo9DEOw1pBlZfDq67BoSQMuuugabL3rGNzxl8fifrUOdR4BmPDvkkpAh5YYHqECEe14ozXBGLdbAe786xPY+scH4tJLr8XSFU1Q/eohyzJg1s65mCMZEkuxa+mGae2CqPJQvsu6VHPeLlRz00EQ9VW2Go5hh4kdX8LeI9QhEaw9DqczuP+vT2C7nxyKR556Bb7vxyoV8YNBskgD2D75vrIcqdUH9cNLj9+FYZsPR9jaZonvRBKGc0xyUzL+wxg2zMequVPY0Dkg4YEojIhF2hh4tXW49pobcMrZl1rElVLIhTq5+PfasUeiwczctxBrTNfivMwVsxX2d2Rs3/dx3yNPYcyhxyE0DHgpNwITlHzAQXaz4KVTmPPxLEx+531EYrKUENdNVhuabddh0ZLlmPrBbFB5OYwxid47J9RJ85+zOoURN5B7m0074JVxMl0UIWyZeiUzTqjzJElfQRjCT/m44trbMP7l1+HVDbDKKkLES7nRBrK8HF9+9DH/aux5LKVkYzRCbQrGVVQkKk5OtUQkkitHbuCRma/rsqRSPto6unD0KRegoaEFVFELJutKTcXGtiRdld4HL6wooxUb5HJi4YcxfQh8519LJHlwzL2HfeLbcXW9hkYF2TZvqGpnSEWGp5SUZLOwea+mPyZPmIRzL7nG3m9BWKBmVIgwRIEIcqR3ywlT5XgDJvIV/OKlDfjlMWPR3dUNKM+B+qjgiKJrq40BZXzM+GAGFi5ailRKJUTN+3BRYQ2lJLq6s3a2nRa2PVmwObPGg69NfCsWhJCkio4xf020Wzs///IrzPz4U4iyjOus5bcbZAVg30PTvMV/qz35txIcAWMcYCx3F0gMBigHIaXnewgaGzHm8DH4801XOvQe4llPrDiRVCxwignGGCil0NreiSNOPB/HHHcmVrW0QdVb41PrD4eiduG3tOMJ4JxGxXbrou6cXdDvrjGof/pY1N55IGdGj2CRToGbusE5DUgRVwnGGA5CzcKzVd2Cb5bglFMvwqi9f4k3pkyHn/KhlIR24qDRbj6yVVFSFg512S7mUgl4nofJUz/ALvseiZNPvQhfL14OVV8P6fvQ2pAxnNTXAnIa3JwFlaWRHj0CNbceiMHPnoDBfz0c/S/eFRWj1gF6sk7k1bg5N1sj1bitFSH+BEBE2tgpt6qvw/KVq3D40afjxLMu51wQsvKUrVicsj4nyKjRAmVg4AlbyQ0eUI9XnryXNhg2DGFHu5s1GgWjc4Dcg1bS7wAATZ/fCqNvBYkUgDBKv9owe3V1uOPWe7Dnfofh8y/nw/dtNRftXgv4MAkAAn2LFmGBAi9kPBMLtHWLhxC4+MrrccwJZ3EofYbnkQkDW7U5pGEBj5AAeGVgSuFhJ8BcLDMWw5wd8RsAJk56B63LGiD9DGL8ARUJAEfzreIFyrWy8w87XKtIueReqNMYK9xQofID522AEOoQ6XQKt/35QVz12+vg1dbbezg5EHbDRx3k4NXU4ImHnsApZ10Gz/MsTYETlJrE+4tFzZkKYPDJ/QmDEQQBlOdhxaom7HvAEXhv8mSoijLoXLetngsWLPdcsd1Q6gI1k760KPu+HwQVbX5Ecv9ChetQAXiSo4LD9aWoD3HLbEykzc/YKD7nhU2p3nNuNo4/6y5WtOcPdQivuho3XX8TLr/6j/Dd3D12EE+sMIxCKavYIyZamxKybHF7esE32Hv0LzH3i7lQFVUW5+DACs4BO07DUSWlUmmsXNyAd6a+D0DE2IhISSqZ442xLfTZn36GTz+fD1lWZdWBEmo72jCQUXhzymS0tnVCeQoGpkAbMzkyiZLZ6xMnIdfcAqlShRJ18UXlZwuER/6xBDdGAE9q0X/4eSDxMxidZYZSnoeguRk/GzMaD911LbEJ8xJR6Lv9FZ2ZXM7yhr5evAx77H8sHnpgHFRdfwjfd4sGo0DMJwYfUAL6l5A/kgLc2oXg/YUIWjV0WwivrgpV+22BAbcdhEFPHYWac3aCGlgBbu4BhwwoGT9ahg3rMGSR8lnV12Ha9A+x++hjcfI5V2JlU4ttSwahAxggNkSMdifRJdfa7jzaOjpx7q9/j133/SXeeft9yNoaCN+L9Pjc42zscCnUMM3dUIOrqe6CH2PwM8eg3y0HonL0CMj+FQjas8i1h9w5dQHMilaQinftMZC4wBMrNkDMixyHQQ7Ck5CVFXz3rX/GTw88HisbW9iPCMkoaj8kRXidyksuF2Ct1QfipSfuxJprro6wuxtSeQBBgXUAIc6W9Zv8GABx45enw+i/QEifgZDZWqeHWsOrq8cbE6fwjruP5lvvegBBaKtlRQrGOHuWyAqneJ0o4qZFx2fYINRB5BrNnu9h6vszebd9DsHvrryWZSYDEoLYtYyTPnXJ5YPYtnpFeRqvvj4Bc7/6GqlUym0E8m1qi9qUsazaS69OALjHQuCLvVuIEpJKdtYH59wdyX2FOoxdB6xivcRHsz5Dd08OUkkOjGZKesKb3i09wJ5fpRR838dvr7sVY0+/EDKVgjYh2IRgjroFwpLlSBiQQGgYXr+BdMetd9ERx52Bjs5uK7MWOjEBoxPgmGSVTYXVI1P8jKRSKcz69HPs/rPD8Nab70LV1jvrJwEWykqMWbeZvPSZMW6zY/IOADaJMxWWEAWVd3ITobVGEIkjBLbtHORChLnAiiYYw8ZoLlAlKRwCgoHu3gQ3YcBkIpHlmGVgIiGGvCiD1ta5JAytEEUY6oTTdbRBcbNfAKEBq9p+uPI3v8epZ16CXBA6mTuDUOuEwgr1meKTVWM0D/N9HxMmvYtdf3oIPvn0C6hqpx2ZF5cwIEgAnQwOYvUkBhhWsP61iZMcgjyMfTeDQCMMQvehYxWcF18ZD93WDBIynpJF9z6DoCpq8dW8xXh/5mwAlnsbCX5EMoZhYM8ZM5ALQrzw2gQgpWzbNCZcE0BCwegOE8gX/xZ68m8lOAE8qdF/iyFMuBysQwvOEggaV2C7nbfHo3f9ATJyzhWFoqYRQia6oMIJe/q+h8/nLsBu+xyO6e++D69fP9JhSGwSzmqFWIO8dSVTkTV93DxG8N5iSOnbsxEwTHM3uKUT3lo1qDn/Jxj43LGounRPyJo0uKkb8SAlakEZRhhqlhUVgO/hzlv/jO13PRAvj38LqZQPooSCRSxgp509iYbve5g6YxbvtOchuOG628FeCqqy0nKMON9aZGG3ltzcDVFXRpWX7kn9nz0W1WfthtRq1fDaeiBbe0A5BpNi43nomfaNLcITHmEMKuiy9CpqEkQsNg7FOWg1THrzXey+/3FYstwNfU3RnCLhhBy9mFIWeLLBumvhyYduR3l5BUwQ2AfVZQwj+IxoBeXGL48D6zut+KNdx9zQmlVNDZo6OnHa6Rfx9rvtj0cefxbZIBsT14nJKtNo2y4zRS2n0Pn9aadYYxd1S+6f8/lcHDf2Auy89yGYMuU9qPr+ZCK7g6QnFvdGuLHRMGEWZHJoa21Bc0tbrBUpRb6lAgFotlViw4pGTJn2AVBe5bzTCrsOSW4WRWLgbN0IIh1I5SkoUhAgmNBSKR575iUcftxp6OrucXNLQBvN0fkoXERDt6h5WLBwMQ444hRcetkfoKrqwMq3i41NKg4GjyyxaSRAERvNRlMY5KBqa/HQA49j1F4H480p0+CnrKiAFGSThsknHs1OVccYlzi061woGAb+dMd92Pkn+2P2rDnw6upc5eBcyR34Kp3yIQSQSvnwPHv9onsg5bonSgiGVdvgglINAoV2SczMzDXV1fA8K4jgp6xAQiqdgp9OIZ1KsRQCVVVVMbAo8jrivBEdg9k5ho7KT4pSogeMbPJ6Rg9fOpOBkhJlZRl4kehEKgXf95FJp6GURHlZGRyDPnHPGfe2NbQ2rKpr+PZb7uQf7zWG35k6wwk7eJDOIDTQduapnXVPJL8VebJJJeF5Hlpa23DBZb/DXvsdgkVLlkJVVEIHYQyWI5CxoqNoNWT2AfCZ6zUbW2waUFrh7XenIQgNysvL4nOaStnzmUqn4Kd8lJVlIITA65OmAmUVYLJ6piQSs0k2IKNh2lbh+RdehnTnKpVKxa8Vv6bvI51OYcnS5Zgx4xNQebXdYDkqCTNrtwmfjJbPFn6f9uR30ARGCWCyEWT2hZBlbMIsSHimux3rbrAeHr/3RpSXpSkIQufqyoVmaW63ErXTtCMfz1+4BPscfBLmz50HVVOPINfjuDfOhzlhec4U9XOpaK6R52uSYSDjoXPqPKpo7IRIK7DWDkUKcI+B6eqGKE+j/vQdUfOzjdF082R0jJtt96FlCuysXcj6NTEAUvX98NXXi3nfg0+ii889BZeffxI8t9BLp2SRgP7jlnsewfmX30A9XV1QAwa4nZtOeJXZdiR39ICERPlx26L21J2h1qwF2nIwzZ1WIUJ5TG43zB4QruxA8NZcIOPbKTDnOapcqLGfEIDiAloBO7hrGATs1dVh1oyZ+MWhJ+LZR+7AoAH9eonGFs892C3KPT1ZbLv5MNx1029w7HGnQfs+DJQku0PdDmsMq8PiOc0AJK/68mTRb+hSCHmlWxhyRFBGGwjlQdSmMHPmxzj86LH4/eab4aDRe+One+yC4ZtshFQR+T0ZEoVyc6sam/DW1Bl4/KkX+PlXJqC7qRVUUw1VVcEmDAsaK5yUjU9sBiL/YCEVdE8bhm20ATbecIglqxLF1zEiRlkUo8Tkt6di1ZJlUDW1VrIqklN3WHRmE48t7DVg6u7sRMPKRkTq/9KZ4RrDyOVy0GywZMkifu6xe7Hjwm9w+YVnY+89fxydE+6rRzd/wTe476EncPvd96GxYRVUbS10mI3BNkwwtvUsJDg4SZL4MDR4A0L1I6MDgJXWmlVdLX0082Pstu+hOGC/vXHisYdhx+23QiaT/pswtFWNzXj59Tdx61338/tTZwAVlaQqK6NWLkf6n2wJ4jTjo0+w9lprINvT4ygq9tC04yy2dXRh6dJlIM9z/n95fjY5pEG8cfDK0ZYj/P6Pd2GDdddAkMu6TbeAVApCSCsGrgQ+/PhTBO1NEKm0ve4FfCwiEGb36lEuq2xFfdtKgAY50THLgCyvwv2PPYf29k4E2R67CTYRJddubFOpNCZN/cBqq5FVVooFIBKuGJoZqt8AvDf9Q4za+2AeM/qndMIxh2OH7bb8zuchigULF+Gp517GXX99HPM+/RyiqsLKvgW5WEiHwYZISDAHpOkItMybjPohkwAaQYBmgmI2oFQ5FixeiXMvuQbDN14fPT1ZB6qSVgid7KbHkwJfLfgaH3zwIcj3rJt8ATvGgc0MQNV1GPfieFp7nXWQUvargpxMH1m5xyCwa+vESW+jp60JsrIKhpNGgMxkTQVfTOaov61K8h2cNxqw6e0gcRLD5JRKeWHjKtx2x7U45eiDqLOrG+VleWPHIr5lvpQHEAYGqYyPE8+6AnffdBvSa62Hnq5OhojQarY5TswFaMQYAEtJYWKKCSnkMNLc1oO66w5CxaGbwzS3WbI3ERNTXrnMaCDtAWUeet6Yh5YrX0P28xWgmrRrMXGBY69FghKZpib8ePcdcfctv8OQddfk7q5uAhEymTRa2jox9pzL8fCDT4KqqyGkjIVvHXEU7ODt3NKD1IjBqL5sT2RGDQG1Z4FsgKReFZNwzj8hdG2a2h94H+0XvMCoTlnjhiL7nwJn4F6oyKKevcuMKUnILl1ET7/wGEbvu7vjAYoixmVv2F8YavZ9D/MWLsHWo/ZDW1c3WHgMYyTA3SzCYWj44msAkb+HkXUbjGYSt7MQg6xWE4jcINS1+Sjs6AS6uyGqyzFs6BBstflwDB++KQ9Zdy3061dH5WUZJgA9uSw6OzqxZPlKfDHva8z8aBY++GgWLV+0zGq6VVa49k4YJW2C40JRkfp7oTGHtdFRSiFYsRxjzzkVt1z3G3R3dUdmnQWcNq0NUmkfR598Lh7464NQ1fX2d7ql1xaJJFxfkGJ0nZBgAxo8oBaVGc+JGjibGdauTQleuLTBGkh2ZwEGNttiBHbbeRtsPmIjrDZoACml0NLWjs+/nI+3p32IKVNnoG3pEkZ5Obx0iqL5oKtWQxbCusmyOdOs+uJPAID6oVsT6HkQBoE5CzYenPs8M5NpbWP4PjYatiF23m5rbLn5Jlhv7TWoorISACOXzWFVYxPmzV+IGR/PwbszPsayr+YDglhVVsIYTQ7lynl8Rj4nMYCyTNomArdLjzbjRBJBaBCGmslT7tMmgXIkSWAdPa1MBIYA2tutMALnDV9tK9BdOOMcqCsrUagNGrv3dhujNkHznG/y1YFbB+uH3kIkxoJNjonsEk2CuKsbCAJXnWvECsaU8B/0UhAVZWCtEyo4dl+TUIWwz4SyGAVuaQVSPg0fsQl22n5rbD5iEwxZdy2UZTKA47WtamzGx598jnemTsP0GTPRtnwlUF4Jr7wcOgyi9+HGaxwSCR/gHoI5SDfOewGAQPX6m5MS0ym2F+a8KGd7uxWbSHauhIzXNbCT3aqoSKxF8dpsKJpcWhFgW3h0tBdca7j7P89wM4Dvg8rLC4gPTlVBEPMq06OHo3P+iiId/X8wwfXf9LeQ6mIYnSOhPM71YMTGQzDuwdsxZN01qCebhec0ESmJaopIgZEem7EJ4+NPv8RPDz0Ny5csgyrPcBjkIiNHSnJVIp3G6GYp8EjLD1yd3x0R9wTw1h2IwU+fCHjadlQFQAnDP2ICMTGxgapNI2zqwvLLX0XPEzNBlam8kmikneiGWVJaC5xBa63Bf7nzBuy9244EAJ/N+xpHHH8OPnhnGrx+/aGdrmQ8kI+uT6DBXVlkjtgW/S7dA7IyBbR024qOKNH1cNWrZsADst0aKw74C8zCVUBKOZfp3ujoqEKIkl6v+WekrSAVJEmE7e244jfn0iWnH2vpBVZiBFykKsCJVnMYaqRSPn/w8Wc47NjT8OVX30BmymFMaBgkiM1XvJI3BebkEj8uAWgM2nhtqflaBh3keroBx4mOiUhACEfP6O4BcllbvnsekM5YjUlyvJxcFsgFdkMiJZBJQflpwEH2nVJKQqOfC+kphSx8dpsAIulBwoDCLKZOegmbb7ohjDaxzQjnkdsgIrS2tWPTHX6KpYsWQaZSsVURHHEFhDlEYngsx5mUFQ5CgtYFNAJ3k7MT0MwjdMHQXV1AT499355nO3SBBkINKA8oL2fP9xKzHmfGBmgI6cPoDoCPM6u+fMJek1EETA5Rt8HGRPQUSGwM1oG7a+PNh2GG6clagBMzkPIIqbR9r2HOvqdQW5RyJgOVTtkNQJ4/yOSaNwlhDZfx2M33qJi0HZ9sSnSGIpUBAkkwrwRRf4BDOPEvAkFKQSie1yXbgg7CnxTtde8zByFSYHMjN849J75vo6YBoFE3ZJgg8aE7P8JeaIYQREJQwp2RiqxMjQOg6YRSnpMGo8giAACbHIgkORSMENI6jXd1EbI5uzal01YMgo29/0N3DwhhnwPPc+Cpgs2ttv8UHrNZJKCP1I1fTXKdOwPAUN2QZ0iIX7DRWUB4sbmPkglFoILKrFDJRJu8QpE7xSDy8oZAdjEnIrJ8yaLOIhfTGuE2jMlfLAISlILRp5rGebcXXaPvDNn3p7chYA7LioFkgKPImrkL4SksX7gIz742CTtutxXWXmMwRT32mLjLnBDotDeqEgqaDVYfNAC7j9oOr46fhOaGlaTKy2GMdsUbJ9CTnHTGKLDIiCVjmCOpZ6KUB72kGQgMUj8dDtPZ7Tr1jrJgrYqZSFjSZVcATnmo2GdjiAqFng+XxhDjWBUCHPE5oSqruK2tAw8//iwAQQ2rWnDwcWdj3hdzoer724FwEhfmABOkNSijUH3FT1B3zu6gwADdmkkpO+9P6DXYPrnTjqytQNtlL6HnzS9t8tUWI8lU5ElXOPX5VidkKRU41w3T3oLrr7uCLjrtGDAbJxyMBGydeqs8kJ2vPPbsazjo2LOwdEkDZFmkRk6BkMoD9L3onPOa3RgtTMqASHSsauauVeNERb9ZYN4IQq5mt3TGkO3OWL07EpCpFMlMGWR5BuT71lmFLf+RhID0fchMGrIsA5lOg6SI+DMJPyPyXFlUiOh2C7dNUq59RQQhmEyuG7qpARdd9mscfuC+lrysZN5pwp13wxY5Nn7iW7jnjjshyyvdNtxZrwghiNGpWO7DxDuDxCBmkwNZ8XcwIJSC8H2yFjQ+hOex8BSRVCAlHVk8r5gvfR+qvBwikwE8D8L3IDJpUmVlEOkURy0xl0QMMQyEUGRVc6ebwOzPzXMnWj7rHO2uj0R30wrU1D9OoVmNCFswkQAjcKotBGYIz4Msy0CUlYEsRcQWJsqDyGQgy8sgMymLvNWcsHMkDRKKhJAWDEqCgDCuZ8nhXZwti7VTkYDIUxBiwKfF2IQkpQdj5hqiPUDYnoRaA8xZm3CIDJtY+sswk3EtUTbGtvzd1ynv9WYACl1ym81h7hhkW3N9COPYc1VWnyYhd4HhwHJ6ICznDWTn3OwQqNHvNAlHihg25X6n8gAzRRCPZcKWRHKgm8uFBJA2hogZIuVDlblz7CnLfRQCpJS1JcqkIVMpijQjOa+r7qDWQhGRZNbPsDFjuOmrWYnkQACQqqidYRiHE4lKgIMod1nnDOsFaYxFBZkYSeyey0JemyGQgZAeQ38EUH+y1W6sKeecKOy5MuwoMewE5y0vlSMSob1TDEAhCZGC0c+Zpnnn/j3J7TsS3BwLGOhcsZDKBmwMqUYQIccMKcsr0dLcikfHvYg1Vh9EW44YZtnrTsU6aT9RYNQpJcIgwOqDBmCfvXbFxMnvoGHB16TKyymChxKoAD/CCTIlMfUaQlCStJxW1PPeV1BlGVTuujFEEIJCE/OcIhsL29ywxFW/zIfaaX10vTMf+ovlIF+CokRHRFY53e5mheeBSWDy+MkY9/TL1JkNIcvLrVp4wmQ0Ts7SJlLvxxuh/qqfg8McTFZztGDbboahCKUvDEC+AmoyaL7xDbTf9RaoKgPrZ4ECoHBeAYR6tRMpBjKR0/X0oXMhpZSiv9x1A5189JjYpy6a6ckCKxf7/ya0M0ZjDM697Fqce8FVyDJBZTJOoNfeeMThTFbmJLSv6gEW9kXDtTvezlWfcVftXylDi4loDRJiNddDirZ0mjnqqMSyXVQga2sXL3YfCc4ELDyPhATMKhC+Aaifs0mO90gcBvCkgM71wLS2kunJwfT0UEVZChf++gJcceGZ0DqE5xVJzLnNvtZWmeaG2/6KD9//AKq8Mq7aieAEhczbuvnL6zldPwvgg4SQZQQEtniJUNnGHaoFSLCJEQzshLsiXybDYDaGqaDGZrvldJnQuIEf2aRCEmwWwfDVZpU+Cdl5S+xzPkf3ui4djZ3obnpGZKo/AdMIEmqgQ18YdqYEzNYeJyHOUEDOdZfKerjYXackISQBPczmZsHyCsDsDSErYxsaOD2niMDgeAfMyfMAa6BGpEgIBTYLjMaBaJ77Cbx+rxOZH0GINeHoj04fwCS0AgwRa2Yy8aLP8Xml+HUNf8gm+AVaFzZ8R9tLortxEjJ1g0mIbawMjquAiHQEjwZBO4WC/PsAdMR+JhIK9limMeMQbpw3A17FIxCqnAhbkJA+gwUxB9GyZjiiFnECQBYJPdhE6rxQtRNFJ7KJTYDNJ6TNOdw879foaW4rSg4MQOiu5kZO1U8jwl4kVI2Dh4fx+SIYInf+7Dw32kgaey0jk3R73Zn1U6za9xPsLQJoH5BQMSqPYJL3dvz/9p7Inzd7b7jjEIpN+BT7HUegszP4Pm3J79GiTHxtje3SlOt8ENI7gI3JEVgKKckEWXBXF1184Rm4+pIzYnV3IUWfRMiINKhDDT/lY2nDShx09Jl4Z/I0eHV1CMOcbUKQY5Y63TfOj+GSn07wguLekW1u9mhUHrcTqs4YBVGvQD05WzlBMEmr9xgACFd2Inh7AToenIrcJysBwTGPgwpcpRIUFwIJKeKZYzEJtUCtP3oVY+Bvshoyx+yA1C7rIlNfycIY6FwYd4aM06E0y7vRdtMkdDzwHqhcFvCGC588KirUCg1Unb4HVCqFoKMTAwYNpIfvvg677zQS2Wwu1nqkXgIzEYzdIl4XLlmO48dehAkvjWdVV2fvcnshNYTwiYPxxuNDsHhO0/foiScfLiXrN9nZkD6ImPcEYV12CZcSBkPEMIX+E47llHCgsONz005E70HQ80ZmHqOw51oARzuXAwU2oFw3qqor8OLTj4EAfDT7U7S2d6Oupgq7jtoBG6y3lpvfUaKKj6x+4oIebR3t2Gzn/bB48TJIz85M3Bhfs5CKYA4zq+Y+BoDRb6ORxHwTEXZKyosXGnIS+hKlysv9cZIhY5CXbBQOROK+bgDw+2C634Q9j6D1m+YEUtp8xzNulaMHjigXuvswZj4OoG2tCEDMd9NuQUISL8oWoSMBkegKmkYmPMkGN6Np7mcAYNuhuJGAvTgybS1oI1IicSaedess0gPiR1jkfo2VC5e79lqI/sMqyATnE+hIEK1d2EZO9PC5l/upQzHiKxD+bFT6FjTM6vy+50nUDj2IBZ9JJLePFUeocH+b6AIh/qLdEHxOhL+YRr4ZmJdNquB7/TfYPGQ+iZhGQ8gBebqMk9spEnEhp/dtK2Qh88dnwKApBHOXacRT9vf07WtRcH/Urr8mSXklgfYHRBV6Ebv5W5OFu3ZziHGdaZp7X/yFmg1+RBIXE2MnCFHep44of4sGm61+PyaYW0zTgnv78K/+pxNc4gVHKRrQ8iCEOMRRBoiEtH2H5hY6YMzPcfuNl2FAfa2zG5EJ8VRGoUW9xQR4nkJ7Vw+OPPliPPv401D1da4/zvE9GTXue5FKE0CLJAnSodXALZ3sbTgQFYdsQ+mt14Ksr4Agwbq9C8E3zeh4dz6yb82Dnr/S9bB9kBVLcQmUE7WSqx/ZYVaKaiYueigLvhptuLtyAAS8oQO5ctQGKNt2bZg1KkFpj4wxyC5rQc/b89Hz/Ccwi1pA1WWOHGoKkclJ1YTkQpOYgbqHipUnETQ3YcPhm9C4B27FpkPXQTabi2em6EOo2Bgr5SWVxIvj38JJp1/MS75ZDK+2zs7AIs8LIaUw+l7dT5+COXNy3xey68QDLAUliv7DKhSbkQZmFMBbgrEBwAMAqgKRzwWSQQZg7mSgkUALmXgWsZhqFL+Lhi8XAACqhtWRF8wDUON2h6Q8j4LmJhxx3C/xwO3X9fnGctmcnbkl6uRoAyUEEIQanvJw74PjcPxxJ8GrqbcIsXgZI8HMy1lnN0brwpbE4iVl/dB9DfMBIBoB5rJIYpDyDmB5bTiiEMAKAG8TIcvATgQxFGz6M3EaTETgkAldBDQw8BlBvC8Ik8KVX0zNX9IxEnjSfM8FoaDto2o33EELvTcxdgCwMYgG5i2ZqaCCI9btzLQYkj4kEhMM02tY9fmyog6Rtq+73o5ayD0BHmIx/6a30iHHs8AWAuYY0OtxoszfZ/n7rW5IFYBtBYmhIOPHeFeDiJeQXOMMCO0ixGdhqu1DNDR0fo9NQO/NAADVf+hOBmIzGJ0pUl7Ov6RwdZBAuwnNXFQH72Hhwp4+psIiPv/9hw0SCA+AMXsz0WbEtHrUhSjcRedxDmy4AYTPAUxmxktomjv9267td9DF7Puv3nAdKc2WDLEmBDuPM7a7EtuTjBAiBmCCoC5B9Fm40rxflEzzHm39h6yPkEcKxgA7L4ogx4YByRAs8mffGACtBvJzNM39AED4NxL0P5XgCvKKGDTicoa4ws2xQ5AQSkoKmpqwwYbr4u6br8EuO22DIBfESvyclCQqIhNLImhmjL3gGtx5672QNTVgJ/UDt6PnuBdPvQ0PizYB8Q5OSeasBno0UcYHlXkAaZiegNFpW+hIe6CUA/zpQgkDStRESUIw5zfzBb+YelVvhXcjCwfY6NGMnhBQElTmgTxBYIbpDICsZmQkIa1AruUbg0eQdwBP8t0JfVSQVgCbg8ZG7PzjneiRv/wRawzqn/BlSyJSEyhJrZHyfQShxuW/vxW/v/FOMBGrdDpCZWlrAEmQwKXh8o9/W/zQ/533nQDGoCDZRQCngYvqEKo6xVzNJDKAfdAIaA9DrIKiVWj8or3w54b5QH8j6paeBCFuYTYBgSQLKwkXtjXh+XEP0D577BbD06NNvpR58na8NkUEPtefDLWGAbDjHvvjw+kzoaqqrMq5U8gCSZ9NeA83fnlCpN/ax8IpgCEWmrlGj4DWBN83WOi5i+GzVbAv8rbqP6wCubC/53NVwEZ5Gj0BUSuasNItKsXaseYfWAx6bz7chsHzc2sb0GBmrgGJDGCYDNpIiuVhkFuElq+XAgiKFtUEXC6Gyv3dC9R3/HxhYviH4h86V/Lf9DsjOHX+tavXroGn1hcaQyDlYMBUMlMEBGkDmUXCiAWhzwuwfN7KPs7N33NsIukS9A9G8bn5Z6/7P32+6e/4PgJg5IAt9jNk/gqiOrDJAVBSSgo7O6CkwDWXn4/zTj/W7YoDKE/aM80cWyUUkMFhDRavvfU+XHDpHwBPQXq+nW0lqihi9GFDz73abDEQw4GqOEIcOaIoSQHH3C40puSEPFvCW4oSoqSJ3hIlHFDyoIBodhQxsCKodNThFIKtMRoTaxNrVJB0qhdOrJZi3B3lOYEFHiKFTmURjcIq74PD5iYcdvShuPumK6k87ec9o1y7REToDncgobZk9c/mLuCTz7wEk8dPgairtYAcS1YPicgHeJ4AnaxXzJ7gbjzzT968iYdxFDlei/kHkmSsWCXqh0wByZ3Z6MAKsQvork6su8EQfPz2S5RJp5woMyMpiMTFIgWJDVQusBJYDz35Io444lfwqqvtLWUNIKMH2BjB22Dl3I+KEhslFg/9/Y9tlEyoNZjvXphGCWAy/xuuh/47Xk9+j5+Jvud7vub3uicS7/f7xj99rv6dv9Nd+7/rWfhnfq6P+2kMASv+lcfmkvffdb7MvyA5gv6+b7dtF2/w8C0141GGHOrmckpISUZrcFsHRh+4L2677lIMHtSfc7kAMmleBerDotyqUjzxwkQce9J56OzocPppYWwgGGu7x3313g3ZYhAGF2jC92ricpLaECUz4UxQdRhaSHcYMMLQceUivpzjuAhh+1dSAp6CcDqCkbOu0zyMEmYBGqSg4mPOS9xwwmCTKNG5QjyjTGo35mUtreUPd3XyRRefiWsuGgujNWljJbe4j3NmtIGnPECAHxz3Es644Co0r2iEqq6OqjZ7wEJ4xHpihunwzhWfNCQqlH9H0Lf8XWjQVnjpbUKpGzJMCJrJDIV48yQRrFqO8y//Nf5w2XmUC3JQMgEi4SJBxQLzzLzuYltHF7bb9ef4at58UCpj0XJ24xWykB5YP8GNcw/+HrOc7xP8LRvMvr6P8e+NBM5nDPIL3+Tia/Hvfh//i5E4930lhwHsNnel8/+vSXD5JFc+cMSALvCdIDmaHcbTUh0Eh83NtO4G6+Hm6y7Hvnv8CNpZ0BQCUFDgzuS4Vpj24Sc47NizsGDuAni1NQiCsJCTGzXnKOE4iyKzwyTQo48Eh6SJtxB53klPD9DTZX9FRQVq62oweEA/DB48mAcPqEdFJoWUb9fOXMhoam2jZctXYlVTE5YuW4bWVU158nY6BZFKQRCxsRp7FPMEC95db3g+JZJ4oWlm0ZDZfV4qBd3VAU8p3HbTb/Grw0cjCAIIiAI7+GTxGVVtTa3tuOCS3/Gf73scSGegfN8lt4jPAgjiP+oGc6Hluf1bk9s/GBEhd4MrSMjLWYc5EFS0AZAc4v1JL2Hz4Rtb89aEGSQXJbnkpoKdxl/K93HUyefjgXsfgFcXaSsCFO9a2RgdjkTz/E//+bZZKUpRiv/DBFfYFxUDh5/PoN+CyINBDmAllULY1UVgjQvPOhlXXDQWKd8rQPCBi+D+ZJOc73v4ZukKHHHi+ZgyfpJdUBLmkzGoI0ZOok9EIBdNJosSIQtnn667eyxpNZPGeuuuSdtssQl23G5LbDF8E6yz5mroV1/Tl1xOQb7s6clh5aomzFuwELM+m4tpH3yC9z6cjQVffQ10dTPK0qTSaSsQnDAcLGjXFhGs88ebXHi5SJrLqs+HLa0YvOZgPHD3Ddh9523i8yxJwsAUbCjsnJiglMKEKdNw2jmX4/OPP4Gs78cxlQIihBA+2DQI4rF6+exxf8cw/v/iHmasvXaaOrwPCXJjtkAoIaVE2NqIHXfbFW+//LhN+tazppe4NIpEjCO7HM9TuOzqP+KqK6+FV1OL0MpJRdJRIQnpMwfX86p55/3z85lSlKIUP4QEVzCXU4OG/0gz7gLJjWA4BxgphCBmJtPcjB122Ql33nQVhm+8vrPWIUgpekFNyenReZ5CTzbAyedeyffd/QBkbS2xEC45UIFeAH/bwUQtPSRs0RmQUlgeWns7oDWvM2wjjN53D/xszx9h6803oYryTMH70kbHPD8u1m0k67arhMgrobho7+jC9Jmf4qkXJvCLr03Eoi+/IggBUVnhjlPnKzeRB/cXJ7CkbXzx8UmpEDauxBbbjsQjf7kZG62/pk1uUsYedclNQahtlRyEGldefydfc8MdZAINr6LMtmTZebALqYjDtz3DR2dXfvrVv3De9u8Im1TqN9yKiKc7Lpa1o5ECYfNKPPbYX3Hw/vtSZ2cXPKXyBqbRSDVCuzqyriArhJwLApx/6bX8p5tuhaqsJMN5UQzLORIe2HxiMt3bYPHibKlVVIpS/PAWh38mGBilTMf0Bajt9yhpWouk3NwKmhjNRKQqK2nhvAV4ZNyLqKur52223JSkFAiC0BmGIuGgbT2wtDbwpMDofXZDuroa4ydMJmZA+p5DkRaSvqkPw/iCqo0AKT2ABHR7B9ho7PyjbXHNlefTjb+9AD/faxTWXWs1+L6kINCWyOxY9tGcTpJwIzdhTR+FnddZZ2er9M3O5kJrg7JMGuutvTr2+cnOdPSho2n4ZsPQ2NqOr+d/A+7Jwlm5FHg/9XlMLnHmZ4oACWsQqRsbcdDhYzDuwVuwxqB+yOUCKCVRLJ8cOQR4noeZsz/HocefzQ/d9zgok4HwVAIlSQpEQkDfZOrNEXrhnFVOneSHXJVYpFZZ9UaC5FFWOJbisSdUCttvPRJDh6xD1dWV1mjXoSbtdUx8SGG/JgUmTpnGR/zqLDz1+NNQ1TWR0XV0GQxZ4zotmEebhq+//oFWt6UoRamC++cjP5cRAze7gIHLQFTGzDkClFSKwlwAdHby6NF70x9/fzHWXmMwcrnASvOI3vK+kd+Xpzw88/KbOH7sRWha1QRV5SwgErqL3OfB5FFyUgqE7R2A9LDvPrvjjBN/id1/tA0SHCiL8RCxsFdeNS4BNiiwW0miVQq0/PPfEAlRx6K9AF59411cf/OfMXH8ZEBKqIoK1iY2OaSkrmdMYE/MGoWUMDoE9wS45KKxuOrCUwFjEOhIV5LySvnM0FrD931oA9xw65/xmz/ciq6WdlbVlZFIsFWMENIDzHIBcbpe/tGTP+CWZN8cnn7rbUAsPyEi5VQxKELAmu4Ag9ZcjXbYegTvuM1I2mz4MKy5+mDU1lQhlfJhDKO9oxNff7MY703/EM+98jrefncGw1Bc3SZccIzTm5JgPtI0fvngD3MuWYpSlILwr0f8GG/A8OFa0M1MahcnGW6p4UIgbGrC4LXWwE3XXYaD9tsDgFXHTrYsmfPAi0CHSPk+Pvl8Pg49/hx88sFHUM5nKplgqBikEVmgBDmgtQVbbjsSl//6LOy3549s6zEMoZmtkn5Rzkp0BfOOuQk4fi/tR1d6SavXlJ8TRs6/DlFJgmIu2rjnX8dV192GWTNmM6oqoZRyxxSLpsSiqeyItUpKhO3NSKdSuOuOG3HkmJ8iDMNCDlckWGpMTNqe/fk8nH7+lZj0+iSgqgpSeqx1CBBpIlJEgsBmXErxWd1LZi/+J7hU/6dJjuqGvExS7W01CtmLriMJCZ3NAt3dBGOATBnSFeWorChDxlfQRqOjswetre1AZwcgJcuKCpAQVsTZbWwIHDLIJ3AI8NGmcd7DiJQ1SlGKUvzXtSj7bll2Tl/OHWs8IitMJYAd7AJkQmYWqrwSbW3tGPfUi1i6fAW233YkKivK3GyulwYMBNl25mqD+uGg0T/Fl18vwWcffASZyTjumBv6W6+o2MxdKYmwrR2VNdW45qoLcedNV2KTDde1vlvaOEqAQDG9jThJX+BYUFQpVdjOch+ROzPHUH8UovEch004I0Dt5oibbjwERx22P9JVlZg27QPk2tvhlZXZVhhF8nImWqHZ8zMUtrRg3fXWwjOP3YOf7fEj9HT1WGSqe+/CtTwDHcL3PQghcNu9j+KXJ5yPL+bMhaqts2bEVpBTkxA+MXcB5hzTMPu8sH1F239oNWL3AX7dHEE4EkRpMOUoqfwuJWQ6DVleBpKCgiBEV0cnWlva0N7WgWwuB6EUq/JyiHQ69rd0PQJDzAZC+gSsNFa49hnXvi0lt1KU4n8kwcGplQtgmeaO5a+J8gEfQIjtibx6MGtjNIRSJDwfM96ahmdemYh111kTwzYcAiEEwlBDCNtmk2Slk6RnP19ZnsEh++8N9tOYNHkamBjK95lj2S4BoRSIiPSqldhp1HYY98AtGP3TH0MQIwx0PGOhgsSWgNALm9iUUpDRTEYIdHX3oLGpBUuWNWDlqmZ0d3Xb0U9ZpmCuo53Ac1IM2uqdy4QXt0OMKolddtyafrrnj2nOvEVY8Pk8yEwq1pSLEA2eFAhWraJRPxmFF5/8MzbdcD0ru+WpAiaSMXkdya++XowjTz4ff7rxLmSFhCrLsLWuhwaRJKkUwUyXAgfq5Z88lydjzvlPnCNZ8eBs0zKRrv4IRHtDiAqABTOHDmlkQU9O5V0IAkkJUsp+uM0O5wn7HIv3CuGRdWZ83pPmYN341fu2cislt1KU4n+lRfmt0j8Vgzbv3w1caxhHW3NHBCCSyvMo7OwE2ODUE4/CVb8+DbVVlW42RwV+XMnFx/M8PP78eJx46vlobW6Fqq7hMAggpWtFGaaLLzgNV5x/MjwpYmThdx0tOW826+4s0NLWjklTpmLKO+9j5mfz8c2ylWhrbUN7exvYaGQyKVRW12KN1QZji02H4kfbbYFRO2yNwQP7QWvH+yPqk4Pn0DTWPCk08H0PuUDj/Cuux59uvAUoq2CRKgdIARzCNK/CMcf/km697nKUpX0EQeiSm7GSlcwIwxApLwUI4J4Hx+HiK2/kVctWkmdnbU6pnTSk9MlwN8BXmfrwBqslmRd9/Q8PN49bdygZdSkRfgYS1ZGzOhih0yNMWOkWisMQGEwkCZAJ+673yNCVunnuy/8auaZSlKIU/+kJDr0AKAOGHwaim5hkfzDnAJYkrJKobmnGhptsiJt+fwn22m0nwBjkAm0Tk8gj5pkNtNZIpVL4aM6X+OWJF+DTmZ/B71fPuZZG1FWX4c6bf0djfr4ndBjCWLntAtBINOOjpE2Ag5UHYYib73kUt/35IV7w2edAoAE/Zc0mpSRIEelkMrQBgoCQy1qB89UG4NgjD8Ml552CskwqRi9G7gNSuNU1oanJsA4LQhCU5+Gvjz2PU8++nLu7OmMawnW/uwxnnXAYaa2teawQCXUTezxKKSxZvgJnXHAlnnrsaUZFNVQ6Q87hWjv7c0nQM4USJ4dLZr33HwQk+fuTHIB0zTpr56Tam8GjARpJJOsRbWQiwdqke3zMR2QAZikz3hIwj+nGr15wCe1foddXilKU4r8nwRUKo6b6j1w/kPo2kNyTjQazDggklaco6OgAAJx20tH4zUVjUVtdiSAXxCrvVoTZVltBqJFO+WhqbceJZ16Gcfc/jA1HbonHH7gdm21sW3hSCmcjTMUyjlbhIxreOP6T1gaHn3QBP/3Q00BtHaSvrAWSM00EEXEey8/k0I0krF2oDg3Q1IIDjjoID99+NYgoTkYi4XwA5l6zP5D1G/M8D+++/zEOPvpUdHV144F7/oR9dt8JuawTS44ZaYzAqb8AwKPPvILzL7sei+cvhKquhGHDrDWBEEJIjxiGyNygVcvlWLy421Vt+r+Ut9U7EQ1Yd6DUYhgLOYwNrwdwP2JUg1HBghlAOwwtIqK5QuDjMMh+krCcKVVtpShFKcHhe0kqAYAaNOIczfRrENXCmBwIyvokMnRzCzYeMQzXXnUB9t3Doh5zuRyUVAXvOtQavmch+Pc98gx22WlbrLPWashms/CUKiBmx/OwaPdOFO/cIy3MDz76FFvtvC/L8gqAJDRHtjzux5KvF0/IkuZkApJ7II3BB2+/gk02XM+BSooEFQssL6hPVf8Fi5dDa4Mha6+Gnp4sPKlcguS4Xet5HpavbMSFl16L+x8aB6TLoDIJ9X/rFSXA+mOCOUs3fPrmf2nV9reEiP9RAVqZSJQlAncpSlFKcN/f+sLvt/kGoeQ/sZB7w2h2xn5SKoWwswswGscffTB+f8W5qK+tRhAEIKuYH/PTIjK2dBJgQeAqvm/R6soLHOedBCzoQKBhZSOGjzoYTU1NTNKKESed1kDJl+K8MiZbx2UiAuey2GDoepj22hOorMjESEtR4I2Xd26lWNTQtU0jorsDkARhCE8py2+HQRCEUNJawIx7cTzOvfgaLPxyAWRdrU3oRjMTaSLpEXFIoD9ov/m31ofqPw7+/2/oIoxKigUXCeEUfK2U1EpRCpRQlPgHEG8ARind9d4q7mx4WFQMCAm0o9U/5JC1Ien7JHwPH7z9Hp557U2ss/Za2HjoehBCIAh1DOCI/g6DEMbRCqgvPfrIAbwI8RFVc1ob1FRX4utFS/D+lLchyytg2OEREjO8Qo+CSPUfYAjyfA+6pRmnnX4S9tp1h5jIXuCFR5SAbRIokawpxp/YpKi1hhTSJXIDNpa03dTajtPOvwoX//pqbu3ogqqusc4FMMa6+ypJbGYJoQ/Uy2bfj9bW0F7rOf/rLTa2KN+FSSuOxEfB10pRilKUKrh/TTXnrTZiC23oWobYHazBbAIiIaVSFHZ1Adrg6CMOxDWXnY3BA+qtqaqTzsqDNqhIpirvPhxbblNhzosSl3FV3PKGVdhil/2xcsUKpnQFmVgz0tnU5C0A8lUgrGmm7mijDYdtgHdfexyVFeUQDrxiyecJLzzmvO1PUYsyIotH5D4igg41RWoor0x8F6df/DvMmz0HsrqSwQbG6i9qCOGz4W4I3Mw6/C1Wzun4L5+1laIUpSjFD6qC67OaM+3Tl3JHw4OibEADEXYAiQpmDo1h2GrOx8ypH+DJFydg8MD+2GzTDR1vLoxbe9zXGh4rYEWZLeFJV5CAXBVXU4X111sHjz/5MslMulciIo4MvfMakkIIkA7JT/l4+pG7MHS9taC1dqJfnKj+ipzNE5Y3RFRk+2NDaxPZ2tDZl/wBZ114FZqaW+BVVUEbQwxo27cVCsZMVuADdMPsh9G1Mmev78ISMKIUpShFKcH938VCEyHfuLNhhpcZ/Iwhsy4JsTFBCGYTMkOo8nI0NzXhqXEvYO6CRdhmq81QW1MFrU1B3kgKDFOBEn+iYiry0EnSBDbdaAjSlVUY/9wr8NI+DKzUVrE6l9VCloAOyHR34S933YB9d9+5NyCGk2+OXb6kRJuSCk1bKTaBJSklvTrxHTro6DPw6guvQVaUQyiJMAytor2QHgFZInMFN9SdaDrfX+YUNrgEZy9FKUpRSnD4wahRABgjddcbq9C54lFROXAxQNtCyCowazYGwlMkUinMmv4hHn32Va6rraGtttjEzuYih4JoppWo6ihy744I2FQo8Bx9nchWhaO23xKhFJj08niIVBpC+S5pCkBYvIL0fJgwAGd76I7brsVxh/3CebGpfFs0SmKJapKICknfrsKLUrHWGp7vobm1HWdf8gecdcFVWNXYClVTDaMN2LAWggQJKYnNu1LwGL189uMuqYlS1VaKUpSiFD+sBOdiDkeyUdzR8CGq+z8mNfoziS0AFjA6NMykysrR1t6G5596kWbOmYdtRm6G/v1q2amdkEjw3IiS6SPJReOi1iBikeQw1PjJLtujeuAgTHhzukU2pjMxtUBKBd3WhrJMCg/c+0c6+uD98oaufYwBI1PXCMJJhZBMR1dgSGERkq++ORVjjjwdrz3/OkRlJchTMFozAA0pPWLkCOZqs4Z/nPnyo8WJqo1Lt3UpSlGKUvwgE1xSXXGUQvv0Fu5seEaUD/iCgO0hVA0xG8OGhfRIlpXRZx/NxiNPv8yVFRXYZuQICCkoDLQ1/Ywds7n3/Cv579j80n1Igg41dtxmc2y/3ZZ4Z+p0NC74GiwFONcD07gcm2+1GcY9chf23GU75HIB5eXAOKYgxJVhVC+6PyhBOIebtXm+h7bOTpz/mxtx+rm/QWNjE1RNjXUjYA6JhISQkli/K4Q5WDd88giWLTOlqq0UpShFKf5zEhyKZnOCOxtmZzJrPGqkqWRgJJGQzBwyM1R5GTq6evDSsy9j2sxPsNmIYTR4UP+8aSkVQSZR3DpM+mjnKQFRJTd0vTVx2IH7AJ6HZSsbqV99HY099Xi65/Y/0HprDqZsNkueUgWvHQFYLHKT4pZlsnKTRAiNgRICUim88fZ0jDnqTLzw9CsQlZWQXgrG2KqNpPSIOSfA15iG2mNMx/ulqq0UpShFKfDDpQngH9G0VIM2H2WMuYFJjASMsVqLQkopELa0oKKuFpeeP5bOOvlIeEoilwt6+83FlVth4uvFDS8iXrd3dkGQQHlZGoBBkNPWsqYoxXByrsbIS4UlPOa0sQjJzu4srr7+dlz7p3ugQwOvshJBEDCBNZFQVlcsnCAFzg+WzpqJ/y01klKUohSl+G+s4FA8myNgjDQdbyzgwZX3i6wIAEQE8YCZSZWXU08QYsKLr9PEd9/H5ptujDVXH2StmDVb7lxBy5BiNZM84pJ6Ow0Yq9hflvHhS4lcEDj3bOpt+ZooFCMR32QYYyCkgFIKU979AGOOOQPjHnsWVFYG4fvQYWAANiSkR+CsYL5YN8w6ybQ3LLeJfg5KVVspSlGKUvzXJLiCRCfR1BRw54rJqmLw6yAeRtJbF4BgY7QQQqjyMiz8cj4efOJ5hJqx3dabI5XyEQZhQk2kqJQtEPpPJCbHgxNCxDZtVgAaeSpCUfuxIE0mCOYRry2bC/Db6+/A8adfgmVLlsOrrQUzMxujQSSFRUi+JcgcEjbMHodYampOqWorRSlKUYr/zgSX7CCOUqbzvUU/GrnRA4sbu7tB2BYQGbAJjWZSmQwFxmDSK2/g9bemYYP118H6660FAYFQa0gh8rxvEgnEZYK6VoAW+Y7GbkwLyNvv5F/HCjoLYau2d6bPxCHHno1HHnoSnCmDSqdYhyEDiKq2TkGuautYscRVbSUJqVKUohSlwH/lDA5/0//LH7TFxiGZGxlyL9YagLFWPEogaO8ASYHTTjiSrrj4DNRWVyAMQleB5X3iYlubIjmvvJC/k9lCbypAgV2BE1JmcFy19WRzuPqGO/GHm+5GkA2gqiphwhBsTAgiZbkN5nXp0dnBoo8/TTQ9S1VbKUpRilL8j1RwfVZzumPaCu5oeFhUDmgF83ZEohystTHMKp0mKIVpk97Fc69Pwnprr4kNh65LVrw5tHJbfelDJsGVgooobtR7XgdhP8tWIFmQgPIUpr7/MQ497mx+9KGnXNWWJh1qJhirRsLcA+KLzPJZp5i2hpUOIVmq2kpRilKU4n84waGX3FdHwzS/euAzAA9iEsOZhGBGQAShKsqxYvlKPPLEc1j4zRLaZqvNUFNdxcYY21gUAgSnWBL56lAefFLgeFpUxVFC8Nmwged5CLTBldfdgePGXohvFi6BV2uV/w0bi5AUShKZKVLwwXr57Kfzs7YSr60UpShFKUoJri+5r/Y3V3HHiidl5cDZBGwJEgNgjDbGsPRTRL5HM6d9gCdeeA396utoixHDnNxXEANHKCHKXCgrGYFK2M7u4u+1MlskCEopTJ3xMQ499kw8/OC4aNYGrTUDpEHkE3MriM8zyz4eazpWLC1VbaUoRSlKUUpw+DvkvuZU1Q94KNCijiG2ZiEEDAcAC6+inFpa2vDsUy9i9mdzsdWWw9G/vs4SxDVDSJn3gHMWNyQooScZ+cFFvDbr1xaEGlffcBeOG3sxFs7/Bl5tNdja2hiAJIRUBPOOBPbXy2e9iHiWWKraSlGKUpSilOC+t9zXGJltfbOLO5a/ICsGziBgJIQYyADYGC2UEjKT5k9nzqaHn3oZ6XQaW48cAc+TCAPrORcp/NsZnW1BEiEGpGit4UkPUkm8Ne1DHHbc2Xj4gSdhUmnIsgxMaJiJollbTpD5vVndO9bM/Wh5qWorRSlKUQqUUJT/5HEKALq2dmR1Syq4iBinGxIZYs4BLKVUFOayhPYO7LTL9rj2qguw/dabA8YgMAZSiFgFhWGdw5ltcvN9D51d3bj6+jtw3S33IswG8KqqEIYhwKyJSDq2+GRB8txw+cwZJTWSUpSiFKUoVXD/wopujOzpmdCNjoYJsmLQeAZvCSHXBEMYo0MhJMnyDH09dz4efOIFdHV3Y5utt0BZOoUw1GCHigQ7cWSpIJXEpHdm4CCnRsJl5ZDptJu1sfNr424Bc4lumH2C6Vi+tKRGUopSlKIUpQSHf5vcV+cbizG48n6R9ToIvBULVQ6YkI2BzJSRBuPtCVPwwmuTsNrggdhk4yGQUiIIA7Bh+CkfbR2duOzqm3Dy2Zdi2bKVULU1zIbBbDRAyvm1vS+FOiBc/lFJjaQUpShFKUoJ7v8TCKWpKeTOhne8qjWeY5h1QGJjtnJfIZEQqrwcDUuW4fEnnseX8xdhi82GoV99LaSSePOdGTj46DPx9OPPgiqqWKTTkV+bgZAemJuI6DdrpppPalr82aLSrK0UpShFKVCawf3/Pf5REpgcAoAYvNnhbHA9QIOYtSYwSCgBAkxzK2oGD+RjDt0fLR1tuO/R54lzOXgV5azDAMYYTYI8Igkwv+qxd2p2xYz5KM3aSlGKUpSilODwfyv3BQAms/rwNXoCugpERzMRiDkESEglEWazQFs7IAioroKUEkZrA2YGyAPrRhJ0hWn45Fb7cqMUMFmXqrZSlKIUpSglOPxQPOfk4M1GM+hqZrExWAOMHAlIQYIAhjbagMmAyLc6lfppD3RedsXs+SUNyVKUohSlKCW4HzSlAINHlgkdnMzgy1hQFYxlzxEo75dj9DwiutQ0zHqsOEmWohSlKEUpSgkOP1AAjgYAv9+IoYEw5wPYA2wGg8iA6BuAHuYecRNaP25JtjlLp64UpShFKUrxnwBCUfG/Bo/sp/qP2EkNGL4d6jesREFrsxSlKEUpSvFDiv8H+OMiTEcEgJUAAAAASUVORK5CYII=" alt="CyberFlow" title="CyberFlow · motor en vivo"></div>
+  <div class="side-state" id="sideState" title="Conectando con el motor"><span class="dot"></span><span id="sideStateText">&hellip;</span></div>
   <nav id="nav">
-    <div class="nav-grupo">Vigilancia</div>
-    <a href="#s-salud" data-sec="s-salud"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>Salud</a>
+    <div class="nav-grupo">Operación</div>
+    <a href="#s-salud" data-sec="s-salud"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>Resumen</a>
+    <a href="#s-escenario" data-sec="s-escenario"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10,8 16,12 10,16"/></svg>Escenario en vivo</a>
     <a href="#s-actividad" data-sec="s-actividad"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,12 7,12 9,6 13,18 15,12 22,12"/></svg>Actividad</a>
     <a href="#s-alertas" data-sec="s-alertas"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>Alertas<span class="pill" id="navAlertPill" hidden></span></a>
     <a href="#s-decisiones" data-sec="s-decisiones"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>Decisiones</a>
-    <a href="#s-bloqueos" data-sec="s-bloqueos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Bloqueos</a>
+    <a href="#s-bloqueos" data-sec="s-bloqueos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Respuestas</a>
     <a href="#s-scores" data-sec="s-scores"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg>Scores</a>
     <!--ADMIN-->
     <div class="nav-grupo">Sistema</div>
-    <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Mapa del sistema</a>
     <a href="#s-despliegue" data-sec="s-despliegue"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="3" y="17" width="6" height="5" rx="1"/><rect x="15" y="17" width="6" height="5" rx="1"/><path d="M12 7v4M6 17v-3h12v3"/></svg>Despliegue</a>
-    <a href="#s-alcance" data-sec="s-alcance"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg>Alcance</a>
+    <a href="#s-topologia" data-sec="s-topologia"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg>Mapa del sistema</a>
     <div class="nav-grupo">Datos</div>
     <a href="#s-variables" data-sec="s-variables"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9" y1="9.5" x2="9" y2="20"/></svg>Variables</a>
     <a href="#s-vivo" data-sec="s-vivo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 2-6 2 3h6"/></svg>Datos en vivo</a>
@@ -907,19 +1373,22 @@ HTML = """<!doctype html>
     <a href="#s-comparacion" data-sec="s-comparacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg>Suricata</a>
     <a href="#s-simulacion" data-sec="s-simulacion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg>Simulación</a>
     <!--/ADMIN-->
+    <div class="nav-grupo">Ayuda</div>
+    <a href="#" id="navGuia" role="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.2a2.6 2.6 0 1 1 3.7 2.4c-.8.4-1.1 1-1.1 1.8"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>Guía operativa</a>
   </nav>
   <div class="foot">SOLO LECTURA</div>
 </aside>
 
 <div class="wrap">
   <header>
-    <h1>CyberFlow<small>Motor en vivo &middot; solo lectura</small></h1>
-    <span class="stamp" id="stamp"></span>
+    <h1><span id="hTitulo">CyberFlow</span><small id="hSub">Motor en vivo</small></h1>
+    <span class="stamp"><span id="stamp"></span><span class="stamp-tz" id="stampTz"></span></span>
     <div class="sesion">
       <!--ADMIN--><button id="modoBtn" class="btn-modo" type="button"
-        title="Cambia entre la vista operativa y la de desarrollo. Las dos son de solo lectura."></button><!--/ADMIN-->
+        title="Operación: tareas del día a día (resumen, alertas, decisiones, respuestas). Desarrollo: añade mapa, datos, modelo y evaluación. Ninguna de las dos cambia nada en el sistema."></button><!--/ADMIN-->
       <button id="avisosBtn" class="btn-avisos" type="button" data-on="1"
         title="Alertas flotantes cuando una IP recibe LIMIT o BLOCK">Avisos: sí</button>
+      <button id="temaBtn" class="btn-tema" type="button" title="Cambiar entre tema claro y oscuro">☾ Tema oscuro</button>
       <span class="quien" id="quien"></span>
       <form method="post" action="/logout"><button class="btn-salir" type="submit">Salir</button></form>
     </div>
@@ -927,34 +1396,83 @@ HTML = """<!doctype html>
 
   <div class="toasts" id="toasts" aria-live="polite"></div>
 
+  <!-- Recorrido guiado de la demo: aparece mientras se sigue un escenario. Cada
+       paso lleva a su seccion con la IP filtrada y resaltada; el ultimo dice que
+       mirar en la consola (Herdr). El panel no ejecuta nada. -->
+  <div class="rg" id="rg" hidden>
+    <div class="rg-cab">
+      <span class="rg-esc" id="rgEsc"></span>
+      <span class="rg-reloj" id="rgReloj"></span>
+      <button type="button" class="rg-x" id="rgCerrar" title="Ocultar el recorrido" aria-label="Ocultar el recorrido">&times;</button>
+    </div>
+    <ol class="rg-pasos" id="rgPasos"></ol>
+    <div class="rg-pie">
+      <p class="rg-frase" id="rgFrase"></p>
+      <span class="rg-cli" id="rgCli"></span>
+      <button type="button" class="rg-sig" id="rgSig">Siguiente &rarr;</button>
+    </div>
+  </div>
+  <button type="button" class="rg-abrir" id="rgAbrir" hidden title="Recorrido de la demo" aria-label="Recorrido de la demo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span class="rg-txt">Recorrido de la demo</span></button>
+
   <!-- El resumen (KPIs, barra de salud y pulso) vive en la pagina Salud, no
        como franja repetida en todas: antes se veia identico en cada seccion y
        daba sensacion de que "todo mostraba lo mismo". El estado sigue siempre a
        la vista en la barra lateral (punto + texto + pastilla de alertas). -->
   <section id="s-salud">
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><circle cx="7" cy="7" r="0.9" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg><h2>Salud del sistema</h2></div>
-    <div class="kpi-row" id="kpis"></div>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><circle cx="7" cy="7" r="0.9" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg><h2>Resumen</h2></div>
     <div class="healthbar" id="healthbar"></div>
+    <div class="aa" id="alertasActivas" aria-live="polite"></div>
+    <div class="kpi-row" id="kpis"></div>
     <div class="pulso" id="pulso" aria-label="Pulso de la ingesta"></div>
-    <div class="grid" id="health"></div>
+    <details class="diag">
+      <summary>Diagnóstico técnico <span class="th-sub">servicios, captura y descartes</span></summary>
+      <div class="grid" id="health"></div>
+    </details>
   </section>
+
+  <section id="s-escenario">
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10,8 16,12 10,16"/></svg><h2>Escenario en vivo</h2></div>
+    <div class="prep" id="prep">
+      <button type="button" class="btn-prep" id="prepBtn">Preparar demo</button>
+      <button type="button" class="btn-prep btn-escoba" id="limpiarBtn" hidden title="Dejar limpio: quita las medidas de la Kali y limpia la vista de Alertas" aria-label="Dejar limpio"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 3 11.5 10.5"/><path d="M9.5 9.5l5 5"/><path d="M9.5 9.5 4 15c-1 1-1 3 0 4l1 1c1 1 3 1 4 0l5.5-5.5"/><path d="M6.5 17.5 9 15"/></svg><span>Limpiar</span></button>
+      <span class="prep-txt" id="prepTxt">Libera la Kali (10.10.20.30) y el cliente (10.10.20.21) en srv-dmz y comprueba que todo está en marcha. Púlsalo antes de cada demo.</span>
+      <ul class="prep-lista" id="prepLista"></ul>
+    </div>
+    <p class="lede-small">Elige un escenario, lanza su comando y pulsa «Iniciar». El panel sigue a esa IP de la detección a la publicación.</p>
+    <div class="esc-cards" id="escCards"></div>
+    <div class="esc-det" id="escDet"></div>
+    <div class="esc-ctl">
+      <label>IP a seguir <input type="text" id="escIp" class="ip-filter" autocomplete="off" spellcheck="false"></label>
+      <button type="button" class="btn-sec" id="escIniciar">Iniciar seguimiento</button>
+      <button type="button" class="btn-sec neutro" id="escParar" hidden>Terminar</button>
+      <span class="esc-estado" id="escEstado"></span>
+      <span class="esc-reloj" id="escReloj"></span>
+    </div>
+    <ol class="esc-pasos" id="escPasos"></ol>
+    <p class="act-h">Ventanas de la IP <span class="th-sub" id="escFilasSub">en vivo, cada 3 s</span></p>
+    <div class="esc-filas" id="escFilas"></div>
+  </section>
+
 
   <!--ADMIN-->
   <section id="s-topologia">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7 7.4 10.4 16M16.9 7.5 13.6 16"/></svg><h2>Mapa del sistema</h2></div>
-    <p class="lede-small">Pulsa un componente para ver su detalle.</p>
+    <p class="lede-small topo-lede" id="topoLede">Pulsa un componente para ver su detalle.</p>
+    <div class="flujo-bar" id="flujoBar" hidden></div>
     <div class="topo-wrap" id="topoWrap">
       <div class="topo-canvas" id="topoCanvas">
         <div class="topo-bar">
           <div class="range-toggle" id="topoVista">
-            <button data-vista="metodologica" class="active">1 · Fases del método</button>
-            <button data-vista="red">2 · Red y captura</button>
-            <button data-vista="completa">3 · Operacional</button>
-            <button data-vista="construccion">4 · Construcción y entrenamiento</button>
-            <button data-vista="decision">5 · Decisión</button>
-            <button data-vista="respuesta">6 · Respuesta</button>
-            <button data-vista="carpetas">7 · Carpetas</button>
-            <button data-vista="validacion">8 · Validación</button>
+            <button data-vista="red">1 · Red y captura</button>
+            <button data-vista="completa" class="active">2 · Operacional</button>
+            <button data-vista="construccion" class="vista-oculta" disabled title="Vista oculta" aria-label="Vista oculta"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.6 6.6C3.9 8.4 2 12 2 12s4 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button>
+            <button data-vista="decision">4 · Decisión</button>
+            <button data-vista="respuesta">5 · Respuesta</button>
+            <button data-vista="carpetas">6 · Carpetas</button>
+          </div>
+          <div class="range-toggle topo-modo" id="topoModo" title="Lab: lo montado para el ensayo · Operativa: solo el flujo de una red real">
+            <button data-modo="lab">Vista lab</button>
+            <button data-modo="operativa">Vista operativa</button>
           </div>
           <div class="topo-zoom">
             <button id="topoMenos" title="Reducir" aria-label="Reducir">&minus;</button>
@@ -986,9 +1504,16 @@ HTML = """<!doctype html>
 
   <section id="s-despliegue">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="2.5" y="17" width="6" height="5" rx="1"/><rect x="15.5" y="17" width="6" height="5" rx="1"/><path d="M12 7v4M5.5 17v-3h13v3"/></svg><h2>Despliegue y agentes</h2></div>
-    <p class="lede-small">Dónde está instalado cada componente y cómo viaja el feed firmado del sensor a los hosts protegidos. El sensor no tiene credenciales de los demás hosts: su estado sale de los servicios reales; el resto es el despliegue declarado.</p>
+    <p class="lede-small">Dónde está instalado cada componente y cómo viaja el feed firmado del sensor a los hosts protegidos. Cada línea dice de dónde sale su estado: <span class="est si">comprobado desde el sensor</span> (servicio consultado ahora) o <span class="est no">configuración declarada</span> (inventario versionado, verificado el 12-oct-2026; el panel no tiene credenciales de los demás hosts).</p>
     <div class="desp" id="despliegue"></div>
     <p class="toolbar-hint" id="desplieguePie"></p>
+    <details class="plegable">
+      <summary>Instalación, diagnóstico y mantenimiento</summary>
+      <p class="lede-small"><b>Requisitos del sensor</b>: Linux con systemd, interfaz conectada a un puerto espejo (SPAN), Suricata, Python con el entorno del proyecto y espacio para el anillo de PCAP. <b>Por host protegido</b>: nftables, el agente <code>agente_enforce.py</code> con su temporizador y la clave pública del sensor; el agente eleva solo <code>nft</code> con <code>sudo -n</code>.</p>
+      <p class="lede-small"><b>Comprobación tras instalar</b>: servicios activos en Resumen · decisiones nuevas en Decisiones · el feed aparece como publicado en Respuestas · en el host, el registro del agente muestra la firma verificada.</p>
+      <p class="lede-small"><b>Diagnóstico</b>: <code>journalctl -u ppi-motor -u ppi-motor-capture -n 100</code> en el sensor; <code>journalctl -u ppi-enforce-agent-v2-dmz -n 50</code> en el host. <b>Recuperación</b>: si el agente rechaza la firma no aplica nada; las reglas caducan solas.</p>
+      <p class="lede-small"><b>Mantenimiento</b>: a diario, revisar Resumen (servicios y drops) y Respuestas; cada semana, el espacio del anillo, la deriva en Aprendizaje y las entidades con más respuestas. Guía completa: <code>docs/INSTALACION.md</code>.</p>
+    </details>
   </section>
 
   <section id="s-variables">
@@ -1000,7 +1525,7 @@ HTML = """<!doctype html>
 
     <div class="umb-box">
       <h3 class="umb-h">Umbrales y régimen de decisión</h3>
-      <p class="lede-small">Las 28 variables entran <strong>juntas</strong> a un modelo multivariante (IsolationForest): una ventana es anómala si su <strong>score combinado &lt; &minus;0,5689</strong> &mdash; un único umbral, calibrado estadísticamente (percentil &alpha;&nbsp;=&nbsp;0,05 sobre el conjunto de oro). <strong>No hay un corte por variable</strong>: el valor de una sola solo cobra sentido combinado con el resto. Solo una parte de las variables lleva, además, un <strong>umbral heurístico explícito</strong> &mdash; criterio razonado y versionado, no calibrado como el del modelo:</p>
+      <p class="lede-small">Las 28 variables entran <strong>juntas</strong> a un modelo multivariante (IsolationForest): una ventana es anómala si su <strong>score combinado &lt; &minus;0,622389</strong> (punto operativo adoptado, &alpha;&nbsp;=&nbsp;0,01, <code>if_limpio_2026_10</code>) &mdash; un único umbral, calibrado estadísticamente (percentil &alpha;&nbsp;=&nbsp;0,01 de las puntuaciones de validación). El motor desplegado aún registra con &alpha;&nbsp;=&nbsp;0,05 (&minus;0,569397). <strong>No hay un corte por variable</strong>: el valor de una sola solo cobra sentido combinado con el resto. Solo una parte de las variables lleva, además, un <strong>umbral heurístico explícito</strong> &mdash; criterio razonado y versionado, no calibrado como el del modelo:</p>
       <div class="umb-tabla">
         <table>
           <thead><tr><th>Regla</th><th>Variables y umbral</th><th>Acción</th><th>Por qué ese valor</th></tr></thead>
@@ -1046,6 +1571,7 @@ HTML = """<!doctype html>
   <section id="s-modelo">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg><h2>Modelo congelado</h2></div>
     <div class="grid" id="model"></div>
+    <p class="vig-hist" id="modeloVigHist"><b>Punto operativo adoptado:</b> &alpha;&nbsp;=&nbsp;0,01, umbral &minus;0,622389 (score_samples; &minus;0,122389 en la escala de decisión), modelo <code>if_limpio_2026_10</code>. <b>Nota:</b> la tarjeta «Umbral vigente» muestra el valor que el <b>motor registra en vivo</b>; el motor desplegado aún opera en &alpha;&nbsp;=&nbsp;0,05 (&minus;0,569397), así que puede mostrar ese número hasta re-apuntarlo. <b>Histórico:</b> <code>if_recalibrado_2026_09</code> (umbral &minus;0,568892, FPR 4,45&#8239;% en el oro) estuvo desplegado hasta el 19-oct-2026; sus cifras aparecen solo como antecedente.</p>
     <div class="fam-wrap" id="modeloFamilias"></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="16.5" r="0.7" fill="currentColor" stroke="none"/></svg><span id="modeloDebil"><strong>Punto débil conocido:</strong> un PERMIT del modelo no descarta un ataque por sí solo; los heurísticos cubren lo que el modelo no ve.</span></div>
 
@@ -1055,8 +1581,8 @@ HTML = """<!doctype html>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Modelo</th><th class="r">ROC-AUC</th><th class="r">AP</th><th class="r">FPR</th><th class="r">Recall (umbral propio)</th></tr></thead>
       <tbody>
-        <tr><td style="box-shadow:inset 3px 0 0 var(--ok)"><b>IF limpio (referencia vigente)</b></td><td class="num r">0,9247</td><td class="num r">0,1858</td><td class="num r">4,53&#8239;%</td><td class="num r"><b>64,29&#8239;%</b></td></tr>
-        <tr><td>IF recalibrado (antecedente)</td><td class="num r">0,9228</td><td class="num r">0,2026</td><td class="num r">4,45&#8239;%</td><td class="num r">64,29&#8239;%</td></tr>
+        <tr><td style="box-shadow:inset 3px 0 0 var(--ok)"><b>IF limpio · <code>if_limpio_2026_10</code> (punto operativo, &alpha;&nbsp;=&nbsp;0,01)</b></td><td class="num r">0,9247</td><td class="num r">0,1858</td><td class="num r">0,87&#8239;%</td><td class="num r"><b>59,52&#8239;%</b></td></tr>
+        <tr><td>IF recalibrado · <code>if_recalibrado_2026_09</code> (histórico, hasta 19-oct)</td><td class="num r">0,9228</td><td class="num r">0,2026</td><td class="num r">4,45&#8239;%</td><td class="num r">64,29&#8239;%</td></tr>
         <tr><td>IF scaled (lab)</td><td class="num r">0,8250</td><td class="num r">0,0043</td><td class="num r">30,34&#8239;%</td><td class="num r">91,67&#8239;%</td></tr>
         <tr><td>IF primary (lab)</td><td class="num r">0,8283</td><td class="num r">0,0044</td><td class="num r">29,07&#8239;%</td><td class="num r">82,14&#8239;%</td></tr>
         <tr><td>IF uniform / exact (scores idénticos)</td><td class="num r">0,7960</td><td class="num r">0,0054</td><td class="num r">34,13&#8239;%</td><td class="num r">85,71&#8239;%</td></tr>
@@ -1065,9 +1591,9 @@ HTML = """<!doctype html>
         <tr><td>Elliptic Envelope (lab)</td><td class="num r">0,3443</td><td class="num r">0,0014</td><td class="num r">86,90&#8239;%</td><td class="num r">42,86&#8239;%</td></tr>
       </tbody>
     </table></div>
-    <p class="toolbar-hint">El IF limpio detecta 54/84 ventanas etiquetadas y produce 2 961 falsas alarmas: precisión 1,79&#8239;%, F1 0,0348. El antecedente tiene mejor AP y menor FPR: no se afirma superioridad general ni equivalencia estadística. Figuras y scores completos: repositorio de orquestación, sección 4.1.</p>
-    <div class="note"><span><strong>Cómo se comparó.</strong> Mismas 65 505 ventanas, con el umbral propio de cada configuración. La evaluación es reutilizada, no un test ciego independiente. El origen de entrenamiento difiere: se mide transferencia a esta red, no superioridad intrínseca de un algoritmo. Se retiró Det@FPR5% porque fijaba el corte en negativos de prueba. La sensibilidad correcta usa validación; α=0,05 no demuestra un óptimo.</span></div>
-    <div class="note"><span><strong>El cálculo.</strong> El IF asigna scores menores a las observaciones más anómalas. El corte congelado es <code>score_samples(x) &lt; −0,5693969936322356</code>, percentil 5 de validación. ROC-AUC resume ordenamiento; AP es precisión media, no una garantía de precisión en el umbral. La prevalencia es 84/65 505 = 0,128&#8239;%. La validación contiene 80 ventanas Kali, 17 con actividad y normalidad no verificada.</span></div>
+    <p class="toolbar-hint">En el punto operativo adoptado (&alpha;&nbsp;=&nbsp;0,01) el IF limpio detecta 50/84 ventanas etiquetadas y produce 567 falsas alarmas: precisión 8,10&#8239;%, F1 14,27&#8239;%, FPR 0,87&#8239;%. No se afirma superioridad general ni equivalencia estadística frente al antecedente. Figuras y scores completos: repositorio de orquestación, sección 4.1.</p>
+    <div class="note"><span><strong>Cómo se comparó.</strong> Mismas 65 505 ventanas, con el umbral propio de cada configuración. La evaluación es reutilizada, no un test ciego independiente. El origen de entrenamiento difiere: se mide transferencia a esta red, no superioridad intrínseca de un algoritmo. Se retiró Det@FPR5% porque fijaba el corte en negativos de prueba. La sensibilidad correcta usa validación; α=0,01 es el punto operativo adoptado, no un óptimo demostrado.</span></div>
+    <div class="note"><span><strong>El cálculo.</strong> El IF asigna scores menores a las observaciones más anómalas. El corte congelado del punto operativo adoptado es <code>score_samples(x) &lt; −0,6223889502095352</code> (−0,122389 en la escala de la función de decisión), percentil 1 de validación. ROC-AUC resume ordenamiento; AP es precisión media, no una garantía de precisión en el umbral. La prevalencia es 84/65 505 = 0,128&#8239;%. La validación contiene 80 ventanas Kali, 17 con actividad y normalidad no verificada.</span></div>
     <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Archivos y código</strong> (auditables desde <em>Mapa &rarr; Ver archivos</em>, con pseudocódigo y diagrama de flujo): <code>entrenar_preliminar.py</code> entrena y congela el umbral; <code>promover_preliminar.py</code> arma el Pipeline + manifiesto; <code>verificar_equivalencia_umbral.py</code> comprueba hash, orden y umbral; <code>compare_frozen_models_metrics.py</code> reproduce las métricas de los 7; <code>significancia_modelos.py</code> hace McNemar + Holm. Los 7 candidatos congelados están en <code>artifacts/model/candidates/*.joblib</code>.</span></div>
     <p class="lede-small"><strong>Ablación histórica del predecesor</strong> sobre 9 episodios (3 familias con 3 repeticiones). No trasladar estas cifras al modelo limpio: su campaña final sigue pendiente.</p>
     <div class="grid">
@@ -1079,215 +1605,64 @@ HTML = """<!doctype html>
   </section>
 
   <section id="s-comparacion">
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg><h2>Comparación con Suricata</h2></div>
-    <p class="lede-small"><b>Por qué Suricata:</b> es el IDS de firmas de referencia, el estándar con el que contrastar. <b>Cómo se comparó:</b> el MISMO PCAP de cada episodio se reprodujo a los dos con el reloj del paquete y la configuración congelada (Suricata con ET Open, 53 013 reglas); qué es un ataque lo fija la REFERENCIA —el orquestador que lanzó el ataque—, no las alertas de ninguno. <b>Qué se mide:</b> detección por episodio, no bloqueo, porque en el espejo SPAN Suricata es IDS (ve una copia, no está en línea). <b>Resultado:</b> Suricata detecta lo que tiene firma (Nikto); CyberFlow detecta además lo que NO la tiene (escaneo, flood, DNS: 0 para Suricata) y encima BLOQUEA, que Suricata en SPAN no puede. No lo reemplaza: lo complementa.</p>
-    <div class="cmp-fig">
-      <svg viewBox="0 0 900 250" role="img" aria-label="Protocolo: entrada común y referencia independiente, cuatro condiciones, evaluación por episodio">
-        <defs><marker id="cmpFl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8aa0b4"/></marker></defs>
-        <g font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="13" fill="#dce8f5">
-          <rect x="10" y="30" width="190" height="72" rx="10" fill="#15202c" stroke="#3a5169"/>
-          <text x="105" y="60" text-anchor="middle" font-weight="600">Entrada común</text>
-          <text x="105" y="80" text-anchor="middle" fill="#9fb2c4" font-size="12">ataques · Nikto · tramo normal</text>
-          <rect x="10" y="150" width="190" height="72" rx="10" fill="#2a1d12" stroke="#b5741b"/>
-          <text x="105" y="180" text-anchor="middle" font-weight="600">Referencia</text>
-          <text x="105" y="200" text-anchor="middle" fill="#e8c9a4" font-size="12">guion y orquestador</text>
-          <rect x="290" y="10" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
-          <text x="415" y="37" text-anchor="middle">Suricata · firmas</text>
-          <rect x="290" y="66" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
-          <text x="415" y="93" text-anchor="middle">Solo modelo · score</text>
-          <rect x="290" y="122" width="250" height="44" rx="9" fill="#15202c" stroke="#3a5169"/>
-          <text x="415" y="149" text-anchor="middle">Solo heurísticos · eventos EVE</text>
-          <rect x="290" y="178" width="250" height="44" rx="9" fill="#0e3b3a" stroke="#5eead4"/>
-          <text x="415" y="205" text-anchor="middle" font-weight="600">CyberFlow · combinado</text>
-          <rect x="640" y="60" width="250" height="130" rx="10" fill="#15202c" stroke="#3a5169"/>
-          <text x="765" y="92" text-anchor="middle" font-weight="600">Evaluación por episodio</text>
-          <text x="765" y="116" text-anchor="middle" fill="#9fb2c4" font-size="12">detección por familia</text>
-          <text x="765" y="136" text-anchor="middle" fill="#9fb2c4" font-size="12">latencia desde el inicio</text>
-          <text x="765" y="156" text-anchor="middle" fill="#9fb2c4" font-size="12">falsos positivos aparte</text>
-        </g>
-        <g stroke="#8aa0b4" stroke-width="1.6" fill="none" marker-end="url(#cmpFl)">
-          <path d="M200,66 L288,32"/><path d="M200,66 L288,88"/><path d="M200,66 L288,144"/><path d="M200,66 L288,200"/>
-          <path d="M540,32 L638,110"/><path d="M540,88 L638,118"/><path d="M540,144 L638,128"/><path d="M540,200 L638,136"/>
-        </g>
-        <path d="M105,222 L105,242 L765,242 L765,194" stroke="#b5741b" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#cmpFl)"/>
-      </svg>
-    </div>
-    <div class="tbl-wrap"><table><thead><tr><th>Familia</th><th class="r">Suricata</th><th class="r">Solo modelo</th><th class="r">Solo heurísticos</th><th class="r">CyberFlow</th></tr></thead><tbody id="cmpTabla"></tbody></table></div>
-    <p class="toolbar-hint">Celda: episodios detectados / medidos · latencia mediana [mín–máx]. CyberFlow lee eventos de EVE, no alertas de Suricata. En SPAN, Suricata es IDS: se compara detección, no bloqueo.</p>
-    <p class="toolbar-hint"><span class="badge heur">ejecutada</span> Batería N=3 por familia, con el mismo PCAP y la configuración fija. <span class="badge">propuesta</span> Campaña C3: N=5 por familia, fuerza bruta, tráfico legítimo intenso y 2 h de tráfico normal con los falsos positivos de Suricata medidos.</p>
-    <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.7" fill="currentColor" stroke="none"/></svg><span><strong>Suricata NO está apagada:</strong> corre EN VIVO en el sensor y CyberFlow <strong>consume sus eventos</strong> (http/dns/tls) para las variables de capa 7 &mdash; es una <em>fuente</em> del sistema. Lo que se midió por <strong>replay</strong> (mismo PCAP a los dos, anclado al reloj del paquete) es su <strong>detección</strong>, no sus alertas en vivo: así los dos ven exactamente la misma entrada y la comparación de detección es limpia.</span></div>
-    <div class="note"><span><strong>Alcance de Suricata.</strong> El ensayo benigno del 14-oct es histórico (~4 min), no una tasa generalizable. En el replay del 23-oct sobre 9 470 paquetes, ET Open cargó 53 013 reglas y generó 55 alertas: 54 STREAM y una ET INFO por uso de curl. No corresponde afirmar cero alertas ni atribuir la alerta informativa a flood sin criterio previo. Nikto y la batería final siguen pendientes. El FPR 4,53&#8239;% del IF offline no es el FPR del sistema completo; LIMIT también tiene costo sobre tráfico legítimo.</span></div>
-    <ul class="cmp-notas" id="cmpNotas"></ul>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V8M10 18V4M16 18v-6M22 18H2"/></svg><h2>CyberFlow frente a Suricata</h2></div>
+    <p class="cmp-lede"><b>Mismo tráfico, dos sistemas.</b> Suricata 7 con ET Open es el IDS de firmas de referencia. Se compara la <b>detección</b>; responder (LIMIT/BLOCK en el host) solo lo hace CyberFlow.</p>
+    <ol class="cmp-como">
+      <li><span class="n">1</span><b>Recortar el tráfico</b><small>Del anillo PCAP del espejo (Sensor1), solo la IP y el intervalo del ataque.</small><code>tcpdump -r live-*.pcap "host IP" · recortar_pcap.py desde hasta</code></li>
+      <li><span class="n">2</span><b>Llevarlo a Suricata</b><small>A una VM aparte (10.10.60.13): Suricata no comparte nada con el sensor.</small><code>ssh suricata · ~/cf-demo/cmp-AAAAMMDD-HHMMSS/pcap</code></li>
+      <li><span class="n">3</span><b>Suricata analiza</b><small>Offline, con todas las firmas ET Open activas. Su salida es fast.log.</small><code>suricata -r pcap -S suricata.rules -k none</code></li>
+      <li><span class="n">4</span><b>CyberFlow, misma ventana</b><small>Las decisiones del motor para esa IP e intervalo, y el acuse del host.</small><code>motor_decision.log · acuses/srv-dmz.json</code></li>
+    </ol>
+    <p class="cmp-run">Lo ejecuta el director al final de cada escenario, o a mano en el bastión: <code>~/cf-demo/comparar-suricata.sh IP desde hasta</code></p>
+    <h3 class="cmp-h">Comparaciones de la demo <span class="th-sub" id="cmpVivoSub"></span></h3>
+    <div class="cmp-vivo" id="cmpVivo"><p class="estado-vacio">Cargando…</p></div>
+    <details class="plegable cmp-bateria">
+      <summary>Medición previa: replay de la batería N=3 por familia</summary>
+      <div class="tbl-wrap"><table><thead><tr><th>Familia</th><th class="r">Suricata</th><th class="r">Solo modelo</th><th class="r">Solo reglas</th><th class="r">CyberFlow</th></tr></thead><tbody id="cmpTabla"></tbody></table></div>
+      <p class="toolbar-hint">Celda: episodios detectados / medidos · latencia mediana [mín–máx]. Mismo PCAP a los dos, con el reloj del paquete.</p>
+      <ul class="cmp-notas" id="cmpNotas"></ul>
+    </details>
+    <p class="toolbar-hint">Suricata del sensor corre sin firmas: solo aporta los eventos HTTP/DNS/TLS que CyberFlow usa como variables de capa 7. Las firmas se evalúan aquí, en la VM aparte.</p>
   </section>
 
-  <section id="s-alcance">
+  <section id="s-alcance" hidden>
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5" y1="19" x2="19" y2="5"/></svg><h2>Alcance del análisis</h2></div>
-    <div class="umb-box">
-      <h3 class="umb-h">Alcance declarado</h3>
-      <p class="lede-small">CyberFlow analiza las capas de <strong>red (L3)</strong>, <strong>transporte (L4)</strong> y <strong>aplicación (L7)</strong> sobre <strong>IPv4</strong>. Observa el tráfico de la <strong>LAN</strong> y el que va <strong>hacia Internet</strong> mediante un <strong>puerto espejo (SPAN)</strong>; no inspecciona la capa&nbsp;2 ni IPv6. El sensor observa <strong>en paralelo, no en línea</strong>, y la respuesta (LIMIT/BLOCK) se aplica <strong>en el host protegido</strong>. IPv6 queda declarado como trabajo futuro.</p>
+    <div class="alc-3">
+      <div><h3>Observa</h3><ul>
+        <li><b>IPv4</b>, capas <b>L3, L4 y L7</b></li>
+        <li>LAN y tráfico hacia Internet, por <b>puerto espejo (SPAN)</b></li>
+        <li>En paralelo, no en línea: no retrasa el tráfico</li></ul></div>
+      <div><h3>Responde</h3><ul>
+        <li><b>LIMIT</b> (degrada la tasa) o <b>BLOCK</b> (corta), con caducidad</li>
+        <li>Solo en hosts que tienen el <b>agente</b> instalado</li>
+        <li>El sensor publica un feed firmado; el host lo aplica</li></ul></div>
+      <div><h3>Límites</h3><ul>
+        <li>IPv6: trabajo futuro</li>
+        <li>Sin inspección de capa 2</li>
+        <li>La visibilidad depende de lo que llegue al espejo y del cifrado (en TLS solo se ven metadatos)</li></ul></div>
     </div>
-    <p class="lede-small">Lo que se captura pero NO se puntúa, y por qué. Declararlo con su cifra es parte del método: sin número, «se excluyó» no es una medición.</p>
+    <div class="umb-box">
+      <h3 class="umb-h">Cómo leer el panel</h3>
+      <p class="lede-small"><b>Anomalía</b>: una ventana cuyo score del modelo queda por debajo del umbral vigente; es una señal, no un ataque confirmado. <b>PERMIT</b>: no se pide acción para esa ventana; no prueba que no haya ataque (el modelo es débil en algunas familias). <b>Dónde se aplica</b>: en el host protegido, por su agente. <b>Qué no confirma el panel</b>: que el host haya aplicado la acción; eso solo lo registra el agente.</p>
+    </div>
+    <details class="plegable">
+      <summary>Alcance declarado en detalle</summary>
+      <p class="lede-small">CyberFlow analiza las capas de <strong>red (L3)</strong>, <strong>transporte (L4)</strong> y <strong>aplicación (L7)</strong> sobre <strong>IPv4</strong>. Observa el tráfico de la <strong>LAN</strong> y el que va <strong>hacia Internet</strong> mediante un <strong>puerto espejo (SPAN)</strong>; no inspecciona la capa&nbsp;2 ni IPv6. El sensor observa <strong>en paralelo, no en línea</strong>, y la respuesta (LIMIT/BLOCK) se aplica <strong>en el host protegido</strong>. IPv6 queda declarado como trabajo futuro.</p>
+    </details>
+    <h3 class="umb-h" style="margin-top:1.2rem">Filtros y cobertura de captura</h3>
+    <p class="lede-small">Lo que se captura pero NO se puntúa, y por qué. Declararlo con su cifra es parte del método: sin número, «se excluyó» no es una medición. Las cifras se acumulan desde el último arranque del motor.</p>
     <div class="grid" id="alcance"></div>
     <p class="toolbar-hint" id="alcanceDetalle"></p>
   </section>
 
   <section id="s-simulacion">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg><h2>Simulación de escenarios</h2></div>
-    <p class="lede-small">Cada escenario trae su explicación y el comando exacto para copiar y pegar en TU terminal SSH. El panel no ejecuta nada: solo guía y luego verás la respuesta del modelo en Actividad y Decisiones.</p>
+    <p class="lede-small">Elige un escenario, copia el comando y ejecútalo en la Kali. La respuesta aparece en Actividad y Decisiones.</p>
     <div class="range-toggle" id="simTabs">
       <button data-sim="normal" class="active">Tráfico normal</button>
       <button data-sim="anomalo">Tráfico anómalo</button>
     </div>
     <div class="sim-grid" id="simGrid"></div>
-
-    <div class="umb-box">
-      <h3 class="umb-h">Cómo se genera la data: normal frente a anómalo</h3>
-      <p class="lede-small"><strong>Concepto de ventana:</strong> el motor no mira paquetes sueltos. Agrupa el tráfico de <em>cada IP</em> en <strong>ventanas de tiempo</strong> (10&nbsp;s para red y transporte, 30&nbsp;s y 60&nbsp;s para contexto y aplicación) y toma <strong>una decisión por ventana</strong>. Por eso "500 paquetes" no dice nada; "500 paquetes/s sostenidos en esta ventana, junto con las otras 27 variables" sí.</p>
-      <p class="lede-small"><strong>Desde dónde se ejecuta:</strong> el tráfico <strong>normal</strong> lo generan 6 perfiles, <strong>uno por IP</strong>, en las VM cliente <code class="esc-cmd">10.10.20.21&ndash;.26</code> (VLAN&nbsp;20), arrancados con <code class="esc-cmd">cyberflow-lab.target</code>. El tráfico <strong>anómalo</strong> sale de la Kali <code class="esc-cmd">10.10.20.30</code> por terminal SSH. El sensor observa todo por el <strong>espejo SPAN</strong>; nunca está en línea.</p>
-
-      <div class="pipe">
-        <div class="pipe-box"><span class="pl">Generación</span><b>Clientes + Kali</b><small>6 perfiles (normal) · ataques (anómalo)</small></div>
-        <div class="pipe-ar">&rarr;</div>
-        <div class="pipe-box"><span class="pl">Espejo SPAN</span><b>Copia del troncal</b><small>el sensor observa, no corta</small></div>
-        <div class="pipe-ar">&rarr;</div>
-        <div class="pipe-box hl"><span class="pl">Captura · ens37</span><b>Dos fuentes</b><small>tcpdump &rarr; PCAP · Suricata &rarr; eve.json</small></div>
-        <div class="pipe-ar">&rarr;</div>
-        <div class="pipe-box"><span class="pl">Ventanas</span><b>10 / 30 / 60 s</b><small>28 variables por IP</small></div>
-        <div class="pipe-ar">&rarr;</div>
-        <div class="pipe-box"><span class="pl">Dataset + modelo</span><b>Decisión</b><small>IsolationForest + heurísticos</small></div>
-      </div>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">Cómo se genera el tráfico normal (procedimiento)</h3>
-      <ol class="esc-refs">
-        <li><strong>Herramienta:</strong> scripts propios en Python (stdlib, sin dependencias externas) &mdash; <code class="esc-cmd">clientes_lab.py</code> (hace las peticiones) y <code class="esc-cmd">servidor_lab.py</code> (responde). No es JMeter ni Locust: es código propio.</li>
-        <li><strong>Orquestador:</strong> <strong>systemd</strong> &mdash; <code class="esc-cmd">cyberflow-lab.target</code> levanta <strong>6 servicios, uno por IP</strong> (.21&ndash;.26), con <code class="esc-cmd">Restart=always</code>. Se arrancan/paran todos con el target (<code class="esc-cmd">clientes_config.py</code> genera las unidades).</li>
-        <li><strong>Decisión por acción:</strong> cada perfil elige una acción <strong>al azar ponderada por su peso</strong> (los números del perfil) y espera un tiempo <strong>aleatorio</strong> (distribución exponencial) alrededor de su ritmo &rarr; parece humano, no periódico.</li>
-        <li><strong>Qué hace cada acción:</strong> peticiones reales HTTP/HTTPS/DNS/API/ping a endpoints que <em>alimentan variables concretas</em> (p. ej. <code class="esc-cmd">/api/auth</code>&rarr;401, <code class="esc-cmd">/api/fallo</code>&rarr;500, <code class="esc-cmd">/estatico/&lt;n&gt;k</code>&rarr;tamaño). Pulsa el <strong>ojito</strong> de cada perfil (tabla de abajo) para ver sus acciones y pesos.</li>
-      </ol>
-      <p class="toolbar-hint" style="margin-top:0.5rem"><strong>Horarios</strong> &mdash; curva diaria en <code class="esc-cmd">factor_horario()</code> de clientes_lab.py (las VMs corren en <strong>UTC</strong>):</p>
-      <div class="umb-tabla">
-        <table>
-          <thead><tr><th>Franja (hora local de la VM)</th><th>Factor</th><th></th></tr></thead>
-          <tbody>
-            <tr><td class="umb-r">08&ndash;13 h</td><td>1,0</td><td>mañana · plena carga</td></tr>
-            <tr><td class="umb-r">13&ndash;15 h</td><td>0,55</td><td>pausa de comida</td></tr>
-            <tr><td class="umb-r">15&ndash;19 h</td><td>0,9</td><td>tarde</td></tr>
-            <tr><td class="umb-r">19&ndash;23 h</td><td>0,35</td><td>noche</td></tr>
-            <tr><td class="umb-r">23&ndash;08 h</td><td>0,12</td><td>madrugada (poco, nunca cero)</td></tr>
-            <tr><td class="umb-r">Fin de semana</td><td>&times;0,3</td><td>multiplica sobre la franja</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="toolbar-hint">El factor multiplica la tasa: más factor &rarr; esperas más cortas &rarr; más tráfico. Los horarios y perfiles se definen en código (<code class="esc-cmd">clientes_lab.py</code>), no en un archivo de ajustes.</p>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">Tráfico NORMAL &mdash; los 6 perfiles (línea base)</h3>
-      <div class="umb-tabla">
-        <table>
-          <thead><tr><th>Perfil · IP</th><th>Qué hace</th><th>Ritmo</th><th>Por qué es normal</th></tr></thead>
-          <tbody>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="ofimatica" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>ofimatica ·21</td><td>web pequeña/media, DNS, API, HTTPS, algún ping</td><td>~3&nbsp;s</td><td>Oficina típica: mezcla de tamaños y protocolos, tasa baja y estable.</td></tr>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="navegacion" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>navegacion ·22</td><td>web pequeña/grande, HTTPS, mucho DNS, algún abandono</td><td>~1,5&nbsp;s</td><td>Navegación intensa pero humana: variedad de destinos, ritmo irregular.</td></tr>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="descargas" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>descargas ·23</td><td>web grande/media, HTTPS, poco DNS</td><td>~8&nbsp;s</td><td>Transferencias grandes espaciadas: muchos bytes, pocos flujos.</td></tr>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="aplicacion" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>aplicacion ·24</td><td>API ok/post/lenta, algún 500, HTTPS, DNS</td><td>~2&nbsp;s</td><td>Cliente de aplicación: patrón repetitivo pero con errores normales.</td></tr>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="ligero" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>ligero ·25</td><td>DNS, API, web pequeña, ping</td><td>~12&nbsp;s</td><td>Uso esporádico: tasa muy baja, pocas acciones.</td></tr>
-            <tr><td class="umb-r"><button class="ojo" data-perfil="erratico" aria-label="Ver cómo se genera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>erratico ·26</td><td>mezcla + puerto cerrado + abandonos, en ráfagas</td><td>~5&nbsp;s</td><td>Ráfagas y silencios a propósito: ensancha la línea base para que el modelo no la aprenda demasiado estrecha.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="toolbar-hint">Comando por perfil: <code class="esc-cmd">python3 clientes_lab.py --perfil ofimatica --origen 10.10.20.21</code>. Dominios internos: <code class="esc-cmd">*.francos-sac.com</code>. <strong>Por qué es la referencia de "normal":</strong> tráfico realista, variado y sin intención maliciosa; de aquí el modelo aprende qué combinación es la esperada.</p>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">Tráfico ANÓMALO &mdash; familias de ataque (desde la Kali)</h3>
-      <div class="umb-tabla">
-        <table>
-          <thead><tr><th>Ataque</th><th>Comando</th><th>Variables que mueve</th><th>Por qué es anómalo</th></tr></thead>
-          <tbody>
-            <tr><td class="umb-r">Escaneo de puertos<br><small>MITRE T1046</small></td><td><code class="esc-cmd">nmap -sT -T4 -p 1-3000 --open 10.10.30.10</code></td><td>flow_attempt&uarr; · unique_dst_port_ratio&uarr; · syn_completion_ratio&darr;</td><td>Prueba muchos puertos y casi ninguno completa: patrón que el tráfico humano nunca produce.</td></tr>
-            <tr><td class="umb-r">DGA / DNS<br><small>MITRE T1568.002</small></td><td><code class="esc-cmd">dig +short &lt;aleatorio&gt;.francos-sac.com @10.10.10.20</code> (en bucle)</td><td>dns_query_rate&uarr; · unique_dns_name_ratio&uarr; · nxdomain_ratio&uarr;</td><td>Decenas de nombres distintos e inexistentes por segundo: firma de generación de dominios o túnel DNS.</td></tr>
-            <tr><td class="umb-r">Flood HTTP<br><small>MITRE T1499</small></td><td><code class="esc-cmd">seq 1 250 | xargs -P10 curl -s http://10.10.30.10/</code></td><td>http_request_rate&uarr;&uarr;</td><td>Volumen de peticiones muy por encima de cualquier perfil: abuso (ambiguo &rarr; LIMIT).</td></tr>
-            <tr><td class="umb-r">Fuerza bruta<br><small>MITRE T1110</small></td><td><code class="esc-cmd">curl -u admin:malN http://10.10.30.10:8081/</code> (en bucle)</td><td>http_auth_failure_ratio&uarr; (&rarr;1,0)</td><td>Ráfaga de logins casi todos 401: nadie legítimo falla el 100&nbsp;% de los intentos.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="toolbar-hint"><strong>Por qué es la referencia de "anómalo":</strong> cada familia empuja una combinación de variables fuera del rango aprendido, o cruza un umbral heurístico declarado (ver la sección <strong>Variables &rarr; Umbrales y régimen</strong>).</p>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">Comandos exactos</h3>
-      <div class="esc-code"><span class="c"># NORMAL &mdash; en la VM de clientes (10.10.20.20): arranca los 6 perfiles</span>
-sudo systemctl start cyberflow-lab.target
-<span class="c"># o un perfil concreto (uno por IP .21&ndash;.26):</span>
-python3 clientes_lab.py --perfil ofimatica --origen 10.10.20.21
-
-<span class="c"># ANÓMALO &mdash; desde la Kali (10.10.20.30), por SSH</span>
-<span class="c"># acceso:</span>
-ssh -t gadmin@10.10.10.30 "ssh -i ~/.ssh/cyberflow-to-atacante adminatacante@10.10.20.30"
-<span class="c"># 1) Escaneo de puertos &rarr; BLOCK</span>
-nmap -sT -T4 --max-retries 1 -p 1-3000 --open 10.10.30.10
-nmap -sT -T5 --min-rate 1500 -p- --open 10.10.30.10
-<span class="c"># 2) DGA / DNS de alta entropía &rarr; LIMIT</span>
-for i in $(seq 1 80); do r=$(head -c6 /dev/urandom|od -An -tx1|tr -d " "); dig +short $r.francos-sac.com @10.10.10.20; sleep 0.5; done
-<span class="c"># 3) Flood HTTP &rarr; LIMIT</span>
-seq 1 250 | xargs -P10 -I{} curl -s -o /dev/null http://10.10.30.10/
-<span class="c"># 4) Fuerza bruta HTTP &rarr; BLOCK (endpoint 401 en srv-dmz:8081)</span>
-for i in $(seq 1 50); do curl -s -o /dev/null -u admin:wrong$i http://10.10.30.10:8081/; sleep 0.4; done
-<span class="c"># verificar el corte: open &rarr; filtered</span>
-nmap -Pn -p80,443 10.10.30.10</div>
-      <p class="toolbar-hint">El panel <strong>no ejecuta</strong> nada: estos comandos se copian y se lanzan en la terminal SSH correspondiente. La respuesta se ve luego en Actividad, Decisiones y Bloqueos.</p>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">Anatomía: por qué cada rango es normal o anómalo</h3>
-      <p class="lede-small">Qué significa cada parte del comando y por qué ese valor cae dentro o fuera de lo normal.</p>
-
-      <p class="toolbar-hint" style="margin-top:0.55rem"><strong>ANÓMALO</strong> &mdash; desde la Kali</p>
-      <div class="anat">
-        <code class="ac">nmap -sT -T4 --max-retries 1 -p 1-3000 --open 10.10.30.10</code>
-        <ul>
-          <li><code class="esc-cmd">-sT</code> conexión TCP completa &middot; <code class="esc-cmd">-T4</code> rápido &middot; <code class="esc-cmd">--max-retries 1</code> casi sin reintentos (agresivo)</li>
-          <li><code class="esc-cmd">-p 1-3000</code> &rarr; <strong>3000 puertos</strong> probados en ~20&nbsp;s</li>
-        </ul>
-        <div class="vd"><span class="bad">ANÓMALO:</span> un cliente habla con 2&ndash;3 puertos; 3000 en segundos dispara <code class="esc-cmd">flow_attempt &ge;20/30s</code>, <code class="esc-cmd">unique_dst_port_ratio &ge;0,45</code> y <code class="esc-cmd">syn_completion &le;0,30</code> (casi ninguno abre). &nbsp;<span class="good">Normal:</span> pocos intentos a 1&ndash;2 puertos conocidos.</div>
-      </div>
-      <div class="anat">
-        <code class="ac">for i in $(seq 1 80); do dig +short $r.francos-sac.com @10.10.10.20; sleep 0.5; done</code>
-        <ul>
-          <li><code class="esc-cmd">$r</code> = 6 bytes aleatorios &rarr; nombre <strong>inexistente y distinto</strong> cada vez</li>
-          <li><code class="esc-cmd">sleep 0.5</code> &rarr; ~2 consultas/s &middot; <code class="esc-cmd">seq 1 80</code> &rarr; <strong>80 consultas</strong> en ~40&nbsp;s</li>
-        </ul>
-        <div class="vd"><span class="bad">ANÓMALO:</span> <code class="esc-cmd">dns_query &ge;20/60s</code> con <code class="esc-cmd">unique_dns_name_ratio &ge;0,45</code> (nombres casi todos distintos). &nbsp;<span class="good">Normal:</span> se repiten pocos dominios conocidos (<code class="esc-cmd">*.francos-sac.com</code>).</div>
-      </div>
-      <div class="anat">
-        <code class="ac">seq 1 250 | xargs -P10 -I{} curl -s http://10.10.30.10/</code>
-        <ul>
-          <li><code class="esc-cmd">seq 1 250</code> &rarr; <strong>250 peticiones</strong> &middot; <code class="esc-cmd">-P10</code> &rarr; 10 en paralelo (ráfaga de segundos)</li>
-        </ul>
-        <div class="vd"><span class="bad">ANÓMALO:</span> <code class="esc-cmd">http_request &ge;100/60s</code>. &nbsp;<span class="good">Normal:</span> el perfil más intenso hace decenas por minuto, no cientos en segundos.</div>
-      </div>
-      <div class="anat">
-        <code class="ac">for i in $(seq 1 50); do curl -u admin:wrong$i http://10.10.30.10:8081/; done</code>
-        <ul>
-          <li><code class="esc-cmd">-u admin:wrong$i</code> &rarr; credenciales <strong>siempre erróneas</strong> (wrong1, wrong2…) &rarr; el servidor responde <strong>401</strong> a todas</li>
-          <li><code class="esc-cmd">seq 1 50</code> &rarr; <strong>50 intentos</strong> seguidos</li>
-        </ul>
-        <div class="vd"><span class="bad">ANÓMALO:</span> <code class="esc-cmd">http_request &ge;5/60s</code> con <code class="esc-cmd">http_auth_failure_ratio &ge;0,80</code> (100&nbsp;% fallo). &nbsp;<span class="good">Normal:</span> un usuario falla 1&ndash;2 veces, no el 100&nbsp;%.</div>
-      </div>
-
-      <p class="toolbar-hint" style="margin-top:0.65rem"><strong>NORMAL</strong> &mdash; cada perfil es un <code class="esc-cmd">--perfil</code> ligado a una IP, porque el motor puntúa por IP</p>
-      <div class="anat">
-        <code class="ac">python3 clientes_lab.py --perfil &lt;perfil&gt; --origen 10.10.20.2X</code>
-        <ul>
-          <li><code class="esc-cmd">--perfil</code> &rarr; qué mezcla de acciones (web, DNS, API, ping…)</li>
-          <li><code class="esc-cmd">--origen</code> &rarr; la IP <code class="esc-cmd">.21&ndash;.26</code> a la que se liga ese perfil</li>
-          <li><strong>ritmo</strong> (de 3 a 12&nbsp;s entre acciones, según perfil) &rarr; tasa humana, no automática</li>
-        </ul>
-        <div class="vd"><span class="good">NORMAL:</span> variedad de acciones + tasa baja + dominios conocidos = la combinación que el modelo aprende como esperada. El detalle de cada perfil está en la tabla de los 6 perfiles (arriba).</div>
-      </div>
-
-      <h3 class="umb-h" style="margin-top:1.1rem">En qué nos guiamos para justificar estos valores</h3>
-      <ul class="esc-refs">
-        <li><strong>MITRE ATT&amp;CK</strong> &mdash; técnicas de ataque y su comportamiento observable (<code class="esc-cmd">attack.mitre.org</code>).</li>
-        <li><strong>OWASP</strong> &mdash; abuso de aplicaciones web (<code class="esc-cmd">owasp.org</code>).</li>
-        <li><strong>Informes de prevalencia</strong> &mdash; Verizon DBIR, Fortinet y ESET: qué ataques son frecuentes y relevantes.</li>
-        <li><strong>Entregable interno 11 · Justificación de ataques</strong> &mdash; la elección y el porqué de cada familia, con su mapeo a estos marcos.</li>
-      </ul>
-      <p class="toolbar-hint">La elección de los ataques y de los umbrales no es arbitraria: se apoya en estos marcos y se valida contra la propia línea base (FPR medido).</p>
-    </div>
 
     <div class="pmodal" id="pmodal">
       <div class="pmodal-box">
@@ -1320,8 +1695,10 @@ nmap -Pn -p80,443 10.10.30.10</div>
   <!--/ADMIN-->
 
   <section id="s-scores">
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg><h2>Distribución de scores recientes</h2></div>
-    <p class="lede-small">Qué tan cerca del umbral está pasando el tráfico reciente &mdash; no solo si alertó o no, sino cuánto margen hubo. La línea marca el umbral operativo.</p>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="4" height="7"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="3" width="4" height="18"/></svg><h2>Distribución de scores</h2></div>
+    <div class="wids" id="scoreWids"></div>
+    <details class="ayuda"><summary>ⓘ Cómo leer este gráfico</summary>
+    <p class="lede-small">Qué tan cerca del umbral está pasando el tráfico reciente (últimas 500 decisiones) &mdash; no solo si alertó o no, sino cuánto margen hubo. La línea marca el <b>umbral vigente</b>, el mismo que usan Decisiones y el motor. Un score inferior al umbral genera una señal del modelo; la decisión final combina otras reglas.</p></details>
     <div class="spark-wrap">
       <svg id="histogram" role="img" aria-label="Histograma de scores recientes con el umbral"></svg>
       <p class="toolbar-hint" id="histogramHint"></p>
@@ -1356,9 +1733,9 @@ nmap -Pn -p80,443 10.10.30.10</div>
         </div>
       </div>
       <div>
-        <p class="act-h">IPs con más acciones</p>
+        <p class="act-h">Entidades con señales <span class="th-sub">última hora · pulsa para ver sus decisiones</span></p>
         <div class="tbl-wrap">
-          <table><thead><tr><th>IP</th><th class="r">Acciones</th><th>Última</th></tr></thead><tbody id="topIps"></tbody></table>
+          <table><thead><tr><th>Entidad</th><th class="r">Decisiones con acción</th><th>Última</th></tr></thead><tbody id="topIps"></tbody></table>
         </div>
       </div>
     </div>
@@ -1366,23 +1743,42 @@ nmap -Pn -p80,443 10.10.30.10</div>
 
   <section id="s-alertas">
     <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg><h2>Alertas</h2></div>
-    <p class="sec-sub">Cada ventana en la que el sistema detectó algo: una <b>anomalía del modelo</b> (score por debajo del umbral) o una <b>regla disparada</b> (escaneo, fuerza bruta, abuso HTTP, DNS). A la derecha, la acción que provoca.</p>
     <div class="alertas-resumen" id="alertasResumen"></div>
-    <div class="range-toggle" id="alertasFiltro">
-      <button data-af="todas" class="active">Todas</button>
-      <button data-af="modelo">Anomalía del modelo</button>
-      <button data-af="regla">Reglas</button>
+    <div class="filtros">
+      <label>Fuente
+        <span class="range-toggle" id="alertasFiltro">
+          <button data-af="todas" class="active">Todas</button>
+          <button data-af="modelo">Modelo</button>
+          <button data-af="regla">Reglas</button>
+        </span></label>
+      <label>Acción
+        <span class="range-toggle" id="alertasAccion">
+          <button data-aa="todas" class="active">Todas</button>
+          <button data-aa="LIMIT">LIMIT</button>
+          <button data-aa="BLOCK">BLOCK</button>
+        </span></label>
+      <input type="text" id="alertasIp" class="ip-filter" placeholder="Filtrar por IP..." aria-label="Filtrar alertas por IP">
+      <button type="button" class="btn-sec neutro" id="alertasLimpiar">Limpiar filtros</button>
+      <button type="button" class="btn-sec neutro btn-escoba-sec" id="alertasEscoba" title="Dejar limpio: quita las medidas de la Kali y limpia esta vista" aria-label="Dejar limpio"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 3 11.5 10.5"/><path d="M9.5 9.5l5 5"/><path d="M9.5 9.5 4 15c-1 1-1 3 0 4l1 1c1 1 3 1 4 0l5.5-5.5"/><path d="M6.5 17.5 9 15"/></svg></button>
+      <button type="button" class="btn-sec neutro" id="alertasMarg" aria-pressed="false" title="Anomalías solo del modelo con el score a menos de 0,05 del umbral">Marginales: ocultas</button>
     </div>
     <div class="alertas-lista" id="alertasLista"></div>
+    <div class="lb-caja" id="alertasListaBlanca" hidden></div>
   </section>
 
   <section id="s-bloqueos">
-    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><h2>IPs bloqueadas ahora</h2></div>
-    <p class="sec-sub" id="vigentesSub">LIMIT y BLOCK que el agente aplica en el host. <b>Reconstruido del registro del motor y del feed publicado</b>, no leído del nftables remoto: es el estado que el sensor <i>sabe</i> que publicó, no una verificación directa en el host. Por eso puede diferir del feed instantáneo (0 entradas entre ciclos) o del historial (un episodio ya caducado).</p>
+    <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><h2>Respuestas</h2></div>
+    <p class="sec-sub"><b>LIMIT</b> degrada la tasa de una IP; solo <b>BLOCK</b> la corta.</p>
+    <div class="wids" id="respWids"></div>
+    <details class="ayuda"><summary>ⓘ Cómo leer esta vista</summary>
+    <p class="resp-fuente" id="vigentesSub">Fuente: registro del motor y feed firmado por el sensor. La columna Evidencia añade lo que <b>cada host protegido dice tener</b> en su nftables (acuse que trae el relay cada 10 s): aplicada, liberada por un humano o fuera de alcance. El acuse es un informe del host, no una orden.</p>
+    <p class="toolbar-hint">Estados: <span class="est si">registrada</span> el motor la decidió · <span class="est si">publicada</span> está en el feed firmado · <span class="est si">srv-dmz: BLOCK aplicado</span> el host la tiene en nftables · <span class="est lib">liberada</span> un humano la quitó · <span class="est no">fuera de alcance</span> el host no la aplica (infraestructura).</p>
+    </details>
+    <p class="act-h">Respuestas registradas como vigentes <span class="th-sub" id="vigentesN"></span></p>
     <div class="tbl-wrap">
-      <table><thead><tr><th>IP</th><th>Acción</th><th>Motivo</th><th>Desde</th><th>Expira en</th><th>Reincidencia</th></tr></thead><tbody id="blocked"></tbody></table>
+      <table><thead><tr><th>Entidad</th><th>Acción</th><th>Motivo</th><th>Inicio del episodio · última renovación</th><th>Caduca</th><th>Evidencia</th></tr></thead><tbody id="blocked"></tbody></table>
     </div>
-    <p class="act-h" style="margin-top:1.2rem">Acciones de las últimas 24 h <span class="th-sub" id="histSub"></span></p>
+    <p class="act-h" style="margin-top:1.2rem">Historial de las últimas 24 h <span class="th-sub" id="histSub"></span></p>
     <div class="spark-wrap" style="margin-bottom:0.8rem">
       <svg id="histChart" class="hist-chart" role="img" aria-label="Línea de tiempo de acciones por IP en las últimas 24 horas"></svg>
       <div class="spark-legend">
@@ -1392,13 +1788,13 @@ nmap -Pn -p80,443 10.10.30.10</div>
       </div>
     </div>
     <div class="tbl-wrap tbl-scroll" style="max-height:280px">
-      <table><thead><tr><th>Inicio</th><th>IP</th><th>Acción</th><th>Motivo</th><th>Duración</th><th class="r">Ventanas</th><th>Estado</th></tr></thead><tbody id="histTabla"></tbody></table>
+      <table><thead><tr><th>Inicio</th><th>Entidad</th><th>Acción</th><th>Motivo</th><th>Racha de decisiones</th><th>Caducidad configurada</th><th class="r">Ventanas</th><th>Estado según registro</th><th></th></tr></thead><tbody id="histTabla"></tbody></table>
     </div>
   </section>
 
   <section id="s-decisiones">
     <div class="sec-head-row">
-      <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg><h2>Decisiones recientes</h2></div>
+      <div class="sec-head"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg><h2>Decisiones</h2></div>
       <div class="toolbar">
         <div class="range-toggle" id="decVista">
           <button data-dv="accion" class="active">Con acción</button>
@@ -1407,13 +1803,25 @@ nmap -Pn -p80,443 10.10.30.10</div>
           <button data-dv="todas">Todas</button>
         </div>
         <input type="text" id="ipFilter" placeholder="Filtrar por IP..." class="ip-filter">
-        <button id="exportCsv" class="export-btn">
+        <button id="exportCsv" class="export-btn" title="Exporta las filas que ves ahora: vista, filtro de IP y periodo actuales">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7,10 12,15 17,10"/><path d="M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
           Exportar CSV
         </button>
       </div>
     </div>
-    <div class="spark-wrap dec-chart">
+    <div class="filtros" id="decPeriodo">
+      <label>Desde <input type="datetime-local" id="decDesde" step="60"></label>
+      <label>Hasta <input type="datetime-local" id="decHasta" step="60"></label>
+      <button type="button" class="btn-sec" id="decConsultar">Consultar periodo</button>
+      <button type="button" class="btn-sec neutro" id="decEnVivo" hidden>Volver a en vivo</button>
+      <button type="button" class="btn-sec neutro" id="decLimpiar">Limpiar filtros</button>
+      <button type="button" class="btn-sec neutro" id="decGrafBtn" aria-expanded="true">Ocultar gráfico</button>
+    </div>
+    <p class="periodo-info" id="decPeriodoInfo"></p>
+    <div class="dec-resumen" id="decResumen"></div>
+    <div class="spark-wrap dec-chart" id="decChartWrap">
+      <button type="button" class="btn-sec dec-max-btn" id="decMaxBtn" title="Ver el gráfico a pantalla completa; rueda del ratón = zoom, doble clic = restablecer">⤢ Ampliar</button>
+      <span class="dec-zoom-info" id="decZoomInfo"></span>
       <svg id="decChart" role="img" aria-label="Score de cada decisión en el tiempo, con el umbral"></svg>
       <div class="chart-tip" id="decTip"></div>
       <div class="spark-legend">
@@ -1426,7 +1834,7 @@ nmap -Pn -p80,443 10.10.30.10</div>
     <p class="toolbar-hint" id="filterHint"></p>
     <div class="tbl-wrap tbl-scroll">
       <table>
-        <thead><tr><th>Hora</th><th>IP</th><th>Acción</th><th>Motivo</th><th>Modelo <span class="th-sub">score frente al umbral</span></th><th class="r">Paquetes</th></tr></thead>
+        <thead><tr><th>Hora</th><th>Entidad</th><th>Decisión</th><th>Fuente</th><th>Motivo</th><th>Modelo <span class="th-sub">score frente al umbral</span></th><th class="r">Paquetes</th><th></th></tr></thead>
         <tbody id="decisions"></tbody>
       </table>
     </div>
@@ -1434,6 +1842,44 @@ nmap -Pn -p80,443 10.10.30.10</div>
 </div>
 
 <style>
+/* ---- Recorrido guiado de la demo ---------------------------------------- */
+.rg{position:fixed;left:calc(224px + 24px);right:24px;bottom:16px;z-index:150;background:linear-gradient(180deg,rgba(18,27,46,.97),rgba(12,19,34,.97));border:1px solid #2c3d63;border-radius:14px;box-shadow:0 18px 48px rgba(0,0,0,.55),0 0 0 1px rgba(94,234,212,.06);padding:10px 14px 10px;backdrop-filter:blur(6px)}
+.rg[hidden]{display:none}
+.rg-cab{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.rg-esc{font-weight:650;font-size:13.5px;color:var(--text)}
+.rg-esc .k{color:var(--accent);font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;margin-right:8px}
+.rg-esc .ip{font-family:var(--mono);color:var(--text-dim);margin-left:8px;font-weight:500}
+.rg-reloj{margin-left:auto;font-family:var(--mono);color:var(--accent);font-size:15px;font-weight:600}
+.rg-x{background:none;border:none;color:var(--text-dim);font-size:20px;line-height:1;cursor:pointer;padding:0 2px}
+.rg-x:hover{color:var(--text)}
+.rg-pasos{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;counter-reset:tp}
+.rg-pasos li{position:relative}
+.rg-pasos button{width:100%;display:flex;align-items:center;gap:8px;background:#121b2e;border:1px solid #26334f;border-radius:10px;padding:7px 10px;color:var(--text-dim);font:inherit;font-size:13px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
+.rg-pasos button:hover{border-color:#3a5179;color:var(--text)}
+.rg-pasos .num{flex:0 0 22px;height:22px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:700;background:#1c2742;color:var(--text-dim)}
+.rg-pasos .lbl{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.rg-pasos .lbl b{color:var(--text);font-weight:600;font-size:13px}
+.rg-pasos .lbl small{font-size:11px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rg-pasos li.ok .num{background:var(--ok);color:#06210f}
+.rg-pasos li.alerta .num{background:var(--danger);color:#2a0606}
+.rg-pasos li.limit .num{background:var(--amber);color:#2a1d02}
+.rg-pasos li.actual button{border-color:var(--accent);background:#10283a;box-shadow:0 0 0 1px rgba(94,234,212,.25) inset}
+.rg-pasos li:not(:last-child)::after{content:"";position:absolute;right:-6px;top:50%;width:6px;height:1px;background:#2c3d63}
+.rg-pie{display:flex;align-items:center;gap:12px;margin-top:8px}
+.rg-frase{margin:0;flex:1;font-size:14px;color:var(--text)}
+.rg-cli{font-family:var(--mono);font-size:12px;color:#ffd58a;background:#2a2109;border:1px solid #5b4511;border-radius:8px;padding:4px 8px;white-space:nowrap;max-width:46%;overflow:hidden;text-overflow:ellipsis}
+.rg-cli:empty{display:none}
+.rg-cli .h{color:#c9a65a;margin-right:6px}
+.rg-sig{background:var(--accent);color:#04201c;border:none;border-radius:9px;padding:7px 14px;font-weight:700;font-size:13px;cursor:pointer}
+.rg-sig:hover{filter:brightness(1.08)}
+.rg-abrir{position:fixed;right:24px;bottom:16px;z-index:150;background:#10283a;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:7px 14px;font-weight:650;font-size:13px;cursor:pointer}
+.rg-abrir[hidden]{display:none}
+body.con-rg .wrap{padding-bottom:150px}
+body.con-rg .toasts{bottom:150px}
+.rg-foco{outline:2px solid var(--accent)!important;outline-offset:2px;animation:rgPulso 1.2s ease-in-out 4;border-radius:8px}
+tr.rg-foco td{background:rgba(94,234,212,.10)!important}
+@keyframes rgPulso{0%,100%{box-shadow:0 0 0 0 rgba(94,234,212,.0)}50%{box-shadow:0 0 0 6px rgba(94,234,212,.28)}}
+@media (max-width:1100px){.rg{left:16px;right:16px}.rg-pasos .lbl small{display:none}}
 .ver-codigo{margin-top:6px;background:#15202c;border:1px solid #2b3a4a;color:#9fd0ff;border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer}
 .ver-codigo:hover{background:#1b2a39;border-color:#3a5169}
 .code-modal{position:fixed;inset:0;background:rgba(2,6,12,.72);z-index:300;display:flex;align-items:center;justify-content:center;padding:22px}
@@ -1545,6 +1991,31 @@ nmap -Pn -p80,443 10.10.30.10</div>
 <script type="application/json" id="datosSesion">__SESION__</script>
 
 <script>
+// Fluidez (3-nov). (a) Con la pestaña oculta no se sondea nada (salvo tareas de >= 1 min);
+// al volver se refresca de inmediato. (b) Un innerHTML idéntico al último que se escribió
+// en el mismo elemento no se vuelve a escribir: el navegador no reconstruye la tabla,
+// no parpadea y no se pierden el hover, la selección ni la posición del scroll.
+(() => {
+  const nativo = window.setInterval.bind(window);
+  window.setInterval = (fn, ms, ...a) => nativo(() => {
+    if (document.hidden && (ms || 0) < 60000) return;
+    fn(...a);
+  }, ms);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && typeof refresh === 'function') refresh();
+  });
+  const d = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+  const ultimo = new WeakMap();
+  Object.defineProperty(Element.prototype, 'innerHTML', {
+    configurable: true, enumerable: d.enumerable, get: d.get,
+    set(v) {
+      const s = String(v), u = ultimo.get(this);
+      if (u && s !== '' && u.html === s && this.childElementCount === u.n && this.firstElementChild === u.primero) return;
+      d.set.call(this, s);
+      ultimo.set(this, { html: s, n: this.childElementCount, primero: this.firstElementChild });
+    },
+  });
+})();
 // Solo los iconos usados dinamicamente en refresh(); los estaticos (encabezados
 // de seccion, nota de contexto) ya estan inline en el HTML de arriba.
 const ICON = {
@@ -1573,7 +2044,7 @@ let currentRange = '1h';
 // no esta mirando la tabla justo en ese momento. Solo cambia titulo/favicon
 // del propio navegador, no notificaciones del sistema operativo (mas
 // invasivo e innecesario para un panel de solo lectura).
-const PROTO = { 112: 'VRRP/CARP (latido del cortafuegos)', 240: 'pfsync (sincronización entre cortafuegos)' };
+const PROTO = { 112: 'VRRP/CARP (latido del router)', 240: 'pfsync (sincronización entre routers)' };
 const BASE_TITLE = document.title;
 const BASE_FAVICON = document.getElementById('favicon').href;
 const ALERT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%235eead4'/%3E%3Ccircle cx='24' cy='9' r='7' fill='%23f87171' stroke='%230a0f1a' stroke-width='1.5'/%3E%3C/svg%3E";
@@ -1611,6 +2082,499 @@ function markSeenAndCountNewAlerts(decisions) {
   }
 }
 
+// ---- Anomalias marginales ------------------------------------------------
+// Una anomalia SOLO del modelo cuyo score queda a menos de MARGEN_MARGINAL por
+// debajo del umbral. Es real (esta en el registro y su LIMIT se publica), pero
+// es ruido de borde: no se avisa con tarjeta flotante y Alertas la agrupa,
+// diciendo siempre cuantas hay. Una regla disparada nunca es marginal.
+const MARGEN_MARGINAL = 0.0;   // motor de las campañas (demo: 0.05)
+function esMarginal(d) {
+  if (!d || d.decision !== 'ALERT' || String(d.detector_name || '').endsWith('_heuristic')) return false;
+  if (d.heuristico && (d.heuristico.accion === 'BLOCK' || d.heuristico.accion === 'LIMIT')) return false;
+  if (d.score == null || d.threshold == null) return false;
+  return d.score >= d.threshold - MARGEN_MARGINAL;
+}
+let verMarginales = false;
+
+// ---- Escenario en vivo -------------------------------------------------------
+// Un escenario por capa (y uno de falso positivo). El panel NO ejecuta nada:
+// muestra el comando y sigue a la IP con /api/escenario cada 3 s. La aplicacion
+// en el host no se afirma: el panel no lee el nftables del servidor.
+const ESC_CATALOGO = [
+  { id: 'l4', capa: 'L4 · Transporte', tipo: 'ataque', nombre: 'Escaneo de puertos',
+    simula: 'Reconocimiento: prueba miles de puertos TCP para ver cuáles están abiertos.',
+    desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
+    comando: 'nmap -sT -T4 --max-retries 1 -p 1-3000 --open 10.10.30.10',
+    espera: 'Regla port_scan → BLOCK hacia srv-dmz (en modo sombra se publica, no se aplica).',
+    guion: ['Primer paso de casi cualquier intrusión: descubrir puertos abiertos.',
+            'La regla port_scan lo ve: muchos puertos distintos, casi ninguna conexión completa. El modelo es solo señal.',
+            'BLOCK firmado y con caducidad en el feed v2. En modo sombra el agente de srv-dmz no lo escribe en nftables.'],
+    tour: { ataque: 'nmap prueba 3000 puertos TCP del servidor.',
+            actividad: 'La Kali sube arriba con BLOCK.',
+            decisiones: 'Regla port_scan, ventana a ventana (el score del IF, como señal).',
+            respuestas: 'BLOCK firmado en el feed v2, con caducidad.',
+            host: 'Modo sombra: el servidor sigue contestando (la medida no se aplica).' } },
+  { id: 'l7', capa: 'L7 · Aplicación', tipo: 'ataque', nombre: 'Abuso HTTP (flood)',
+    simula: 'Cientos de peticiones web en segundos desde una IP, como un bot.',
+    desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
+    comando: 'seq 1 900 | xargs -P20 -I{} curl -s -o /dev/null http://10.10.30.10/',
+    espera: 'Regla http_abuse (≥ 600 peticiones en 60 s) → LIMIT hacia srv-dmz (en modo sombra se publica, no se aplica).',
+    guion: ['Cada petición es válida; lo anómalo es la tasa.',
+            'La regla http_abuse cuenta peticiones por minuto de una sola IP: dispara desde 600.',
+            'LIMIT: respuesta proporcional, temporal y reversible.'],
+    tour: { ataque: '900 peticiones web en paralelo contra el servidor.',
+            actividad: 'La Kali aparece con LIMIT.',
+            decisiones: 'http_abuse: ≥ 600 peticiones en 60 s.',
+            respuestas: 'LIMIT firmado en el feed v2, con caducidad.',
+            host: 'Modo sombra: el servidor sigue atendiendo (la medida no se aplica).' } },
+  { id: 'brute', capa: 'L7 · Aplicación', tipo: 'ataque', nombre: 'Fuerza bruta HTTP',
+    simula: 'Ráfaga de logins fallidos contra un endpoint que exige autenticación (401).',
+    desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
+    comando: 'for i in $(seq 1 120); do curl -s -o /dev/null -u x:x http://10.10.30.10:8081/; done',
+    espera: 'Regla brute_force (≥ 5 req HTTP/60 s y ≥ 80 % de fallo de auth 401/403) → BLOCK hacia srv-dmz.',
+    guion: ['Muchos intentos de login casi todos fallidos (401): la huella de un ataque de credenciales.',
+            'El modelo mide flojo este patrón; quien lo caza es la regla brute_force (ratio de fallos de auth).',
+            'BLOCK firmado y con caducidad. Es el valor del híbrido: el heurístico tapa el hueco del modelo.'],
+    tour: { ataque: '120 intentos de login fallidos contra el endpoint 8081.',
+            actividad: 'La Kali sube con BLOCK.',
+            decisiones: 'brute_force: ≥ 80 % de 401 en 60 s.',
+            respuestas: 'BLOCK firmado en el feed v2, con caducidad.',
+            host: 'Con enforcement: la IP cae en nftables del servidor; en sombra solo se publica.' } },
+  { id: 'l3', capa: 'L3 · Red', tipo: 'ataque', nombre: 'Inundación ICMP',
+    simula: 'Un equipo satura al servidor con pings: denegación de servicio en capa de red.',
+    desde: 'Kali · 10.10.20.30 (sin sudo)', ip: '10.10.20.30',
+    comando: 'for k in 1 2 3 4; do ping -q -i 0.002 -s 1200 -w 60 10.10.30.10 >/dev/null & done; wait',
+    espera: 'El motor actual no tiene regla ICMP: solo el modelo lo ve (ALERT) y la política if_senal no publica medida. Muestra la señal del IF, no una respuesta.',
+    guion: ['Capa de red: ≈ 2000 paquetes ICMP por segundo.',
+            'El modelo ve el volumen anómalo (ALERT); ninguna regla lo cubre.',
+            'Sin medida: con la política if_senal el modelo solo es señal. Es un límite declarado del alcance.'],
+    tour: { ataque: '4 pings en paralelo: ≈ 2000 paquetes/s de ICMP.',
+            actividad: 'La Kali aparece con ALERT del modelo, sin acción.',
+            decisiones: 'Score del IF bajo el umbral; ninguna regla.',
+            respuestas: 'Sin medida en el feed.',
+            host: 'El ping sigue pasando.' } },
+  { id: 'l7dns', capa: 'L7 · Aplicación', tipo: 'ataque', nombre: 'DNS de alta entropía (DGA)',
+    simula: 'Malware que busca su servidor de control con nombres aleatorios.',
+    desde: 'Kali · 10.10.20.30', ip: '10.10.20.30',
+    comando: 'for i in $(seq 1 80); do r=$(head -c6 /dev/urandom | od -An -tx1 | tr -d " \\n"); dig +short ${r}.francos-sac.com @10.10.10.20 >/dev/null 2>&1; sleep 0.5; done',
+    espera: 'Regla dns_entropy (≥ 30 consultas en 60 s, nombres únicos o NXDOMAIN) → LIMIT de DNS hacia DC1. El modelo lo ve casi normal.',
+    guion: ['Nombres de dominio aleatorios: la huella de un DGA.',
+            'El modelo lo ve casi normal; la regla de entropía DNS, no.',
+            'Modelo y reglas se complementan.'],
+    tour: { ataque: '80 consultas DNS a nombres aleatorios.',
+            actividad: 'La Kali aparece con LIMIT por regla.',
+            decisiones: 'dns_entropy: NXDOMAIN y nombres únicos.',
+            respuestas: 'LIMIT firmado en el feed v2, destino DC1 (DNS).',
+            host: 'Modo sombra: DC1 sigue resolviendo (la medida no se aplica).' } },
+  { id: 'fp', capa: 'L7 · Aplicación', tipo: 'tráfico legítimo', nombre: 'Cliente legítimo intenso',
+    simula: 'Un usuario real navegando sin parar: una página cada 2 s durante 2 minutos.',
+    desde: 'VM clientes · 10.10.20.21', ip: '10.10.20.21',
+    comando: 'for i in $(seq 1 60); do curl -s -o /dev/null --interface 10.10.20.21 http://10.10.30.10/; sleep 2; done',
+    espera: 'PERMIT de principio a fin: ninguna regla, el modelo no lo sostiene. No se toca al usuario.',
+    guion: ['Tráfico legítimo, pero intenso: el caso que más falsos positivos da.',
+            'Ninguna regla salta y el modelo no ve una anomalía sostenida.',
+            'PERMIT: el usuario sigue trabajando. Antes esto se bloqueaba; se corrigió y se midió.'],
+    tour: { ataque: 'Navegación continua: 1 página cada 2 s, 2 minutos.',
+            actividad: 'La IP .21 NO aparece con acción.',
+            decisiones: 'Todas sus ventanas: PERMIT (marginales sin acción).',
+            respuestas: 'Sin respuesta para .21: nada que caducar.',
+            host: 'En srv-dmz: «sin regla» para .21; el ping pasa 0 % de pérdida.' } },
+];
+
+let esc = null;                  // {id, ip, t0} mientras hay seguimiento
+try { esc = JSON.parse(localStorage.getItem('cf_escenario') || 'null'); } catch (e) { esc = null; }
+// Un seguimiento de demo dura minutos. Si el guardado tiene mas de 30 min es de
+// otra sesion (p.ej. 314:54 en el Resumen): se descarta en vez de mostrarlo.
+const ESC_CADUCA_S = 1800;
+if (esc && esc.t0 && Date.now() / 1000 - esc.t0 > ESC_CADUCA_S) {
+  esc = null;
+  try { localStorage.removeItem('cf_escenario'); } catch (e) { /* sin persistir */ }
+}
+let escSel = (esc && esc.id) || 'l4';
+let escDatos = null, escFeedVisto = null, escVistas = new Set(), escError = '';
+function escActivo() { return !!(esc && esc.t0 && esc.ip); }
+function escGuardar() { try { localStorage.setItem('cf_escenario', JSON.stringify(esc)); } catch (e) { /* sin persistir */ } }
+function escMmss(s) { s = Math.max(0, Math.round(s)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+function escDelta(t) { return escActivo() && t ? ' · +' + escMmss(t - esc.t0) : ''; }
+
+function renderEscCards() {
+  const cont = document.getElementById('escCards');
+  if (!cont) return;
+  cont.innerHTML = ESC_CATALOGO.map(s => '<button type="button" class="esc-card' + (s.id === escSel ? ' sel' : '')
+    + (s.tipo === 'tráfico legítimo' ? ' fp' : '') + '" data-esc="' + s.id + '">'
+    + '<span class="esc-capa">' + varEsc(s.capa) + '</span><b>' + varEsc(s.nombre) + '</b>'
+    + '<small>' + (s.tipo === 'tráfico legítimo' ? 'debe quedar en PERMIT' : 'ataque simulado') + '</small></button>').join('');
+}
+
+function renderEscDetalle() {
+  const det = document.getElementById('escDet');
+  const s = ESC_CATALOGO.find(x => x.id === escSel);
+  if (!det || !s) return;
+  det.innerHTML = '<div class="esc-box"><span class="k">' + varEsc(s.capa) + ' · ' + varEsc(s.tipo) + '</span>'
+    + '<h3>' + varEsc(s.nombre) + '</h3><p>' + varEsc(s.simula) + '</p>'
+    + '<p><span class="k">Desde</span> ' + varEsc(s.desde) + '</p>'
+    + '<div class="esc-cmd"><code>' + varEsc(s.comando) + '</code>'
+    + '<button type="button" class="btn-sec neutro esc-copiar" data-cmd="' + varEsc(s.comando) + '">copiar</button></div>'
+    + '<p><span class="k">Qué esperamos</span> ' + varEsc(s.espera) + '</p></div>';
+  const ip = document.getElementById('escIp');
+  if (ip && !escActivo()) ip.value = s.ip;
+}
+
+function escPaso(n, titulo, estado, cuerpo, hora, donde) {
+  return '<li class="esc-paso ' + estado + '"><h4><span>' + titulo + '</span><span class="n">' + n + '</span></h4>'
+    + cuerpo + (hora ? '<span class="t">' + hora + '</span>' : '') + (donde ? '<span class="dnd">' + donde + '</span>' : '') + '</li>';
+}
+
+function renderEscPasos() {
+  const ol = document.getElementById('escPasos');
+  if (!ol) return;
+  const D = escDatos;
+  const activo = escActivo();
+  const ahora = Date.now() / 1000;
+  const filas = (D && D.decisiones) || [];
+  const conAccion = filas.filter(f => f.accion !== 'PERMIT');
+  const claras = conAccion.filter(f => !f.marginal);
+  const legit = activo && (ESC_CATALOGO.find(x => x.id === esc.id) || {}).tipo === 'tráfico legítimo';
+  // 1. Llegan datos
+  let p1;
+  if (!D) p1 = escPaso('1', 'Llegan datos', 'espera', 'Consultando el motor…');
+  else {
+    const edad = D.ultima_decision ? ahora - D.ultima_decision : null;
+    const vivo = edad != null && edad < 30;
+    p1 = escPaso('1', 'Llegan datos', vivo ? 'ok' : 'espera',
+      vivo ? 'Sí: ' + D.decisiones_60s + ' ventanas analizadas en el último minuto, de ' + D.ips_60s + ' IP.'
+           : 'No hay decisiones recientes del motor.',
+      edad != null ? 'última ventana hace ' + Math.round(edad) + ' s' : '', 'Resumen · Actividad');
+  }
+  // 2. Deteccion
+  let p2;
+  if (!activo) p2 = escPaso('2', 'Detección', 'inactivo', 'Pulsa «Iniciar seguimiento» al lanzar el comando.');
+  else if (!filas.length) p2 = escPaso('2', 'Detección', 'espera', 'La IP ' + varEsc(esc.ip) + ' aún no aparece en las ventanas.');
+  else if (!conAccion.length) p2 = escPaso('2', 'Detección', 'espera', filas.length + ' ventana(s) de la IP analizadas; todas normales por ahora.', 'primera ventana ' + fmtTime(filas[filas.length - 1].logged_at) + escDelta(filas[filas.length - 1].logged_at), 'Actividad');
+  else {
+    const pr = (claras.length ? claras : conAccion).reduce((a, b) => (a.logged_at < b.logged_at ? a : b));
+    p2 = escPaso('2', 'Detección', 'ok', 'Detectada: ' + conAccion.length + ' de ' + filas.length + ' ventanas con acción'
+      + (claras.length ? '' : ' (todas marginales)') + '.', 'primera ' + fmtTime(pr.logged_at) + escDelta(pr.logged_at), 'Actividad · Alertas');
+  }
+  // 3. Decision: quien y que
+  let p3;
+  if (!activo || !conAccion.length) p3 = escPaso('3', 'Decisión', activo ? 'espera' : 'inactivo', activo ? 'Esperando una ventana con acción.' : '—');
+  else {
+    const sev = { BLOCK: 2, LIMIT: 1 };
+    const peor = conAccion.reduce((a, b) => ((sev[b.accion] || 0) > (sev[a.accion] || 0) ? b : a));
+    const hayModelo = conAccion.some(f => f.decision === 'ALERT');
+    const hayRegla = conAccion.some(f => f.heuristico && f.heuristico.heuristico);
+    const quien = hayModelo && hayRegla ? 'modelo y regla' : (hayRegla ? 'regla' : 'modelo');
+    const conScore = filas.filter(f => f.score != null);
+    const minimo = conScore.length ? conScore.reduce((a, b) => (a.score < b.score ? a : b)) : null;
+    // el motivo que se enseña es el de la ventana que fijó la acción más severa
+    const regla = (peor.heuristico && peor.heuristico.heuristico) ? peor
+      : conAccion.find(f => f.heuristico && f.heuristico.heuristico);
+    const prim = conAccion.reduce((a, b) => (a.logged_at < b.logged_at ? a : b));
+    const escalo = prim.accion !== peor.accion;
+    p3 = escPaso('3', 'Decisión', 'ok', '<span class="badge acc-' + peor.accion.toLowerCase() + '">' + peor.accion + '</span> por <b>' + quien + '</b> <span class="esc-hist">(la más severa del seguimiento)</span>'
+      + (escalo ? '<br><span class="esc-hist">escaló de ' + prim.accion + ' (' + fmtTime(prim.logged_at) + ') a ' + peor.accion + '</span>' : '')
+      + (regla ? '<br>' + varEsc(regla.heuristico.heuristico) + ': ' + varEsc(regla.heuristico.motivo || '') : '')
+      + (minimo ? '<br>score mínimo ' + minimo.score.toFixed(3) + ' · umbral ' + Number(minimo.threshold).toFixed(3) : ''),
+      fmtTime(peor.logged_at) + escDelta(peor.logged_at), 'Alertas · Decisiones');
+  }
+  // 4. Publicacion en el feed firmado
+  let p4;
+  const ent = D && D.feed && D.feed.entrada;
+  if (ent && activo && !escFeedVisto) escFeedVisto = ahora;
+  if (!activo) p4 = escPaso('4', 'Publicación', 'inactivo', '—');
+  else if (ent) p4 = escPaso('4', 'Publicación', 'ok', 'En el feed firmado: <b>' + varEsc(ent.accion) + '</b> · ' + varEsc(ent.motivo || '')
+      + '<br>caduca ' + fmtTime(ent.hasta)
+      + (ent.nivel > 1 ? '<br><span class="esc-hist">reincidencia nivel ' + ent.nivel + ': la IP ya tuvo episodios en las últimas 24 h, por eso dura más</span>' : ''),
+      'feed de las ' + fmtTime(D.feed.generado) + (escFeedVisto ? escDelta(escFeedVisto) : ''), 'Respuestas');
+  else if (D && conAccion.length) {
+    // La accion de ESTE seguimiento (no la vigente del historial de 24 h, que puede ser otra).
+    const accEsc = conAccion.some(f => f.accion === 'BLOCK') ? 'BLOCK' : 'LIMIT';
+    const libEsc = ((D.aplicacion) || []).some(a => (a.eventos || []).some(e => e.evento === 'liberada'));
+    p4 = libEsc
+      ? escPaso('4', 'Publicación', 'ok', 'La orden <b>' + accEsc + '</b> se publicó y ya salió del feed: la IP fue liberada por revisión humana (paso 5).', '', 'Respuestas')
+      : escPaso('4', 'Publicación', 'espera', 'Decidida (' + accEsc + '); esperando el próximo feed (cada 10 s).', '', 'Respuestas');
+  }
+  else p4 = escPaso('4', 'Publicación', activo && conAccion.length ? 'espera' : 'inactivo', 'Aún no está en el feed.', D && D.feed ? 'feed de las ' + fmtTime(D.feed.generado) : '');
+  // 5. Aplicacion: lo que el host dice tener en nftables (acuse que trae el relay)
+  let p5 = escPaso5(D, activo, ent);
+  // Trafico legitimo: el exito es que NO pase nada. Verde cuando hay ventanas
+  // de la IP y ninguna pide accion.
+  if (legit && filas.length && !conAccion.length) {
+    const marg = filas.filter(f => f.politica_modelo === 'marginal' || f.politica_modelo === 'suelta').length;
+    p2 = escPaso('2', 'Detección', 'ok', '<b>Sin detección</b>: ' + filas.length + ' ventanas, todas PERMIT.', 'correcto: es un usuario legítimo', 'Actividad');
+    p3 = escPaso('3', 'Decisión', 'ok', '<span class="badge acc-permit">PERMIT</span> ninguna regla salta'
+      + (marg ? '<br><span class="esc-hist">' + marg + ' anomalía(s) marginal/suelta del modelo: se registran, no actúan</span>' : '<br>el modelo lo ve normal'), '', 'Decisiones');
+    p4 = escPaso('4', 'Publicación', 'ok', 'Nada que publicar: la IP no está en el feed.', D && D.feed ? 'feed de las ' + fmtTime(D.feed.generado) : '', 'Respuestas');
+    p5 = escPaso('5', 'Aplicación en el host', 'ok', '<b>srv-dmz: sin regla</b> para ' + varEsc(esc.ip) + '. El usuario no se ve afectado.', '', 'según el host · relay cada 10 s');
+  }
+  ol.innerHTML = p1 + p2 + p3 + p4 + p5;
+}
+
+const ESC_EVENTO = { aplicada: 'aplicada', cambiada: 'cambiada a', retirada: 'retirada', liberada: 'liberada por un humano' };
+
+function escPaso5(D, activo, ent) {
+  if (!D) return escPaso('5', 'Aplicación en el host', 'espera', 'Consultando el acuse de los hosts…');
+  const apl = D.aplicacion;
+  if (apl == null) return escPaso('5', 'Aplicación en el host', 'ext',
+    'Sin acuse de los hosts: el panel no lee su nftables. Se comprueba en el host.', '', 'srv-dmz: mira-agente.sh');
+  if (!apl.length) return escPaso('5', 'Aplicación en el host', 'espera',
+    'Ningún host protegido ha enviado su acuse todavía.', '', 'acuse del host · relay cada 10 s');
+  let estado = 'espera', hora = '';
+  const partes = apl.map(a => {
+    const evs = (a.eventos || []);
+    const hist = evs.length ? '<br><span class="esc-hist">' + evs.slice(-4).map(e => fmtTime(e.t) + ' ' + (ESC_EVENTO[e.evento] || e.evento)
+      + (e.accion ? ' ' + varEsc(e.accion) : '')).join(' · ') + '</span>' : '';
+    const quien = '<b>' + varEsc(a.host) + '</b>';
+    if (a.error) return quien + ': no pudo leer sus reglas nftables (' + varEsc(a.error) + ').';
+    if (a.atrasado) return quien + ': acuse atrasado' + (a.edad != null ? ' (hace ' + Math.round(a.edad) + ' s)' : '') + '.' + hist;
+    if (a.agente && a.agente !== 'active') return quien + ': agente EN SOMBRA (' + varEsc(a.agente) + '): recibe la orden, no la aplica.' + hist;
+    const liberadaYa = evs.some(e => e.evento === 'liberada') || String(a.fuera_de_alcance || '').startsWith('liberada');
+    if (a.fuera_de_alcance && !a.regla && !liberadaYa)
+      return quien + ': no se aplica, la IP está fuera de su alcance (' + varEsc(a.fuera_de_alcance) + ').' + hist;
+    if (liberadaYa && !a.regla) {
+      estado = 'ok';
+      const lb = evs.filter(e => e.evento === 'liberada').pop();
+      if (lb && activo) hora = 'liberada ' + fmtTime(lb.t) + escDelta(lb.t);
+      return quien + ': <b>sin regla</b>, liberada por revisión humana. Las ventanas tardías del mismo episodio no la vuelven a poner.' + hist;
+    }
+    if (a.regla) {
+      estado = 'ok';
+      const ap = evs.filter(e => e.evento === 'aplicada' || e.evento === 'cambiada').pop();
+      if (ap && activo) hora = 'aplicada ' + fmtTime(ap.t) + escDelta(ap.t);
+      return '<span class="badge acc-' + a.regla.accion.toLowerCase() + '">' + varEsc(a.regla.accion) + '</span> en el nftables de ' + quien
+        + (a.regla.expira ? ' · se quita sola a las ' + fmtTime(a.regla.expira) : '') + hist;
+    }
+    const lib = evs.filter(e => e.evento === 'liberada').pop();
+    if (lib) {
+      estado = 'ok';
+      if (activo) hora = 'liberada ' + fmtTime(lib.t) + escDelta(lib.t);
+      return quien + ': <b>sin regla</b>, liberada por revisión humana. No se reaplica salvo reincidencia.' + hist;
+    }
+    if (ent && activo) return quien + ': orden publicada; el agente aún no la aplica (la recoge cada 10 s).' + hist;
+    return quien + ': sin regla para esta IP (pasa libre).' + hist;
+  });
+  const edad = apl.map(a => a.edad).filter(x => x != null);
+  return escPaso('5', 'Aplicación en el host', activo ? estado : (estado === 'ok' ? 'ok' : 'inactivo'),
+    partes.join('<br>'), hora || (edad.length ? 'acuse de hace ' + Math.round(Math.min.apply(null, edad)) + ' s' : ''),
+    'según el host · relay cada 10 s');
+}
+
+function renderEscFilas() {
+  const cont = document.getElementById('escFilas');
+  const sub = document.getElementById('escFilasSub');
+  if (!cont) return;
+  const filas = (escDatos && escDatos.decisiones) || [];
+  if (sub) sub.textContent = escActivo() ? 'de ' + esc.ip + ' desde ' + fmtTime(esc.t0) + ' · en vivo, cada 3 s'
+    : 'de ' + ((document.getElementById('escIp') || {}).value || '') + ' en los últimos 2 min';
+  if (escError) { cont.innerHTML = '<p class="estado-vacio">No se pudo consultar: ' + varEsc(escError) + '</p>'; return; }
+  if (!filas.length) { cont.innerHTML = '<p class="estado-vacio">Sin ventanas de esta IP en el periodo.</p>'; return; }
+  // Ventanas iguales del mismo instante (los tres tamaños de ventana, o varias
+  // sin score) se agrupan en una fila «×N»: la tabla cuenta lo que cambia.
+  const grupos = [];
+  for (const f of filas.slice(0, 120)) {
+    const mot = f.heuristico && f.heuristico.heuristico ? varEsc(f.heuristico.heuristico) + ': ' + varEsc(f.heuristico.motivo || '')
+      : (f.cadena_v2 && f.decision === 'ALERT') ? 'IF del motor: ALERT · ' + varEsc(TXT_MEDIDA_V2[(f.cadena_v2.medida || {}).estado] || 'medida desconocida')
+      : (f.decision === 'ALERT' ? (f.politica_modelo === 'marginal' ? 'anomalía marginal del modelo · sin acción' : (f.politica_modelo === 'suelta' ? 'anomalía suelta del modelo · sin acción' : 'anomalía sostenida del modelo · para revisión humana')) : (f.score == null ? 'sin score (poco tráfico)' : 'normal para el modelo'));
+    const clave = fmtTime(f.logged_at) + '|' + f.accion + '|' + mot + '|' + (f.marginal ? 1 : 0);
+    const ult = grupos[grupos.length - 1];
+    if (ult && ult.clave === clave) { ult.n += 1; ult.keys.push(f.logged_at + '|' + f.window_end_utc); continue; }
+    grupos.push({ clave: clave, f: f, mot: mot, n: 1, keys: [f.logged_at + '|' + f.window_end_utc] });
+  }
+  cont.innerHTML = grupos.slice(0, 30).map(g => {
+    const f = g.f;
+    const nueva = g.keys.some(k => !escVistas.has(k));
+    g.keys.forEach(k => escVistas.add(k));
+    return '<div class="esc-fila' + (nueva ? ' nueva' : '') + '"><span class="hora">' + fmtTime(f.logged_at) + '</span>'
+      + '<span><span class="badge acc-' + String(f.accion).toLowerCase() + '">' + f.accion + '</span></span>'
+      + '<span>' + miniBarraScore(f.score) + '</span>'
+      + '<span>' + g.mot + (g.n > 1 ? ' <b class="esc-x">×' + g.n + '</b>' : '')
+      + (f.marginal ? '<span class="tag-marg">marginal</span>' : '') + '</span></div>';
+  }).join('');
+}
+
+function renderEscReloj() {
+  const r = document.getElementById('escReloj');
+  const e = document.getElementById('escEstado');
+  if (r) r.textContent = escActivo() ? escMmss(Date.now() / 1000 - esc.t0) : '';
+  if (e) e.textContent = escActivo() ? 'Siguiendo ' + esc.ip + ' desde las ' + fmtTime(esc.t0) : '';
+  const bI = document.getElementById('escIniciar'), bP = document.getElementById('escParar');
+  if (bI) bI.textContent = escActivo() ? 'Reiniciar' : 'Iniciar seguimiento';
+  if (bP) bP.hidden = !escActivo();
+}
+
+let escEnVuelo = null;
+async function escConsultar() {
+  const sec = document.getElementById('s-escenario');
+  const visible = sec && sec.classList.contains('pag-activa');
+  if (!visible && !escActivo()) return;
+  const ip = escActivo() ? esc.ip : ((document.getElementById('escIp') || {}).value || '').trim();
+  if (!ip) return;
+  const desde = escActivo() ? esc.t0 - 5 : Date.now() / 1000 - 120;
+  const t0 = escActivo() ? esc.t0 : null;
+  // Una respuesta que llega tarde (de la IP o el seguimiento anterior) no se
+  // pinta: sin esto, al cambiar de .30 a .21 los pasos mostraban datos de .30.
+  const vigente = () => (escActivo() ? (esc.ip === ip && esc.t0 === t0)
+    : ((document.getElementById('escIp') || {}).value || '').trim() === ip);
+  // Sin solapes: si el panel tarda, no se apilan peticiones cada 3 s.
+  const clave = ip + '|' + t0;
+  if (escEnVuelo === clave) return;
+  escEnVuelo = clave;
+  setTimeout(() => { if (escEnVuelo === clave) escEnVuelo = null; }, 20000);
+  try {
+    const r = await fetch('/api/escenario?ip=' + encodeURIComponent(ip) + '&desde=' + desde.toFixed(0));
+    const d = await r.json();
+    if (!vigente()) return;
+    if (d.error) { escError = d.error; } else { escError = ''; escDatos = d; }
+  } catch (e) {
+    if (!vigente()) return;
+    escError = 'sin conexión con el panel';
+    if (escDatos && escDatos.ip !== ip) escDatos = null;
+  } finally {
+    if (escEnVuelo === clave) escEnVuelo = null;
+  }
+  if (!vigente()) return;
+  renderEscPasos();
+  renderEscFilas();
+}
+
+function escIniciar() {
+  const ip = ((document.getElementById('escIp') || {}).value || '').trim();
+  if (!/^\\d{1,3}(\\.\\d{1,3}){3}$/.test(ip)) { const e = document.getElementById('escEstado'); if (e) e.textContent = 'Escribe una IP válida.'; return; }
+  esc = { id: escSel, ip: ip, t0: Date.now() / 1000 };
+  if (typeof rgPaso !== 'undefined') { rgPaso = 0; rgOculto = false; }
+  escFeedVisto = null; escDatos = null; escVistas = new Set();
+  escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas(); escConsultar();
+}
+
+on('escCards', 'click', (ev) => {
+  const b = ev.target.closest('.esc-card');
+  if (!b) return;
+  escSel = b.dataset.esc;
+  renderEscCards(); renderEscDetalle();
+  if (!escActivo()) { escDatos = null; escVistas = new Set(); escConsultar(); }
+});
+on('escDet', 'click', async (ev) => {
+  const b = ev.target.closest('.esc-copiar');
+  if (!b) return;
+  try { await navigator.clipboard.writeText(b.dataset.cmd); b.textContent = 'copiado ✓'; }
+  catch (e) { b.textContent = 'copia manual'; }
+  setTimeout(() => { b.textContent = 'copiar'; }, 1500);
+});
+on('escIniciar', 'click', escIniciar);
+
+// «Preparar demo»: el panel deja una petición; el publicador la mete en el feed FIRMADO;
+// el agente de srv-dmz la verifica, libera las IP de la demo y lo confirma en su acuse.
+let prepTimer = null;
+function renderPrep(d) {
+  const ul = document.getElementById('prepLista'), txt = document.getElementById('prepTxt'), box = document.getElementById('prep');
+  if (!ul || !d) return;
+  ul.innerHTML = (d.checks || []).map(c => '<li class="' + c.estado + '"><span class="ic">'
+    + ({ ok: '✔', esp: '…', mal: '✘' }[c.estado] || '·') + '</span><span>' + varEsc(c.texto)
+    + (c.detalle ? ' <small>' + varEsc(c.detalle) + '</small>' : '') + '</span></li>').join('');
+  if (box) box.classList.toggle('listo', !!d.listo);
+  if (txt && d.peticion) txt.innerHTML = d.listo
+    ? '<b>Listo para la demo.</b> Elige un escenario y pulsa «Iniciar».'
+    : 'Preparando… (feed firmado → srv-dmz → acuse, unos 30–40 s)';
+}
+async function prepSondear(fin) {
+  clearTimeout(prepTimer);
+  let d = null;
+  try { d = await (await fetch('/api/demo/estado')).json(); } catch (e) { /* reintenta */ }
+  if (d) renderPrep(d);
+  const b = document.getElementById('prepBtn');
+  if (d && d.listo || Date.now() > fin) { if (b) b.disabled = false; return; }
+  prepTimer = setTimeout(() => prepSondear(fin), 3000);
+}
+async function prepPedir() {
+  const b = document.getElementById('prepBtn'), ul = document.getElementById('prepLista');
+  if (b) b.disabled = true;
+  try {
+    const r = await fetch('/api/demo/preparar', { method: 'POST', headers: { 'X-CyberFlow': '1' } });
+    if (!r.ok) throw new Error(r.status === 403 ? 'Solo un administrador puede preparar la demo.' : 'HTTP ' + r.status);
+    esc = null; escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas();
+    vistaLimpiaDesde(Date.now() / 1000);
+    if (typeof rgOculto !== 'undefined') { rgOculto = false; }
+    prepSondear(Date.now() + 120000);
+  } catch (e) {
+    if (ul) ul.innerHTML = '<li class="mal"><span class="ic">✘</span><span>' + varEsc(e.message) + '</span></li>';
+    if (b) b.disabled = false;
+  }
+}
+on('prepBtn', 'click', prepPedir);
+
+// «Dejar limpio» (cadena v2, 16-nov): deja el control D5 (reset_origen de la Kali); el
+// publicador lo consume, quita sus medidas vigentes y su escalada, republica el feed y acusa.
+// Además se borra el seguimiento de escenario del panel. No toca umbrales ni reglas.
+let limpTimer = null;
+function pintarLimpieza(items, listo) {
+  const ul = document.getElementById('prepLista'), txt = document.getElementById('prepTxt');
+  if (ul) ul.innerHTML = items.map(([est, t]) => '<li class="' + est + '"><span class="ic">'
+    + ({ ok: '✔', esp: '…', mal: '✘' }[est] || '·') + '</span><span>' + t + '</span></li>').join('');
+  if (txt && listo) txt.innerHTML = '<b>Limpio.</b> Elige un escenario y pulsa «Iniciar».';
+}
+async function limpiezaSondear(id, fin) {
+  clearTimeout(limpTimer);
+  let d = null;
+  try { d = await (await fetch('/api/demo/limpieza?id=' + encodeURIComponent(id))).json(); } catch (e) { /* reintenta */ }
+  const b = document.getElementById('limpiarBtn');
+  if (d) {
+    const ack = d.ack;
+    const items = [['ok', 'Petición dejada al publicador'],
+      ack ? (ack.ok ? ['ok', 'Publicador: estado de la Kali limpio, feed n.º ' + varEsc(String(ack.secuencia ?? '—'))
+                       + ' (' + ((ack.quitado || {}).vigentes || []).length + ' medida(s) retirada(s))']
+                    : ['mal', 'Publicador: ' + varEsc(ack.error || 'rechazada')])
+          : ['esp', 'Esperando al publicador…'],
+      d.kali_en_feed === false ? ['ok', 'Feed sin medidas sobre la Kali ni el cliente'] : ['esp', 'El feed aún tiene una medida sobre la Kali o el cliente']];
+    const listo = !!(ack && ack.ok && d.kali_en_feed === false);
+    pintarLimpieza(items, listo);
+    if (listo || (ack && !ack.ok)) { if (b) b.disabled = false; return; }
+  }
+  if (Date.now() > fin) { pintarLimpieza([['mal', 'Sin acuse del publicador en 60 s: revisa ppi-publicar-feed-v2']], false); if (b) b.disabled = false; return; }
+  limpTimer = setTimeout(() => limpiezaSondear(id, fin), 2000);
+}
+// Vista limpia: Alertas solo muestra lo posterior a la última limpieza. Es una marca de
+// este navegador; los registros del motor no se borran y «Ver historial» la deshace.
+let limpioDesde = 0;
+try { limpioDesde = Number(localStorage.getItem('cf_limpio_desde')) || 0; } catch (e) { /* sin marca */ }
+function vistaLimpiaDesde(t) {
+  limpioDesde = t || 0;
+  try { if (limpioDesde) localStorage.setItem('cf_limpio_desde', String(limpioDesde)); else localStorage.removeItem('cf_limpio_desde'); } catch (e) { /* sin persistir */ }
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  if (typeof toastVisto !== 'undefined') toastVisto.clear();
+  if (typeof renderAlertas === 'function') renderAlertas();
+  if (typeof pintarPillAlertas === 'function') pintarPillAlertas();
+}
+on('alertasEscoba', 'click', () => limpiarPedir());
+async function limpiarPedir() {
+  const b = document.getElementById('limpiarBtn');
+  if (b) b.disabled = true;
+  try {
+    const r = await fetch('/api/demo/limpiar', { method: 'POST', headers: { 'X-CyberFlow': '1' } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.motivo || (r.status === 403 ? 'Solo un administrador puede dejarlo limpio.' : 'HTTP ' + r.status));
+    esc = null; escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas();
+    vistaLimpiaDesde(Date.now() / 1000);
+    pintarLimpieza([['ok', 'Petición dejada al publicador'], ['esp', 'Esperando al publicador…']], false);
+    limpiezaSondear(d.id, Date.now() + 60000);
+  } catch (e) {
+    pintarLimpieza([['mal', varEsc(e.message)]], false);
+    if (b) b.disabled = false;
+  }
+}
+on('limpiarBtn', 'click', limpiarPedir);
+(async () => {
+  try {
+    const d = await (await fetch('/api/demo/estado')).json();
+    if (d && d.peticion && d.peticion_edad < 900) renderPrep(d);
+  } catch (e) { /* sin estado previo */ }
+})();
+on('escParar', 'click', () => { esc = null; escGuardar(); renderEscReloj(); renderEscPasos(); renderEscFilas(); });
+renderEscCards(); renderEscDetalle(); renderEscReloj(); renderEscPasos();
+if (escActivo()) { const ip = document.getElementById('escIp'); if (ip) ip.value = esc.ip; }
+setInterval(renderEscReloj, 1000);
+setInterval(escConsultar, 3000);
+
 // ---- Alertas flotantes ---------------------------------------------------
 // Una tarjeta por IP y accion, con el motivo. BLOCK se queda hasta cerrarla (o
 // 45 s); LIMIT se va sola a los 15 s. Pulsarla filtra Decisiones por esa IP.
@@ -1625,6 +2589,21 @@ function pintarBotonAvisos() {
   b.textContent = avisosOn ? 'Avisos: sí' : 'Avisos: no';
 }
 pintarBotonAvisos();
+function pintarBotonTema() {
+  const b = document.getElementById('temaBtn');
+  if (!b) return;
+  const osc = document.documentElement.dataset.tema === 'oscuro';
+  // El botón dice a qué tema cambia, con su icono (sol / luna).
+  b.textContent = osc ? '☀ Tema claro' : '☾ Tema oscuro';
+  b.title = osc ? 'Cambiar al tema claro' : 'Cambiar al tema oscuro';
+}
+pintarBotonTema();
+on('temaBtn', 'click', () => {
+  const t = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+  document.documentElement.dataset.tema = t;
+  try { localStorage.setItem('cf_tema', t); } catch (e) { /* sin persistir */ }
+  pintarBotonTema();
+});
 on('avisosBtn', 'click', () => {
   avisosOn = !avisosOn;
   try { localStorage.setItem('cf_avisos', avisosOn ? '1' : '0'); } catch (e) { /* sin persistir */ }
@@ -1650,6 +2629,11 @@ function motivoDeDecision(d) {
 
 function avisar(nuevas) {
   if (!avisosOn) return;
+  nuevas = (nuevas || []).filter(d => !esMarginal(d) && accionDeDecision(d) !== 'PERMIT');
+  // Con un escenario en seguimiento los cinco pasos ya cuentan lo de su IP: el aviso
+  // solo taparía la evidencia. Se avisa de las OTRAS IP.
+  if (escActivo()) nuevas = nuevas.filter(d => d.entity_ip !== esc.ip);
+  if (!nuevas.length) return;
   const cont = document.getElementById('toasts');
   if (!cont) return;
   const grupos = new Map();
@@ -1663,14 +2647,28 @@ function avisar(nuevas) {
   }
   for (const g of grupos.values()) {
     const id = 'toast-' + g.ip.split('.').join('-') + '-' + g.acc;
+    if (limpioDesde && (g.d.logged_at || 0) < limpioDesde) continue;
+    const visto = toastVisto.get(id), ahoraT = Date.now() / 1000;
+    toastVisto.set(id, ahoraT);
     const viejo = document.getElementById(id);
-    if (viejo) viejo.remove();
+    if (viejo) {
+      const mt = viejo.querySelector('.t-mot'); if (mt) mt.textContent = motivoDeDecision(g.d).texto || '';
+      // Mientras siga el episodio el aviso queda a la vista; se cierra 20 s después de la última ventana.
+      clearTimeout(viejo._cierre); viejo._cierre = setTimeout(() => viejo.remove(), g.acc === 'BLOCK' ? 20000 : 10000);
+      continue;
+    }
+    if (visto && ahoraT - visto < 120) continue;   // mismo episodio: no repetir la alarma
     const m = motivoDeDecision(g.d);
     const el = document.createElement('div');
     el.className = 'toast ' + (g.acc === 'BLOCK' ? 'block' : 'limit');
     el.id = id;
-    el.innerHTML = '<div class="t-cab"><span class="badge acc-' + g.acc.toLowerCase() + '">' + g.acc + '</span>'
-      + '<span class="t-ip">' + varEsc(g.ip) + '</span>'
+    const tIco = g.acc === 'BLOCK'
+      ? '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>'
+      : '<path d="M12 14l3.5-3.5"/><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/>';
+    el.innerHTML = '<div class="t-cab"><span class="t-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">' + tIco + '</svg></span>'
+      + '<span><span class="t-alarma">' + (g.acc === 'BLOCK' ? 'Alerta crítica' : 'Alerta') + '</span><br>'
+      + '<span class="t-ip">' + varEsc(g.ip) + '</span></span>'
+      + '<span class="badge acc-' + g.acc.toLowerCase() + '">' + g.acc + '</span>'
       + '<button class="t-x" title="Cerrar" aria-label="Cerrar">×</button></div>'
       + '<div class="t-mot">' + varEsc(m.texto || 'acción del sistema') + '</div>'
       + '<div class="t-meta">' + varEsc(m.regla) + ' · ' + fmtTime(g.d.logged_at)
@@ -1683,9 +2681,9 @@ function avisar(nuevas) {
       el.remove();
     });
     cont.prepend(el);
-    setTimeout(() => el.remove(), g.acc === 'BLOCK' ? 45000 : 15000);
+    el._cierre = setTimeout(() => el.remove(), g.acc === 'BLOCK' ? 20000 : 10000);
   }
-  while (cont.children.length > 4) cont.lastElementChild.remove();
+  while (cont.children.length > 2) cont.lastElementChild.remove();
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -1696,8 +2694,24 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+const toastVisto = new Map();   // id de aviso -> última vez que llegó una ventana del episodio
 function card(label, value, cls) {
   return `<div class="card ${cls||''}"><div class="label">${label}</div><div class="value">${value}</div></div>`;
+}
+// 17-nov: widget con icono para Actividad, Respuestas y Scores.
+const W_ICO = {
+  ventanas: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/>',
+  block: '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>',
+  limit: '<path d="M12 14l3.5-3.5"/><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/>',
+  ips: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-4 4-6 7-6s6 2 7 6"/>',
+  modelo: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+  umbral: '<path d="M3 12h18" stroke-dasharray="3 3"/><path d="M6 18l4-9 4 5 4-9"/>',
+  reloj: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
+  escudo: '<path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+};
+function widget(label, value, cls, ico, sub) {
+  return `<div class="wid ${cls || ''}"><span class="w-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${W_ICO[ico] || ''}</svg></span>`
+    + `<div><div class="w-lab">${label}</div><div class="w-val">${value}</div>${sub ? `<div class="w-sub">${sub}</div>` : ''}</div></div>`;
 }
 function fmtTime(t) {
   return new Date(t * 1000).toLocaleTimeString('es-PE', { hour12: false });
@@ -1710,21 +2724,44 @@ function renderKpis(status) {
   if (!el) return;
   const c = status.counters || {};
   const cal = status.calibracion && status.calibracion.calibrado_en_esta_red;
-  const alertas = c.alert_model || 0;
-  const hr = window._histResumen;
-  const tile = (lab, val, sub, estado) =>
-    `<div class="kpi ${estado || ''}"><div class="k-dot"></div>`
+  const nMod = c.alert_model || 0;
+  let nAcc = (c.block || 0) + (c.limit || 0);
+  let vig = (status.vigentes || []).length;
+  // Cada cifra lleva a la vista donde se ve su detalle. Ambar solo si pide
+  // atencion; nunca verde por «hay respuesta»: eso no confirma nada en el host.
+  const tile = (lab, val, sub, estado, ir) =>
+    `<div class="kpi ${estado || ''}"${ir ? ` data-ir="${ir}" role="link" tabindex="0"` : ''}><div class="k-dot"></div>`
     + `<div class="k-lab">${lab}</div><div class="k-val">${val}</div>`
-    + `<div class="k-sub">${sub}</div></div>`;
+    + `<div class="k-sub">${sub}</div>${ir ? '<div class="k-ir">Ver ' + escSimple(SEC_TITULO_CORTO[ir] || '') + ' &rarr;</div>' : ''}</div>`;
+  // Modo v2 con una fuente ausente: la cifra es desconocida, no cero.
+  const cvF = (status.cadena_v2 && status.cadena_v2.activa) ? (status.cadena_v2.fuentes || {}) : null;
+  const sinFuente = k => cvF && !(cvF[k] && cvF[k].ok);
+  if (sinFuente('traza')) nAcc = '—';
+  if (sinFuente('feed')) vig = '—';
   el.innerHTML =
-    tile('Entidades vigiladas', c.entidades != null ? c.entidades : '—', 'última hora', '') +
-    tile('Ventanas/h', (c.total != null ? c.total : 0).toLocaleString('es'), 'analizadas', '') +
-    tile('Cerca del umbral', hr ? hr.pct + '<small>%</small>' : '—',
-         hr ? hr.bajoUmbral + ' de ' + hr.n + ' scores' : 'sin scores', hr && hr.pct > 20 ? 'warn' : '') +
-    tile('Anomalías del modelo (1h)', alertas,
-         cal ? 'no equivalen a ataques confirmados' : 'modelo sin calibrar: ruido',
-         !cal ? 'warn' : (alertas > 0 ? 'bad' : 'ok'));
+    tile('Entidades observadas', c.entidades != null ? c.entidades : '—', 'IPs con ventanas en la última hora', '', 's-actividad') +
+    tile('Ventanas analizadas', (c.total != null ? c.total : 0).toLocaleString('es'), 'en la última hora', '', 's-decisiones') +
+    tile((status.cadena_v2 && status.cadena_v2.activa) ? 'Medidas publicadas (v2)' + (sinFuente('traza') ? ' · desconocido (traza ausente)' : '') : 'Alertas detectadas', nAcc,
+         (status.cadena_v2 && status.cadena_v2.activa)
+           ? nMod + ' señal(es) del IF en la hora · solo actúa lo que publica el publicador v2' + (cal ? '' : ' · modelo sin calibrar')
+           : nMod + ' anomalía(s) del modelo · ' + Math.max(0, nAcc - nMod) + ' por reglas' + (cal ? '' : ' · modelo sin calibrar'),
+         !cal || nAcc > 0 ? 'warn' : '', 's-alertas') +
+    tile('Respuestas registradas', vig, (status.cadena_v2 && status.cadena_v2.activa)
+           ? 'medidas en el feed v2 · ' + (status.cadena_v2.modo === 'sombra' ? 'propuestas (sombra), aplicación no ejecutada' : 'aplicación sin evidencia')
+           : (status.acuses || []).length
+           ? 'vigentes según el motor · ' + aplicadasEnHostsDe(status.acuses) + ' aplicada(s) en el host según su acuse'
+           : 'vigentes según el registro del motor; ningún host ha enviado acuse',
+         vig > 0 ? 'warn' : '', 's-bloqueos');
 }
+const SEC_TITULO_CORTO = { 's-actividad': 'Actividad', 's-decisiones': 'Decisiones', 's-alertas': 'Alertas', 's-bloqueos': 'Respuestas' };
+on('kpis', 'click', (ev) => {
+  const k = ev.target.closest('[data-ir]');
+  if (k && typeof mostrarSeccion === 'function') mostrarSeccion(k.dataset.ir);
+});
+on('kpis', 'keydown', (ev) => {
+  const k = ev.target.closest('[data-ir]');
+  if (k && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); mostrarSeccion(k.dataset.ir); }
+});
 
 // La franja de salud la decide el servidor (status.salud): una sola verdad,
 // testeable, que separa salud de servicio de actividad de respuesta. Aqui solo
@@ -1848,7 +2885,7 @@ function renderHistogram(data) {
     return;
   }
   // Lienzo en pixeles reales: el texto no se deforma y caben ejes de verdad.
-  const w = Math.max(320, svg.clientWidth || 900), h = 190;
+  const w = Math.max(320, svg.clientWidth || 900), h = 240;
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   const X0 = 46, X1 = w - 10, Y0 = 22, base = h - 28;
   const maxCount = ejeBonito(Math.max(...data.buckets.map(b => b.count), 1));
@@ -1898,6 +2935,16 @@ function renderHistogram(data) {
   svg.innerHTML = bars;
   const pct = data.n ? Math.round(100 * bajoUmbral / data.n) : 0;
   window._histResumen = { pct: pct, n: data.n, bajoUmbral: bajoUmbral };
+  const sw = document.getElementById('scoreWids');
+  if (sw) {
+    const c3 = v => v.toFixed(3).split('.').join(',');
+    sw.innerHTML = [
+      widget('Decisiones puntuadas', data.n.toLocaleString('es'), 'navy', 'ventanas', 'últimas 500 como máximo'),
+      widget('Umbral vigente', c3(data.threshold), 'ok', 'umbral', 'por debajo = anomalía'),
+      widget('Bajo el umbral', bajoUmbral.toLocaleString('es'), bajoUmbral ? 'bad' : '', 'modelo', pct + ' % del tráfico reciente'),
+      widget('Score mínimo', c3(data.min), '', 'reloj', 'máximo ' + c3(data.max)),
+    ].join('');
+  }
   // La misma escala del histograma la reusa la mini-barra de la tabla.
   window._escalaScore = { min: data.min, max: data.max, umbral: data.threshold };
   // Referencia: la fraccion que quedo bajo el umbral al calibrar (FPR del
@@ -1941,14 +2988,20 @@ function on(id, evento, fn) {
 // disponible siempre en el botón flotante. Cada paso enfoca una sección; los
 // pasos cuyo elemento no existe -por rol o vista- se saltan solos.
 const TOUR_PASOS = [
-  { sel: '#kpis', t: 'Las cifras clave', d: 'Cuatro números de un vistazo: entidades vigiladas, ventanas analizadas por hora, cuántos scores rozan el umbral y las alertas reales de la última hora.' },
+  // Cuatro tareas operativas primero; la arquitectura y el entrenamiento van
+  // despues como recorrido avanzado (solo aparecen en la vista de desarrollo).
+  { sel: '#s-salud', t: '1 · Comprobar la salud', d: 'Arriba, el estado general: si los servicios están operativos y si hay algo que atender. Debajo, cuatro cifras de la última hora: entidades observadas, ventanas analizadas, anomalías del modelo y alertas de reglas, y respuestas registradas. Pulsa una cifra para ir a su detalle.' },
+  { sel: '#s-alertas', t: '2 · Encontrar el episodio', d: 'Alertas lista cada ventana con señal: anomalía del modelo (azul) o regla disparada. Filtra por fuente, acción o IP. «Ver decisión» abre la decisión exacta.' },
+  { sel: '#s-decisiones', t: '3 · Entender la decisión', d: 'Cada fila tiene «Ver detalle»: resultado, por qué se decidió, la evidencia (score frente al umbral, regla) y el contexto técnico. Para mirar atrás, elige un periodo y pulsa «Consultar periodo».' },
+  { sel: '#s-bloqueos', t: '4 · Revisar la respuesta', d: 'Respuestas separa lo registrado por el motor, lo publicado en el feed firmado y lo aplicado en el host, que este panel no comprueba. LIMIT degrada la tasa; solo BLOCK corta.' },
+  { sel: '#kpis', t: 'Recorrido avanzado', d: 'Lo que sigue explica la arquitectura, el modelo y la evaluación. Puedes cerrar la guía aquí si solo vas a operar.' },
   { sel: '#s-topologia', t: 'El recorrido del paquete', d: 'De la red al veredicto: captura → variables por capa → modelo y heurísticos → decisión → respuesta en el host. Pulsa cualquier componente para ver qué hace.' },
-  { sel: '#topoVista', t: 'Siete vistas', d: 'De la red a la validación: cada botón es un diagrama del mismo sistema.' },
+  { sel: '#topoVista', t: 'Vistas', d: 'De la red a las carpetas: cada botón es un diagrama del mismo sistema.' },
+  { sel: '#topoModo', t: 'Lab u operativa', d: 'Lab muestra lo que se montó para el ensayo; Operativa, solo el flujo de una red real.' },
   { sel: '#topoArchivosBtn', t: 'Código auditable', d: 'En modo desarrollador, pulsa Ver archivos, elige un componente y un archivo; en su ficha pulsa ◎ Ver contenido. El visor es de solo lectura y solo muestra rutas permitidas.' },
   { sel: '#s-modelo', t: 'El detector activo y su umbral', d: 'El detector desplegado aprende la normalidad de esta red; el umbral se fijó con validación. Aquí ves el modelo activo y sus métricas, no una etiqueta fija de OCSVM.' },
   { sel: '#pruebasPrevias', t: 'Pruebas previas', d: 'Siete modelos se compararon en el estudio; la ablación sobre nueve episodios separa modelo solo (6), heurísticos solos (7) y ambos combinados (9). No confundas el 9/9 del sistema con el modelo solo.' },
-  { sel: '#s-scores', t: 'Distribución de scores', d: 'No solo si alertó o no, sino cuánto margen hubo respecto al umbral. Rojo = ALERT, verde = PERMIT.' },
-  { sel: '#s-decisiones', t: 'Las decisiones', d: 'Cada ventana con su decisión, su score frente al umbral (la mini-barra) y el motivo. Filtrable por IP y exportable.' },
+  { sel: '#s-scores', t: 'Distribución de scores', d: 'No solo si alertó o no, sino cuánto margen hubo respecto al umbral vigente. A la izquierda de la línea, anómalo para el modelo; a la derecha, normal.' },
   { sel: '#s-simulacion', t: 'Escenarios guiados', d: 'Comandos listos para provocar tráfico normal o un ataque y ver cómo responde el modelo. El panel no ejecuta: copias el comando y observas.' },
   { sel: null, t: 'Esto es el demo', d: 'Estás viendo datos de ejemplo. Para usarlo en tu propia red, sigue la instalación del README (modo despliegue) y recalibra con tu tráfico.' },
 ];
@@ -2087,11 +3140,6 @@ function renderPulso(status) {
     + ficha('Decisiones', String(p.decisiones_60s), '/min',
             'última ' + pulsoHace(edad(p.ultima_decision)), edad(p.ultima_decision), 60,
             pulsoSpark(pulsoHist.dec, 'var(--ok)'))
-    + ficha('Dataset acumulado', filas == null ? '—' : filas.toLocaleString('es'), 'filas',
-            p.dataset ? 'escrito ' + pulsoHace(edad(p.dataset.mtime))
-              + (filas != null && filas > pulsoFilas0 ? ' · +' + (filas - pulsoFilas0).toLocaleString('es') + ' en esta sesión' : '')
-              : 'sin dato',
-            p.dataset ? edad(p.dataset.mtime) : null, 1200, '')
     + ficha('Feed publicado', p.feed ? String(p.feed.entradas) : '—', p.feed && p.feed.entradas === 1 ? 'entrada' : 'entradas',
             p.feed ? 'firmado ' + pulsoHace(edad(p.feed.generado)) : 'sin dato',
             p.feed ? edad(p.feed.generado) : null, 150, '');
@@ -2105,7 +3153,10 @@ async function refresh() {
       fetch('/api/status'), fetch('/api/score-histogram')]);
     const status = await statusRes.json();
     const histogramData = await histRes.json();
-    stamp.textContent = 'Actualizado ' + new Date().toLocaleTimeString();
+    ultimaActualizacion = Date.now();
+    errorActualizacion = '';
+    pintarSello();
+    cargarListaBlanca();
 
     window._fprRef = status.model ? status.model.test_fpr : null;
     renderHistogram(histogramData);
@@ -2147,6 +3198,15 @@ async function refresh() {
         estado
       ));
     }
+    // El dataset acumulado es diagnostico (aprendizaje), no pulso operativo.
+    const pd = status.pulso && status.pulso.dataset;
+    if (pd) {
+      const filas = pd.filas;
+      healthCards.push(card('Dataset acumulado', (filas == null ? '—' : filas.toLocaleString('es'))
+        + '<small>filas · escrito ' + pulsoHace(status.pulso.ahora - pd.mtime)
+        + (filas != null && pulsoFilas0 != null && filas > pulsoFilas0 ? ' · +' + (filas - pulsoFilas0).toLocaleString('es') + ' en esta sesión' : '')
+        + '</small>'));
+    }
     health.innerHTML = healthCards.join('');
 
     const modelEl = document.getElementById('model');
@@ -2158,20 +3218,28 @@ async function refresh() {
       const ev = m.evaluacion;
       const coma = (v, d) => v.toFixed(d).split('.').join(',');
       const tarjetas = [
-        card('Detector', escSimple(DETECTOR_LABEL[m.detector_name] || m.detector_name || 'no disponible'), 'txt'),
-        card('Umbral', coma(m.threshold, 4), 'accent'),
+        card('Detector vigente', escSimple(DETECTOR_LABEL[m.detector_name] || m.detector_name || 'no disponible')
+          + '<small>' + escSimple(m.detector_name || '') + '</small>', 'txt'),
+        card('Umbral vigente', coma(m.threshold, 6) + '<small>score_samples · del manifiesto del motor</small>', 'accent'),
       ];
       if (ev) {
         // Cifras medidas del detector en uso (docs/evaluacion/modelo-vigente.json).
         const dk = ev.deteccion_kali;
-        tarjetas.push(card('FPR en el oro', coma(ev.fpr_oro.valor * 100, 2) + ' %<small>' + ev.fpr_oro.ventanas.toLocaleString('es') + ' ventanas</small>'));
+        tarjetas.push(card('FPR en el oro (vigente)', coma(ev.fpr_oro.valor * 100, 2) + ' %<small>' + ev.fpr_oro.ventanas.toLocaleString('es') + ' ventanas</small>'));
         tarjetas.push(card('Detección del modelo solo', coma(100 * dk.detectadas / dk.total, 1) + ' %<small>' + dk.detectadas + ' de ' + dk.total + ' ventanas de ataque</small>', 'accent'));
       } else {
-        tarjetas.push(card('FPR benigno', pct(m.test_fpr, 2)));
+        tarjetas.push(card('FPR benigno (vigente)', pct(m.test_fpr, 2) + '<small>del manifiesto; «—» si no lo trae</small>'));
         tarjetas.push(card('Detección global', pct(m.detection_rate, 1), 'accent'));
         tarjetas.push(card('Detección Kali-real', pct(m.kali_real_detection_rate, 1), 'accent'));
       }
       modelEl.innerHTML = tarjetas.join('');
+      // Si se hubiera hecho rollback al recalibrado, la nota fija de «histórico»
+      // mentiria: se reescribe con lo que dice el manifiesto.
+      const vh = document.getElementById('modeloVigHist');
+      if (vh && m.detector_name && m.detector_name !== 'if_limpio_2026_10') {
+        vh.innerHTML = '<b>Vigente:</b> <code>' + escSimple(m.detector_name) + '</code>, umbral ' + coma(m.threshold, 6)
+          + ' (leído del manifiesto del motor). Las cifras de la tabla de abajo marcadas como vigentes corresponden a <code>if_limpio_2026_10</code>: no aplican a este detector.';
+      }
       const fam = document.getElementById('modeloFamilias'), debil = document.getElementById('modeloDebil');
       if (ev && fam) {
         // Barras por familia: la mas floja es el punto debil, dicho con su cifra.
@@ -2191,16 +3259,22 @@ async function refresh() {
       }
     }
 
+    ACUSES = status.acuses || [];
+    ACUSES_V1_HISTORICOS = !!status.acuses_v1_historicos;
+    pintarCadenaV2(status.cadena_v2);
     renderVigentes(status.vigentes || [], status.blocked || []);
+    AA_VIG = status.vigentes || [];
+    try { renderAlertasActivas(); } catch (e) { console.warn('alertas activas', e); }
 
     const c = status.counters;
     ultimosCounters = c;
+    counters.classList.add('wids');
     counters.innerHTML = [
-      card('Ventanas analizadas', (c.total || 0).toLocaleString('es')),
-      card('BLOCK', c.block || 0, c.block > 0 ? 'bad' : ''),
-      card('LIMIT', c.limit || 0, c.limit > 0 ? 'amber' : ''),
-      card('IPs con acción', c.ips_con_accion || 0, c.ips_con_accion > 0 ? 'amber' : ''),
-      card('Anomalías del modelo', c.alert_model || 0, c.alert_model > 0 ? 'bad' : ''),
+      widget('Ventanas analizadas', (c.total || 0).toLocaleString('es'), 'navy', 'ventanas', 'tráfico puntuado'),
+      widget('BLOCK', c.block || 0, c.block > 0 ? 'bad' : '', 'block', 'IP cortada'),
+      widget('LIMIT', c.limit || 0, c.limit > 0 ? 'amber' : '', 'limit', 'tasa degradada'),
+      widget('IPs con acción', c.ips_con_accion || 0, c.ips_con_accion > 0 ? 'amber' : '', 'ips', 'atacantes distintos'),
+      widget('Anomalías del modelo', c.alert_model || 0, c.alert_model > 0 ? 'bad' : '', 'modelo', 'Isolation Forest'),
     ].join('');
 
     const alcanceEl = document.getElementById('alcance');
@@ -2227,15 +3301,55 @@ async function refresh() {
     if (currentRange === '1h') renderSparkline(status.activity);
     else loadActivity(currentRange);
 
-    lastDecisions = await (await fetch('/api/decisions?limit=600')).json();
+    try {
+      lastDecisions = await (await fetch('/api/decisions?limit=600')).json();
+      decisionesCargadas = true;
+      decisionesError = false;
+    } catch (e) {
+      decisionesError = true;
+      throw e;
+    }
     markSeenAndCountNewAlerts(lastDecisions);
     renderDecisionsTable();
     renderAlertas();
     renderTopIps();
   } catch (e) {
-    stamp.textContent = 'Error al actualizar: ' + e;
+    errorActualizacion = String(e);
+    pintarSello();
+    renderAlertas();
   }
 }
+
+// Sello de frescura: cuanto hace de la ultima lectura buena, con la hora exacta
+// al pasar el raton. Si las lecturas fallan, se dice «datos desactualizados».
+let ultimaActualizacion = 0, errorActualizacion = '';
+let decisionesCargadas = false, decisionesError = false;
+function pintarSello() {
+  const el = document.getElementById('stamp');
+  if (!el) return;
+  if (!ultimaActualizacion) {
+    el.textContent = errorActualizacion ? 'Sin conexión con el panel' : 'Conectando…';
+    return;
+  }
+  const s = Math.max(0, Math.round((Date.now() - ultimaActualizacion) / 1000));
+  const viejo = s > 20 || errorActualizacion;
+  el.textContent = (viejo ? 'Datos desactualizados · ' : '') + 'Actualizado hace ' + (s < 60 ? s + ' s' : Math.floor(s / 60) + ' min');
+  el.title = 'Última lectura correcta: ' + new Date(ultimaActualizacion).toLocaleString('es-PE', { hour12: false })
+    + (errorActualizacion ? '\\nÚltimo error: ' + errorActualizacion : '');
+  el.style.color = viejo ? 'var(--amber)' : '';
+}
+setInterval(pintarSello, 1000);
+(function zonaHoraria() {
+  const el = document.getElementById('stampTz');
+  if (!el) return;
+  let tz = '';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* sin Intl */ }
+  const off = -new Date().getTimezoneOffset() / 60;
+  const utc = 'UTC' + (off === 0 ? '' : (off > 0 ? '+' : '−') + Math.abs(off));
+  const nombre = tz === 'America/Lima' ? 'Lima' : (tz.split('/').pop() || '').replace(/_/g, ' ');
+  el.textContent = 'Horas: ' + (nombre ? nombre + ' · ' : '') + utc;
+  el.title = 'Las horas se muestran en la zona de este navegador. Los registros del motor están en UTC (ventana_end_utc).';
+})();
 
 // Seccion C: el filtro y la exportacion trabajan sobre lastDecisions (lo
 // que ya esta cargado en el navegador), sin pedir nada nuevo al backend.
@@ -2256,7 +3370,7 @@ function miniBarraScore(score) {
   const x = v => ((Math.max(e.min, Math.min(e.max, v)) - e.min) / (e.max - e.min)) * (w - 6) + 3;
   const ux = x(e.umbral), sx = x(score);
   const col = score < e.umbral ? 'var(--danger)' : 'var(--ok)';
-  const zona = score < e.umbral ? 'ALERT' : 'PERMIT';
+  const zona = score < e.umbral ? 'anómalo para el modelo' : 'normal para el modelo';
   return `<svg class="mini" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img"`
     + ` aria-label="score ${score.toFixed(3)}, umbral ${e.umbral.toFixed(3)}, ${zona}">`
     + `<title>score ${score.toFixed(3)} · umbral ${e.umbral.toFixed(3)} · ${zona}</title>`
@@ -2269,11 +3383,32 @@ function miniBarraScore(score) {
 // publicar_feed.py: un heuristico confirmado manda (BLOCK o LIMIT); si no, una
 // anomalia del modelo (ALERT) degrada a LIMIT; lo demas, PERMIT. Si el motor
 // aun no emite el campo `heuristico` (no reiniciado), se cae a modelo/PERMIT.
+// Politica A (3-nov): el modelo SOLO no actua (queda «para revisión humana»);
+// actua la regla. Y la infraestructura (gateways, DNS/AD, sensor, bastión) nunca
+// recibe accion: = NUNCA_BLOQUEAR de publicar_feed.py.
+const MODELO_SOLO_ACTUA = true;   // motor de las campañas (3-nov, noche); política A = false
+const NUNCA_BLOQUEAR_JS = new Set(['10.10.10.30', '10.10.60.11', '10.10.30.1', '10.10.40.1',
+  '10.10.60.1', '10.10.20.1', '10.10.10.20']);
+function esInfraProtegida(d) { return NUNCA_BLOQUEAR_JS.has(String(d.entity_ip || '')); }
+function paraRevision(d) {
+  return d.decision === 'ALERT' && !String(d.detector_name || '').endsWith('_heuristic')
+    && d.politica_modelo === 'sostenida' && !(d.heuristico && d.heuristico.accion);
+}
+// Cadena v2 (4A): si el servidor adjunta d.cadena_v2, la accion es SOLO la medida que
+// publico el publicador v2 (traza). Una anomalia del IF sin medida publicada es PERMIT.
+const MEDIDAS_V2 = ['nueva', 'renovada', 'escalada', 'mantenida'];
+function medidaV2(d) {
+  const m = (d && d.cadena_v2 && d.cadena_v2.medida) || {};
+  return (MEDIDAS_V2.includes(m.estado) && (m.accion === 'BLOCK' || m.accion === 'LIMIT')) ? m.accion : 'PERMIT';
+}
 function accionDeDecision(d) {
   const sev = { BLOCK: 2, LIMIT: 1, PERMIT: 0 };
   let acc = 'PERMIT';
+  if (d && d.cadena_v2) return medidaV2(d);
+  if (esInfraProtegida(d)) return acc;
   if (d.decision === 'ALERT') {
-    acc = String(d.detector_name || '').endsWith('_heuristic') ? 'BLOCK' : 'LIMIT';
+    if (String(d.detector_name || '').endsWith('_heuristic')) acc = 'BLOCK';
+    else if (MODELO_SOLO_ACTUA && (!d.politica_modelo || d.politica_modelo === 'sostenida')) acc = 'LIMIT';
   }
   if (d.heuristico && sev[d.heuristico.accion] > sev[acc]) acc = d.heuristico.accion;
   return acc;
@@ -2293,12 +3428,126 @@ function alertaTipos(d) {
   if (!regla && d.decision === 'ALERT' && esHeur) regla = det.replace(/_heuristic$/, '');
   return { modelo, regla };
 }
+function pintarBotonMarg() {
+  const b = document.getElementById('alertasMarg');
+  if (!b) return;
+  b.textContent = verMarginales ? 'Marginales: visibles' : 'Marginales: ocultas';
+  b.setAttribute('aria-pressed', verMarginales ? 'true' : 'false');
+}
+document.addEventListener('click', (ev) => {
+  if (!ev.target.closest('#alertasMarg, [data-al-marg]')) return;
+  verMarginales = !verMarginales;
+  pintarBotonMarg();
+  renderAlertas();
+});
+// --- Lista blanca (16-nov): infraestructura conocida (p. ej. Zabbix) agrupada aparte. ---
+// Viene de configs/lista-blanca.json por /api/lista-blanca. El panel solo AGRUPA la vista:
+// si el feed v2 sigue publicando una medida sobre esa IP, se dice en el bloque.
+let LISTA_BLANCA = new Map();
+let listaBlancaFeedLeido = false;
+let verLB = false;
+async function cargarListaBlanca() {
+  try {
+    const r = await (await fetch('/api/lista-blanca')).json();
+    LISTA_BLANCA = new Map((r.entradas || []).map(e => [String(e.ip), e]));
+    listaBlancaFeedLeido = !!r.feed_leido;
+  } catch (e) { /* sin lista: el panel sigue como siempre */ }
+  renderAlertas();
+}
+function enListaBlanca(ip) { return LISTA_BLANCA.has(String(ip || '')); }
+function tarjetaAlerta(d) {
+  const coma3 = v => (v == null ? '—' : Number(v).toFixed(3).split('.').join(','));
+  const acc = accionDeDecision(d);
+  const t = alertaTipos(d);
+  const tags = [];
+  // Iconos (trazo, 24x24): criticidad y tipo de regla.
+  const svg = (p, s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const P_ACC = {
+    BLOCK: '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>',
+    LIMIT: '<path d="M12 14l3.5-3.5"/><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/>',
+  };
+  const P_REGLA = {
+    port_scan: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 12l6-6"/>',
+    port_scan_temprano: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 12l6-6"/>',
+    brute_force: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>',
+    http_abuse: '<path d="M3 7c3-2 6 2 9 0s6-2 9 0M3 12c3-2 6 2 9 0s6-2 9 0M3 17c3-2 6 2 9 0s6-2 9 0"/>',
+    dns_entropy: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  };
+  const P_MODELO = '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>';
+  if (t.modelo || d._modelo) tags.push('<span class="al-tag modelo">' + svg(P_MODELO, 11) + 'Anomalía del modelo</span>');
+  if (t.regla) tags.push('<span class="al-tag regla">' + svg(P_REGLA[t.regla] || P_ACC.BLOCK, 11) + 'Regla: ' + varEsc(t.regla) + '</span>');
+  if (enListaBlanca(d.entity_ip)) tags.push('<span class="al-tag">Lista blanca</span>');
+  const motivo = (d.heuristico && d.heuristico.motivo) ? varEsc(d.heuristico.motivo)
+    : (d.score != null ? 'score ' + coma3(d.score) + ' por debajo del umbral ' + coma3(d.threshold) : '');
+  const key = d.entity_ip + '|' + d.window_end_utc;
+  return `<div class="al-card al-${acc.toLowerCase()}">`
+    + `<div class="al-sev">${P_ACC[acc] ? '<span class="al-ico">' + svg(P_ACC[acc], 18) + '</span>' : ''}<span class="badge acc-${acc.toLowerCase()}">${acc}</span></div>`
+    + `<div class="al-main"><div class="al-top"><span class="al-ip">${varEsc(d.entity_ip)}</span>`
+    + `<span class="al-hace" title="${varEsc(String(d.window_end_utc || ''))} UTC">${fmtTime(d.logged_at)} · ${haceTexto(d.logged_at)}</span>`
+    + (d._n > 1 ? `<span class="al-epi" title="Ventanas de 10 s del mismo episodio, agrupadas">${d._n} ventanas · desde ${fmtTime(d._desde)}</span>` : '')
+    + `</div>`
+    + `<div class="al-tags">${tags.join(' ')}</div>`
+    + `<div class="al-motivo">${motivo}</div></div>`
+    + `<div class="al-ver">${miniBarraScore(d.score)}<button type="button" class="btn-sec" data-ver-dec="${varEsc(key)}" data-ip="${varEsc(d.entity_ip)}">Ver decisión &rarr;</button></div></div>`;
+}
+let lbAbierta = false;
+function renderListaBlanca(alertasLB) {
+  const caja = document.getElementById('alertasListaBlanca');
+  if (!caja) return;
+  if (!LISTA_BLANCA.size) { caja.hidden = true; caja.innerHTML = ''; return; }
+  caja.hidden = false;
+  const filas = [...LISTA_BLANCA.values()].map(e => {
+    const suyas = alertasLB.filter(d => String(d.entity_ip) === e.ip);
+    const ult = suyas.length ? Math.max(...suyas.map(d => d.logged_at || 0)) : null;
+    const reglas = [...new Set(suyas.map(d => alertaTipos(d).regla || (alertaTipos(d).modelo ? 'modelo' : '')).filter(Boolean))];
+    const m = e.medida_feed;
+    const feedTxt = m
+      ? `<span class="lb-aviso"><span class="badge acc-${String(m.accion).toLowerCase()}">${varEsc(m.accion)}</span> el publicador aún la emite hacia ${varEsc(m.destino || '—')} (vigente hasta ${fmtTime(m.hasta)}): esta lista solo agrupa la vista.</span>`
+      : (listaBlancaFeedLeido ? 'sin medida vigente en el feed' : 'feed no disponible');
+    // 17-nov: el motivo largo pasa al title; en pantalla, nombre y fecha de alta.
+    return `<div class="lb-fila"><div title="${varEsc(e.motivo)}"><span class="lb-ip">${varEsc(e.ip)}</span><span class="lb-nom">${varEsc(e.nombre)}</span>`
+      + (e.alta ? `<div class="lb-det">en la lista desde ${varEsc(e.alta)}</div>` : '')
+      + `<div class="lb-det">${suyas.length} alerta(s) en los registros cargados${ult ? ' · última ' + fmtTime(ult) + ' (' + haceTexto(ult) + ')' : ''}${reglas.length ? ' · ' + varEsc(reglas.join(', ')) : ''} · ${feedTxt}</div></div>`
+      + (suyas.length ? `<button type="button" class="btn-sec neutro" data-lb-ver="1">${verLB ? 'Ocultar' : 'Ver'} sus alertas</button>` : '<span></span>')
+      + (verLB && suyas.length ? `<div class="lb-tarjetas">${suyas.slice(0, 20).map(tarjetaAlerta).join('')}</div>` : '')
+      + `</div>`;
+  }).join('');
+  // 17-nov: plegada por defecto; recuerda si el usuario la abrió (se repinta en cada sondeo).
+  caja.innerHTML = `<details class="lb-plegable"${lbAbierta ? ' open' : ''}>`
+    + `<summary title="Sus alertas se agrupan aquí y no en la lista de arriba. Se edita en configs/lista-blanca.json del sensor.">`
+    + `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>`
+    + `Lista blanca <span class="lb-n">${LISTA_BLANCA.size}</span></summary>` + filas + `</details>`;
+  const dt = caja.querySelector('details');
+  if (dt) dt.addEventListener('toggle', () => { lbAbierta = dt.open; });
+}
+on('alertasListaBlanca', 'click', (ev) => {
+  if (ev.target.closest('[data-lb-ver]')) { verLB = !verLB; renderAlertas(); return; }
+  const b = ev.target.closest('[data-ver-dec]');
+  if (b) abrirDecision(b.dataset.ip, b.dataset.verDec);
+});
+// Una sola tarjeta por episodio: ventanas seguidas de la misma IP, acción y regla
+// (huecos de hasta 2 min) se funden en la más reciente, con su número de ventanas.
+function agruparEpisodios(rows) {
+  const ord = rows.slice().sort((a, b) => (b.logged_at || 0) - (a.logged_at || 0));
+  const out = [], abiertos = new Map();
+  for (const d of ord) {
+    const t = alertaTipos(d);
+    const k = d.entity_ip + '|' + accionDeDecision(d) + '|' + (t.regla || (t.modelo ? 'modelo' : ''));
+    const g = abiertos.get(k);
+    if (g && (g._desde - (d.logged_at || 0)) <= 120) { g._n += 1; g._desde = d.logged_at || g._desde; g._modelo = g._modelo || t.modelo; continue; }
+    const nuevo = Object.assign({}, d, { _n: 1, _desde: d.logged_at || 0, _modelo: t.modelo });
+    abiertos.set(k, nuevo); out.push(nuevo);
+  }
+  return out;
+}
 function renderAlertas() {
   const lista = document.getElementById('alertasLista');
   const resumen = document.getElementById('alertasResumen');
   if (!lista || !resumen) return;
-  const coma3 = v => (v == null ? '—' : Number(v).toFixed(3).split('.').join(','));
-  const todas = (lastDecisions || []).filter(d => accionDeDecision(d) !== 'PERMIT');
+  const todasConLB = (lastDecisions || []).filter(d => accionDeDecision(d) !== 'PERMIT');
+  const alertasLB = todasConLB.filter(d => enListaBlanca(d.entity_ip));
+  renderListaBlanca(alertasLB);
+  const todas = todasConLB.filter(d => !enListaBlanca(d.entity_ip) && (!limpioDesde || (d.logged_at || 0) >= limpioDesde));
   const ahora = Date.now() / 1000;
   const h = todas.filter(d => ahora - (d.logged_at || 0) <= 3600);
   // El recuento de la hora viene de los contadores del servidor (ventana real
@@ -2309,37 +3558,66 @@ function renderAlertas() {
   const totalHora = hayCont ? (c.block || 0) + (c.limit || 0) : h.length;
   const nMod = (c.alert_model != null) ? c.alert_model : h.filter(d => alertaTipos(d).modelo).length;
   const nReg = hayCont ? Math.max(0, totalHora - nMod) : h.filter(d => alertaTipos(d).regla).length;
-  const listadas = Math.min(h.length, totalHora);
-  resumen.innerHTML = `<div class="al-num ${totalHora ? 'hay' : ''}">${totalHora}</div>`
-    + `<div class="al-num-t">alerta(s) en la última hora`
-    + `<small>${nReg} por reglas · ${nMod} anomalía(s) del modelo`
-    + (totalHora > listadas ? ` · se listan las ${listadas} más recientes` : '')
-    + `</small></div>`;
-  let rows = todas;
-  if (alertasFiltro === 'modelo') rows = rows.filter(d => alertaTipos(d).modelo);
-  if (alertasFiltro === 'regla') rows = rows.filter(d => alertaTipos(d).regla);
-  rows = rows.slice(0, 80);
-  if (!rows.length) {
-    lista.innerHTML = '<p class="dim" style="padding:0.7rem 0">Sin alertas en el periodo cargado — el sistema está en PERMIT.</p>';
+  const nMargH = (c.alert_model_marginal != null) ? c.alert_model_marginal : h.filter(esMarginal).length;
+  // Politica A: alerta = lo que provoca accion (una regla). El modelo solo queda
+  // «para revision» y la infraestructura protegida nunca se actua: se cuentan aparte.
+  const relev = (c.acciones_relevantes != null) ? c.acciones_relevantes : Math.max(0, totalHora - nMargH);
+  const nRegla = (c.acciones_regla != null) ? c.acciones_regla : h.filter(d => alertaTipos(d).regla).length;
+  // 17-nov: el desglose va en fichas con icono; la explicación larga queda en el title.
+  const ICO = {
+    regla: '<path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/>',
+    modelo: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+    infra: '<path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/>',
+    lb: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+    marg: '<path d="M3 12h4l2-4 4 8 2-4h6"/>',
+  };
+  const ficha = (ico, n, txt, tit) => `<span class="al-ficha" title="${varEsc(tit)}">`
+    + `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${ICO[ico]}</svg>`
+    + `<b>${n}</b> ${txt}</span>`;
+  const epis = agruparEpisodios(todas);
+  const nVista = limpioDesde ? epis.length : relev;
+  resumen.innerHTML = `<div class="al-num ${nVista ? 'hay' : ''}">${nVista}</div>`
+    + `<div class="al-num-t">${limpioDesde ? 'alertas desde la limpieza de las ' + fmtTime(limpioDesde) + ' <button type="button" class="btn-link" data-al-historial="1">Ver historial</button>' : 'alertas con acción · última hora'}<div class="al-fichas">`
+    + ficha('regla', nRegla, 'por regla', 'Alertas que dispararon una regla (escaneo, fuerza bruta, abuso HTTP, DNS) y provocan LIMIT o BLOCK.')
+    + ficha('modelo', c.revision_modelo || 0, 'solo modelo', 'Anomalías solo del Isolation Forest: quedan para revisión, sin acción.')
+    + ficha('infra', c.infra_protegida || 0, 'infraestructura', 'Detecciones sobre infraestructura protegida: nunca se actúa sobre ellas.')
+    + (LISTA_BLANCA.size ? ficha('lb', alertasLB.length, 'lista blanca', 'Alertas de IPs en la lista blanca: se muestran abajo, aparte.') : '')
+    + ficha('marg', nMargH, 'marginales', 'Score a menos de 0,05 del umbral; ' + (verMarginales ? 'visibles.' : 'agrupadas.'))
+    + `</div></div>`;
+  // Estados vacios: dependen de por que no hay filas. Una lista filtrada vacia
+  // NUNCA permite concluir que el sistema este en PERMIT.
+  const vacio = (txt, boton) => {
+    lista.innerHTML = `<p class="estado-vacio">${txt}${boton || ''}</p>`;
+  };
+  if (decisionesError && !decisionesCargadas) {
+    vacio('No se pudieron cargar las alertas.', ' <button type="button" class="btn-sec" data-al-reintentar="1">Reintentar</button>');
     return;
   }
-  lista.innerHTML = rows.map(d => {
-    const acc = accionDeDecision(d);
-    const t = alertaTipos(d);
-    const tags = [];
-    if (t.regla) tags.push('<span class="al-tag regla">Regla: ' + varEsc(t.regla) + '</span>');
-    if (t.modelo) tags.push('<span class="al-tag modelo">Anomalía del modelo</span>');
-    const motivo = (d.heuristico && d.heuristico.motivo) ? varEsc(d.heuristico.motivo)
-      : (d.score != null ? 'score ' + coma3(d.score) + ' por debajo del umbral ' + coma3(d.threshold) : '');
-    return `<div class="al-card al-${acc.toLowerCase()}">`
-      + `<div class="al-sev"><span class="badge acc-${acc.toLowerCase()}">${acc}</span></div>`
-      + `<div class="al-main"><div class="al-top"><span class="al-ip">${varEsc(d.entity_ip)}</span>`
-      + `<span class="al-hace">${haceTexto(d.logged_at)}</span></div>`
-      + `<div class="al-tags">${tags.join(' ')}</div>`
-      + `<div class="al-motivo">${motivo}</div></div>`
-      + `<div class="al-mini">${miniBarraScore(d.score)}</div></div>`;
-  }).join('');
+  if (!decisionesCargadas) { vacio('Cargando alertas…'); return; }
+  if (!(lastDecisions || []).length) { vacio('Todavía no se han recibido registros del motor.'); return; }
+  if (limpioDesde && !todas.length) { vacio('Todo limpio: sin alertas desde las ' + fmtTime(limpioDesde) + '.', ' <button type="button" class="btn-sec neutro" data-al-historial="1">Ver historial</button>'); return; }
+  const ipQ = ((document.getElementById('alertasIp') || {}).value || '').trim();
+  let rows = todas;
+  const nMargLista = rows.filter(esMarginal).length;
+  if (!verMarginales) rows = rows.filter(d => !esMarginal(d));
+  if (alertasFiltro === 'modelo') rows = rows.filter(d => alertaTipos(d).modelo);
+  if (alertasFiltro === 'regla') rows = rows.filter(d => alertaTipos(d).regla);
+  if (alertasAccion !== 'todas') rows = rows.filter(d => accionDeDecision(d) === alertasAccion);
+  if (ipQ) rows = rows.filter(d => String(d.entity_ip).includes(ipQ));
+  rows = agruparEpisodios(rows).slice(0, 80);
+  if (!rows.length) {
+    const limpiar = ' <button type="button" class="btn-sec neutro" data-al-limpiar="1">Limpiar filtros</button>';
+    if (!verMarginales && nMargLista) vacio('Ahora solo hay anomalías marginales del modelo (' + nMargLista + '): score a menos de 0,05 del umbral.', ' <button type="button" class="btn-sec neutro" data-al-marg="1">Mostrarlas</button>');
+    else if (ipQ) vacio('No encontramos alertas para esta IP en la lista cargada.', limpiar);
+    else if (alertasFiltro === 'regla') vacio('No hay alertas de reglas en los registros cargados. Puede haber anomalías del modelo; consulta «Todas».', limpiar);
+    else if (alertasFiltro === 'modelo') vacio('No hay anomalías del modelo en los registros cargados. Puede haber alertas de reglas; consulta «Todas».', limpiar);
+    else if (alertasAccion !== 'todas') vacio('No hay alertas con ' + alertasAccion + ' en los registros cargados.', limpiar);
+    else vacio('No hay alertas en los registros cargados (' + lastDecisions.length + ' decisiones, desde las ' + fmtTime(Math.min(...lastDecisions.map(d => d.logged_at || Infinity))) + '). Para periodos anteriores, consulta Decisiones.');
+    return;
+  }
+  lista.innerHTML = rows.map(tarjetaAlerta).join('');
 }
+let alertasAccion = 'todas';
 on('alertasFiltro', 'click', (ev) => {
   const b = ev.target.closest('button[data-af]');
   if (!b) return;
@@ -2347,6 +3625,44 @@ on('alertasFiltro', 'click', (ev) => {
   document.querySelectorAll('#alertasFiltro button').forEach(x => x.classList.toggle('active', x === b));
   renderAlertas();
 });
+on('alertasAccion', 'click', (ev) => {
+  const b = ev.target.closest('button[data-aa]');
+  if (!b) return;
+  alertasAccion = b.dataset.aa;
+  document.querySelectorAll('#alertasAccion button').forEach(x => x.classList.toggle('active', x === b));
+  renderAlertas();
+});
+on('alertasIp', 'input', () => renderAlertas());
+document.addEventListener('click', ev => { if (ev.target.closest('[data-al-historial]')) vistaLimpiaDesde(0); });
+function limpiarFiltrosAlertas() {
+  alertasFiltro = 'todas'; alertasAccion = 'todas';
+  const ip = document.getElementById('alertasIp');
+  if (ip) ip.value = '';
+  document.querySelectorAll('#alertasFiltro button').forEach(x => x.classList.toggle('active', x.dataset.af === 'todas'));
+  document.querySelectorAll('#alertasAccion button').forEach(x => x.classList.toggle('active', x.dataset.aa === 'todas'));
+  renderAlertas();
+}
+on('alertasLimpiar', 'click', limpiarFiltrosAlertas);
+on('alertasLista', 'click', (ev) => {
+  if (ev.target.closest('[data-al-limpiar]')) { limpiarFiltrosAlertas(); return; }
+  if (ev.target.closest('[data-al-reintentar]')) { refresh(); return; }
+  const b = ev.target.closest('[data-ver-dec]');
+  if (b) abrirDecision(b.dataset.ip, b.dataset.verDec);
+});
+// Salta de una alerta (o respuesta) a su decision: filtra por IP, abre su
+// detalle y la deja a la vista. El detalle sigue abierto en los refrescos.
+function abrirDecision(ip, key) {
+  const f = document.getElementById('ipFilter');
+  if (f) f.value = ip || '';
+  decVista = 'todas'; pintarDecVista();
+  if (key) decAbiertas.add(key);
+  renderDecisionsTable();
+  mostrarSeccion('s-decisiones');
+  if (key) {
+    const tr = [...document.querySelectorAll('#decisions tr.dec-fila')].find(t => t.dataset.key === key);
+    if (tr) tr.scrollIntoView({ block: 'center' });
+  }
+}
 
 function haceTexto(t) {
   const s = Math.max(0, Math.round(Date.now() / 1000 - t));
@@ -2361,31 +3677,131 @@ function duracionTexto(s) {
   return m + ' min' + (r ? ' ' + r + ' s' : '');
 }
 
+// Lo que cada host protegido dice tener para una IP (acuse que trae el relay).
+let ACUSES = [];
+let ACUSES_V1_HISTORICOS = false;
+// Cadena v2 (4A): franja de estado y panel de solo lectura («Preparar demo» oculto).
+// Texto de la franja (función pura: se prueba con Node). Las incidencias de las fuentes se
+// muestran tal cual; una fuente ausente NUNCA se presenta como cero medidas o normalidad.
+function franjaV2HTML(cv) {
+  // 16-nov: la misma información, en fichas cortas dentro de la columna de contenido
+  // (antes una línea corrida sobre la barra lateral) y con «¿Qué es el modo sombra?».
+  const fu = cv.fuentes || {};
+  const okF = k => !!(fu[k] && fu[k].ok);
+  const est = k => okF(k) ? 'ok' : '<b>ausente o ilegible</b>';
+  const inc = cv.incidencias || [];
+  const medidas = (fu.feed && fu.feed.ok) ? (cv.feed_entradas || 0) + ' medida(s) en el feed' : 'medidas en el feed: <b>desconocido</b>';
+  const ficha = (txt, cls, tit) => '<span class="cv2-ficha' + (cls ? ' ' + cls : '') + '"' + (tit ? ' title="' + varEsc(tit) + '"' : '') + '>' + txt + '</span>';
+  const fuentesOk = okF('senales_if') && okF('traza') && okF('feed');
+  // 16-nov: con todo sano la franja no se muestra (pedido de Mark); solo aparece si una fuente
+  // falta, el feed está atrasado o hay incidencias, para que un problema nunca quede oculto.
+  if (fuentesOk && !cv.feed_atrasado && !inc.length) return '';
+  // 18-nov (pedido de Mark): la franja NUNCA muestra el estado normal (política, «modo sombra»,
+  // «solo lectura», acuse del agente, nº de medidas). Solo asoma el FALLO real —fuente ausente,
+  // feed atrasado o incidencia— para que un problema no quede oculto durante la demo.
+  const fallos = [];
+  if (cv.feed_atrasado) fallos.push(ficha('Feed v2 atrasado', 'mal', 'El publicador v2 no refresca el feed'));
+  if (!(fu.feed && fu.feed.ok)) fallos.push(ficha(medidas, 'mal'));
+  if (!fuentesOk) fallos.push(ficha('Fuentes: señales IF ' + est('senales_if') + ', traza ' + est('traza') + ', feed ' + est('feed'), 'mal'));
+  return (fallos.length ? '<div class="cv2-fichas">' + fallos.join('') + '</div>' : '')
+    + (inc.length ? '<div class="cv2-inc"><b class="est no">INCIDENCIA: ' + inc.map(varEsc).join(' · ') + '</b></div>' : '');
+}
+function pintarCadenaV2(cv) {
+  const activa = !!(cv && cv.activa);
+  const b = document.getElementById('prepBtn');
+  // Solo se oculta, nunca se vuelve a mostrar: en modo v2 el servidor ya lo sirve oculto
+  // y una respuesta fallida de /api/status no debe reactivarlo.
+  if (b && activa) { b.hidden = true; b.disabled = true; }
+  const lb = document.getElementById('limpiarBtn'), pt = document.getElementById('prepTxt');
+  if (lb && activa && lb.hidden) {
+    lb.hidden = false;
+    if (pt) pt.textContent = 'Quita las medidas vigentes de la Kali (10.10.20.30) del feed y reinicia el seguimiento. Púlsalo antes de cada demo.';
+  }
+  let f = document.getElementById('cadenaV2Franja');
+  if (!activa) { if (f) f.remove(); return; }
+  if (!f) {
+    f = document.createElement('div');
+    f.id = 'cadenaV2Franja';
+    f.className = 'cv2-franja';
+    f.setAttribute('role', 'status');
+    // Dentro de la columna de contenido, bajo la cabecera (no sobre la barra lateral).
+    const wrap = document.querySelector('.wrap') || document.body;
+    const cab = wrap.querySelector(':scope > header');
+    wrap.insertBefore(f, cab ? cab.nextSibling : wrap.firstChild);
+  }
+  f.innerHTML = franjaV2HTML(cv);
+  f.hidden = !f.innerHTML;
+}
+function estadoEnHosts(ip) {
+  if (ACUSES_V1_HISTORICOS) {
+    // El agente v1 está parado: su acuse es evidencia HISTÓRICA, no el estado actual del host.
+    const r = ACUSES.map(a => (a.reglas || {})[ip] ? varEsc(a.host) + ': ' + varEsc(a.reglas[ip].accion) : null).filter(Boolean);
+    return r.length ? `<span class="est no" title="Acuse del agente v1 (parado): evidencia histórica">aplicación v1 (histórica): ${r.join(', ')}</span>`
+      : '<span class="est no" title="El agente v2 no envía acuse al sensor">host: sin evidencia de aplicación</span>';
+  }
+  if (!ACUSES.length) return '<span class="est no" title="Ningún host ha enviado su acuse">host: sin acuse</span>';
+  return ACUSES.map(a => {
+    const h = varEsc(a.host);
+    if (a.atrasado) return `<span class="est no" title="El último acuse tiene ${Math.round(a.edad || 0)} s">${h}: acuse atrasado</span>`;
+    const r = (a.reglas || {})[ip];
+    if (r) return `<span class="est si" title="Según el propio host">${h}: ${varEsc(r.accion)} aplicado</span>`;
+    if ((a.liberadas || {})[ip]) return `<span class="est lib" title="Un humano la liberó en el host">${h}: liberada</span>`;
+    const motivo = String((a.sombra || {})[ip] || '');
+    if (motivo.startsWith('liberada')) return `<span class="est lib" title="Un humano la liberó en el host">${h}: liberada</span>`;
+    if (motivo) return `<span class="est no" title="${varEsc(motivo)}">${h}: no se aplica (fuera de alcance)</span>`;
+    return `<span class="est no">${h}: sin regla</span>`;
+  }).join('');
+}
+function aplicadasEnHostsDe(acuses) {
+  const ips = new Set();
+  (acuses || []).forEach(a => { if (!a.atrasado) Object.keys(a.reglas || {}).forEach(ip => ips.add(ip)); });
+  return ips.size;
+}
+
 // Acciones vigentes: del feed publicado (caducidad exacta) o reconstruidas del
 // registro con la misma escalera. Si el host tuviera nftables local, tambien.
 function renderVigentes(vigentes, locales) {
+  const ahora = Date.now() / 1000;
   const filas = vigentes.map(v => {
     const total = v.accion === 'BLOCK' ? ({ 1: 300, 2: 1800, 3: 3600 }[v.nivel] || 300) + 60 : 360;
     const pct = Math.max(2, Math.min(100, Math.round(100 * v.expira_s / total)));
     const color = v.accion === 'BLOCK' ? 'var(--danger)' : 'var(--amber)';
     const reinc = v.accion === 'BLOCK'
-      ? 'nivel ' + (v.nivel || 1) + (v.revisar_humano ? ' · revisar' : '')
-      : '—';
+      ? 'reincidencia nivel ' + (v.nivel || 1) + (v.revisar_humano ? ' · revisar' : '')
+      : '';
+    const caducaEn = ahora + (v.expira_s || 0);
+    const registrada = v.registrada !== false;
+    const publicada = v.publicada != null ? v.publicada : v.fuente === 'feed';
+    const estados = v.fuente === 'feed_v2'
+      ? `<span class="est si">publicada en el feed v2</span>`
+        + `<span class="est no">${varEsc(v.estado_respuesta || 'propuesta')}</span>`
+        + `<span class="est no">aplicación: ${v.aplicacion === 'no_ejecutada' ? 'no ejecutada (sombra)' : 'desconocida'}</span>`
+        + `<span class="est no">efecto: sin evidencia</span>`
+      : `<span class="est ${registrada ? 'si' : 'no'}">${registrada ? 'registrada' : 'solo en el feed'}</span>`
+      + `<span class="est ${publicada ? 'si' : 'no'}">${publicada ? 'publicada' : 'no vista en el feed'}</span>`
+      + estadoEnHosts(v.ip);
     return `<tr class="row-${v.accion.toLowerCase()}"><td class="ip">${varEsc(v.ip)}</td>`
-      + `<td><span class="badge acc-${v.accion.toLowerCase()}">${v.accion}</span></td>`
-      + `<td class="why">${varEsc(v.origen || '')}${v.motivo ? ' · ' + varEsc(v.motivo) : ''}</td>`
-      + `<td class="num">${v.desde ? fmtTime(v.desde) : '—'}${v.ofensas ? '<span class="hace">' + v.ofensas + ' ventanas</span>' : ''}</td>`
-      + `<td class="num">${duracionTexto(v.expira_s)}<div class="vig-barra"><i style="width:${pct}%;background:${color}"></i></div></td>`
-      + `<td>${reinc}<div class="vig-fuente">${v.fuente === 'feed' ? 'feed publicado' : 'según registro'}</div></td></tr>`;
+      + `<td><span class="badge acc-${v.accion.toLowerCase()}">${v.accion}</span>${reinc ? '<span class="hace">' + reinc + '</span>' : ''}</td>`
+      + `<td class="why"><span class="clamp">${varEsc(v.origen || '')}${v.motivo ? ' · ' + varEsc(v.motivo) : ''}</span></td>`
+      + `<td class="num">${v.desde ? fmtTime(v.desde) : '—'}${v.ultima ? '<span class="hace">renovada ' + fmtTime(v.ultima) + (v.ofensas ? ' · ' + v.ofensas + ' ventanas' : '') + '</span>' : ''}</td>`
+      + `<td class="num">${fmtTime(caducaEn)}<span class="hace">en ${duracionTexto(v.expira_s)}</span><div class="vig-barra"><i style="width:${pct}%;background:${color}"></i></div></td>`
+      + `<td>${estados}<div><button type="button" class="btn-sec" data-ver-ip="${varEsc(v.ip)}">Ver decisiones &rarr;</button></div></td></tr>`;
   });
   for (const b of locales) {
     filas.push(`<tr class="row-block"><td class="ip">${varEsc(b.ip)}</td><td><span class="badge acc-block">BLOCK</span></td>`
-      + `<td class="why">nftables local</td><td class="num">—</td>`
-      + `<td class="num">${b.expires_seconds != null ? duracionTexto(b.expires_seconds) : '?'}</td><td>—</td></tr>`);
+      + `<td class="why">nftables de este equipo</td><td class="num">—</td>`
+      + `<td class="num">${b.expires_seconds != null ? 'en ' + duracionTexto(b.expires_seconds) : '?'}</td>`
+      + `<td><span class="est si">aplicada en este equipo</span></td></tr>`);
   }
+  const n = document.getElementById('vigentesN');
+  if (n) n.textContent = vigentes.length + ' según registro y feed' + (locales.length ? ' · ' + locales.length + ' en el nftables de este equipo' : '');
   document.getElementById('blocked').innerHTML = filas.length ? filas.join('')
-    : '<tr class="empty-row"><td colspan="6">Ninguna IP limitada ni bloqueada ahora mismo.</td></tr>';
+    : '<tr class="empty-row"><td colspan="6">Ninguna respuesta registrada como vigente. Esto no comprueba el estado del nftables del host.</td></tr>';
 }
+on('blocked', 'click', (ev) => {
+  const b = ev.target.closest('[data-ver-ip]');
+  if (b) abrirDecision(b.dataset.verIp, null);
+});
 
 // Historial de acciones: lo que ya paso, no solo lo vigente. Una fila por IP en
 // la linea de tiempo; la zona anterior al registro leido se raya, porque ahi no
@@ -2400,6 +3816,17 @@ function renderHistorial(d) {
     + (corto ? ' · el registro leído empieza a las ' + fmtTime(d.desde) : '');
   const ips = [];
   eps.forEach(e => { if (ips.indexOf(e.ip) < 0) ips.push(e.ip); });
+  const rw = document.getElementById('respWids');
+  if (rw) {
+    const nB = eps.filter(e => e.accion === 'BLOCK').length, nL = eps.filter(e => e.accion === 'LIMIT').length;
+    const vig = (typeof AA_VIG !== 'undefined' && AA_VIG) ? AA_VIG.length : 0;
+    rw.innerHTML = [
+      widget('Vigentes ahora', vig, vig ? 'bad' : 'ok', 'escudo', vig ? 'IP con medida activa' : 'ninguna IP restringida'),
+      widget('Episodios BLOCK', nB, nB ? 'bad' : '', 'block', 'últimas ' + d.horas + ' h'),
+      widget('Episodios LIMIT', nL, nL ? 'amber' : '', 'limit', 'últimas ' + d.horas + ' h'),
+      widget('IPs afectadas', ips.length, ips.length ? 'navy' : '', 'ips', 'distintas en el periodo'),
+    ].join('');
+  }
   const filas = ips.slice(0, 10);
   const W = Math.max(320, svg.clientWidth || 900), FH = 24, Y0 = 8;
   const H = Y0 + Math.max(1, filas.length) * FH + 26;
@@ -2434,20 +3861,195 @@ function renderHistorial(d) {
   svg.innerHTML = g;
   tb.innerHTML = eps.length ? eps.slice(0, 60).map(e => {
     const dur = Math.round(e.fin - e.inicio);
-    return `<tr class="row-${e.accion.toLowerCase()}" data-ip="${varEsc(e.ip)}" style="cursor:pointer" title="Pulsa para filtrar las decisiones de esta IP">`
+    // Racha = cuanto duraron las decisiones; caducidad = lo que se configuro
+    // que dure la accion tras la ultima. Lo aplicado en el host no se ve aqui.
+    const cadConf = e.accion === 'BLOCK' ? '300 s (nivel 1; 1800/3600 s si reincide)' : '300 s';
+    return `<tr class="row-${e.accion.toLowerCase()}" data-ip="${varEsc(e.ip)}" style="cursor:pointer" title="Pulsa para ver las decisiones de esta IP">`
       + `<td class="num">${fmtTime(e.inicio)}<span class="hace">${haceTexto(e.inicio)}</span></td>`
       + `<td class="ip">${varEsc(e.ip)}</td><td><span class="badge acc-${e.accion.toLowerCase()}">${e.accion}</span></td>`
-      + `<td class="why">${e.origen && e.origen !== 'modelo' ? '<span class="badge heur">' + varEsc(e.origen) + '</span> ' : ''}${varEsc(e.motivo || '')}</td>`
-      + `<td class="num">${dur > 0 ? duracionTexto(dur) : 'una ventana'}</td><td class="num r">${e.ventanas}</td>`
-      + `<td>${e.vigente ? '<span class="badge acc-' + e.accion.toLowerCase() + '">en vigor</span>' : '<span class="hace" style="display:inline">caducada</span>'}</td></tr>`;
-  }).join('') : '<tr class="empty-row"><td colspan="7">Ninguna IP limitada ni bloqueada en este tramo.</td></tr>';
+      + `<td class="why"><span class="clamp">${e.origen && e.origen !== 'modelo' ? '<span class="badge heur">' + varEsc(e.origen) + '</span> ' : ''}${varEsc(e.motivo || '')}</span></td>`
+      + `<td class="num">${dur > 0 ? duracionTexto(dur) : 'una ventana'}<span class="hace">${fmtTime(e.inicio)}–${fmtTime(e.fin)}</span></td>`
+      + `<td class="num">${cadConf}${e.caduca ? '<span class="hace">hasta ' + fmtTime(e.caduca) + '</span>' : ''}</td>`
+      + `<td class="num r">${e.ventanas}</td>`
+      + `<td>${e.vigente ? '<span class="badge acc-' + e.accion.toLowerCase() + '">vigente</span>' : '<span class="hace" style="display:inline">caducada</span>'}</td>`
+      + `<td><button type="button" class="btn-sec">Ver &rarr;</button></td></tr>`;
+  }).join('') : '<tr class="empty-row"><td colspan="9">Ninguna respuesta registrada en este tramo.</td></tr>';
 }
 async function cargarHistorial() {
   if (!document.getElementById('histChart')) return;
-  try { renderHistorial(await (await fetch('/api/acciones')).json()); } catch (e) { /* se reintenta en el siguiente ciclo */ }
+  try {
+    const d = await (await fetch('/api/acciones')).json();
+    renderHistorial(d);
+    AA_EPS = (d && d.episodios) || [];
+    renderAlertasActivas();
+  } catch (e) { /* se reintenta en el siguiente ciclo */ }
 }
 cargarHistorial();
 setInterval(cargarHistorial, 30000);
+
+// ---- G2 · Alertas activas en el Resumen (validacion externa, R3) -----------
+// Cada IP limitada o bloqueada AHORA, con su regla, accion, desde y caducidad,
+// a un clic de su respuesta, de su decision y de su flujo en el Mapa. Sale de
+// status.vigentes (cada 5 s), asi que un ataque aparece sin cambiar de seccion.
+// Debajo, las ultimas respuestas ya caducadas, atenuadas. `var` y no `let`:
+// refresh() llama aqui antes de que este bloque se evalue.
+// Sin inicializador: un `var x = []` evaluado despues borraria lo ya recibido.
+var AA_VIG, AA_EPS, aaVistas, aaListo;   // aaVistas: ip|accion -> cuando la vio este navegador
+var AA_NUEVA_S = 60;
+
+function aaEsNueva(v, ahora) {
+  const k = v.ip + '|' + v.accion, vista = aaVistas.get(k);
+  return (v.desde && ahora - v.desde < 60) || (vista && ahora - vista < 60);
+}
+
+function renderAlertasActivas() {
+  const caja = document.getElementById('alertasActivas');
+  if (!caja) return;
+  AA_VIG = AA_VIG || []; AA_EPS = AA_EPS || []; aaVistas = aaVistas || new Map();
+  const aaPrimera = !aaListo; aaListo = true;   // en la primera pintada nada cuenta como «nueva»
+  const ahora = Date.now() / 1000;
+  const vig = AA_VIG.filter(v => !NUNCA_BLOQUEAR_JS.has(String(v.ip)));
+  const claves = new Set(vig.map(v => v.ip + '|' + v.accion));
+  for (const k of claves) if (!aaVistas.has(k)) aaVistas.set(k, aaPrimera ? 0 : ahora);
+  for (const k of [...aaVistas.keys()]) if (!claves.has(k)) aaVistas.delete(k);
+  const vigIps = new Set(vig.map(v => v.ip));
+  const cad = AA_EPS.filter(e => !e.vigente && !vigIps.has(e.ip) && !NUNCA_BLOQUEAR_JS.has(String(e.ip))).slice(0, 3);
+  const regla = (o, m) => (o && o !== 'modelo' ? '<span class="badge heur">' + varEsc(o) + '</span> ' : (o ? 'modelo · ' : '')) + varEsc(m || '');
+  const botones = ip => `<button type="button" class="btn-sec" data-aa-resp="${varEsc(ip)}">Respuesta &rarr;</button>`
+    + `<button type="button" class="btn-sec" data-aa-dec="${varEsc(ip)}">Decisión &rarr;</button>`
+    + (document.getElementById('topo') ? `<button type="button" class="btn-sec" data-aa-mapa="${varEsc(ip)}">Mapa &rarr;</button>` : '');
+  const icoAcc = a => a === 'block'
+    ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>'
+    : (a === 'limit' ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 14l3.5-3.5"/><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/></svg>' : '');
+  const filas = vig.map(v => {
+    const nueva = aaEsNueva(v, ahora), a = String(v.accion || '').toLowerCase();
+    return `<tr class="row-${a}${nueva ? ' aa-nueva' : ''}"><td class="ip">${varEsc(v.ip)}${nueva ? '<span class="nueva-tag">NUEVA</span>' : ''}</td>`
+      + `<td><span class="badge acc-${a}">${icoAcc(a)}${varEsc(v.accion)}</span></td>`
+      + `<td class="why"><span class="clamp">${regla(v.origen, v.motivo)}</span></td>`
+      + `<td class="num col-ext">${v.desde ? fmtTime(v.desde) + '<span class="hace">' + haceTexto(v.desde) + '</span>' : '—'}</td>`
+      + `<td class="num col-ext">${fmtTime(ahora + (v.expira_s || 0))}<span class="hace">en ${duracionTexto(Math.round(v.expira_s || 0))}</span></td>`
+      + `<td class="ir">${botones(v.ip)}</td></tr>`;
+  });
+  const filasCad = cad.map(e => {
+    const a = String(e.accion || '').toLowerCase();
+    return `<tr class="row-${a} caducada"><td class="ip">${varEsc(e.ip)}</td>`
+      + `<td><span class="badge acc-${a}">${icoAcc(a)}${varEsc(e.accion)}</span></td>`
+      + `<td class="why"><span class="clamp">${regla(e.origen, e.motivo)}</span></td>`
+      + `<td class="num col-ext">${fmtTime(e.inicio)}<span class="hace">${haceTexto(e.inicio)}</span></td>`
+      + `<td class="num col-ext">${e.caduca ? 'caducó ' + fmtTime(e.caduca) + '<span class="hace">' + haceTexto(e.caduca) + '</span>' : 'caducada'}</td>`
+      + `<td class="ir">${botones(e.ip)}</td></tr>`;
+  });
+  caja.classList.toggle('con-activas', vig.length > 0);
+  const cab = `<div class="aa-cab"><h3>Alertas activas</h3><span class="n">${vig.length}</span>`
+    + `<span class="th-sub">IPs limitadas o bloqueadas ahora · se actualiza cada 5 s</span></div>`;
+  const vacio = vig.length ? '' : '<p class="aa-vacio">Ninguna IP limitada ni bloqueada en este momento.</p>';
+  const tabla = (filas.length || filasCad.length)
+    ? '<table><thead><tr><th>IP</th><th>Acción</th><th>Regla y motivo</th><th class="col-ext">Desde</th><th class="col-ext">Caduca</th><th></th></tr></thead><tbody>'
+      + filas.join('') + (filasCad.length ? '<tr class="aa-sep"><td colspan="6">Últimas respuestas, ya caducadas</td></tr>' + filasCad.join('') : '')
+      + '</tbody></table>'
+    : '';
+  caja.innerHTML = cab + vacio + tabla;
+  try { renderFlujoBar(); } catch (e) { /* el Mapa aun no esta listo: el siguiente ciclo */ }
+}
+
+function irARespuesta(ip) {
+  mostrarSeccion('s-bloqueos');
+  setTimeout(() => {
+    const tr = [...document.querySelectorAll('#blocked tr, #histTabla tr')].find(t => t.textContent.includes(ip));
+    if (tr && typeof rgResaltar === 'function') rgResaltar(tr);
+  }, 150);
+}
+on('alertasActivas', 'click', (ev) => {
+  const b = ev.target.closest('button');
+  if (!b) return;
+  if (b.dataset.aaResp) irARespuesta(b.dataset.aaResp);
+  else if (b.dataset.aaDec) abrirDecision(b.dataset.aaDec, null);
+  else if (b.dataset.aaMapa) {
+    flujoIp = b.dataset.aaMapa;
+    if (topoVista !== 'completa') {
+      topoVista = 'completa';
+      document.querySelectorAll('#topoVista button').forEach(x => x.classList.toggle('active', x.dataset.vista === 'completa'));
+      topoZoom = null;
+    }
+    flujoFirma = '';
+    mostrarSeccion('s-topologia');
+    if (topoUltimo) renderTopologia(topoUltimo);
+  }
+});
+
+// ---- G3 · Flujo origen -> servidor sobre el Mapa (validacion externa, R2) ---
+// Resalta en la vista «2 · Operacional» el camino que siguio la IP: origen ->
+// red -> SPAN -> interfaz -> captura (L3/L4) o Suricata (L7) -> variables ->
+// modelo o heuristico -> decision -> feed -> relay -> agente (nftables), con el
+// color de su accion. La IP sale de: la elegida, una respuesta vigente, el
+// escenario en curso o el ultimo episodio (caducado). No inventa tramos: si no
+// hubo LIMIT/BLOCK, el flujo termina en la decision.
+var flujoIp;                   // undefined/null = automatico · '' = sin resaltar · ip = elegida
+var flujoFirma;
+// Reglas que leen eventos L7 de Suricata; el resto sale de los PCAP (L3/L4).
+function flujoEsL7(origen) { return ['http_abuse', 'dns_entropy', 'brute_force'].indexOf(origen) >= 0; }
+
+function flujoCandidatas() {
+  AA_VIG = AA_VIG || []; AA_EPS = AA_EPS || [];
+  const out = [];
+  const add = (ip, accion, origen, motivo, fuente) => {
+    if (!ip || NUNCA_BLOQUEAR_JS.has(String(ip)) || out.some(o => o.ip === ip)) return;
+    out.push({ ip: ip, accion: accion || null, origen: origen || null, motivo: motivo || '', fuente: fuente });
+  };
+  AA_VIG.forEach(v => add(v.ip, v.accion, v.origen, v.motivo, 'respuesta vigente'));
+  if (typeof escActivo === 'function' && escActivo()) {
+    const e = AA_EPS.find(x => x.ip === esc.ip && x.inicio >= esc.t0 - 60);
+    add(esc.ip, e && e.accion, e && e.origen, e && e.motivo, 'escenario en curso');
+  }
+  AA_EPS.forEach(e => add(e.ip, e.accion, e.origen, e.motivo, 'último episodio · ' + haceTexto(e.inicio)));
+  return out;
+}
+function flujoActual() {
+  if (flujoIp === '') return null;
+  const c = flujoCandidatas();
+  return (flujoIp && c.find(x => x.ip === flujoIp)) || c[0] || null;
+}
+function flujoNodos(f) {
+  const origen = topoModo === 'operativa' ? 'entrante'
+    : f.ip === '10.10.20.30' ? 'atacante' : (/^10\.10\.20\.2[1-6]$/.test(f.ip) ? 'clientes' : null);
+  const l7 = flujoEsL7(f.origen);
+  const n = [origen, 'red', 'span', 'nic'].concat(l7 ? ['suricata', 'eve', 'parser_eve'] : ['captura', 'pcap', 'motor']);
+  n.push('variables', f.origen && f.origen !== 'modelo' ? 'heuristicos' : 'modelo', 'control');
+  if (f.accion === 'LIMIT' || f.accion === 'BLOCK') n.push('feed', 'relay', 'agente');
+  return n.filter(Boolean);
+}
+function flujoColor(f) {
+  return !f ? 'var(--accent)' : f.accion === 'BLOCK' ? 'var(--danger)' : f.accion === 'LIMIT' ? 'var(--amber)' : 'var(--accent)';
+}
+function renderFlujoBar() {
+  const bar = document.getElementById('flujoBar');
+  if (!bar) return;
+  const c = flujoCandidatas(), f = flujoActual();
+  const firma = JSON.stringify([c, f && f.ip, topoVista]);
+  if (firma === flujoFirma) return;     // no repintar el <select> mientras se usa
+  flujoFirma = firma;
+  bar.hidden = false;
+  bar.style.setProperty('--flujo', flujoColor(f));
+  if (!c.length) {
+    bar.innerHTML = '<span>Sin IP que seguir: el flujo se resalta cuando hay un escenario en curso o una respuesta reciente.</span>';
+    return;
+  }
+  const titulo = id => ((TOPO_VISTAS.completa.nodos.concat([TOPO_OP_ENTRANTE.completa.nodo]).find(n => n.id === id) || {}).titulo || id);
+  const opts = c.map(x => `<option value="${varEsc(x.ip)}"${f && f.ip === x.ip ? ' selected' : ''}>${varEsc(x.ip)} · ${varEsc(x.accion || 'sin acción')} · ${varEsc(x.fuente)}</option>`).join('')
+    + `<option value=""${f ? '' : ' selected'}>— sin resaltar —</option>`;
+  const acc = f && f.accion ? `<span class="badge acc-${f.accion.toLowerCase()}">${varEsc(f.accion)}</span>` : '';
+  bar.innerHTML = `<b>Flujo de</b><select id="flujoSel" aria-label="IP cuyo flujo se resalta">${opts}</select>${acc}`
+    + (f ? `<span>${f.origen ? varEsc(f.origen) + (f.motivo ? ' · ' : '') : ''}${varEsc(f.motivo || '')}</span>`
+      + `<span class="pasos">${flujoNodos(f).map(titulo).join(' → ')}</span>` : '')
+    + (f && topoVista !== 'completa' ? '<span class="pasos">(se dibuja en la vista 2 · Operacional)</span>' : '');
+}
+document.addEventListener('change', (ev) => {
+  if (!ev.target || ev.target.id !== 'flujoSel') return;
+  flujoIp = ev.target.value;
+  flujoFirma = '';
+  renderFlujoBar();
+  if (topoUltimo) renderTopologia(topoUltimo);
+});
 
 // Despliegue: la cadena sensor -> relay -> host protegido. La topologia se
 // declara (el panel no tiene credenciales de los otros hosts); la vivacidad del
@@ -2464,18 +4066,23 @@ function renderDespliegue(status) {
       let cls = '', est = '';
       if (n.rol === 'sensor' && c.servicio && (c.servicio in serv)) {
         cls = serv[c.servicio] ? 'ok' : 'bad';
-        est = serv[c.servicio] ? 'activo' : 'inactivo';
+        est = 'comprobado desde el sensor: ' + (serv[c.servicio] ? 'activo' : 'inactivo');
+      } else if (n.rol !== 'sensor') {
+        est = 'estado no comprobado desde este panel';
       }
-      const meta = c.cadencia || c.detalle || c.fichero || c.unidad || '';
+      // La periodicidad viene del inventario: se dice que es declarada, no medida.
+      const meta = c.cadencia ? c.cadencia + ' · configuración declarada' : (c.detalle || c.fichero || c.unidad || '');
       return `<div class="desp-comp ${cls}"><span class="c-dot"></span><span class="c-n">${varEsc(c.nombre)}`
-        + (est ? ` <span class="hace" style="display:inline">${est}</span>` : '') + `</span>`
+        + (est ? `<span class="hace">${est}</span>` : '') + `</span>`
         + (meta ? `<span class="c-u" title="${varEsc(c.unidad || '')}">${varEsc(meta)}</span>` : '') + `</div>`;
     }).join('');
-    return `<div class="desp-card ${n.rol}"><div class="desp-rol">${ROL[n.rol] || n.rol}</div>`
+    const funciones = n.rol === 'agente'
+      ? '<div class="desp-meta"><span class="est si">Verifica firma</span><span class="est si">Aplica nftables con caducidad</span></div>' : '';
+    return `<details class="desp-card ${n.rol}" open><summary class="desp-sum"><div class="desp-rol">${ROL[n.rol] || n.rol}</div>`
       + `<div class="desp-h">${varEsc(n.titulo)}</div>`
-      + `<div class="desp-host">${varEsc(n.host)} · ${varEsc(n.ip)}</div>`
+      + `<div class="desp-host">${varEsc(n.host)} · ${varEsc(n.ip)}</div></summary>`
       + `<div class="desp-meta">VLAN ${varEsc(n.vlan || '—')} · ${varEsc(n.donde || '')}</div>`
-      + comps + (n.nota ? `<div class="desp-nota">${varEsc(n.nota)}</div>` : '') + `</div>`;
+      + funciones + comps + (n.nota ? `<div class="desp-nota">${varEsc(n.nota)}</div>` : '') + `</details>`;
   });
   // Flechas entre eslabones (el feed firmado viaja de izquierda a derecha).
   cont.innerHTML = tarjetas.join('<div class="desp-flecha" title="feed firmado">&rarr;</div>');
@@ -2517,7 +4124,9 @@ function renderTopIps() {
   el.innerHTML = lista.length ? lista.map(p =>
     `<tr class="row-${p.acc.toLowerCase()}" data-ip="${varEsc(p.ip)}" style="cursor:pointer"><td class="ip">${varEsc(p.ip)}</td>`
     + `<td class="num r">${p.n}</td><td><span class="badge acc-${p.acc.toLowerCase()}">${p.acc}</span><span class="hace">${haceTexto(p.ult)}</span></td></tr>`).join('')
-    : '<tr class="empty-row"><td colspan="3">Ninguna IP con acciones en la última hora.</td></tr>';
+    : '<tr class="empty-row"><td colspan="3">' + (lastDecisions.length
+      ? 'Ninguna entidad con acciones en las decisiones cargadas de la última hora.'
+      : 'Todavía no se han recibido decisiones.') + '</td></tr>';
 }
 
 on('topIps', 'click', (ev) => {
@@ -2542,9 +4151,96 @@ on('decVista', 'click', (ev) => {
   renderDecisionsTable();
 });
 
+// Las decisiones que se miran: las ultimas 600 en vivo o, si se consulto un
+// periodo, las de ese periodo. El refresco de 5 s no pisa una consulta.
+let decPeriodo = null;
+function decFuente() { return decPeriodo ? decPeriodo.decisiones : lastDecisions; }
+
+function fechaLocalInput(t) {
+  const d = new Date(t * 1000), p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function fmtFechaHora(t) {
+  return new Date(t * 1000).toLocaleString('es-PE', { hour12: false, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+async function consultarPeriodo() {
+  const vd = document.getElementById('decDesde').value, vh = document.getElementById('decHasta').value;
+  const desde = vd ? new Date(vd).getTime() / 1000 : null, hasta = vh ? new Date(vh).getTime() / 1000 : null;
+  const info = document.getElementById('decPeriodoInfo');
+  if (desde == null && hasta == null) { info.textContent = 'Indica al menos «Desde» o «Hasta».'; return; }
+  if (desde != null && hasta != null && hasta < desde) { info.textContent = '«Hasta» es anterior a «Desde».'; return; }
+  info.className = 'periodo-info';
+  info.textContent = 'Consultando el registro…';
+  try {
+    const q = 'desde=' + (desde != null ? desde : '') + '&hasta=' + (hasta != null ? hasta : '');
+    decPeriodo = await (await fetch('/api/decisions?' + q)).json();
+  } catch (e) {
+    info.textContent = 'No se pudo consultar el periodo: ' + e;
+    return;
+  }
+  document.getElementById('decEnVivo').hidden = false;
+  renderDecisionsTable();
+}
+function pintarPeriodoInfo() {
+  const info = document.getElementById('decPeriodoInfo');
+  if (!info) return;
+  if (!decPeriodo) {
+    const ts = lastDecisions.map(d => d.logged_at).filter(Boolean);
+    info.className = 'periodo-info';
+    info.textContent = ts.length ? 'En vivo: las ' + lastDecisions.length + ' decisiones más recientes, desde '
+      + fmtFechaHora(Math.min(...ts)) + '. Para ver antes, elige un periodo.' : 'En vivo: aún no hay decisiones cargadas.';
+    return;
+  }
+  const p = decPeriodo;
+  const ini = p.desde != null ? fmtFechaHora(p.desde) : 'el inicio del registro';
+  const fin = p.hasta != null ? fmtFechaHora(p.hasta) : 'ahora';
+  let txt = 'Periodo consultado: ' + ini + ' – ' + fin + ' · ' + p.total.toLocaleString('es') + ' decisiones';
+  if (p.truncado) txt += ' · se muestran las ' + p.limite.toLocaleString('es') + ' más recientes';
+  if (p.registro_desde != null && p.desde != null && p.registro_desde > p.desde + 60) {
+    txt += ' · el registro leído empieza el ' + fmtFechaHora(p.registro_desde) + ': antes no se puede saber si hubo decisiones';
+  }
+  info.className = 'periodo-info activo';
+  info.textContent = txt;
+}
+on('decConsultar', 'click', consultarPeriodo);
+on('decEnVivo', 'click', () => {
+  decPeriodo = null;
+  document.getElementById('decEnVivo').hidden = true;
+  renderDecisionsTable();
+});
+on('decLimpiar', 'click', () => {
+  decPeriodo = null;
+  document.getElementById('decEnVivo').hidden = true;
+  document.getElementById('decDesde').value = '';
+  document.getElementById('decHasta').value = '';
+  document.getElementById('ipFilter').value = '';
+  decVista = 'accion'; pintarDecVista();
+  decAbiertas.clear();
+  renderDecisionsTable();
+});
+(function () {
+  // Periodo por omision en los campos: la ultima hora (no se consulta hasta pulsar).
+  const d = document.getElementById('decDesde'), h = document.getElementById('decHasta');
+  if (d && h) { const t = Date.now() / 1000; d.value = fechaLocalInput(t - 3600); h.value = fechaLocalInput(t); }
+})();
+let decGrafVisible = true;
+try { decGrafVisible = localStorage.getItem('cf_dec_graf') !== '0'; } catch (e) { /* por omision, visible */ }
+function pintarDecGraf() {
+  const w = document.getElementById('decChartWrap'), b = document.getElementById('decGrafBtn');
+  if (w) w.hidden = !decGrafVisible;
+  if (b) { b.textContent = decGrafVisible ? 'Ocultar gráfico' : 'Mostrar gráfico'; b.setAttribute('aria-expanded', String(decGrafVisible)); }
+}
+pintarDecGraf();
+on('decGrafBtn', 'click', () => {
+  decGrafVisible = !decGrafVisible;
+  try { localStorage.setItem('cf_dec_graf', decGrafVisible ? '1' : '0'); } catch (e) { /* sin persistir */ }
+  pintarDecGraf();
+  if (decGrafVisible) renderDecChart();
+});
+
 function filasFiltradas() {
   const query = document.getElementById('ipFilter').value.trim();
-  let rows = lastDecisions;
+  let rows = decFuente();
   if (decVista === 'accion') rows = rows.filter(d => accionDeDecision(d) !== 'PERMIT');
   if (decVista === 'limit') rows = rows.filter(d => accionDeDecision(d) === 'LIMIT');
   if (decVista === 'block') rows = rows.filter(d => accionDeDecision(d) === 'BLOCK');
@@ -2556,22 +4252,66 @@ function filasFiltradas() {
 // (sin paquetes: el modelo no puntua) van en un carril aparte abajo, no en cero.
 // El lienzo usa los pixeles reales del elemento, asi los puntos son redondos.
 let decPuntos = [];
-function renderDecChart() {
+// Zoom del gráfico: rango de tiempo visible (null = todo) y modo ampliado.
+let decZoom = null, decRango = null, decX0 = 64;
+function decAmpliar(si) {
+  const w = document.getElementById('decChartWrap'), b = document.getElementById('decMaxBtn');
+  if (!w) return;
+  let fondo = document.getElementById('decFondo');
+  if (si) {
+    if (!fondo) {
+      fondo = document.createElement('div'); fondo.id = 'decFondo'; fondo.className = 'dec-fondo';
+      fondo.addEventListener('click', () => decAmpliar(false)); document.body.appendChild(fondo);
+    }
+  } else { if (fondo) fondo.remove(); decZoom = null; }
+  w.classList.toggle('dec-max', si);
+  if (b) b.textContent = si ? '✕ Cerrar' : '⤢ Ampliar';
+  renderDecChart();
+}
+on('decMaxBtn', 'click', () => decAmpliar(!document.getElementById('decChartWrap').classList.contains('dec-max')));
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && document.getElementById('decFondo')) decAmpliar(false); });
+(function () {
   const svg = document.getElementById('decChart');
   if (!svg) return;
+  svg.addEventListener('wheel', ev => {
+    if (!decRango) return;
+    ev.preventDefault();
+    const r = svg.getBoundingClientRect(), X0 = decX0, X1 = r.width - 10;
+    const [a, b] = decZoom || decRango;
+    const fr = Math.min(1, Math.max(0, (ev.clientX - r.left - X0) / (X1 - X0)));
+    const tc = a + (b - a) * fr, esc = ev.deltaY < 0 ? 0.75 : 1.33;
+    const na = tc - (tc - a) * esc, nb = tc + (b - tc) * esc;
+    decZoom = (na <= decRango[0] && nb >= decRango[1]) ? null : [Math.max(decRango[0], na), Math.min(decRango[1], nb)];
+    renderDecChart();
+  }, { passive: false });
+  svg.addEventListener('dblclick', () => { decZoom = null; renderDecChart(); });
+})();
+
+function renderDecChart() {
+  const svg = document.getElementById('decChart');
+  if (!svg || !decGrafVisible) return;
   const query = document.getElementById('ipFilter').value.trim();
-  const datos = (query ? lastDecisions.filter(d => d.entity_ip.includes(query)) : lastDecisions)
+  const fuente = decFuente();
+  const datos = (query ? fuente.filter(d => d.entity_ip.includes(query)) : fuente)
     .filter(d => d.logged_at);
-  const W = Math.max(320, svg.clientWidth || 900), H = 170;
+  const W = Math.max(320, svg.clientWidth || 900), H = Math.max(170, svg.clientHeight || 170);
+  const grande = H > 220;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  const X0 = 64, X1 = W - 10, Y0 = 10, Y1 = H - 46, YS = H - 30;
+  const X0 = grande ? 90 : 64, X1 = W - 10, Y0 = 10, Y1 = H - 46, YS = H - 30;
+  decX0 = X0;
   decPuntos = [];
   if (!datos.length) {
     svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">Sin decisiones que graficar.</text>`;
     return;
   }
   const ahora = Date.now() / 1000;
-  const t0 = Math.min(...datos.map(d => d.logged_at)), t1 = Math.max(ahora, t0 + 60);
+  let t0 = Math.min(...datos.map(d => d.logged_at));
+  let t1 = Math.max(decPeriodo ? Math.max(...datos.map(d => d.logged_at)) : ahora, t0 + 60);
+  decRango = [t0, t1];
+  if (decZoom) { t0 = Math.max(t0, decZoom[0]); t1 = Math.min(t1, decZoom[1]); if (t1 - t0 < 20) t1 = t0 + 20; }
+  const zi = document.getElementById('decZoomInfo');
+  if (zi) zi.textContent = decZoom ? 'Zoom ' + fmtTime(t0) + ' – ' + fmtTime(t1) + ' · doble clic para restablecer'
+    : (grande ? 'Rueda del ratón para acercar · Esc para cerrar' : '');
   const conScore = datos.filter(d => d.score != null);
   const umbral = conScore.length ? conScore[0].threshold : (window._escalaScore ? window._escalaScore.umbral : null);
   let lo = Math.min(...conScore.map(d => d.score)), hi = Math.max(...conScore.map(d => d.score));
@@ -2602,13 +4342,15 @@ function renderDecChart() {
   for (let i = 0; i <= 4; i++) {
     const t = t0 + (t1 - t0) * i / 4, x = px(t);
     s += `<line x1="${x.toFixed(1)}" y1="${Y1}" x2="${x.toFixed(1)}" y2="${Y1 + 3}" stroke="var(--border)"/>`;
-    s += `<text x="${x.toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${i === 4 ? 'ahora' : fmtTime(t)}</text>`;
+    s += `<text x="${x.toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : (i === 4 ? 'end' : 'middle')}">${i === 4 && !decPeriodo && !decZoom ? 'ahora' : fmtTime(t)}</text>`;
   }
-  const estilo = { PERMIT: ['var(--accent)', 2, 0.4], LIMIT: ['var(--amber)', 3.8, 0.95], BLOCK: ['var(--danger)', 4.4, 1] };
+  const k = grande ? 1.6 : 1;
+  const estilo = { PERMIT: ['var(--accent)', 2 * k, 0.4], LIMIT: ['var(--amber)', 3.8 * k, 0.95], BLOCK: ['var(--sev-block)', 4.4 * k, 1] };
   // Los PERMIT primero: las acciones se dibujan encima y no quedan tapadas.
   ['PERMIT', 'LIMIT', 'BLOCK'].forEach(tipo => {
     datos.forEach(d => {
       if (accionDeDecision(d) !== tipo) return;
+      if (d.logged_at < t0 || d.logged_at > t1) return;
       const x = px(d.logged_at), y = d.score != null ? py(d.score) : YS;
       const e = estilo[tipo];
       s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${e[1]}" fill="${e[0]}" fill-opacity="${e[2]}"/>`;
@@ -2658,24 +4400,116 @@ on('decChart', 'click', (ev) => {
 
 // Filas abiertas: el detalle sobrevive al refresco de 5 s.
 const decAbiertas = new Set();
+// Quien pidio la accion: el modelo, una regla, los dos o ninguno.
+function fuenteDecision(d) {
+  const t = alertaTipos(d);
+  if (t.modelo && t.regla) return 'Modelo + regla';
+  if (t.regla) return 'Regla: ' + t.regla;
+  if (t.modelo) return 'Modelo';
+  return d.score == null ? 'Sin puntuar' : 'Modelo (normal)';
+}
+// Explicacion en lenguaje natural de POR QUE salio esta accion.
+function porQueDecision(d, accion) {
+  const t = alertaTipos(d), h = d.heuristico;
+  const reglaTxt = t.regla ? 'la regla «' + t.regla + '»' + (h && h.motivo ? ' (' + h.motivo + ')' : '') : '';
+  const modeloTxt = d.score == null ? 'El modelo no puntuó esta ventana (sin paquetes).'
+    : (t.modelo ? 'El score del modelo fue inferior al umbral vigente.' : 'El score del modelo quedó por encima del umbral: normal para el modelo.');
+  if (accion === 'PERMIT') {
+    return 'No se pidió acción: ninguna regla se activó y ' + (d.score == null ? 'el modelo no puntuó la ventana.' : 'el modelo no vio anomalía.')
+      + ' PERMIT no prueba que no haya ataque.';
+  }
+  if (t.regla && t.modelo) return 'Se decidió ' + accion + ' porque se activó ' + reglaTxt + ' y, además, el score del modelo fue inferior al umbral vigente. Manda la acción más severa.';
+  if (t.regla) return 'Se decidió ' + accion + ' porque se activó ' + reglaTxt + '. ' + modeloTxt;
+  return 'Se decidió ' + accion + ' porque el score del modelo fue inferior al umbral vigente. No se activaron reglas heurísticas en esta ventana. Una anomalía del modelo solo llega a LIMIT.';
+}
+// Los siete pasos de la cadena v2 de una decision, con su fuente. Lo que no consta en
+// una fuente se muestra «desconocido» o «sin evidencia», nunca como «no».
+const TXT_MEDIDA_V2 = {
+  nueva: 'medida publicada (nueva)', renovada: 'medida publicada (renovada)',
+  escalada: 'medida publicada (escalada)', mantenida: 'medida vigente mantenida',
+  rechazada: 'regla rechazada por el publicador · sin efecto',
+  sin_punto_de_aplicacion: 'sin punto de aplicación · no se restringe',
+  no_publicada: 'sin medida publicada', desconocido: 'desconocido · la traza v2 no cubre esta decisión',
+  pendiente: 'pendiente · posterior a la última publicación del publicador v2',
+  fuente_desactualizada: 'desconocido · la traza v2 está desactualizada',
+  fuente_ausente: 'desconocido · traza v2 ausente o ilegible',
+};
+// Señal α publicada (senales-if.jsonl). «sin señal» solo con cobertura demostrada.
+const TXT_SENAL_V2 = {
+  sin_senal: 'sin señal α (procesada por el publicador, ningún α superado)',
+  sin_puntuar: 'sin puntuar (el motor no puntuó la ventana)',
+  pendiente: 'pendiente · posterior a la última publicación del publicador v2',
+  fuente_desactualizada: 'desconocido · la traza v2 está desactualizada',
+  fuente_ausente: 'desconocido · senales-if.jsonl ausente o ilegible',
+  desconocido: 'desconocido · cobertura no demostrada',
+};
+const TXT_APLICACION_V2 = {
+  no_ejecutada: 'no ejecutada (modo sombra)', no_aplica: 'no aplica (ausencia de medida demostrada)',
+  desconocido: 'desconocido (sin evidencia)',
+};
+function cadenaV2HTML(d) {
+  const c = d.cadena_v2;
+  if (!c) return '';
+  const fila = (k, v, src) => `<div><dt>${k}</dt><dd>${v}<small class="hace"> · ${src}</small></dd></div>`;
+  const s = c.if || {};
+  const ifTxt = s.estado === 'senal'
+    ? 'señal IF · score ' + (s.score != null ? Number(s.score).toFixed(4) : '—') + ' · α superados: ' + varEsc((s.alfa_superados || []).join(', ') || 'ninguno')
+    : varEsc(TXT_SENAL_V2[s.estado] || TXT_SENAL_V2.desconocido);
+  const im = c.if_motor || {};
+  const motorTxt = c.if_motor
+    ? 'decision_if ' + varEsc(String(im.decision_if ?? 'sin puntuar')) + ' · score ' + (im.score != null ? Number(im.score).toFixed(4) : '—')
+      + ' · umbral desplegado ' + (im.umbral != null ? Number(im.umbral).toFixed(4) : '—')
+    : 'desconocido';
+  const reglas = (c.reglas || []).map(r => varEsc(r.regla) + (r.accion ? ' → ' + varEsc(r.accion) : '')).join('; ') || 'ninguna';
+  const m = c.medida || {};
+  let medTxt = varEsc(TXT_MEDIDA_V2[m.estado] || String(m.estado || 'desconocido'));
+  if (m.accion) medTxt = `<span class="badge acc-${String(m.accion).toLowerCase()}">${varEsc(m.accion)}</span> ` + medTxt
+    + (c.propuesta ? ' · <b>propuesta (sombra)</b>' : '') + (m.secuencia != null ? ' · feed n.º ' + m.secuencia : '');
+  const apl = TXT_APLICACION_V2[c.aplicacion] || TXT_APLICACION_V2.desconocido;
+  return '<div><h4>Cadena v2 (fuentes reales)</h4><dl>'
+    + fila('1a · IF del motor', motorTxt, 'registro del motor (decision_if)')
+    + fila('1b · Señal α publicada', ifTxt, 'senales-if.jsonl')
+    + fila('2 · Regla heurística', reglas, 'registro del motor')
+    + fila('3 · Decisión del motor', varEsc(String(c.decision || '—')), 'registro del motor')
+    + fila('4 · Medida', medTxt, 'traza del publicador v2')
+    + fila('5 · Agente (recepción/evaluación)', 'desconocido', 'sin canal desde el sensor')
+    + fila('6 · Aplicación confirmada', apl, 'modo declarado')
+    + fila('7 · Efecto observado', 'sin evidencia', 'el sensor no lo mide')
+    + '</dl></div>';
+}
 function decDetalleHTML(d, accion) {
   const h = d.heuristico;
   const margen = d.score != null && d.threshold != null ? d.score - d.threshold : null;
-  const caduca = accion === 'LIMIT' ? '300 s' : (accion === 'BLOCK' ? '300, 1800 o 3600 s según reincidencia' : 'no aplica');
+  const caduca = accion === 'LIMIT' ? '300 s tras la última decisión' : (accion === 'BLOCK' ? '300, 1800 o 3600 s según reincidencia' : 'no aplica');
   const fila = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
-  return '<dl>'
-    + fila('Ventana (UTC)', varEsc(String(d.window_end_utc || '—')))
-    + fila('Detector', varEsc(String(d.detector_name || '—')))
+  return '<div class="det4">'
+    + '<div><h4>Resultado</h4><dl>'
+    + fila('Decisión', `<span class="badge acc-${accion.toLowerCase()}">${accion}</span>`)
+    + fila('Entidad', varEsc(String(d.entity_ip || '—')))
+    + fila('Hora', fmtTime(d.logged_at) + ' · ventana ' + varEsc(String(d.window_end_utc || '—')) + ' UTC')
+    + fila('Caducidad configurada', caduca)
+    + '</dl></div>'
+    + '<div><h4>Por qué</h4><p>' + varEsc(porQueDecision(d, accion)) + '</p>'
+    + (accion !== 'PERMIT' ? '<p style="margin-top:0.5rem"><button type="button" class="btn-sec" data-ir-resp="1">Ver su respuesta &rarr;</button></p>' : '')
+    + '</div>'
+    + '<div><h4>Evidencia</h4><dl>'
     + fila('Score y umbral', d.score != null ? d.score.toFixed(4) + ' frente a ' + (d.threshold != null ? d.threshold.toFixed(4) : '—') : 'sin puntuar: ventana sin paquetes')
-    + fila('Margen al umbral', margen == null ? '—' : (margen >= 0 ? '+' : '') + margen.toFixed(4) + (margen < 0 ? ' · anomalía' : ' · normal'))
+    + fila('Margen al umbral', margen == null ? '—' : (margen >= 0 ? '+' : '') + margen.toFixed(4) + (margen < 0 ? ' · anómalo' : ' · normal'))
     + fila('Regla', h && h.heuristico ? varEsc(h.heuristico) + ' → ' + varEsc(h.accion || '') : 'ninguna')
     + fila('Qué midió la regla', h && h.motivo ? varEsc(h.motivo) : '—')
     + fila('Paquetes en 10 s', d.packet_count_10s ?? '—')
+    + '</dl></div>'
+    + '<div><h4>Contexto técnico</h4><dl>'
+    + fila('Detector', varEsc(String(d.detector_name || '—')))
+    + fila('Decisión del modelo', varEsc(String(d.decision || '—')))
     + fila('Historia cubierta', d.history_coverage_s != null ? d.history_coverage_s + ' s' : '—')
-    + fila('Acción y caducidad', accion + ' · ' + caduca)
-    + '</dl>';
+    + fila('Registrada (logged_at)', d.logged_at ? new Date(d.logged_at * 1000).toLocaleString('es-PE', { hour12: false }) : '—')
+    + '</dl></div>'
+    + cadenaV2HTML(d)
+    + '</div>';
 }
 on('decisions', 'click', (ev) => {
+  if (ev.target.closest('[data-ir-resp]')) { mostrarSeccion('s-bloqueos'); return; }
   const tr = ev.target.closest('tr.dec-fila');
   if (!tr) return;
   const k = tr.dataset.key;
@@ -2685,32 +4519,45 @@ on('decisions', 'click', (ev) => {
 
 function renderDecisionsTable() {
   const { rows, query } = filasFiltradas();
-  const nAcc = lastDecisions.filter(d => accionDeDecision(d) !== 'PERMIT').length;
+  const fuente = decFuente();
+  const cuenta = { PERMIT: 0, LIMIT: 0, BLOCK: 0 };
+  fuente.forEach(d => { cuenta[accionDeDecision(d)] += 1; });
   const quees = { accion: 'con acción', limit: 'con LIMIT', block: 'con BLOCK' }[decVista];
+  const base = decPeriodo ? 'decisiones del periodo' : 'decisiones recientes';
   document.getElementById('filterHint').textContent =
-    (quees ? (decVista === 'accion' ? nAcc : rows.length) + ' ' + quees + ' de ' + lastDecisions.length + ' decisiones recientes' : lastDecisions.length + ' decisiones recientes')
-    + (query ? ' · ' + rows.length + ' coinciden con «' + query + '»' : '');
+    (quees ? rows.length + ' ' + quees + ' de ' + fuente.length + ' ' + base : fuente.length + ' ' + base)
+    + (query ? ' · filtradas por «' + query + '»' : '');
+  const res = document.getElementById('decResumen');
+  if (res) res.innerHTML = `<span>Total <b>${fuente.length.toLocaleString('es')}</b></span>`
+    + `<span>PERMIT <b>${cuenta.PERMIT.toLocaleString('es')}</b></span>`
+    + `<span>LIMIT <b>${cuenta.LIMIT.toLocaleString('es')}</b></span>`
+    + `<span>BLOCK <b>${cuenta.BLOCK.toLocaleString('es')}</b></span>`;
+  pintarPeriodoInfo();
   renderDecChart();
-  document.getElementById('decisions').innerHTML = rows.length ? rows.map(d => {
+  document.getElementById('decisions').innerHTML = rows.length ? rows.slice(0, 1500).map(d => {
     const accion = accionDeDecision(d);
     const accBadge = `<span class="badge acc-${accion.toLowerCase()}">${accion}</span>`;
     const isAlert = d.decision === 'ALERT';
     const modelo = d.score != null
-      ? `<span class="modelo-celda"><span class="${isAlert ? 'm-alert' : 'm-permit'}">${isAlert ? 'ALERT' : 'normal'}</span>`
+      ? `<span class="modelo-celda"><span class="${isAlert ? 'm-alert' : 'm-permit'}">${isAlert ? 'Anómalo' : 'Normal'}</span>`
         + `<span>${d.score.toFixed(3)}</span>${miniBarraScore(d.score)}</span>`
       : '<span class="modelo-celda"><span class="m-permit">sin puntuar</span></span>';
     const m = motivoDeDecision(d);
     const motivoTxt = m.regla && m.regla !== 'modelo'
-      ? `<span class="badge heur" title="regla determinista, sin firma">${varEsc(m.regla)}</span> ${varEsc(m.texto)}`
+      ? varEsc(m.texto)
       : (m.regla === 'modelo' ? varEsc(m.texto) : varEsc(DETECTOR_LABEL[d.detector_name] || d.detector_name || ''));
+    const fte = fuenteDecision(d);
+    const fteHTML = fte.startsWith('Regla: ') ? `<span class="badge heur" title="regla determinista, sin firma">${varEsc(fte.slice(7))}</span>` : varEsc(fte);
     const key = d.entity_ip + '|' + d.window_end_utc;
-    const cls = 'dec-fila ' + (accion !== 'PERMIT' ? 'row-' + accion.toLowerCase() : '') + (nuevasClaves.has(key) ? ' row-nueva' : '');
-    return `<tr class="${cls}" data-key="${varEsc(key)}" title="Pulsa para ver el detalle"><td class="num">${fmtTime(d.logged_at)}<span class="hace">${haceTexto(d.logged_at)}</span></td>`
-      + `<td class="ip">${varEsc(d.entity_ip)}</td><td>${accBadge}</td><td class="why">${motivoTxt}</td>`
-      + `<td>${modelo}</td><td class="num r">${d.packet_count_10s ?? '—'}</td></tr>`
-      + (decAbiertas.has(key) ? `<tr class="dec-det"><td colspan="6">${decDetalleHTML(d, accion)}</td></tr>` : '');
-  }).join('') : `<tr class="empty-row"><td colspan="6">${query ? 'Ninguna decisión coincide con el filtro.'
-      : (decVista === 'accion' ? 'Ninguna acción reciente: todo el tráfico se permitió.' : 'Sin decisiones recientes.')}</td></tr>`;
+    const abierta = decAbiertas.has(key);
+    const cls = 'dec-fila ' + (accion !== 'PERMIT' ? 'row-' + accion.toLowerCase() : '') + (nuevasClaves.has(key) ? ' row-nueva' : '') + (abierta ? ' abierta' : '');
+    return `<tr class="${cls}" data-key="${varEsc(key)}"><td class="num">${fmtTime(d.logged_at)}<span class="hace">${haceTexto(d.logged_at)}</span></td>`
+      + `<td class="ip">${varEsc(d.entity_ip)}</td><td>${accBadge}</td><td>${fteHTML}</td><td class="why"><span class="clamp">${motivoTxt}</span></td>`
+      + `<td>${modelo}</td><td class="num r">${d.packet_count_10s ?? '—'}</td>`
+      + `<td><button type="button" class="btn-sec" aria-expanded="${abierta}">${abierta ? 'Ocultar' : 'Ver detalle'}</button></td></tr>`
+      + (abierta ? `<tr class="dec-det"><td colspan="8">${decDetalleHTML(d, accion)}</td></tr>` : '');
+  }).join('') : `<tr class="empty-row"><td colspan="8">${query ? 'Ninguna decisión coincide con el filtro en ' + (decPeriodo ? 'el periodo consultado.' : 'las decisiones cargadas.')
+      : (decVista === 'accion' ? 'Ninguna decisión con acción en ' + (decPeriodo ? 'el periodo consultado.' : 'las decisiones cargadas.') : 'Sin decisiones en ' + (decPeriodo ? 'el periodo consultado.' : 'las decisiones cargadas.'))}</td></tr>`;
 }
 
 on('ipFilter', 'input', renderDecisionsTable);
@@ -2733,7 +4580,9 @@ on('exportCsv', 'click', () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `cyberflow-decisiones-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+  // El nombre dice el alcance: en vivo (ultimas cargadas) o el periodo pedido, y la vista.
+  const alcance = decPeriodo ? 'periodo-' + fechaLocalInput(decPeriodo.desde || 0).replace(/[:T]/g, '') : 'envivo';
+  a.download = `cyberflow-decisiones-${alcance}-${decVista}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -2766,6 +4615,18 @@ const TOPO_ICON = {
   firewall: '<rect x="2" y="3.3" width="14" height="11.4" rx="1"/><path d="M2 7.1h14M2 10.9h14M6.6 3.3v3.8M11.4 3.3v3.8M4.3 7.1v3.8M9 7.1v3.8M13.7 7.1v3.8M6.6 10.9v3.8M11.4 10.9v3.8"/>',
   switch:   '<rect x="1.6" y="5.4" width="14.8" height="7.2" rx="1.3"/><path d="M4 9h10"/><path d="M6.4 6.9 4 9l2.4 2.1M11.6 6.9 14 9l-2.4 2.1"/>',
   carpeta:  '<path d="M2 4.6h4.4l1.5 2H16v7.8H2Z"/><path d="M2 8.6h14"/>',
+  atacante: '<circle cx="9" cy="9" r="6.3"/><path d="M9 1.3V4.2M9 13.8v2.9M1.3 9H4.2M13.8 9h2.9"/><circle cx="9" cy="9" r="1.5" fill="currentColor" stroke="none"/>',
+  usuarios: '<circle cx="6.5" cy="6.5" r="2.6"/><path d="M1.8 15c.6-3 2.4-4.4 4.7-4.4S10.6 12 11.2 15"/><circle cx="12.6" cy="6" r="2.1"/><path d="M12 10.3c2.2 0 3.6 1.4 4.2 4"/>',
+  kali:     '<path d="M2.2 13.6c2.6-.4 4.4-1.6 5.4-3.6.8-1.6.6-3.6 2.2-5 1.4-1.2 3.6-1.4 5.8-.6-1.6.2-2.6.8-3 1.8 1.4.2 2.4 1 2.8 2.2-1.2-.6-2.4-.6-3.4 0-1.4 2.6-3.6 4.6-7 5.6"/><path d="M12.4 6.2h.01"/>',
+  radar:    '<circle cx="9" cy="9" r="7"/><circle cx="9" cy="9" r="3.6"/><path d="M9 9 14 4"/><circle cx="12.2" cy="11.6" r="0.9" fill="currentColor" stroke="none"/>',
+  terminal: '<rect x="1.8" y="3" width="14.4" height="12" rx="1.6"/><path d="M4.8 7.2 7.4 9.4 4.8 11.6M9 12h4"/>',
+  bicho:    '<ellipse cx="9" cy="10.4" rx="3.6" ry="4.6"/><path d="M9 5.8V15M5.4 8.6 2.4 7M12.6 8.6l3-1.6M5.4 11.6H2.2M12.6 11.6h3.2M6.6 6.4 5.2 3.4M11.4 6.4l1.4-3"/>',
+  flechas:  '<path d="M2.4 6h11.4M11.2 3.4 13.8 6l-2.6 2.6M15.6 12H4.2M6.8 9.4 4.2 12l2.6 2.6"/>',
+  python:   '<path d="M9 1.8c-3 0-3.4 1.3-3.4 2.4v1.6H9v.6H4.2C2.8 6.4 1.8 7.4 1.8 9.4s1 3.2 2.4 3.2h1.4v-2c0-1.4 1.2-2.4 2.6-2.4h3.6c1.2 0 2.2-1 2.2-2.2V4.2c0-1.2-1-2.4-5-2.4z"/><path d="M9 16.2c3 0 3.4-1.3 3.4-2.4v-1.6H9v-.6h4.8c1.4 0 2.4-1 2.4-3s-1-3.2-2.4-3.2"/><circle cx="7" cy="3.8" r="0.6" fill="currentColor" stroke="none"/><circle cx="11" cy="14.2" r="0.6" fill="currentColor" stroke="none"/>',
+  engranaje:'<circle cx="9" cy="9" r="2.6"/><path d="M9 1.8v2.4M9 13.8v2.4M1.8 9h2.4M13.8 9h2.4M3.9 3.9l1.7 1.7M12.4 12.4l1.7 1.7M3.9 14.1l1.7-1.7M12.4 5.6l1.7-1.7"/>',
+  llave:    '<circle cx="5.6" cy="9" r="3.4"/><path d="M9 9h7.2M13.6 9v2.8M15.8 9v2"/>',
+  router:   '<circle cx="9" cy="9" r="7.2"/><path d="M9 4.4v3.2M9 10.4v3.2M4.4 9h3.2M10.4 9h3.2"/><path d="M7.9 5.5 9 4.4l1.1 1.1M7.9 12.5 9 13.6l1.1-1.1M5.5 7.9 4.4 9l1.1 1.1M12.5 7.9 13.6 9l-1.1 1.1"/>',
+  entrante: '<path d="M1.8 9h8.6"/><path d="M7.2 5.6 10.6 9l-3.4 3.4"/><path d="M11.6 2.6h4.6v12.8h-4.6"/>',
   // Perfiles de trafico legitimo (clientes .21-.26).
   ofimatica:  '<rect x="3.6" y="2" width="10.8" height="14" rx="1.1"/><path d="M6 5.4h6M6 8h6M6 10.6h4"/>',
   navegacion: '<rect x="2" y="3.4" width="14" height="11.2" rx="1.3"/><path d="M2 6.6h14"/><circle cx="4.2" cy="5" r="0.5" fill="currentColor" stroke="none"/><circle cx="6" cy="5" r="0.5" fill="currentColor" stroke="none"/><path d="M9 8.4a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8M6.6 10.8h4.8M9 8.4v4.8"/>',
@@ -2779,6 +4640,69 @@ const TOPO_ICON = {
   host_bastion:  '<path d="M3 15.4V6.6l6-3.8 6 3.8v8.8"/><path d="M2.2 15.4h13.6"/><path d="M7.3 15.4v-3.4h3.4v3.4"/>',
 };
 const HOST_ICON = { sensor: 'host_sensor', servidor: 'host_servidor', bastion: 'host_bastion' };
+// 17-nov: cada tipo de componente con su color (icono blanco sobre círculo de color).
+const ICO_COLOR = {
+  red: '#0284c7', entrante: '#0d9488', atacante: '#dc2626', usuarios: '#16a34a', host_servidor: '#7c3aed',
+  disco: '#7c3aed', router: '#4f46e5', firewall: '#4f46e5', switch: '#2563eb', espejo: '#2563eb', nic: '#475569',
+  captura: '#ea580c', lupa: '#f59e0b', fichero: '#64748b', cpu: '#9333ea', tabla: '#0891b2', reglas: '#d97706',
+  modelo: '#7c3aed', decision: '#1e3a8a', escudo: '#059669', ojo: '#0369a1', tijera: '#6b7280', ciclo: '#0d9488',
+  carpeta: '#ca8a04',
+};
+function icoCirculo(ico, cx, cy, r, color) {
+  const s = Math.round(r * 1.25);
+  return `<circle class="ico-bg" cx="${cx}" cy="${cy}" r="${r}" fill="${color || ICO_COLOR[ico] || '#475569'}"/>`
+    + `<g class="ico ico-blanco" transform="translate(${cx - s / 2}, ${cy - s / 2})"><svg width="${s}" height="${s}" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[ico] || ''}</svg></g>`;
+}
+// Herramientas de cada componente (columna de la derecha del detalle). Iconos propios con el color
+// de cada herramienta: no son los logotipos oficiales.
+const TOPO_HERR = {
+  atacante: [
+    { n: 'Kali Linux', d: 'VM atacante · 10.10.20.30', ico: 'kali', c: '#367bf0' },
+    { n: 'ping (inundación)', d: 'flood ICMP → BLOCK', ico: 'flechas', c: '#0891b2', capa: 'L3 · Red', demo: true },
+    { n: 'nmap', d: 'escaneo de puertos → BLOCK', ico: 'radar', c: '#1d4ed8', capa: 'L4 · Transporte', demo: true },
+    { n: 'curl · fuerza bruta', d: 'logins fallidos 401 → BLOCK', ico: 'terminal', c: '#0b4f6c', capa: 'L7 · Aplicación', demo: true },
+    { n: 'curl · flood HTTP', d: 'muchas peticiones/s → LIMIT', ico: 'terminal', c: '#0e7490', capa: 'L7 · Aplicación', demo: true },
+    { n: 'dig · DGA', d: 'DNS de alta entropía → LIMIT', ico: 'red', c: '#b45309', capa: 'L7 · Aplicación', demo: true },
+    { n: 'nikto', d: 'vulnerabilidades web', ico: 'bicho', c: '#15803d', capa: 'L7 · Aplicación', demo: false },
+    { n: 'arpspoof', d: 'ARP spoofing · trabajo futuro', ico: 'nic', c: '#6b7280', capa: 'L2 · Enlace', demo: false },
+  ],
+  clientes: [
+    { n: 'Python', d: 'clientes_lab.py · servidor_lab.py', ico: 'python', c: '#3776ab' },
+    { n: 'systemd', d: 'cyberflow-lab.target · 6 servicios', ico: 'engranaje', c: '#30d475' },
+  ],
+  servidor: [
+    { n: 'Python HTTP/HTTPS', d: 'servidor_lab.py · 80 y 443', ico: 'python', c: '#3776ab' },
+    { n: 'nftables', d: 'sets con caducidad: LIMIT y BLOCK', ico: 'escudo', c: '#059669' },
+    { n: 'ed25519', d: 'el agente verifica la firma del feed', ico: 'llave', c: '#7c3aed' },
+  ],
+  gateway: [
+    { n: 'pfSense', d: 'router A/B en alta disponibilidad', ico: 'router', c: '#212d6b' },
+    { n: 'CARP · pfsync', d: 'VIP compartida entre A y B', ico: 'ciclo', c: '#4f46e5' },
+  ],
+  suricata: [ { n: 'Suricata', d: 'eventos L7 en eve.json (sin reglas)', ico: 'lupa', c: '#ef6c00' } ],
+  captura: [ { n: 'tcpdump', d: 'anillo de PCAP en el sensor', ico: 'captura', c: '#ea580c' } ],
+  modelo: [ { n: 'scikit-learn', d: 'Isolation Forest · umbral calibrado', ico: 'modelo', c: '#f7931e' } ],
+};
+function herramientasHTML(id) {
+  const l = TOPO_HERR[id];
+  if (!l) return '';
+  const tarjeta = h =>
+    `<div class="herr"><span class="herr-ico" style="background:${h.c}"><svg width="30" height="30" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[h.ico] || ''}</svg></span>`
+    + `<span class="herr-t"><b>${h.n}${h.demo ? ' <span class="herr-demo">demo</span>' : ''}</b><small>${h.d}</small></span></div>`;
+  // Si las herramientas traen capa (p. ej. el atacante), se agrupan por capa del modelo OSI
+  // (L2/L3/L4/L7) y se marca con «demo» la que se lanza en la sustentación.
+  if (l.some(h => h.capa)) {
+    let html = '<aside class="herr-col"><div class="cod-sub">Ataques por capa</div>';
+    html += l.filter(h => !h.capa).map(tarjeta).join('');      // la plataforma (Kali), sin capa
+    const capas = [];
+    l.forEach(h => { if (h.capa && !capas.includes(h.capa)) capas.push(h.capa); });
+    for (const capa of capas) {
+      html += `<div class="herr-capa">${capa}</div>` + l.filter(h => h.capa === capa).map(tarjeta).join('');
+    }
+    return html + '<div class="herr-leyenda"><span class="herr-demo">demo</span> = la lanzas en la sustentación</div></aside>';
+  }
+  return '<aside class="herr-col"><div class="cod-sub">Herramientas</div>' + l.map(tarjeta).join('') + '</aside>';
+}
 
 // Dos vistas del mismo sistema. "esencial" es el camino del paquete en siete
 // pasos; "completa" anade los artefactos que se escriben en disco, la rama de
@@ -2816,7 +4740,12 @@ const TOPO_VISTAS = {
     // Flujo HORIZONTAL de izquierda a derecha: cada fase es una columna
     // (Hosts | Adquisicion | Analisis | Decision | Observabilidad) y el paquete
     // avanza de izquierda a derecha. Un punto lo recorre en vivo.
-    packet: 'M374,70 L374,275 L540,139 L628,215 L894,139 L894,249 L1148,187 L1424,187 L1680,183',
+    // Dos sobres que salen A LA VEZ desde la Interfaz en escucha, uno por cada rama de
+    // adquisición (tcpdump y Suricata), y se JUNTAN en el Modelo recalibrado.
+    packets: [
+      { d: 'M374,275 L628,139 L628,215 L894,139 L894,249 L1148,187', dur: '6s', begin: '0s' },   // rama tcpdump (L2·L3·L4)
+      { d: 'M374,275 L628,303 L628,379 L894,359 L894,249 L1148,187', dur: '6s', begin: '0s' },   // rama Suricata (L7)
+    ],
     grupos: [
       { x: 12,   y: 32, w: 200, h: 456, txt: 'Hosts · VLAN 20/30' },
       { x: 272,  y: 32, w: 460, h: 456, txt: 'Adquisición',          n: 1 },
@@ -2825,12 +4754,12 @@ const TOPO_VISTAS = {
       { x: 1578, y: 32, w: 196, h: 456, txt: 'Observabilidad',       n: 4 },
     ],
     nodos: [
-      { id: 'atacante', x: 24, y: 70,  w: 176, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',   host: true, ip: '10.10.20.30',     desc: 'lanza los ataques' },
-      { id: 'clientes', x: 24, y: 140, w: 176, h: 48, icono: 'red',    titulo: 'Clientes',          host: true, ip: '10.10.20.21-.26', desc: '6 perfiles legítimos' },
-      { id: 'servidor', x: 24, y: 210, w: 176, h: 48, icono: 'disco',  titulo: 'Servidor',          host: true, ip: '10.10.30.10',     desc: 'objetivo HTTP/HTTPS' },
-      { id: 'gateway',  x: 24, y: 280, w: 176, h: 48, icono: 'firewall', titulo: 'Firewall', host: true, ip: '10.10.20.1',      desc: 'enruta entre VLAN' },
+      { id: 'atacante', x: 24, y: 70,  w: 176, h: 48, icono: 'atacante',   titulo: 'Atacante (Kali)',   host: true, ip: '10.10.20.30',     desc: 'lanza los ataques' },
+      { id: 'clientes', x: 24, y: 140, w: 176, h: 48, icono: 'usuarios',    titulo: 'Clientes',          host: true, ip: '10.10.20.21-.26', desc: '6 perfiles legítimos' },
+      { id: 'servidor', x: 24, y: 210, w: 176, h: 48, icono: 'host_servidor',  titulo: 'Servidor',          host: true, ip: '10.10.30.10',     desc: 'objetivo HTTP/HTTPS' },
+      { id: 'gateway',  x: 24, y: 280, w: 176, h: 48, icono: 'router', titulo: 'Router', host: true, ip: '10.10.20.1',      desc: 'enruta entre VLAN' },
       { id: 'red',       x: 286, y: 70,  w: 176, h: 58, icono: 'red',    titulo: 'Red de la entidad',  tag: 'VLAN 10-100' },
-      { id: 'span',      x: 286, y: 158, w: 176, h: 58, icono: 'switch', titulo: 'Espejo SPAN',        tag: 'CORE-STACK' },
+      { id: 'span',      x: 286, y: 158, w: 176, h: 58, icono: 'switch', titulo: 'Espejo SPAN',        tag: 'SWITCH' },
       { id: 'nic',       x: 286, y: 246, w: 176, h: 58, icono: 'nic',    titulo: 'Interfaz en escucha', tag: 'ens37 · SIN IP' },
       { id: 'captura',   x: 540, y: 110, w: 176, h: 58, icono: 'captura', titulo: 'tcpdump',           tag: 'SERVICIO' },
       { id: 'pcap',      x: 540, y: 192, w: 176, h: 46, icono: 'fichero', titulo: 'anillo live-*.pcap', tag: 'ARTEFACTO', clase: 'artefacto' },
@@ -2839,7 +4768,7 @@ const TOPO_VISTAS = {
       { id: 'motor',     x: 806, y: 110, w: 176, h: 58, icono: 'cpu',    titulo: 'Parser de paquetes', tag: 'TRAMA → FLUJO · L2·L3·L4' },
       { id: 'variables', x: 806, y: 220, w: 176, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s',   tag: 'POR IP Y VENTANA' },
       { id: 'parser_eve', x: 806, y: 330, w: 176, h: 58, icono: 'reglas', titulo: 'Parser de eventos', tag: 'JSON → L7 · HTTP·DNS·TLS', val: 'http · dns · tls' },
-      { id: 'descartes', x: 806, y: 420, w: 176, h: 48, icono: 'tijera', titulo: 'Fuera del cálculo',  tag: 'SUMIDERO', clase: 'sumidero' },
+      { id: 'descartes', x: 806, y: 420, w: 176, h: 48, icono: 'tijera', titulo: 'No se puntúa',       tag: 'CONTROL · DUPLICADOS', clase: 'sumidero' },
       { id: 'reentrenamiento', x: 1060, y: 70, w: 176, h: 58, icono: 'ciclo', titulo: 'Aprendizaje', tag: 'APROBACIÓN HUMANA · CADA NOCHE' },
       { id: 'modelo',    x: 1060, y: 158, w: 176, h: 58, icono: 'modelo', titulo: 'Modelo recalibrado', tag: 'IF · CALIBRADO' },
       { id: 'heuristicos', x: 1060, y: 276, w: 176, h: 58, icono: 'reglas', titulo: 'Heurísticos',     tag: 'DETERMINISTAS' },
@@ -2898,7 +4827,7 @@ const TOPO_VISTAS = {
     nodos: [
       { id: 'm_datos',  x: 32,   y: 78, w: 196, h: 62, icono: 'disco',    titulo: 'Línea base real',       tag: 'SPAN · PCAP · eve', val: 'hecho' },
       { id: 'm_feat',   x: 262,  y: 78, w: 196, h: 62, icono: 'tabla',    titulo: '28 variables L3/L4/L7', tag: 'extractor congelado', val: 'hecho' },
-      { id: 'm_modelo', x: 492,  y: 78, w: 196, h: 62, icono: 'modelo',   titulo: 'IF + heurísticos',      tag: 'θ = −0,569397', val: 'hecho' },
+      { id: 'm_modelo', x: 492,  y: 78, w: 196, h: 62, icono: 'modelo',   titulo: 'IF + heurísticos',      tag: 'θ = −0,622389', val: 'hecho' },
       { id: 'm_eval',   x: 722,  y: 78, w: 196, h: 62, icono: 'lupa',     titulo: 'Replay vs Suricata',    tag: '9/9 vs 0/9 · N=3', val: 'parcial · falta C3' },
       { id: 'm_resp',   x: 952,  y: 78, w: 196, h: 62, icono: 'escudo',   titulo: 'PERMIT/LIMIT/BLOCK',    tag: 'feed firmado', val: 'hecho' },
       { id: 'm_desp',   x: 1182, y: 78, w: 196, h: 62, icono: 'nic',      titulo: 'Desplegado en sensor',  tag: 'systemd · replicable', val: 'hecho' },
@@ -2938,7 +4867,7 @@ const TOPO_VISTAS = {
       { id: 'c_cand',    x: 808,  y: 72,  w: 200, h: 64, icono: 'modelo',   titulo: 'Candidatos',           tag: 'IF · LOF · OCSVM · EE', val: '7 (laboratorio) · IF aquí' },
       { id: 'c_metr',    x: 1064, y: 72,  w: 200, h: 64, icono: 'lupa',     titulo: 'Comparar métricas',    tag: 'FPR · recall · F1 · AUC', val: 'criterio fijado antes' },
       { id: 'c_sel',     x: 1320, y: 72,  w: 200, h: 64, icono: 'decision', titulo: 'Selección', forma: 'rombo', rsub: 'IF → esta red' },
-      { id: 'c_cong',    x: 1320, y: 252, w: 200, h: 64, icono: 'cpu',      titulo: 'Congelar modelo', tag: 'α=0,05 · −0,569397', val: 'sha256 df547da0…' },
+      { id: 'c_cong',    x: 1320, y: 252, w: 200, h: 64, icono: 'cpu',      titulo: 'Congelar modelo', tag: 'α=0,01 · −0,622389', val: 'sha256 df547da0…' },
       { id: 'c_desp',    x: 1064, y: 252, w: 200, h: 64, icono: 'nic',      titulo: 'Despliegue',           tag: 'promover + verificar', val: 'manifiesto + hash' },
       { id: 'c_acum',    x: 808,  y: 252, w: 200, h: 64, icono: 'fichero',  titulo: 'Acumulación',          tag: 'temporizador · v3', val: 'cada 10 min' },
       { id: 'c_vivo',    x: 552,  y: 252, w: 200, h: 64, icono: 'escudo',   titulo: 'Motor en vivo',        tag: 'PERMIT · ALERT · BLOCK', val: 'marca IPs sospechosas' },
@@ -2987,13 +4916,13 @@ const TOPO_VISTAS = {
       { x: 740, y: 32,  w: 720, h: 452, txt: 'Host ESXi · 172.17.25.2' },
     ],
     nodos: [
-      { id: 'atacante',  x: 24,  y: 60,  w: 176, h: 48, icono: 'lupa',   titulo: 'Atacante (Kali)',  host: true, ip: '10.10.20.30',     desc: '' },
-      { id: 'clientes',  x: 24,  y: 118, w: 176, h: 48, icono: 'red',    titulo: 'Clientes',         host: true, ip: '10.10.20.21-.26', desc: '' },
-      { id: 'servidor',  x: 24,  y: 216, w: 176, h: 48, icono: 'disco',  titulo: 'srv-dmz · objetivo', host: true, ip: '10.10.30.10',   desc: '' },
+      { id: 'atacante',  x: 24,  y: 60,  w: 176, h: 48, icono: 'atacante',   titulo: 'Atacante (Kali)',  host: true, ip: '10.10.20.30',     desc: '' },
+      { id: 'clientes',  x: 24,  y: 118, w: 176, h: 48, icono: 'usuarios',    titulo: 'Clientes',         host: true, ip: '10.10.20.21-.26', desc: '' },
+      { id: 'servidor',  x: 24,  y: 216, w: 176, h: 48, icono: 'host_servidor',  titulo: 'srv-dmz · objetivo', host: true, ip: '10.10.30.10',   desc: '' },
       { id: 'r_bastion', x: 24,  y: 316, w: 176, h: 48, icono: 'ojo',    titulo: 'VM-GESTION',       host: true, ip: '10.10.10.30',     desc: '' },
       { id: 'r_dns',     x: 24,  y: 374, w: 176, h: 48, icono: 'red',    titulo: 'DNS / AD',         host: true, ip: '10.10.10.20',     desc: '' },
-      { id: 'gateway',   x: 330, y: 70,  w: 196, h: 48, icono: 'firewall', titulo: 'Firewall A/B',   host: true, ip: 'enruta entre VLAN', desc: '' },
-      { id: 'span',      x: 330, y: 216, w: 196, h: 58, icono: 'switch', titulo: 'CORE-STACK',       tag: 'NO ENRUTA · ESPEJA' },
+      { id: 'gateway',   x: 330, y: 70,  w: 196, h: 48, icono: 'router', titulo: 'Router A/B',     host: true, ip: 'enruta entre VLAN', desc: '' },
+      { id: 'span',      x: 330, y: 216, w: 196, h: 58, icono: 'switch', titulo: 'Switch',           tag: 'NO ENRUTA · ESPEJA' },
       { id: 'r_pg',      x: 760, y: 70,  w: 240, h: 58, icono: 'nic',    titulo: 'PG-CYBERFLOW-SPAN', tag: 'GRUPO DE PUERTOS', val: 'modo promiscuo' },
       { id: 'nic',       x: 760, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor1 · ens37',  tag: 'CAPTURA · SIN IP', val: 'modo promiscuo' },
       { id: 'r_sensor2', x: 990, y: 200, w: 196, h: 58, icono: 'nic',    titulo: 'Sensor2 · ens37',  tag: 'RÉPLICA · 10.10.60.12', val: 'recibe la misma copia' },
@@ -3031,10 +4960,10 @@ const TOPO_VISTAS = {
     ],
     nodos: [
       { id: 'variables',   x: 40,   y: 120, w: 190, h: 58, icono: 'tabla',  titulo: 'Variables / 10 s', tag: 'POR IP Y VENTANA' },
-      { id: 'descartes',   x: 40,   y: 204, w: 190, h: 48, icono: 'tijera', titulo: 'IP excluida',      tag: 'SE CUENTA · NO SE PUNTÚA', clase: 'sumidero' },
+      { id: 'd_excluida',  x: 40,   y: 204, w: 190, h: 48, icono: 'tijera', titulo: 'IP excluida',      tag: 'SE CUENTA · NO SE PUNTÚA', val: 'fuera de alcance', clase: 'sumidero' },
       { id: 'modelo',      x: 330,  y: 70,  w: 200, h: 58, icono: 'modelo', titulo: 'Isolation Forest', tag: 'SOLO CON PAQUETES' },
       { id: 'heuristicos', x: 330,  y: 170, w: 200, h: 58, icono: 'reglas', titulo: 'Heurísticos',      tag: 'TAMBIÉN SIN PAQUETES (L7)' },
-      { id: 'd_alert',     x: 630,  y: 70,  w: 200, h: 58, icono: 'decision', titulo: 'ALERT del modelo', tag: 's(x) < −0,569397', val: 'pasa a LIMIT' },
+      { id: 'd_alert',     x: 630,  y: 70,  w: 200, h: 58, icono: 'decision', titulo: 'ALERT del modelo', tag: 's(x) < −0,622389', val: 'señal · sin medida' },
       { id: 'd_reglas',    x: 630,  y: 170, w: 300, h: 58, icono: 'reglas', titulo: 'Regla disparada',  tag: 'ABUSO HTTP · DNS → LIMIT', val: 'fuerza bruta · escaneo → BLOCK' },
       { id: 'registro',    x: 1060, y: 124, w: 200, h: 50, icono: 'fichero', titulo: 'motor_decision.log', tag: 'IP · VENTANA · SCORE · REGLA', clase: 'artefacto' },
       { id: 'd_nunca',     x: 40,   y: 330, w: 200, h: 58, icono: 'tijera', titulo: 'Nunca bloquear',   tag: 'FILTRO', val: 'bastión · sensor · DNS' },
@@ -3046,7 +4975,7 @@ const TOPO_VISTAS = {
       { id: 'd_block',     x: 1080, y: 440, w: 240, h: 58, icono: 'escudo', titulo: 'BLOCK',            tag: 'REVISIÓN HUMANA DESDE EL 3.º', val: '300 · 1800 · 3600 s', clase: 'acc-block' },
     ],
     aristas: [
-      { d: 'M135,178 L135,204',                      desde: 'variables',   hasta: 'descartes',  tipo: 'descarte' },
+      { d: 'M135,178 L135,204',                      desde: 'variables',   hasta: 'd_excluida', tipo: 'descarte' },
       { d: 'M230,149 C280,149 280,99 330,99',        desde: 'variables',   hasta: 'modelo',     etiqueta: '28 variables', ex: 276, ey: 106 },
       { d: 'M230,149 C280,149 280,199 330,199',      desde: 'variables',   hasta: 'heuristicos', etiqueta: '+ conteos', ex: 280, ey: 204 },
       { d: 'M530,99 L630,99',                        desde: 'modelo',      hasta: 'd_alert',    etiqueta: 'score &lt; umbral', ex: 580, ey: 90 },
@@ -3079,15 +5008,15 @@ const TOPO_VISTAS = {
       { id: 'feed',       x: 320,  y: 110, w: 176, h: 58, icono: 'fichero', titulo: 'Feed firmado',  tag: 'CICLO ≤ 10 s' },
       { id: 'relay',      x: 592,  y: 110, w: 176, h: 58, icono: 'espejo',  titulo: 'Relay',         tag: 'RÉPLICA', val: 'ciclo 10 s' },
       { id: 'agente',     x: 860,  y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'Agente',        tag: 'VERIFICA LA FIRMA' },
-      { id: 'p_nft',      x: 1110, y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'nftables',      tag: 'MEDIDO 15,3 s', val: 'LIMIT · BLOCK', clase: 'acc-block' },
+      { id: 'p_nft',      x: 1110, y: 110, w: 176, h: 58, icono: 'escudo',  titulo: 'nftables',      tag: 'MEDIDA EN ~1,3 s', val: 'LIMIT · BLOCK', clase: 'acc-block' },
       { id: 'p_noaplica', x: 860,  y: 230, w: 176, h: 58, icono: 'tijera',  titulo: 'Firma inválida', tag: 'LO VIGENTE CADUCA', val: 'no aplica nada', clase: 'sumidero' },
       { id: 'p_caduca',   x: 1110, y: 230, w: 176, h: 58, icono: 'ciclo',   titulo: 'Caduca sola',   tag: 'TIMEOUT DEL SET', val: '300 · 1800 · 3600 s' },
       { id: 'p_manual',   x: 1356, y: 110, w: 176, h: 58, icono: 'ojo',     titulo: 'Retirada manual', tag: 'UNA PERSONA', val: 'nft delete element' },
     ],
     aristas: [
       { d: 'M216,139 L320,139',   desde: 'control', hasta: 'feed',       etiqueta: 'ciclo 10 s', ex: 268, ey: 130 },
-      { d: 'M496,139 L592,139',   desde: 'feed',    hasta: 'relay',      tipo: 'fijo', etiqueta: '+3 s', ex: 544, ey: 130 },
-      { d: 'M768,139 L860,139',   desde: 'relay',   hasta: 'agente',     tipo: 'fijo', etiqueta: '+3 s', ex: 814, ey: 130 },
+      { d: 'M496,139 L592,139',   desde: 'feed',    hasta: 'relay',      tipo: 'fijo', etiqueta: 'copia', ex: 544, ey: 130 },
+      { d: 'M768,139 L860,139',   desde: 'relay',   hasta: 'agente',     tipo: 'fijo', etiqueta: 'pull', ex: 814, ey: 130 },
       { d: 'M1036,139 L1110,139', desde: 'agente',  hasta: 'p_nft',      tipo: 'fijo', etiqueta: 'válida', ex: 1073, ey: 130 },
       { d: 'M948,168 L948,230',   desde: 'agente',  hasta: 'p_noaplica', tipo: 'descarte' },
       { d: 'M1198,168 L1198,230', desde: 'p_nft',   hasta: 'p_caduca',   tipo: 'fijo' },
@@ -3173,7 +5102,60 @@ function validacionDetalleHTML() {
     + '<p class="dim">Los subtotales resumen la tabla documental; no se deriva de ellos el éxito en producción. TAM y juicio de expertos van en la validación externa.</p>';
 }
 
-let topoVista = 'metodologica';
+let topoVista = 'completa';
+// 17-nov: Vista lab = lo montado para el ensayo; Vista operativa = solo el flujo de una red real.
+// En operativa no se sabe de antemano si el tráfico es un ataque: la Kali y los clientes se
+// funden en «Tráfico entrante» y desaparece lo que solo existe en el laboratorio.
+let topoModo = 'lab';
+try { if (localStorage.getItem('cf_topo_modo') === 'operativa') topoModo = 'operativa'; } catch (e) { /* lab */ }
+const TOPO_SIEMPRE_OCULTOS = new Set(['reentrenamiento']);   // el aprendizaje no se muestra (17-nov)
+const TOPO_OP_OCULTOS = {
+  red: ['atacante', 'clientes', 'r_sensor2', 'r_cmp'],
+  completa: ['atacante', 'clientes', 'descartes', 'wazuh'],
+};
+const TOPO_OP_ENTRANTE = {
+  red: { nodo: { id: 'entrante', x: 24, y: 60, w: 176, h: 106, icono: 'entrante', titulo: 'Tráfico entrante', host: true, ip: 'sin clasificar', desc: 'legítimo o ataque: lo decide el sensor' },
+         arista: { d: 'M200,113 C268,113 268,236 330,236', desde: 'entrante', hasta: 'span', tipo: 'fijo', etiqueta: '1 · entra', ex: 262, ey: 104 },
+         grupo: 'Entrada · sin clasificar',
+         packet: 'M200,113 L330,240 L400,216 L400,118 L456,118 L456,216 L330,250 L200,240' },
+  completa: { nodo: { id: 'entrante', x: 24, y: 100, w: 176, h: 58, icono: 'entrante', titulo: 'Tráfico entrante', host: true, ip: 'sin clasificar', desc: 'legítimo o ataque: lo decide el sensor' },
+              arista: { d: 'M200,129 C250,129 262,99 286,99', desde: 'entrante', hasta: 'red', tipo: 'fijo', etiqueta: 'entra', ex: 240, ey: 112 },
+              grupo: 'Red · entrada y servicios' },
+};
+const TOPO_LEDE = {
+  red: 'Por dónde pasa el tráfico y cómo llega su copia al sensor: el switch espeja el troncal del router; el sensor escucha sin IP y no está en el camino.',
+  completa: 'El recorrido de un paquete de punta a punta: captura, variables cada 10 s, modelo y reglas, decisión, feed firmado y agente en el host.',
+  decision: 'Cómo se decide: el motor juzga cada ventana (modelo + reglas); el publicador agrupa por IP, elige lo más severo y fija la caducidad.',
+  respuesta: 'Del veredicto a la regla en el host: feed firmado, réplica en el bastión, agente que verifica la firma y nftables con caducidad.',
+  carpetas: 'Dónde vive cada pieza en el repositorio.',
+};
+const topoCacheOp = {};
+function topoV() {
+  if (topoVista === 'construccion' || !TOPO_VISTAS[topoVista]) topoVista = 'completa';
+  const base = TOPO_VISTAS[topoVista];
+  const clave = topoVista + '|' + topoModo;
+  if (topoCacheOp[clave]) return topoCacheOp[clave];
+  const fuera = new Set(TOPO_SIEMPRE_OCULTOS);
+  if (topoModo === 'operativa') (TOPO_OP_OCULTOS[topoVista] || []).forEach(id => fuera.add(id));
+  let nodos = base.nodos.filter(n => !fuera.has(n.id));
+  let aristas = base.aristas.filter(e => !fuera.has(e.desde) && !fuera.has(e.hasta));
+  let grupos = base.grupos, packet = base.packet;
+  const ent = topoModo === 'operativa' && TOPO_OP_ENTRANTE[topoVista];
+  if (ent) {
+    nodos = [ent.nodo].concat(nodos);
+    aristas = [ent.arista].concat(aristas);
+    grupos = grupos.map((g, i) => i === 0 ? Object.assign({}, g, { txt: ent.grupo }) : g);
+    if (ent.packet) packet = ent.packet;
+  }
+  return (topoCacheOp[clave] = Object.assign({}, base, { nodos, aristas, grupos, packet }));
+}
+function pintarTopoModo() {
+  document.querySelectorAll('#topoModo button').forEach(b => b.classList.toggle('active', b.dataset.modo === topoModo));
+  const l = document.getElementById('topoLede');
+  if (l) l.textContent = (TOPO_LEDE[topoVista] || '') + (!TOPO_OP_OCULTOS[topoVista] ? ''
+    : topoModo === 'operativa' ? ' Vista operativa: solo el flujo que existiría en una red real.'
+    : ' Vista lab: incluye lo montado para el ensayo (Kali, clientes, réplica y comparador).') + ' Pulsa un componente para ver su detalle.';
+}
 // Ultimo estado de /api/aprendizaje (lo llena cargarAprendizaje). Los nodos del
 // aprendizaje en la topologia lo leen; con var y aqui arriba para que exista
 // desde el primer pintado, aunque llegue despues.
@@ -3188,12 +5170,20 @@ const filesAbiertos = new Set();
 const TOPO_TEXTO = {
   red: {
     que: 'El tráfico entre VLAN de la entidad. No se toca: CyberFlow solo observa una copia.',
-    nota: 'La red enruta a través del cortafuegos, así que todo el tráfico entre VLAN pasa por el troncal espejado.',
+    nota: 'La red enruta a través del router, así que todo el tráfico entre VLAN pasa por el troncal espejado.',
   },
   span: {
-    que: 'La sesión de espejo del conmutador copia el troncal del cortafuegos hacia el puerto del sensor.',
+    que: 'La sesión de espejo del switch copia el troncal del router hacia el puerto del sensor. Copia, no desvía: el sensor no está en el camino del tráfico.',
     nota: 'Desde el sensor no se puede leer el estado de la sesión: se infiere de que lleguen paquetes. Si deja de llegar tráfico, el problema puede estar aquí y el panel no lo distingue de una red en silencio.',
-    cmd: 'monitor session 1 source interface Gi1/0/23 , Gi2/0/23 both\\nmonitor session 1 destination interface Gi2/0/19 encapsulation replicate\\n! Gi1/0/23 y Gi2/0/23: troncales del Firewall A/B\\n! Gi2/0/19: hacia el hipervisor del sensor (172.17.25.2)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
+    cmd: 'monitor session 1 source interface Gi1/0/23 , Gi2/0/23 both\\nmonitor session 1 destination interface Gi2/0/19 encapsulation replicate\\n! Gi1/0/23 y Gi2/0/23: troncales del router A/B\\n! Gi2/0/19: hacia el hipervisor del sensor (172.17.25.2)\\n! encapsulation replicate: conserva la etiqueta 802.1Q -> el sensor ve la VLAN',
+  },
+  d_excluida: {
+    que: 'Una IP declarada fuera de alcance (por ejemplo, infraestructura propia): sus ventanas se cuentan, pero el motor no las puntúa ni decide sobre ellas.',
+    nota: 'No confundir con «No se puntúa» de la vista Operacional, que suma además el latido de los routers y las copias dobles del espejo.',
+  },
+  entrante: {
+    que: 'Todo lo que cruza el troncal espejado: usuarios, servicios y, quizá, un atacante. En una red real nadie lo etiqueta de antemano: el sensor solo ve tráfico y decide, ventana a ventana, si es normal (PERMIT) o anómalo (LIMIT o BLOCK).',
+    nota: 'En la vista lab este nodo se separa en la Kali (ataques del ensayo) y los clientes (tráfico legítimo generado): allí sí se sabe cuál es cuál, y eso es lo que permite medir aciertos y falsos positivos.',
   },
   atacante: {
     que: 'La VM Kali (10.10.20.30, VLAN 20). Lanza los ataques del ensayo con herramientas estándar de pentesting; cada familia mueve variables distintas que el sensor ve por el espejo. El panel solo MUESTRA estos comandos (sección Simulación); nunca los ejecuta.',
@@ -3237,15 +5227,15 @@ const TOPO_TEXTO = {
     flujoTit: 'Qué corre en el host y cómo bloquea',
     flujo: [
       {paso: 'Servicio web (servidor_lab.py)', fichero: 'HTTP 80 · HTTPS 443', garantia: 'objetivo del tráfico legítimo y de los ataques. Sirve /estatico/<n>k (tamaños) y /api/* — ok, auth→401, perdido→404, fallo→500, lento: cada endpoint alimenta una variable concreta'},
-      {paso: 'Agente de enforcement', fichero: 'ppi-enforce-agent.timer (ciclo 10 s)', garantia: 'trae el feed del relay, verifica la firma ed25519 y aplica nftables'},
-      {paso: 'BLOCK = drop', fichero: 'set cyberflow_bloqueados (con timeout)', garantia: 'ip saddr @bloqueados → drop; caduca solo'},
-      {paso: 'LIMIT = rate-limit', fichero: 'set cyberflow_limitados (con timeout)', garantia: 'limit rate over 100/s burst 5 → drop el exceso'},
+      {paso: 'Agente de enforcement v2', fichero: 'ppi-enforce-agent-v2-dmz.service (ciclo 10 s)', garantia: 'trae el feed del relay, verifica la firma ed25519 y sincroniza nftables a través de cf-nft-helper (único comando con sudo). Hoy corre en SOMBRA: registra lo que haría'},
+      {paso: 'BLOCK = drop', fichero: 'set bloqueados (con timeout)', garantia: 'ip saddr @bloqueados → drop; caduca solo'},
+      {paso: 'LIMIT = rate-limit', fichero: 'set limitados (con timeout)', garantia: 'por origen: más de 100 paquetes/s (ráfaga 100) → drop el exceso. En el DNS (DC1), solo puerto 53: 30/min, ráfaga 18'},
     ],
-    cmd: 'table inet cyberflow {\\n  set cyberflow_bloqueados { type ipv4_addr; flags timeout }\\n  set cyberflow_limitados  { type ipv4_addr; flags timeout }\\n  chain entrada {\\n    type filter hook input priority filter - 10; policy accept;\\n    ip saddr @cyberflow_bloqueados drop\\n    ip saddr @cyberflow_limitados limit rate over 100/second burst 5 packets drop\\n  }\\n}',
-    nota: 'Tabla AISLADA (policy accept): solo cae lo que trae el feed; nunca gateways ni DNS. El sudoers del agente solo permite «nft» sin contraseña, nada más. Fail-safe: si la firma no verifica, no toca la tabla. Aparece con pocos paquetes PROPIOS porque el motor atribuye cada flujo a quien lo inicia, no al destino.',
+    cmd: 'table inet cyberflow_dmz {\\n  set bloqueados { type ipv4_addr; flags timeout; counter; }\\n  set limitados  { type ipv4_addr; flags timeout; counter; }\\n  chain entrada {\\n    type filter hook input priority -10; policy accept;\\n    ip saddr @bloqueados counter drop\\n    ip saddr @limitados update @tasa_origen { ip saddr limit rate over 100/second burst 100 packets } counter drop\\n  }\\n}',
+    nota: 'Tabla AISLADA (policy accept): solo cae lo que trae el feed; nunca gateways ni DNS. El sudoers del agente solo permite el helper cf-nft-helper, que valida cada orden antes de pasarla a nft. Fail-safe: si la firma no verifica, no toca la tabla. Aparece con pocos paquetes PROPIOS porque el motor atribuye cada flujo a quien lo inicia, no al destino.',
   },
   gateway: {
-    que: 'La segmentación del laboratorio: un cortafuegos pfSense en alta disponibilidad (par A/B con VIP CARP) que enruta entre VLAN y es la puerta de enlace de cada una (VLAN 20 clientes/Kali · 30 DMZ · 60 sensor · 10 gestión). Todo el tráfico entre VLAN cruza el troncal, que es el que se espeja (SPAN) hacia el sensor.',
+    que: 'El router de la red: enruta entre VLAN y es la puerta de enlace de cada una. En el laboratorio es un pfSense en alta disponibilidad (par A/B con VIP CARP) (VLAN 20 clientes/Kali · 30 DMZ · 60 sensor · 10 gestión). Todo el tráfico entre VLAN cruza el troncal, que es el que se espeja (SPAN) hacia el sensor.',
     flujoTit: 'Reglas implementadas (lo que el ensayo comprobó)',
     flujo: [
       {paso: 'Atacante → DMZ', fichero: 'VLAN 20 → VLAN 30', garantia: 'HTTPS (443) permitido. En la validación del 14-oct el puerto 80 también estaba ABIERTO E2E (ver nota), lo que permitió validar los ataques HTTP; ICMP bloqueado'},
@@ -3253,7 +5243,7 @@ const TOPO_TEXTO = {
       {paso: 'Sensor sin salida a Internet', fichero: 'VLAN 60 · egress denegado', garantia: 'propiedad de seguridad: nada de bots externos'},
       {paso: 'Troncal espejado', fichero: 'SPAN del trunk → sensor', garantia: 'el sensor ve una COPIA, no está en línea: observa, no corta'},
     ],
-    nota: 'El escaneo de puertos se valida de extremo a extremo porque opera a nivel TCP/flujo, que el sensor observa por el espejo SPAN. En la validación del 14-oct el puerto 80 estaba ABIERTO E2E (Kali→DMZ), así que los ataques HTTP en claro —flood (http_abuse→LIMIT) y fuerza bruta sobre el endpoint de laboratorio (brute_force→BLOCK)— también se validaron de extremo a extremo; sobre 443 Suricata solo ve TLS cifrado. El DNS de alta entropía (DGA) se detecta aunque vaya al resolutor de gestión, no a la DMZ. El cortafuegos es de SOLO LECTURA para CyberFlow: la respuesta la aplica el agente en el host, no aquí. En el ARP spoofing la IP de la puerta de enlace pasa a verse con dos MAC: esa es la anomalía de capa 2 que mueve unique_src_mac_30s.',
+    nota: 'El escaneo de puertos se valida de extremo a extremo porque opera a nivel TCP/flujo, que el sensor observa por el espejo SPAN. En la validación del 14-oct el puerto 80 estaba ABIERTO E2E (Kali→DMZ), así que los ataques HTTP en claro —flood (http_abuse→LIMIT) y fuerza bruta sobre el endpoint de laboratorio (brute_force→BLOCK)— también se validaron de extremo a extremo; sobre 443 Suricata solo ve TLS cifrado. El DNS de alta entropía (DGA) se detecta aunque vaya al resolutor de gestión, no a la DMZ. El router es de SOLO LECTURA para CyberFlow: la respuesta la aplica el agente en el host, no aquí. En el ARP spoofing la IP de la puerta de enlace pasa a verse con dos MAC: esa es la anomalía de capa 2 que mueve unique_src_mac_30s.',
   },
   reentrenamiento: {
     que: 'El modelo envejece: la normalidad cambia con el tiempo. Cada noche el sistema sanea un lote, mide la deriva y, cuando toca, entrena y evalúa un candidato. Desplegarlo lo decide una persona: un modelo que se cambia solo podría aprender un ataque lento como normal.',
@@ -3344,12 +5334,12 @@ const TOPO_TEXTO = {
     enlace: { href: '#s-vivo', vtab: 'eve', txt: 'Ver eventos parseados en vivo' },
   },
   modelo: {
-    que: 'Isolation Forest limpio ajustado en esta red, con umbral congelado en validación (score_samples < -0,569397).',
+    que: 'Isolation Forest limpio ajustado en esta red, con umbral congelado en validación (score_samples < -0,622389, punto operativo α = 0,01).',
     codigo: {
       archivo: 'modelo congelado en artifacts/ · entrenamiento en scripts/modeling/',
       pseudo: [
         'score ← modelo.score_samples(features)',
-        'si score < umbral (−0,569397): ALERT → LIMIT',
+        'si score < umbral (−0,622389): ALERT → LIMIT',
         'si no: PERMIT',
       ],
       editar: 'no se edita a mano: se reentrena y una persona lo promueve (ver Aprendizaje)',
@@ -3379,7 +5369,7 @@ const TOPO_TEXTO = {
     },
   },
   control: {
-    que: 'Fusiona las dos señales en UNA decisión por entidad y ventana. El motor registra PERMIT o ALERT (score bajo el umbral, o heurístico); la ALERT se traduce en acción: LIMIT (degradar la tasa) para la anomalía del modelo y para abuso HTTP o DNS, BLOCK (cortar) para fuerza bruta o escaneo confirmados.',
+    que: 'Fusiona las dos señales en UNA decisión por entidad y ventana. El motor registra PERMIT o ALERT (score bajo el umbral, o heurístico); la acción la pone la regla: LIMIT (degradar la tasa) para abuso HTTP o DNS, BLOCK (cortar) para fuerza bruta o escaneo. La anomalía del modelo, sola, queda como señal para revisión (política if_senal).',
     flujoTit: 'Cómo se decide la acción',
     flujo: [
       {paso: 'Dos entradas', fichero: 'motor_decision.py', garantia: 'score del modelo (anomalía→LIMIT) + heurístico (confirmado→BLOCK)'},
@@ -3427,14 +5417,14 @@ const TOPO_TEXTO = {
       {paso: 'Aplica', fichero: 'nftables', garantia: 'set con timeout nativo → caduca solo'},
     ],
     codigo: {
-      archivo: 'scripts/enforce/agente_enforce.py   (corre en el host protegido)',
+      archivo: '/opt/cyberflow/agente-v2/agente_enforce_v2.py   (corre en el host protegido)',
       pseudo: [
         'cada 10 s:',
         '  feed ← traer del relay (bastión)',
         '  si la firma ed25519 no verifica: no tocar nada (fail-safe)',
         '  sincronizar nftables: LIMIT=rate-limit, BLOCK=drop con timeout',
       ],
-      editar: 'nano ~/enforce/agente_enforce.py && sudo systemctl restart ppi-enforce-agent.timer   (en srv-dmz)',
+      editar: 'sudo nano /opt/cyberflow/agente-v2/agente_enforce_v2.py && sudo systemctl restart ppi-enforce-agent-v2-dmz   (en srv-dmz)',
     },
   },
   wazuh: {
@@ -3452,7 +5442,7 @@ const TOPO_TEXTO = {
     enlace: { href: '#s-vivo', vtab: 'eve', txt: 'Ver los eventos en vivo y a qué variable aporta cada uno' },
   },
   descartes: {
-    que: 'Lo que se captura pero NO se puntúa: plano de control, copias del espejo y entidades declaradas fuera de alcance.',
+    que: 'Lo que se captura pero NO se puntúa. Casi todo es el latido del par de routers del laboratorio (CARP y pfsync, varios paquetes por segundo, día y noche); el resto son las copias dobles que el espejo enseña de una misma trama y las IP declaradas fuera de alcance. No es tráfico perdido: es ruido que, si se puntuara, el modelo tomaría por normal o por anómalo sin serlo.',
     nota: 'Declararlo con su cifra es parte del método. Sin número, «se excluyó» no es una medición sino una afirmación.',
   },
   variables: {
@@ -3470,7 +5460,7 @@ const TOPO_TEXTO = {
   },
   panel: {
     que: 'Lee el registro del motor, el estado de los servicios y la tabla nftables. No ejecuta ninguna acción.',
-    nota: 'Solo lectura a propósito. Un panel que pudiera desbloquear una IP sería otro camino hacia el cortafuegos, y con su propia superficie de ataque.',
+    nota: 'Solo lectura a propósito. Un panel que pudiera desbloquear una IP sería otro camino hacia las reglas de los hosts, y con su propia superficie de ataque.',
   },
   relay: {
     que: 'El bastión copia el feed firmado del sensor a la red interna. Los hosts lo traen de aquí: nunca hablan con el sensor.',
@@ -3486,7 +5476,7 @@ const TOPO_TEXTO = {
       {paso: 'Por qué hace falta', fichero: 'red segmentada por VLAN', garantia: 'el host de la DMZ no habla con el sensor directamente; el bastión alcanza a los dos y hace de puente'},
       {paso: 'Por qué es seguro', fichero: 'relay TONTO', garantia: 'solo copia bytes: la firma la pone el sensor y la verifica el host, así que el bastión no puede forjar ni alterar un bloqueo'},
     ],
-    nota: 'Modelo «un feed / N agentes (pull)»: el sensor NO tiene credenciales de los hosts; publica una lista firmada y cada host la trae y la verifica. Por eso el bastión, aunque administre, no es un camino hacia el cortafuegos. Está en la lista «nunca bloquear» (como los gateways y el DNS) para que un falso positivo no corte la propia vía de gestión. La VM también expone el panel al exterior por Tailscale (vm-gestion.tail83bf9c.ts.net).',
+    nota: 'Modelo «un feed / N agentes (pull)»: el sensor NO tiene credenciales de los hosts; publica una lista firmada y cada host la trae y la verifica. Por eso el bastión, aunque administre, no es un camino hacia las reglas de los hosts. Está en la lista «nunca bloquear» (como los gateways y el DNS) para que un falso positivo no corte la propia vía de gestión. La VM también expone el panel al exterior por Tailscale (vm-gestion.tail83bf9c.ts.net).',
   },
   r_dns: {
     que: 'El DNS y directorio de la red. Las consultas DNS de las pruebas van contra esta máquina.',
@@ -3619,7 +5609,7 @@ const TOPO_TEXTO = {
     archivos: [
       { n: 'instalar / desplegar',       host: 'sensor',   d: 'levanta el sensor desde cero' },
       { n: 'relay-feed.sh',              host: 'bastion',  d: 'copia el feed firmado a los hosts' },
-      { n: 'ppi-enforce-agent (unidad)', host: 'servidor', d: 'temporizador del agente, ciclo 10 s' },
+      { n: 'ppi-enforce-agent-v2-dmz (unidad)', host: 'servidor', d: 'servicio del agente v2, ciclo 10 s' },
     ],
   },
   cf_mas: {
@@ -3627,7 +5617,7 @@ const TOPO_TEXTO = {
   },
   // ---- Vista DECISION ----
   d_alert: {
-    que: 'Una ventana con paquetes cuyo score queda por debajo del umbral. El modelo no bloquea: su alerta se traduce en LIMIT.',
+    que: 'Una ventana con paquetes cuyo score queda por debajo del umbral. Con la política vigente (if_senal) el modelo solo es señal: marca la ventana para revisión y confirma la regla, pero por sí solo no publica medida.',
     nota: 'Sin paquetes en la ventana el modelo no puntúa, para no alertar por silencio de red.',
   },
   d_reglas: {
@@ -3658,7 +5648,7 @@ const TOPO_TEXTO = {
   // ---- Vista RESPUESTA ----
   p_nft: {
     que: 'La regla ya aplicada en el núcleo del host protegido. Es el final del tiempo de respuesta.',
-    nota: 'La medición histórica fue de 51 a 141 s con temporizadores de 60 s. La cadena vigente de 10 s midió 15,3 s desde la decisión hasta nftables; el cálculo corrigió 35,990 s de desfase NTP del sensor.',
+    nota: 'En la Campaña B, de la señal a la medida aplicada pasaron unos 1,3 s, casi constantes; los escaneos quedaron bloqueados en 1,4–1,9 s de mediana desde el inicio. Históricamente, con temporizadores de 60 s, eran 51 a 141 s.',
   },
   p_noaplica: {
     que: 'Si la firma del feed no verifica, el agente no toca nada.',
@@ -3682,7 +5672,7 @@ const TOPO_TEXTO = {
     nota: 'La limpieza acota la ENTRADA (deduplicar el espejo, quitar plano de control), nunca las fórmulas. 27 de 28 variables muestran variación observable.',
   },
   m_modelo: {
-    que: 'F3 · Detector híbrido: IF limpio con θ=−0,569397 y cuatro heurísticos (fuerza bruta, escaneo, abuso HTTP y DNS inusual). La evaluación offline del IF no es la evaluación del híbrido. La campaña del modelo limpio tiene resultados parciales; falta una batería completa y consistente.',
+    que: 'F3 · Detector híbrido: IF limpio con θ=−0,622389 (α = 0,01) y cuatro heurísticos (fuerza bruta, escaneo, abuso HTTP y DNS inusual). La evaluación offline del IF no es la evaluación del híbrido. La campaña del modelo limpio tiene resultados parciales; falta una batería completa y consistente.',
     nota: 'El modelo se elige comparando 7 candidatos, no a ciegas; el umbral se calibra en validación con objetivo de falsos positivos y se CONGELA antes de mirar el test.',
   },
   m_eval: {
@@ -3715,7 +5705,7 @@ const TOPO_TEXTO = {
     nota: 'Total usado para el IF vigente: 335 202 ventanas normales (204 148 + 65 633 + 65 421). Sin ataques: los de la Kali se reservaron para medir detección después.',
   },
   c_limpia: {
-    que: 'Limpieza = acotar la ENTRADA, no tocar fórmulas. Se quitan el plano de control del cortafuegos (CARP 112, pfsync 240), la segunda copia de cada trama que el espejo enseña dos veces y las entidades declaradas fuera de alcance.',
+    que: 'Limpieza = acotar la ENTRADA, no tocar fórmulas. Se quitan el plano de control del router (CARP 112, pfsync 240), la segunda copia de cada trama que el espejo enseña dos veces y las entidades declaradas fuera de alcance.',
     flujoTit: 'Qué se quita y dónde',
     flujo: [
       {paso: 'Plano de control', fichero: 'motor_decision.py', garantia: '--excluir-protocolos 112,240'},
@@ -3749,19 +5739,19 @@ const TOPO_TEXTO = {
     que: 'Con qué métricas. Sobre tráfico normal: FPR en validación (para fijar el umbral) y en prueba (una sola vez). Sobre ataques: tasa de detección con la Kali. En el laboratorio, además: precisión, recall, F1, MCC, ROC-AUC y PR-AUC, con McNemar + Holm entre pares.',
     flujoTit: 'Métricas del IF vigente',
     flujo: [
-      {paso: 'FPR validación', fichero: 'ensayo-if-v2.json', garantia: '5,00 % (por construcción: α = 0,05)'},
-      {paso: 'FPR prueba', fichero: 'Tabla 6 (4.1)', garantia: '4,53 % sobre 65 421 ventanas normales; IF offline'},
-      {paso: 'Detección Kali', fichero: 'nota M', garantia: '54/84 = 64,3 % global; HTTP 35/43'},
+      {paso: 'FPR validación', fichero: 'ensayo-if-v2.json', garantia: '1,00 % (por construcción: α = 0,01)'},
+      {paso: 'FPR prueba', fichero: 'Tabla 6 (4.1)', garantia: '0,87 % sobre 65 421 ventanas normales; IF offline'},
+      {paso: 'Detección Kali', fichero: 'nota M', garantia: '50/84 = 59,5 % global'},
     ],
-    nota: 'El corte usa validación con α=0,05. El 4,53 % es del IF offline, no del híbrido; evaluación reutilizada, no test ciego independiente.',
+    nota: 'El corte usa validación con α=0,01. El 0,87 % es del IF offline, no del híbrido; evaluación reutilizada, no test ciego independiente.',
   },
   c_sel: {
-    que: 'El OCSVM del laboratorio marca 99,57 % del tráfico normal como anómalo. El IF limpio obtiene FPR 4,53 % y recall 54/84, pero precisión 1,79 %. Se mide transferencia a esta red; no superioridad intrínseca ni cumplimiento de una meta de aceptación independiente.',
+    que: 'El OCSVM del laboratorio marca 99,57 % del tráfico normal como anómalo. El IF limpio obtiene FPR 0,87 % y recall 50/84, precisión 8,10 % (α = 0,01). Se mide transferencia a esta red; no superioridad intrínseca ni cumplimiento de una meta de aceptación independiente.',
     nota: 'La ablación 6/9, 7/9 y 9/9 es histórica del predecesor. El modelo limpio requiere su campaña final; no trasladar esas coberturas.',
     enlace: { href: '#s-modelo', txt: 'Ver «Pruebas previas» y la ablación' },
   },
   c_cong: {
-    que: 'Pipeline con escalador e IF; percentil α=0,05 en validación: score_samples < −0,569397 (decision_function < −0,069397). No se reajusta durante la evaluación.',
+    que: 'Pipeline con escalador e IF; percentil α=0,01 en validación: score_samples < −0,622389 (decision_function < −0,122389). No se reajusta durante la evaluación.',
     flujoTit: 'Qué queda fijo',
     flujo: [
       {paso: 'Pipeline', fichero: 'if_limpio_2026_10_desplegable.joblib', garantia: 'sha256 df547da0…fd60'},
@@ -3839,7 +5829,6 @@ const TOPO_TEXTO = {
   a_hum: {
     que: 'Aprobación humana: el modelo en uso solo cambia con «promover», que lanza una persona. Deja copia del .toml y apunta motor y panel al candidato; «revertir» lo deshace. Se conservan 3 modelos de respaldo.',
     nota: 'Por qué no es automático: un modelo que se despliega solo puede aprender un ataque lento como normal. Todo lo automático ocurre fuera del modelo en uso.',
-    enlace: { href: '#s-aprendizaje', txt: 'Ver el estado en «Aprendizaje»' },
   },
 };
 
@@ -4055,7 +6044,8 @@ function topoEstado(id, s) {
 
 function renderTopologia(status) {
   topoUltimo = status;
-  const v = TOPO_VISTAS[topoVista];
+  pintarTopoModo();
+  const v = topoV();
   const svg = document.getElementById('topo');
   const tabla = document.getElementById('topoTabla');
   if (v.tabla) {
@@ -4090,9 +6080,17 @@ function renderTopologia(status) {
   // que no apaga la arista; solo un servicio caido lo hace. La rama de
   // descarte nunca se anima: no es el camino del dato, es donde se queda.
   const PUNTA = ' marker-end="url(#topoPunta)"';
+  // G3: el flujo de la IP seguida (solo en la vista Operacional, la que tiene
+  // origen, sensor y agente en un mismo dibujo).
+  let fl = null;
+  try { fl = topoVista === 'completa' ? flujoActual() : null; } catch (e) { fl = null; }
+  const flSet = fl ? new Set(flujoNodos(fl)) : null;
   const aristas = v.aristas.map(e => {
     const label = e.etiqueta
       ? `<text class="topo-edge-label" x="${e.ex}" y="${e.ey}" text-anchor="middle">${e.etiqueta}</text>` : '';
+    if (flSet && flSet.has(e.desde) && flSet.has(e.hasta) && e.tipo !== 'descarte' && e.tipo !== 'previsto') {
+      return `<path class="topo-edge flujo" d="${e.d}"${PUNTA}/>` + label;
+    }
     // Con tipo, el conector dice su naturaleza (copia, previsto, persona...) y
     // no depende del estado vivo. Un enlace fisico no lleva punta.
     if (e.tipo) {
@@ -4103,20 +6101,26 @@ function renderTopologia(status) {
     return `<path class="topo-edge ${vivo ? 'live' : 'dim'}" d="${e.d}"${PUNTA}/>` + label;
   }).join('');
 
-  // Un punto recorre la tuberia en bucle: hace visible que el dato fluye.
-  const packet = v.packet
-    ? `<circle class="topo-pkt" r="5"><animateMotion dur="6s" repeatCount="indefinite" calcMode="linear" path="${v.packet}"/></circle>`
-    : '';
+  // Sobres (paquetes de datos) que recorren la tuberia en bucle: hacen visible que el dato
+  // fluye. Una vista puede tener varios (v.packets) para mostrar ramas que se unifican, o uno
+  // solo (v.packet). Cada sobre lleva una ficha doblada dentro para que se lea como "mensaje".
+  const sobre = (d, dur, begin) =>
+    `<g class="topo-pkt"><rect x="-12" y="-8.5" width="24" height="17" rx="3.5"/>`
+    + `<path d="M-12,-7 L0,2 L12,-7"/><path class="pkt-ficha" d="M-6,0.5 h12 M-6,3.4 h8"/>`
+    + `<animateMotion dur="${dur}" begin="${begin}" repeatCount="indefinite" calcMode="linear" path="${d}"/></g>`;
+  const packet = v.packets
+    ? v.packets.map(p => sobre(p.d, p.dur || '7s', p.begin || '0s')).join('')
+    : (v.packet ? sobre(v.packet, '9s', '0s') : '');
 
   // Los hosts no pasan por topoEstado: se dibujan con su IP y su rol.
   const hosts = v.nodos.filter(n => n.host).map(n => {
     const cy = n.y + n.h / 2;
     return `<g class="topo-node topo-host ${topoSel === n.id ? 'sel' : ''}" data-node="${n.id}" tabindex="0" role="button" aria-label="${n.titulo}">
       <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9"/>
-      <g class="ico" transform="translate(${n.x + 12}, ${cy - 11})"><svg width="22" height="22" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[n.icono]}</svg></g>
-      <text class="ttl" x="${n.x + 44}" y="${cy - 3}">${n.titulo}</text>
-      <text class="hostip" x="${n.x + 44}" y="${cy + 11}">${n.ip}</text>
-      <text class="tag" x="${n.x + n.w - 10}" y="${n.y + n.h - 6}" text-anchor="end">${n.desc}</text>
+      ${icoCirculo(n.icono, n.x + 25, cy, 16)}
+      <text class="ttl" x="${n.x + 49}" y="${cy - 3}">${n.titulo}</text>
+      <text class="hostip" x="${n.x + 49}" y="${cy + 11}">${n.ip}</text>
+      <title>${n.titulo} · ${n.ip}${n.desc ? ' · ' + n.desc : ''}</title>
     </g>`;
   }).join('');
 
@@ -4140,7 +6144,7 @@ function renderTopologia(status) {
       </g>`;
     }
     const etiqueta = n.tag
-      ? `<text class="tag" x="${n.x + 46}" y="${n.y + n.h - 5}">${n.tag}</text>` : '';
+      ? `<text class="tag" x="${n.x + 49}" y="${n.y + n.h - 5}">${n.tag}</text>` : '';
     const desplazar = n.tag ? -8 : 0;
     // Con "Ver archivos" activo, cada nodo con ficheros muestra un contador; el
     // detalle de cada uno se abre pulsando el nodo (aparecen como cuadraditos).
@@ -4149,9 +6153,9 @@ function renderTopologia(status) {
       ? `<text class="fbadge" x="${n.x + n.w - 24}" y="${n.y + n.h - 6}" text-anchor="end">▤ ${nfiles}</text>` : '';
     return `<g class="topo-node ${e.estado} ${n.clase || ''} ${nfiles ? 'tiene-archivos' : ''} ${topoSel === n.id ? 'sel' : ''}" data-node="${n.id}" tabindex="0" role="button" aria-label="${n.titulo}">
       <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9"/>
-      <g class="ico" transform="translate(${n.x + 13}, ${cy - 11 + desplazar})"><svg width="22" height="22" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[n.icono]}</svg></g>
-      <text class="ttl" x="${n.x + 46}" y="${cy - 3 + desplazar}">${n.titulo}</text>
-      <text class="sub" x="${n.x + 46}" y="${cy + 12 + desplazar}">${e.valor}</text>
+      ${icoCirculo(n.icono, n.x + 25, cy + desplazar * 0.5, 16)}
+      <text class="ttl" x="${n.x + 49}" y="${cy - 3 + desplazar}">${n.titulo}</text>
+      <text class="sub" x="${n.x + 49}" y="${cy + 12 + desplazar}">${e.valor}</text>
       ${etiqueta}${badge}
       <circle class="led" cx="${n.x + n.w - 13}" cy="${n.y + 13}" r="4" fill="${color}"/>
     </g>`;
@@ -4160,6 +6164,12 @@ function renderTopologia(status) {
   // La punta de flecha toma el color de su conector (context-stroke).
   const defs = '<defs><marker id="topoPunta" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse"><path d="M0,0.8 L9.5,5 L0,9.2 Z" fill="context-stroke" stroke="none"/></marker></defs>';
   svg.innerHTML = defs + grupos + aristas + packet + hosts + nodos;
+  svg.classList.toggle('con-flujo', !!flSet);
+  if (flSet) {
+    svg.style.setProperty('--flujo', flujoColor(fl));
+    svg.querySelectorAll('.topo-node').forEach(g => g.classList.toggle('en-flujo', flSet.has(g.dataset.node)));
+  } else svg.style.removeProperty('--flujo');
+  try { renderFlujoBar(); } catch (e) { /* sin datos aun */ }
   aplicarZoom();
   renderTopoDetalle();
 }
@@ -4171,7 +6181,7 @@ let topoZoom = null;   // null = ajustar al ancho disponible
 // lienzo, para que se vea entero de un vistazo. El lienzo tiene una altura
 // acotada por CSS (min(76vh,760px)); en pantalla completa la hereda del padre.
 function escalaAjuste() {
-  const v = TOPO_VISTAS[topoVista];
+  const v = topoV();
   const caja = document.getElementById('topoScroll');
   const fw = (caja.clientWidth - 8) / v.w;
   // En modo normal ajustamos al ANCHO (el lienzo se encoge a la altura del
@@ -4183,7 +6193,7 @@ function escalaAjuste() {
 }
 
 function aplicarZoom() {
-  const v = TOPO_VISTAS[topoVista];
+  const v = topoV();
   const svg = document.getElementById('topo');
   svg.setAttribute('viewBox', `0 0 ${v.w} ${v.h}`);
   let escala = topoZoom;
@@ -4204,11 +6214,25 @@ on('topoVista', 'click', (ev) => {
   document.querySelectorAll('#topoVista button').forEach(x => x.classList.toggle('active', x === b));
   topoZoom = null;   // cada vista tiene otro tamano: se reajusta
   // Si el nodo seleccionado no existe en la vista nueva, se cae al primero.
-  if (!TOPO_VISTAS[topoVista].nodos.some(n => n.id === topoSel)) {
-    const prim = TOPO_VISTAS[topoVista].nodos.find(n => !n.host) || TOPO_VISTAS[topoVista].nodos[0];
+  if (!topoV().nodos.some(n => n.id === topoSel)) {
+    const prim = topoV().nodos.find(n => !n.host) || topoV().nodos[0];
     topoSel = prim ? prim.id : null;
   }
   if (topoUltimo) renderTopologia(topoUltimo);
+});
+
+on('topoModo', 'click', (ev) => {
+  const b = ev.target.closest('button[data-modo]');
+  if (!b) return;
+  topoModo = b.dataset.modo === 'operativa' ? 'operativa' : 'lab';
+  try { localStorage.setItem('cf_topo_modo', topoModo); } catch (e) { /* sin persistir */ }
+  if (!topoV().nodos.some(n => n.id === topoSel)) {
+    const prim = topoV().nodos.find(n => !n.host) || topoV().nodos[0];
+    topoSel = prim ? prim.id : null;
+  }
+  topoZoom = null;
+  flujoFirma = null;
+  if (topoUltimo) renderTopologia(topoUltimo); else pintarTopoModo();
 });
 
 on('topoMas', 'click', () => {
@@ -4220,6 +6244,81 @@ on('topoMenos', 'click', () => {
 on('topoReset', 'click', () => {
   topoZoom = null; aplicarZoom();
 });
+
+// 18-nov: mapa táctil y con ratón. Arrastrar con un dedo o con el ratón mueve el mapa en los dos
+// sentidos (izquierda-derecha y arriba-abajo); dos dedos hacen pellizco de zoom; Ctrl/⌘ + rueda
+// (o pellizco en el trackpad) hace zoom centrado donde apuntas; la rueda normal o Shift+rueda
+// desplazan. Un toque/clic sin mover sigue seleccionando el nodo; los botones +/−/Ajustar siguen.
+(function () {
+  const caja = document.getElementById('topoScroll');
+  if (!caja || !window.PointerEvent) return;
+  caja.style.touchAction = 'none';            // tomamos arrastre y pellizco nosotros
+  function zoomHacia(nuevo, cx, cy) {
+    const antes = escalaActual();
+    nuevo = Math.max(0.25, Math.min(3, nuevo));
+    if (Math.abs(nuevo - antes) < 0.001) return;
+    const r = caja.getBoundingClientRect();
+    const px = (caja.scrollLeft + (cx - r.left)) / antes;   // punto del diagrama bajo el cursor
+    const py = (caja.scrollTop + (cy - r.top)) / antes;
+    topoZoom = nuevo; aplicarZoom();
+    caja.scrollLeft = px * nuevo - (cx - r.left);            // mantenerlo bajo el cursor
+    caja.scrollTop = py * nuevo - (cy - r.top);
+  }
+  caja.addEventListener('wheel', ev => {
+    if (ev.ctrlKey || ev.metaKey) {                         // Ctrl/⌘ + rueda = zoom
+      ev.preventDefault();
+      zoomHacia(escalaActual() * (ev.deltaY < 0 ? 1.12 : 1 / 1.12), ev.clientX, ev.clientY);
+      return;
+    }
+    // Rueda normal: desplaza; Shift convierte la rueda vertical en horizontal.
+    const dx = ev.shiftKey ? (ev.deltaY || ev.deltaX) : ev.deltaX;
+    const dy = ev.shiftKey ? 0 : ev.deltaY;
+    if (dx) { caja.scrollLeft += dx; ev.preventDefault(); }
+    if (dy && (caja.scrollHeight > caja.clientHeight)) { caja.scrollTop += dy; }
+  }, { passive: false });
+  const pts = new Map();
+  let distBase = 0, zoomBase = 1, arrastrando = false, movido = false;
+  caja.addEventListener('pointerdown', ev => {
+    pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, x0: ev.clientX, y0: ev.clientY });
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      distBase = Math.hypot(a.x - b.x, a.y - b.y);
+      zoomBase = escalaActual();
+    }
+  });
+  caja.addEventListener('pointermove', ev => {
+    const p = pts.get(ev.pointerId);
+    if (!p) return;
+    const dx = ev.clientX - p.x, dy = ev.clientY - p.y;
+    p.x = ev.clientX; p.y = ev.clientY;
+    if (pts.size === 2 && distBase) {                       // pellizco = zoom
+      const [a, b] = [...pts.values()];
+      ev.preventDefault();
+      zoomHacia(zoomBase * (Math.hypot(a.x - b.x, a.y - b.y) / distBase), (a.x + b.x) / 2, (a.y + b.y) / 2);
+      return;
+    }
+    if (pts.size === 1) {                                   // un dedo/ratón = arrastrar en los dos ejes
+      if (!arrastrando && Math.hypot(ev.clientX - p.x0, ev.clientY - p.y0) < 4) return;  // deja pasar el toque/clic de selección
+      arrastrando = true; movido = true;
+      caja.classList.add('arrastrando');
+      ev.preventDefault();
+      try { caja.setPointerCapture(ev.pointerId); } catch (e) { /* ignora */ }
+      caja.scrollLeft -= dx;
+      caja.scrollTop -= dy;
+    }
+  });
+  const soltar = ev => {
+    pts.delete(ev.pointerId);
+    if (pts.size < 2) distBase = 0;
+    if (pts.size === 0) { arrastrando = false; caja.classList.remove('arrastrando'); }
+  };
+  caja.addEventListener('pointerup', soltar);
+  caja.addEventListener('pointercancel', soltar);
+  // Si hubo arrastre, no dejamos que el clic final seleccione un nodo por error.
+  caja.addEventListener('click', ev => {
+    if (movido) { ev.stopPropagation(); ev.preventDefault(); movido = false; }
+  }, true);
+})();
 
 // Plegar/desplegar el panel de detalle: al ocultarlo el diagrama toma todo el
 // ancho (util para verlo a lo ancho). La preferencia es por-visor.
@@ -4283,7 +6382,8 @@ window.addEventListener('resize', () => { if (topoZoom == null) aplicarZoom(); }
 // Perfiles de trafico legitimo, cada uno con su icono (nodo "Clientes").
 function perfilesHTML(perfiles) {
   if (!perfiles || !perfiles.length) return '';
-  const fila = p => `<div class="perfil"><span class="perfil-ico"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[p.icono] || ''}</svg></span>`
+  const COL = { ofimatica: '#2563eb', navegacion: '#0891b2', descargas: '#7c3aed', aplicacion: '#ea580c', ligero: '#16a34a', erratico: '#dc2626' };
+  const fila = p => `<div class="perfil" style="--pc:${COL[p.icono] || 'var(--accent)'}"><span class="perfil-ico"><svg width="30" height="30" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TOPO_ICON[p.icono] || ''}</svg></span>`
     + `<span class="perfil-n">${p.n}${p.ip ? '<small>' + p.ip + '</small>' : ''}</span>`
     + `<span class="perfil-d">${p.d || ''}</span>`
     + (p.ej ? `<span class="perfil-ej">p. ej. ${p.ej}</span>` : '') + `</div>`;
@@ -4325,7 +6425,7 @@ function codigoHTML(c) {
 
 function renderTopoDetalle() {
   if (!topoUltimo) return;
-  const lista = TOPO_VISTAS[topoVista].nodos;
+  const lista = topoV().nodos;
   const n = lista.find(x => x.id === topoSel) || lista[0];
   let e = topoEstado(n.id, topoUltimo);
   if (e.valor === '—' && n.val) e = Object.assign({}, e, { valor: n.val });
@@ -4333,7 +6433,8 @@ function renderTopoDetalle() {
   const filas = Object.entries(e.datos || {})
     .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   const cabIp = n.host && n.ip ? `<span class="state">${n.ip}</span>` : `<span class="state ${e.estado}">${e.valor}</span>`;
-  document.getElementById('topoDetail').innerHTML =
+  const herr = herramientasHTML(n.id);
+  const cuerpo =
     `<h3>${n.titulo}${cabIp}</h3>` +
     (t.que ? `<p>${t.que}</p>` : '') +
     (n.id === 'modelo' ? decisionModeloHTML() : '') +
@@ -4347,6 +6448,8 @@ function renderTopoDetalle() {
     filesHTML(n.id) +
     (t.nota ? `<p class="dim">${t.nota}</p>` : '') +
     (t.enlace ? `<p><a href="${t.enlace.href}"${t.enlace.vtab ? ` data-vtab="${t.enlace.vtab}"` : ''}>${t.enlace.txt} &rarr;</a></p>` : '');
+  document.getElementById('topoDetail').innerHTML = herr
+    ? `<div class="det-con-herr"><div class="det-cuerpo">${cuerpo}</div>${herr}</div>` : cuerpo;
 }
 
 // La regla de decision del modelo, hecha visible en el nodo "Modelo": una recta
@@ -5222,18 +7325,32 @@ function renderSidebar(status) {
   const dropsSube = !!(cm && cm.drops_estado && cm.drops_estado.subiendo);
   const captDegradada = dropsSube || (al.pcaps_ilegibles || 0) > 0;
   const el = document.getElementById('sideState');
-  let clase = 'ok', texto = 'todo en marcha';
-  if (caidos.length) { clase = 'bad'; texto = caidos.length + ' servicio(s) caído(s)'; }
-  else if (!cal) { clase = 'warn'; texto = 'sin calibrar'; }
-  else if (captDegradada) { clase = 'warn'; texto = 'captura degradada · ver Alcance'; }
+  let clase = 'ok', texto = 'Live', detalle = 'Motor en vivo: todo en marcha';
+  if (caidos.length) { clase = 'bad'; texto = caidos.length + ' down'; detalle = caidos.length + ' servicio(s) caído(s)'; }
+  else if (!cal) { clase = 'warn'; texto = 'No calib.'; detalle = 'Sin calibrar en esta red'; }
+  else if (captDegradada) { clase = 'warn'; texto = 'Degraded'; detalle = 'Captura degradada · ver Alcance'; }
   el.className = 'side-state ' + clase;
+  el.title = detalle;
   document.getElementById('sideStateText').textContent = texto;
 
   const c = status.counters || {};
-  const alertas = (c.alert_model || 0) + (c.alert_auth_heuristic || 0);
+  const alertas = (c.acciones_relevantes != null) ? c.acciones_relevantes
+    : (c.alert_model || 0) + (c.alert_auth_heuristic || 0);
+  ultimoPillHora = alertas;
+  pintarPillAlertas();
+}
+
+let ultimoPillHora = 0;
+function pintarPillAlertas() {
   const pill = document.getElementById('navAlertPill');
-  pill.hidden = alertas === 0;
-  pill.textContent = alertas;
+  const lb = document.getElementById('limpiarBtn'), ae = document.getElementById('alertasEscoba');
+  if (lb && ae) ae.hidden = lb.hidden;
+  if (!pill) return;
+  let n = ultimoPillHora;
+  if (limpioDesde) n = agruparEpisodios((lastDecisions || []).filter(d => accionDeDecision(d) !== 'PERMIT'
+    && !enListaBlanca(d.entity_ip) && (d.logged_at || 0) >= limpioDesde)).length;
+  pill.hidden = n === 0;
+  pill.textContent = n;
 }
 
 // --- Navegacion por paginas: una seccion a la vez --------------------------
@@ -5252,6 +7369,7 @@ const SEC_TITULO = new Map([...seccionesPag.entries()].map(([id, s]) => {
 // Pensado para que desde cualquier vista se salte a la que uno suele querer ver
 // despues. Solo se muestran las que existen y no estan ocultas por el modo.
 const RELACIONES = {
+  's-escenario':   ['s-alertas', 's-decisiones', 's-bloqueos'],
   's-salud':       ['s-alertas', 's-actividad', 's-decisiones'],
   's-actividad':   ['s-alertas', 's-decisiones', 's-bloqueos'],
   's-alertas':     ['s-decisiones', 's-bloqueos', 's-scores'],
@@ -5263,7 +7381,7 @@ const RELACIONES = {
   's-alcance':     ['s-topologia', 's-modelo', 's-variables'],
   's-variables':   ['s-vivo', 's-decisiones', 's-modelo'],
   's-vivo':        ['s-variables', 's-decisiones', 's-topologia'],
-  's-modelo':      ['s-scores', 's-aprendizaje', 's-comparacion'],
+  's-modelo':      ['s-scores', 's-comparacion'],
   's-aprendizaje': ['s-modelo', 's-scores', 's-comparacion'],
   's-comparacion': ['s-modelo', 's-simulacion', 's-decisiones'],
   's-simulacion':  ['s-comparacion', 's-decisiones', 's-actividad'],
@@ -5285,11 +7403,28 @@ function primeraVisible() {
   for (const [id, s] of seccionesPag) { if (!s.hidden) return id; }
   return seccionesPag.keys().next().value;
 }
+// Frase de contexto bajo el titulo de cada seccion (la cabecera nombra la
+// seccion; «solo lectura» ya lo dice una vez la barra lateral).
+const SEC_SUB = {
+  's-escenario': 'Un ataque por capa, o un falso positivo, seguido de la detección a la aplicación',
+  's-salud': 'Estado general, cifras de la última hora y pulso de la ingesta',
+  's-actividad': 'Volumen analizado y acciones por minuto u hora',
+  's-alertas': 'Anomalías del modelo y alertas de reglas, con su acción',
+  's-decisiones': 'Cada ventana decidida, con su motivo y su evidencia',
+  's-bloqueos': 'Decisiones de limitación y bloqueo, publicación y caducidad',
+  's-scores': 'Cuánto margen deja el tráfico respecto al umbral vigente',
+  's-despliegue': 'Dónde corre cada componente y de dónde sale su estado',
+  's-alcance': 'Qué observa CyberFlow, dónde responde y qué no puede confirmar',
+};
 function mostrarSeccion(id, subir) {
   const sec = seccionesPag.get(id);
   if (!sec || sec.hidden) id = primeraVisible();
   seccionesPag.forEach((s, k) => s.classList.toggle('pag-activa', k === id));
   enlaces.forEach((a, k) => a.classList.toggle('active', k === id));
+  if (id === 's-topologia' && typeof renderFlujoBar === 'function') renderFlujoBar();
+  const ht = document.getElementById('hTitulo'), hs = document.getElementById('hSub');
+  if (ht) ht.textContent = SEC_TITULO.get(id) || 'CyberFlow';
+  if (hs) hs.textContent = 'CyberFlow · ' + (SEC_SUB[id] || 'motor en vivo');
   pintarRelaciones(id);
   try { history.replaceState(null, '', '#' + id); } catch (e) { /* sin hash */ }
   if (subir !== false) window.scrollTo({ top: 0, behavior: 'auto' });
@@ -5568,20 +7703,71 @@ function cmpCelda(c) {
   return '<td class="num r ' + cls + '">' + t + '</td>';
 }
 
+const CMP_ESC = { l4: 'L4 · Escaneo de puertos', l7: 'L7 · Abuso HTTP', l3: 'L3 · Inundación ICMP',
+                 l7dns: 'L7 · DNS de alta entropía', fp: 'Cliente legítimo intenso' };
+function cmpTarjeta(c) {
+  const s = c.suricata || {}, f = c.cyberflow || {};
+  const titulo = CMP_ESC[c.escenario] || (c.escenario || 'Comparación');
+  const top = (s.top || []).slice(0, 3).map(x => '<li><b>' + x.n + '</b>' + varEsc(x.firma) + '</li>').join('');
+  const desg = (f.desglose || []).map(x => '<li><b>' + varEsc(x.n) + '</b>ventanas ' + varEsc(x.accion) + ' · ' + varEsc(x.origen) + '</li>').join('');
+  const legit = c.escenario === 'fp';
+  // «SURICATA STREAM/HTTP/DECODER…» son eventos del propio motor de Suricata (anomalías de flujo o
+  // de protocolo), no firmas de ataque; las de ET Open/GPL sí describen una amenaza.
+  const topS = s.top || [];
+  // ET INFO / GPL INFO tampoco describen un ataque: son avisos informativos (p. ej. «Web Crawl using Curl»).
+  const deMotor = topS.filter(x => /^SURICATA |^(ET|GPL) INFO /.test(x.firma)).reduce((a, x) => a + x.n, 0);
+  const soloMotor = topS.length > 0 && deMotor === topS.reduce((a, x) => a + x.n, 0);
+  let veredicto, clase;
+  if (legit) {
+    veredicto = f.con_accion ? 'CyberFlow actuó sobre tráfico legítimo: falso positivo.' : 'Tráfico legítimo: CyberFlow <b>no actúa</b>'
+      + (s.alertas ? '; Suricata emite ' + s.alertas + ' alerta(s) que alguien tendría que revisar' + (soloMotor ? ' (de flujo e informativas, ninguna de ataque).' : '.') : '; Suricata tampoco alerta.');
+    clase = f.con_accion ? '' : 'bien';
+  } else if (f.con_accion && (!s.alertas || soloMotor)) {
+    veredicto = (s.alertas ? 'Suricata no tiene <b>ninguna firma de ataque</b> para esto: solo eventos de flujo (SURICATA STREAM/HTTP) e informativos (ET INFO). '
+                           : 'Suricata <b>no tiene firma</b> para esto. ')
+      + 'CyberFlow lo identifica y <b>responde</b>' + (f.aplicada ? ' (' + varEsc(f.aplicada.accion) + ' aplicado en srv-dmz a las ' + varEsc(f.aplicada.hora) + ')' : '') + '.';
+    clase = 'bien';
+  } else if (f.con_accion && s.alertas > 50 * Math.max(1, f.con_accion)) {
+    veredicto = 'Los dos lo ven. Suricata emite <b>' + s.alertas.toLocaleString('es') + ' alertas</b> (una por paquete) que alguien tiene que leer; '
+      + 'CyberFlow lo resume en ' + f.con_accion + ' ventanas y <b>responde</b>' + (f.aplicada ? ' (' + varEsc(f.aplicada.accion) + ' aplicado a las ' + varEsc(f.aplicada.hora) + ')' : '') + '.';
+    clase = 'bien';
+  } else if (f.con_accion) {
+    veredicto = 'Los dos lo ven. Suricata solo alerta; CyberFlow además <b>responde</b>' + (f.aplicada ? ' (' + varEsc(f.aplicada.accion) + ' aplicado en srv-dmz a las ' + varEsc(f.aplicada.hora) + ')' : '') + '.'; clase = 'bien';
+  } else {
+    veredicto = 'CyberFlow no actuó en este intervalo.'; clase = 'neutro';
+  }
+  return '<article class="cmp-card"><header><b>' + varEsc(titulo) + '</b><span class="ip">' + varEsc(c.ip) + '</span>'
+    + '<span class="cuando">' + fmtTime(c.desde) + '–' + fmtTime(c.hasta) + (c.pcap && c.pcap.paquetes != null ? ' · ' + c.pcap.paquetes + ' paquetes' : '') + '</span></header>'
+    + '<div class="cmp-dos"><div class="cmp-lado"><span class="quien">Suricata ' + varEsc(s.version || '') + ' · ' + (s.firmas ? s.firmas.toLocaleString('es') + ' firmas' : '') + '</span>'
+    + '<span class="cifra">' + (s.alertas || 0) + '<small>alertas · ' + (s.firmas_distintas || 0) + ' firmas distintas</small></span>'
+    + (top ? '<ul>' + top + '</ul>' : '<ul><li>ninguna firma disparó</li></ul>')
+    + '<span class="ev">' + varEsc(s.evidencia || '') + '</span></div>'
+    + '<div class="cmp-lado"><span class="quien">CyberFlow · modelo + reglas</span>'
+    + '<span class="cifra">' + (f.con_accion || 0) + '<small>de ' + (f.ventanas || 0) + ' ventanas con acción</small></span>'
+    + '<ul>' + (f.primera ? '<li><b>' + varEsc(f.primera.hora) + '</b>primera: ' + varEsc(f.primera.accion) + ' · ' + varEsc([f.primera.modelo, f.primera.regla].filter(Boolean).join(' + ')) + '</li>' : '<li>ninguna ventana pidió acción</li>')
+    + desg + (f.aplicada ? '<li><b>' + varEsc(f.aplicada.hora) + '</b>' + varEsc(f.aplicada.accion) + ' aplicado en srv-dmz (acuse)</li>' : '') + '</ul>'
+    + '<span class="ev">' + varEsc(f.evidencia || '') + '</span></div></div>'
+    + '<footer class="' + clase + '">' + veredicto + '</footer></article>';
+}
+
 async function cargarComparacion() {
   const tb = document.getElementById('cmpTabla');
+  const vivo = document.getElementById('cmpVivo');
   if (!tb) return;
   try {
     const r = await (await fetch('/api/comparacion')).json();
+    const lista = r.en_vivo || [];
+    if (vivo) {
+      vivo.innerHTML = lista.length ? lista.map(cmpTarjeta).join('')
+        : '<p class="estado-vacio">Aún no hay comparaciones. Se generan al final de cada escenario de la demo.</p>';
+      const sub = document.getElementById('cmpVivoSub');
+      if (sub) sub.textContent = lista.length ? lista.length + ' · la más reciente primero · evidencia en Sensor1 ~/feed/comparaciones/' : '';
+    }
     if (r.error) { tb.innerHTML = '<tr class="empty-row"><td colspan="5">' + varEsc(r.error) + '</td></tr>'; return; }
     const conds = ['suricata', 'modelo', 'heuristicos', 'combinado'];
     let html = r.por_familia.map(f => '<tr><td>' + varEsc(f.nombre) + (f.con_firma ? ' <span class="badge heur">con firma</span>' : '') + '</td>'
       + conds.map(c => cmpCelda(f[c])).join('') + '</tr>').join('');
     html += '<tr class="cmp-total"><td>Total sin firma</td>' + conds.map(c => cmpCelda(r.sin_firma[c])).join('') + '</tr>';
-    const fp = r.falsos_positivos;
-    const fpTxt = (x) => x.valor === 'no medido' ? '<td class="cmp-nm">no medido</td>'
-      : '<td class="num">' + x.valor + (x.de ? ' / ' + x.de : '') + '</td>';
-    html += '<tr><td>Falsos positivos <span class="hace">ventanas normales con acción</span></td>' + conds.map(c => fpTxt(fp[c])).join('') + '</tr>';
     tb.innerHTML = html;
     document.getElementById('cmpNotas').innerHTML = (r.notas || []).map(n => '<li>' + varEsc(n) + '</li>').join('');
   } catch (e) {
@@ -5589,6 +7775,7 @@ async function cargarComparacion() {
   }
 }
 cargarComparacion();
+setInterval(() => { const s = document.getElementById('s-comparacion'); if (s && s.classList.contains('pag-activa')) cargarComparacion(); }, 15000);
 
 // ---- Datos en vivo -------------------------------------------------------
 // Captura en vivo al estilo de Wireshark. Tres llamadas, todas solo admin:
@@ -5895,10 +8082,10 @@ function vivoDetalle(r, fuente) {
 
 async function vivoPoll() {
   const sec = document.getElementById('s-vivo');
-  if (!sec || sec.hidden || vivo.pausa || vivo.enCurso) return;
+  if (!sec || sec.hidden || !sec.classList.contains('pag-activa') || vivo.pausa || vivo.enCurso) return;
   vivo.enCurso = true;
   try {
-    const qs = new URLSearchParams({todos: document.getElementById('vivoTodos').checked ? '1' : '0'});
+    const qs = new URLSearchParams({abierta: '1', todos: document.getElementById('vivoTodos').checked ? '1' : '0'});
     for (const k of ['pf', 'po', 'pn', 'eo']) if (vivo.cursor[k] !== undefined) qs.set(k, vivo.cursor[k]);
     const d = await (await fetch('/api/vivo/flujo?' + qs.toString())).json();
     if (d.error) {
@@ -5923,9 +8110,11 @@ async function vivoPoll() {
 
 async function vivoMotor() {
   const sec = document.getElementById('s-vivo');
-  if (!sec || sec.hidden || vivo.pausa || vivo.error) return;
+  // Solo con «Datos en vivo» abierta: /api/vivo recorre el anillo PCAP y el eve.json
+  // y era lo que mas CPU gastaba en el sensor aunque nadie mirara esta seccion.
+  if (!sec || sec.hidden || !sec.classList.contains('pag-activa') || vivo.pausa || vivo.error) return;
   try {
-    const d = await (await fetch('/api/vivo?todos=1&limite=3000')).json();
+    const d = await (await fetch('/api/vivo?abierta=1&todos=1&limite=3000')).json();
     if (d.error) return;
     vivo.motorInfo = d;
     for (const r of d.tramas) vivo.motor.pcap.set(r.fuente.fichero + '#' + r.fuente.trama, r);
@@ -6129,7 +8318,11 @@ function renderAprendizaje(e) {
   document.getElementById('aprCandidato').innerHTML = c;
 
   const filasPol = [
-    ['activo', p.activo ? 'sí' : 'no'], ['modo', p.modo],
+    // El valor interno del .toml sigue siendo «supervisado»; lo que significa
+    // para quien lee es que nada se promueve sin una persona.
+    ['activo', p.activo ? 'sí' : 'no'],
+    ['modo', p.modo === 'supervisado'
+      ? '<span title="valor en el .toml: supervisado">Promoción con aprobación humana</span>' : varEsc(String(p.modo))],
     ['cadencia', p.cadencia_dias + ' días · mínimo ' + p.dias_minimos + ' lotes'],
     ['deriva', 'PSI > ' + p.psi_alerta + ' o anómalo > ' + aprPct(p.tasa_anomala_max) + ' durante ' + p.dias_deriva + ' días'],
     ['saneamiento', '±' + p.margen_contaminacion_s + ' s de IPs marcadas · atípica en ≥ ' + p.max_variables_atipicas + ' variables · lote fuera si PSI > ' + p.psi_rechazo_lote],
@@ -6209,7 +8402,28 @@ if (document.getElementById('aprDefensas')) {
 // quitarse de encima lo que no necesita mientras opera. Por eso vive en
 // localStorage y no en la sesion: es preferencia, no autorizacion.
 const SESION = JSON.parse(document.getElementById('datosSesion').textContent);
-const DEV_SECS = ['s-topologia', 's-variables', 's-vivo', 's-modelo', 's-comparacion', 's-alcance', 's-simulacion', 's-aprendizaje'];
+// Alcance NO esta aqui: explica que observa y que no confirma el panel, y eso
+// lo necesita quien opera, no solo quien desarrolla.
+// G1 (validacion externa, D5): el Mapa pasa a la vista operativa, porque es
+// donde se sigue el flujo de una IP.
+const DEV_SECS = ['s-variables', 's-vivo', 's-modelo', 's-comparacion', 's-simulacion'];
+// G1: en operativo el MENU se queda en cinco entradas (Resumen, Escenario,
+// Alertas, Respuestas, Mapa). Estas secciones NO se ocultan: el recorrido
+// guiado, «Ver Actividad →», «Ver decisiones →» y las vistas relacionadas
+// siguen llevando a ellas. Solo dejan de ocupar sitio en el menu.
+const OPS_FUERA_DEL_MENU = ['s-actividad', 's-decisiones', 's-scores', 's-despliegue'];
+
+// Un encabezado de grupo sin enlaces visibles debajo se oculta (p.ej. DATOS,
+// MODELO y EVALUACION en el modo operativo).
+function pintarGruposNav() {
+  let grupo = null, visibles = 0;
+  const cerrar = () => { if (grupo) grupo.hidden = visibles === 0; };
+  for (const el of document.querySelectorAll('#nav > .nav-grupo, #nav > a')) {
+    if (el.classList.contains('nav-grupo')) { cerrar(); grupo = el; visibles = 0; }
+    else if (!el.hidden) visibles += 1;
+  }
+  cerrar();
+}
 
 function aplicarModo(modo) {
   const dev = modo === 'desarrollo';
@@ -6219,10 +8433,20 @@ function aplicarModo(modo) {
     const enlace = document.querySelector('#nav a[data-sec="' + id + '"]');
     if (enlace) enlace.hidden = !dev;
   }
+  for (const id of OPS_FUERA_DEL_MENU) {
+    const enlace = document.querySelector('#nav a[data-sec="' + id + '"]');
+    if (enlace) enlace.hidden = !dev;
+  }
+  // 17-nov: Aprendizaje no se muestra en ningún modo.
+  for (const id of ['s-aprendizaje']) {
+    const sec = document.getElementById(id); if (sec) sec.hidden = true;
+    const enlace = document.querySelector('#nav a[data-sec="' + id + '"]'); if (enlace) enlace.hidden = true;
+  }
+  pintarGruposNav();
   const b = document.getElementById('modoBtn');
   if (b) {
     b.dataset.modo = modo;
-    b.textContent = dev ? 'Modo desarrollo' : 'Modo operativo';
+    b.textContent = 'Vista: ' + (dev ? 'Desarrollo' : 'Operación') + ' · cambiar';
   }
   try { localStorage.setItem('cyberflow_modo', modo); } catch (e) { /* sin persistir */ }
   // Si la seccion que se veia quedo oculta al pasar a operativo, saltar a una
@@ -6234,7 +8458,14 @@ function aplicarModo(modo) {
   }
 }
 
-document.getElementById('quien').textContent = SESION.usuario + ' · ' + SESION.rol;
+const ROL_NOMBRE = { admin: 'Administrador', lector: 'Lector' };
+document.getElementById('quien').textContent = SESION.usuario + ' · ' + (ROL_NOMBRE[SESION.rol] || SESION.rol);
+pintarGruposNav();
+on('navGuia', 'click', (ev) => {
+  ev.preventDefault();
+  const b = document.getElementById('tourBtn');
+  if (b) b.click();
+});
 
 if (SESION.rol === 'admin') {
   let modo = 'operativo';
@@ -6247,8 +8478,185 @@ if (SESION.rol === 'admin') {
 }
 
 setInterval(refresh, 5000);
+
+// ---- Recorrido guiado de la demo -------------------------------------------
+// El mismo orden que se defiende en la sustentación: el ataque (Kali) -> la IP
+// aparece en Actividad -> su porqué en Decisiones -> la orden firmada en
+// Respuestas -> la prueba en el host (consola Herdr SRV-DMZ). Cada paso se pone
+// en verde (o en su color de acción) cuando ocurre, con datos de /api/escenario.
+const RG_PASOS = [
+  { k: 'ataque', t: 'Ataque', sec: 's-escenario', cli: 'Herdr · ORIGEN' },
+  { k: 'actividad', t: 'Actividad', sec: 's-actividad', cli: '' },
+  { k: 'decisiones', t: 'Decisiones', sec: 's-decisiones', cli: 'Herdr · SENSOR1: mira-motor.sh' },
+  { k: 'respuestas', t: 'Respuestas', sec: 's-bloqueos', cli: '' },
+  { k: 'host', t: 'Host (CLI)', sec: null, cli: 'Herdr · SRV-DMZ' },
+];
+let rgPaso = 0, rgOculto = false;
+try { rgOculto = sessionStorage.getItem('cf_rg_oculto') === '1'; } catch (e) { /* sin persistir */ }
+
+function rgEstado() {
+  // Estado de cada paso: '' pendiente, 'ok' hecho, 'limit'/'alerta' hecho con acción.
+  const D = escDatos, s = ESC_CATALOGO.find(x => x.id === (esc && esc.id)) || {};
+  const legit = s.tipo === 'tráfico legítimo';
+  const filas = (D && D.decisiones) || [];
+  const acc = filas.filter(f => f.accion !== 'PERMIT');
+  const peor = acc.some(f => f.accion === 'BLOCK') ? 'alerta' : (acc.length ? 'limit' : '');
+  const ent = D && D.feed && D.feed.entrada;
+  const apl = (D && D.aplicacion) || [];
+  const aplicada = apl.some(a => a.regla);
+  const liberada = apl.some(a => (a.eventos || []).some(e => e.evento === 'liberada'));
+  if (legit) {
+    const visto = filas.length > 0, limpio = visto && !acc.length;
+    return { ataque: visto ? 'ok' : '', actividad: limpio ? 'ok' : (acc.length ? peor : ''),
+             decisiones: limpio ? 'ok' : (acc.length ? peor : ''), respuestas: limpio ? 'ok' : (ent ? peor : ''),
+             host: limpio ? 'ok' : (aplicada ? peor : '') };
+  }
+  return { ataque: filas.length ? 'ok' : '', actividad: acc.length ? peor : '', decisiones: acc.length ? peor : '',
+           respuestas: ent ? (ent.accion === 'BLOCK' ? 'alerta' : 'limit') : '',
+           host: aplicada ? (apl.find(a => a.regla).regla.accion === 'BLOCK' ? 'alerta' : 'limit') : (liberada ? 'ok' : '') };
+}
+
+function rgDetalle(k) {
+  // Lo pequeño bajo cada paso: el dato que lo prueba.
+  const D = escDatos;
+  if (!D) return 'esperando…';
+  const filas = D.decisiones || [];
+  const acc = filas.filter(f => f.accion !== 'PERMIT');
+  const ent = D.feed && D.feed.entrada;
+  const apl = (D.aplicacion || []).find(a => a.regla);
+  const prim = acc.length ? acc.reduce((a, b) => (a.logged_at < b.logged_at ? a : b)) : null;
+  if (k === 'ataque') return filas.length ? filas.length + ' ventanas' : 'lanza el comando';
+  if (k === 'actividad' || k === 'decisiones') return prim ? prim.accion + escDelta(prim.logged_at) : (filas.length ? 'todo PERMIT' : '—');
+  if (k === 'respuestas') return ent ? ent.accion + ' · caduca ' + fmtTime(ent.hasta) : 'sin orden';
+  if (k === 'host') {
+    const lib = (D.aplicacion || []).some(a => (a.eventos || []).some(e => e.evento === 'liberada'));
+    return apl ? apl.regla.accion + ' en nftables' : (lib ? 'liberada' : 'sin regla');
+  }
+  return '';
+}
+
+function renderRg() {
+  const caja = document.getElementById('rg'), abrir = document.getElementById('rgAbrir');
+  if (!caja) return;
+  const activo = escActivo();
+  caja.hidden = !activo || rgOculto;
+  // 16-nov: el acceso al recorrido queda siempre a la vista. Sin seguimiento lleva a
+  // Escenario (allí se elige y se pulsa «Iniciar seguimiento»); con él, reabre la barra.
+  if (abrir) {
+    abrir.hidden = activo && !rgOculto;
+    abrir.classList.toggle('sin-esc', !activo);
+    const t = abrir.querySelector('.rg-txt');
+    if (t) t.textContent = activo ? 'Recorrido de la demo' : 'Recorrido de la demo ▸ elegir escenario';
+  }
+  document.body.classList.toggle('con-rg', activo && !rgOculto);
+  if (!activo || rgOculto) return;
+  const s = ESC_CATALOGO.find(x => x.id === esc.id) || {};
+  document.getElementById('rgEsc').innerHTML = '<span class="k">' + varEsc(s.capa || '') + '</span>' + varEsc(s.nombre || '')
+    + '<span class="ip">' + varEsc(esc.ip) + '</span>';
+  document.getElementById('rgReloj').textContent = escMmss(Date.now() / 1000 - esc.t0);
+  const est = rgEstado();
+  document.getElementById('rgPasos').innerHTML = RG_PASOS.map((p, i) =>
+    '<li class="' + (est[p.k] || '') + (i === rgPaso ? ' actual' : '') + '"><button type="button" data-tp="' + i + '">'
+    + '<span class="num">' + (i + 1) + '</span><span class="lbl"><b>' + (p.k === 'ataque' && ((ESC_CATALOGO.find(x => x.id === (esc && esc.id)) || {}).tipo === 'tráfico legítimo') ? 'Tráfico' : p.t) + '</b><small>' + varEsc(rgDetalle(p.k)) + '</small></span></button></li>').join('');
+  const p = RG_PASOS[rgPaso];
+  document.getElementById('rgFrase').textContent = (s.rg && s.rg[p.k]) || '';
+  const cli = rgCli(p.k, s);
+  document.getElementById('rgCli').innerHTML = cli ? '<span class="h">' + varEsc(cli[0]) + '</span>' + varEsc(cli[1]) : '';
+  document.getElementById('rgSig').textContent = rgPaso < RG_PASOS.length - 1 ? 'Siguiente →' : 'Ver los 5 pasos';
+}
+
+function rgCli(k, s) {
+  const ip = esc.ip;
+  if (k === 'ataque') return [s.id === 'fp' ? 'CLIENTES $' : 'KALI $', s.comando || ''];
+  if (k === 'decisiones') return ['SENSOR1 $', '~/cf-demo/mira-motor.sh ' + ip];
+  if (k === 'host') return ['SRV-DMZ $', '~/cf-demo/en-firewall.sh ' + ip];
+  return null;
+}
+
+function rgResaltar(el) {
+  if (!el) return;
+  document.querySelectorAll('.rg-foco').forEach(x => x.classList.remove('rg-foco'));
+  el.classList.add('rg-foco');
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  setTimeout(() => el.classList.remove('rg-foco'), 6000);
+}
+
+function rgIr(i) {
+  rgPaso = Math.max(0, Math.min(RG_PASOS.length - 1, i));
+  const p = RG_PASOS[rgPaso], ip = esc.ip;
+  const legit = ((ESC_CATALOGO.find(x => x.id === esc.id) || {}).tipo === 'tráfico legítimo');
+  if (p.k === 'ataque') { mostrarSeccion('s-escenario', false); rgResaltar(document.getElementById('escDet')); }
+  else if (p.k === 'actividad') {
+    mostrarSeccion('s-actividad'); renderTopIps();
+    setTimeout(() => rgResaltar(document.querySelector('#topIps tr[data-ip="' + ip + '"]') || document.getElementById('topIps').closest('.tbl-wrap')), 120);
+  } else if (p.k === 'decisiones') {
+    document.getElementById('ipFilter').value = ip;
+    decVista = legit ? 'todas' : 'accion'; pintarDecVista(); renderDecisionsTable();
+    mostrarSeccion('s-decisiones');
+    setTimeout(() => rgResaltar(document.querySelector('#decisions tr')), 160);
+  } else if (p.k === 'respuestas') {
+    mostrarSeccion('s-bloqueos');
+    setTimeout(() => rgResaltar([...document.querySelectorAll('#blocked tr')].find(tr => tr.textContent.includes(ip))
+      || document.getElementById('blocked').closest('.tbl-wrap')), 160);
+  } else if (p.k === 'host') {
+    mostrarSeccion('s-escenario', false);
+    setTimeout(() => rgResaltar(document.querySelector('#escPasos li:last-child')), 120);
+  }
+  renderRg();
+}
+
+on('rgPasos', 'click', (ev) => { const b = ev.target.closest('button[data-tp]'); if (b) rgIr(+b.dataset.tp); });
+on('rgSig', 'click', () => {
+  if (rgPaso < RG_PASOS.length - 1) rgIr(rgPaso + 1);
+  else { mostrarSeccion('s-escenario', false); setTimeout(() => rgResaltar(document.getElementById('escPasos')), 100); }
+});
+on('rgCerrar', 'click', () => { rgOculto = true; try { sessionStorage.setItem('cf_rg_oculto', '1'); } catch (e) { /* */ } renderRg(); });
+on('rgAbrir', 'click', () => {
+  if (!escActivo()) { if (typeof mostrarSeccion === 'function') mostrarSeccion('s-escenario', true); return; }
+  rgOculto = false; try { sessionStorage.removeItem('cf_rg_oculto'); } catch (e) { /* */ } renderRg(); });
+setInterval(renderRg, 1000);
+renderRg();
+
 </script>
 """
+
+
+VIVO_MIN_S = 30.0
+_VIVO_LOCK = threading.Lock()
+_VIVO_ULTIMO: dict = {}
+STATUS_CACHE_S = 3.0
+_STATUS_CACHE: dict = {}
+_STATUS_LOCK = threading.Lock()
+_RENDIMIENTO: dict = {"desde": time.time(), "rutas": {}, "volcado": 0.0}
+_RENDIMIENTO_LOCK = threading.Lock()
+
+
+def medir_ruta(ruta: str, segundos: float, nbytes: int, destino: Path | None) -> None:
+    if not ruta.startswith("/api/"):
+        ruta = "(pagina)"
+    with _RENDIMIENTO_LOCK:
+        r = _RENDIMIENTO["rutas"].setdefault(ruta, {"n": 0, "s": 0.0, "max_s": 0.0, "bytes": 0})
+        r["n"] += 1
+        r["s"] += segundos
+        r["max_s"] = max(r["max_s"], segundos)
+        r["bytes"] += nbytes
+        if destino is None or time.monotonic() - _RENDIMIENTO["volcado"] < 30:
+            return
+        _RENDIMIENTO["volcado"] = time.monotonic()
+        dur = max(1.0, time.time() - _RENDIMIENTO["desde"])
+        filas = sorted(({"ruta": k, "peticiones": v["n"], "por_min": round(v["n"] * 60 / dur, 1),
+                         "ms_medio": round(1000 * v["s"] / v["n"], 1), "ms_max": round(1000 * v["max_s"]),
+                         "cpu_s_por_min": round(v["s"] * 60 / dur, 2),
+                         "kb_medio": round(v["bytes"] / v["n"] / 1024, 1)}
+                        for k, v in _RENDIMIENTO["rutas"].items()),
+                       key=lambda f: -f["cpu_s_por_min"])
+        datos = {"desde": _RENDIMIENTO["desde"], "segundos": round(dur), "rutas": filas}
+    try:
+        tmp = destino.with_suffix(".tmp")
+        tmp.write_text(json.dumps(datos, indent=1), encoding="utf-8")
+        tmp.replace(destino)
+    except OSError:
+        pass
 
 
 def tail_lines(path: Path, max_bytes: int = 1_048_576) -> list[str]:
@@ -6265,17 +8673,172 @@ def tail_lines(path: Path, max_bytes: int = 1_048_576) -> list[str]:
     ]
 
 
-def read_decisions(log_path: Path, limit: int, max_bytes: int = 1_048_576) -> list[dict]:
-    records = []
-    for line in tail_lines(log_path, max_bytes=max_bytes):
+# Almacen incremental de decisiones (3-nov, segunda version). Antes cada tramo
+# (1, 4, 16 y 32 MiB) se volvia a parsear entero cada 2,5 s: en el Sensor1 eso
+# era la CPU al 100 % y el panel en 5 GB con 66 hilos esperando. Ahora se parsea
+# una vez la cola de DECISIONES_VENTANA_BYTES y despues solo los bytes nuevos;
+# cada tramo es un corte por desplazamiento del mismo almacen. La politica del
+# modelo se recalcula solo en la zona que las ventanas nuevas pueden cambiar.
+# Los dicts se comparten: los llamadores no los modifican.
+DECISIONES_CACHE_S = 2.0
+DECISIONES_VENTANA_BYTES = 33_554_432
+_ALMACENES: dict = {}
+_ALMACENES_LOCK = threading.Lock()
+
+
+def _malloc():
+    """glibc: pocas arenas (un servidor con muchos hilos fragmenta mucho) y una
+    forma de devolver al sistema la memoria liberada. Nada fuera de Linux."""
+    try:
+        import ctypes
+        libc = ctypes.CDLL("libc.so.6")
+        libc.mallopt(-8, 2)            # M_ARENA_MAX = 2
+        return libc
+    except (OSError, AttributeError):
+        return None
+
+
+_LIBC = _malloc()
+_ULTIMO_TRIM = [0.0]
+
+
+def _devolver_memoria() -> None:
+    if _LIBC is not None and time.monotonic() - _ULTIMO_TRIM[0] > 60:
+        _ULTIMO_TRIM[0] = time.monotonic()
         try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if event.get("event") == "decision":
-            records.append(event)
-    records.sort(key=lambda item: item.get("logged_at", 0))
+            _LIBC.malloc_trim(0)
+        except Exception:              # noqa: BLE001 - es solo higiene de memoria
+            pass
+
+
+def _almacen(log_path: Path) -> dict:
+    """Pone al dia el almacen de `log_path` (como mucho cada DECISIONES_CACHE_S)
+    y lo devuelve bloqueado por el llamador via a["lock"]."""
+    clave = str(log_path)
+    with _ALMACENES_LOCK:
+        a = _ALMACENES.get(clave)
+        if a is None:
+            a = _ALMACENES[clave] = {"lock": threading.Lock(), "t": -1e9, "ino": None,
+                                     "pos": 0, "resto": b"", "offs": [], "recs": [],
+                                     "inicio_partido": False}
+    with a["lock"]:
+        if time.monotonic() - a["t"] < DECISIONES_CACHE_S:
+            return a
+        a["t"] = time.monotonic()
+        try:
+            st = log_path.stat()
+        except OSError:
+            a.update(ino=None, pos=0, resto=b"", offs=[], recs=[])
+            return a
+        if a["ino"] != st.st_ino or st.st_size < a["pos"]:          # rotado o truncado
+            ini = max(0, st.st_size - DECISIONES_VENTANA_BYTES)
+            a.update(ino=st.st_ino, pos=ini, resto=b"", offs=[], recs=[], inicio_partido=ini > 0)
+        if st.st_size > a["pos"]:
+            with log_path.open("rb") as fh:
+                fh.seek(a["pos"])
+                datos = fh.read(st.st_size - a["pos"])
+            base = a["pos"] - len(a["resto"])
+            buf = a["resto"] + datos
+            a["pos"] += len(datos)
+            ini = 0
+            if a["inicio_partido"]:
+                nl = buf.find(b"\n")
+                ini = nl + 1 if nl >= 0 else len(buf)
+                a["inicio_partido"] = nl < 0
+            fin = buf.rfind(b"\n")
+            if fin < ini:
+                a["resto"] = buf[ini:]
+                return a
+            a["resto"] = buf[fin + 1:]
+            nuevos, offs = [], []
+            p = ini
+            while p <= fin:
+                q = buf.index(b"\n", p)
+                linea = buf[p:q]
+                if b'"decision"' in linea:
+                    try:
+                        ev = json.loads(linea)
+                    except ValueError:
+                        ev = None
+                    if isinstance(ev, dict) and ev.get("event") == "decision":
+                        nuevos.append(ev)
+                        offs.append(base + p)
+                p = q + 1
+            if nuevos:
+                recs, offsets = a["recs"], a["offs"]
+                previo = recs[-1].get("logged_at", 0) if recs else None
+                recs.extend(nuevos)
+                offsets.extend(offs)
+                t_nuevo = min(float(d.get("logged_at", 0)) for d in nuevos)
+                if previo is not None and t_nuevo < float(previo):
+                    orden = sorted(range(len(recs)), key=lambda k: recs[k].get("logged_at", 0))
+                    a["recs"] = recs = [recs[k] for k in orden]
+                    a["offs"] = offsets = [offsets[k] for k in orden]
+                # Una ventana nueva puede volver «sostenida» otra de hasta 120 s antes,
+                # que a su vez necesita 120 s de contexto: se recalcula desde t-240 s
+                # con contexto desde t-360 s y lo anterior se deja como estaba.
+                corte, ctx_t = t_nuevo - 2 * VENTANA_SOSTENIDA_S, t_nuevo - 3 * VENTANA_SOSTENIDA_S
+                k = len(recs)
+                while k > 0 and float(recs[k - 1].get("logged_at", 0)) >= ctx_t:
+                    k -= 1
+                ctx = recs[k:]
+                fijas = [(d, d["politica_modelo"]) for d in ctx
+                         if float(d.get("logged_at", 0)) < corte and "politica_modelo" in d]
+                anotar_politica_modelo(ctx)
+                for d, v in fijas:
+                    d["politica_modelo"] = v
+            limite = a["pos"] - DECISIONES_VENTANA_BYTES
+            if a["offs"] and a["offs"][0] < limite - DECISIONES_VENTANA_BYTES // 8:
+                k = bisect.bisect_left(a["offs"], limite)
+                del a["offs"][:k]
+                del a["recs"][:k]
+                _devolver_memoria()
+        return a
+
+
+def _decisiones_tramo(log_path: Path, max_bytes: int) -> list[dict]:
+    """Decisiones de los ultimos `max_bytes` del registro, de la mas antigua a la
+    mas reciente (copia de la lista; los dicts son compartidos)."""
+    a = _almacen(log_path)
+    with a["lock"]:
+        k = bisect.bisect_left(a["offs"], a["pos"] - max_bytes)
+        tramo = a["recs"][k:]
+    if _CADENA_V2 is not None:
+        _CADENA_V2.anotar(tramo)        # cadena_v2 en cada decision, desde las trazas reales
+    return tramo
+
+
+def read_decisions(log_path: Path, limit: int, max_bytes: int = 1_048_576) -> list[dict]:
+    records = _decisiones_tramo(log_path, max_bytes)
     return records[-limit:][::-1]
+
+
+PERIODO_MAX_BYTES = 33_554_432   # 32 MiB del final del registro
+PERIODO_MAX_FILAS = 5000
+
+
+def consultar_periodo(log_path: Path, desde: float | None, hasta: float | None,
+                      limite: int = PERIODO_MAX_FILAS,
+                      max_bytes: int = PERIODO_MAX_BYTES) -> dict:
+    """Decisiones con ``logged_at`` en [desde, hasta], mas recientes primero.
+
+    Devuelve tambien lo que de verdad se pudo consultar: desde cuando hay
+    registro en el tramo leido y si se corto por el tope de filas. Asi el panel
+    dice «periodo consultado» y no deja creer que un hueco es ausencia de
+    decisiones cuando en realidad el registro no llegaba tan atras.
+    """
+    todas = read_decisions(log_path, limit=10_000_000, max_bytes=max_bytes)
+    registro_desde = min((float(d.get("logged_at", 0)) for d in todas), default=None)
+    registro_hasta = max((float(d.get("logged_at", 0)) for d in todas), default=None)
+    sel = [d for d in todas
+           if (desde is None or float(d.get("logged_at", 0)) >= desde)
+           and (hasta is None or float(d.get("logged_at", 0)) <= hasta)]
+    return {
+        "desde": desde, "hasta": hasta,
+        "registro_desde": registro_desde, "registro_hasta": registro_hasta,
+        "total": len(sel), "truncado": len(sel) > limite, "limite": limite,
+        "decisiones": sel[:limite],
+    }
 
 
 def leer_alcance(log_path: Path) -> dict:
@@ -6292,6 +8855,22 @@ def leer_alcance(log_path: Path) -> dict:
     aparecen: un cero afirmaria que se midio y salio limpio, que es justo lo
     contrario de no haberlo medido.
     """
+    try:
+        sello = (str(log_path), log_path.stat().st_size // 262_144)
+    except OSError:
+        sello = None
+    if sello is not None and _CACHE_ALCANCE.get("sello") == sello \
+            and time.monotonic() - _CACHE_ALCANCE.get("t", 0) < 15:
+        return dict(_CACHE_ALCANCE["datos"])
+    alcance = _leer_alcance(log_path)
+    _CACHE_ALCANCE.update(sello=sello, t=time.monotonic(), datos=alcance)
+    return dict(alcance)
+
+
+_CACHE_ALCANCE: dict = {}
+
+
+def _leer_alcance(log_path: Path) -> dict:
     alcance: dict = {}
     for line in tail_lines(log_path, max_bytes=1_048_576):
         try:
@@ -6343,12 +8922,24 @@ def compute_counters(decisions: list[dict], window_seconds: int = 3600,
         1 for d in recent
         if d["decision"] == "PERMIT" and d.get("detector_name") == detector_modelo
     )
-    acciones = [accion_de(d) for d in recent]
+    # Infraestructura protegida (DNS/AD, gateways...): sus reglas se registran pero
+    # nunca se publican ni aplican, asi que no son alertas con accion (politica A).
+    acciones = [None if str(d.get("entity_ip", "")) in NUNCA_BLOQUEAR else accion_de(d) for d in recent]
     return {
         "total": len(recent),
         "block": sum(1 for a in acciones if a and a[0] == "BLOCK"),
         "limit": sum(1 for a in acciones if a and a[0] == "LIMIT"),
         "ips_con_accion": len({d.get("entity_ip") for d, a in zip(recent, acciones) if a}),
+        # Las anomalias marginales cuentan aparte: el panel las agrupa, no las borra.
+        "alert_model_marginal": sum(1 for d in recent if es_marginal(d)),
+        "acciones_relevantes": sum(1 for d, a in zip(recent, acciones) if a and not es_marginal(d)),
+        "acciones_regla": sum(1 for d, a in zip(recent, acciones) if a and isinstance(d.get("heuristico"), dict)
+                              and d["heuristico"].get("accion") in SEVERIDAD_ACCION),
+        "revision_modelo": sum(1 for d in recent if d.get("politica_modelo") == "sostenida"
+                               and str(d.get("entity_ip", "")) not in NUNCA_BLOQUEAR
+                               and not (isinstance(d.get("heuristico"), dict) and d["heuristico"].get("accion"))),
+        "infra_protegida": sum(1 for d in recent if str(d.get("entity_ip", "")) in NUNCA_BLOQUEAR
+                               and (d.get("decision") == "ALERT" or isinstance(d.get("heuristico"), dict))),
         "alert_model": alert_ocsvm,
         "alert_auth_heuristic": alert_auth_heuristic,
         "permit_model": permit_model,
@@ -6464,13 +9055,14 @@ def resumen_salud(modo: str, services: dict, counters: dict, drops: dict,
             partes.append("%d anomalía(s) del modelo" % n_alert_modelo)
         if n_alert_fb:
             partes.append("%d alerta(s) de fuerza bruta" % n_alert_fb)
+        # Lo que el sensor sabe es que DECIDIO una accion; si el host la aplico no
+        # se ve desde aqui. Por eso «decisiones registradas», no «respuesta activa».
         if n_accion > 0:
-            msg = "Servicios activos · respuesta activa en la última hora"
+            msg = "Servicios operativos · %d decisión(es) LIMIT/BLOCK en la última hora" % n_accion
         else:
-            msg = "Servicios activos · %d alerta(s) en la última hora" % (n_alert_modelo + n_alert_fb)
+            msg = "Servicios operativos · %d alerta(s) en la última hora" % (n_alert_modelo + n_alert_fb)
         return {"nivel": "warn", "msg": msg,
-                "sub": "El sistema está respondiendo: " + " · ".join(partes)
-                       + ". Revisar Decisiones y Bloqueos abajo."}
+                "sub": " · ".join(partes) + " · detalle en Respuestas"}
     if subiendo_drops:
         d = drops.get("delta")
         return {"nivel": "warn",
@@ -6517,6 +9109,10 @@ def bucket_activity(decisions: list[dict], bucket_seconds: int, count: int) -> l
             bucket["permit"] += 1
         # La accion (LIMIT/BLOCK) no coincide con ALERT: una regla puede pedir
         # BLOCK con el modelo en PERMIT. El grafico cuenta acciones.
+        # Infraestructura protegida (p. ej. el DNS con dns_entropy): nunca se
+        # actua sobre ella, asi que no pinta LIMIT/BLOCK (= compute_counters).
+        if str(item.get("entity_ip", "")) in NUNCA_BLOQUEAR:
+            continue
         accion = accion_de(item)
         if accion is not None:
             bucket[accion[0].lower()] += 1
@@ -6605,15 +9201,70 @@ REGLA_LEGACY = {"auth_failure_heuristic": "fallos de autenticación repetidos"}
 NUNCA_BLOQUEAR = {"10.10.10.30", "10.10.60.11", "10.10.30.1", "10.10.40.1",
                   "10.10.60.1", "10.10.20.1", "10.10.10.20"}   # = publicar_feed.py
 
+# Lista blanca (16-nov-2026): IPs de infraestructura conocida (p. ej. Zabbix) cuyas alertas se
+# agrupan aparte en el panel. Es un fichero editable, no codigo: configs/lista-blanca.json.
+# El panel NO decide nada: solo agrupa la vista y dice si el feed v2 todavia publica una medida
+# sobre esa IP (lo que hace el publicador no cambia por editar este fichero).
+LISTA_BLANCA_PATH = RAIZ_REPO / "configs" / "lista-blanca.json"
+
+
+def leer_lista_blanca(ruta: Path = LISTA_BLANCA_PATH) -> list[dict]:
+    """Entradas validas de la lista blanca ({ip, nombre, motivo, alta}); [] si falta o es ilegible."""
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    out, vistas = [], set()
+    for e in (datos.get("entradas") or []) if isinstance(datos, dict) else []:
+        if not isinstance(e, dict):
+            continue
+        ip = str(e.get("ip", "")).strip()
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            continue
+        if ip in vistas:
+            continue
+        vistas.add(ip)
+        out.append({"ip": ip, "nombre": str(e.get("nombre", "")), "motivo": str(e.get("motivo", "")),
+                    "alta": str(e.get("alta", ""))})
+    return out
+
+
+def estado_lista_blanca(ruta: Path, feed_v2: Path | None, ahora: float) -> dict:
+    """Lista blanca + la medida que el feed v2 publica HOY sobre cada IP (None si ninguna)."""
+    entradas = leer_lista_blanca(ruta)
+    vig: dict[str, dict] = {}
+    feed_ok = False
+    if feed_v2 is not None:
+        try:
+            feed = json.loads(feed_v2.read_text(encoding="utf-8"))
+            feed_ok = True
+            for x in feed.get("entradas") or []:
+                if isinstance(x, dict) and float(x.get("hasta", 0)) > ahora:
+                    vig[str(x.get("ip", ""))] = x
+        except (OSError, ValueError, TypeError):
+            pass
+    for e in entradas:
+        m = vig.get(e["ip"])
+        e["medida_feed"] = ({"accion": m.get("accion"), "hasta": m.get("hasta"), "motivo": m.get("motivo"),
+                             "destino": m.get("destino")} if m else None)
+    return {"ruta": str(ruta), "feed_leido": feed_ok, "entradas": entradas}
+
 
 def accion_de(d: dict) -> tuple[str, str, str] | None:
     """(accion, motivo, origen) de una decision, o None si no pide accion."""
+    if _CADENA_V2 is not None:
+        # Cadena v2 (4A): la accion es la medida que PUBLICO el publicador v2 (traza),
+        # nunca una deduccion del panel. Una anomalia del IF sin medida no es LIMIT.
+        return cadena_v2.medida_como_accion(d)
     candidatos = []
     if d.get("decision") == "ALERT":
         det = str(d.get("detector_name", ""))
         if det.endswith("_heuristic"):
             candidatos.append(("BLOCK", REGLA_LEGACY.get(det, "regla determinista"), det))
-        else:
+        elif MODELO_SOLO_ACTUA and d.get("politica_modelo") in (None, "sostenida"):
+            # = publicar_feed: con la politica A el modelo solo no pide accion
             candidatos.append(("LIMIT", "anomalía del modelo", "modelo"))
     h = d.get("heuristico")
     if isinstance(h, dict) and h.get("accion") in SEVERIDAD_ACCION:
@@ -6622,6 +9273,301 @@ def accion_de(d: dict) -> tuple[str, str, str] | None:
         return None
     # A igual severidad gana la regla: su motivo dice mas que «anomalia del modelo».
     return max(candidatos, key=lambda c: (SEVERIDAD_ACCION[c[0]], c[2] != "modelo"))
+
+
+
+# 3-nov (noche): motor de las campañas otra vez (demo: 0.05 / 3 / False).
+MARGEN_MARGINAL = 0.0    # misma cifra que el navegador (MARGEN_MARGINAL en el JS)
+VENTANA_SOSTENIDA_S = 120  # = tramo que lee publicar_feed (--ventana-segundos)
+MIN_VENTANAS_MODELO = 1    # = publicar_feed.MIN_VENTANAS_MODELO
+MODELO_SOLO_ACTUA = True   # = publicar_feed.MODELO_SOLO_ACTUA (politica A = False)
+
+
+def anotar_politica_modelo(decisiones: list[dict]) -> None:
+    """Marca cada ALERT solo-modelo como «marginal», «suelta» o «sostenida».
+
+    Es la misma politica que publicar_feed.py (3-nov): el modelo solo, sin regla
+    que lo confirme, publica LIMIT con anomalia CLARA (score < umbral - 0,05) y
+    SOSTENIDA (3 ventanas claras de la misma IP a <= 120 s). Las otras dos se
+    registran y se ven, pero no piden accion. Escribe el campo en cada dict.
+
+    Con la cadena v2 activa no se anota: esa politica es la del publicador v1.
+    """
+    if _CADENA_V2 is not None:
+        return
+    claras: dict[str, list[float]] = {}
+    solo = []
+    for d in decisiones:
+        if d.get("decision") != "ALERT" or str(d.get("detector_name", "")).endswith("_heuristic"):
+            continue
+        h = d.get("heuristico")
+        if isinstance(h, dict) and h.get("accion") in SEVERIDAD_ACCION:
+            continue
+        solo.append(d)
+        s, u = d.get("score"), d.get("threshold")
+        marginal = (isinstance(s, (int, float)) and isinstance(u, (int, float))
+                    and s >= u - MARGEN_MARGINAL)
+        d["politica_modelo"] = "marginal" if marginal else "suelta"
+        if not marginal:
+            claras.setdefault(str(d.get("entity_ip")), []).append(float(d.get("logged_at", 0)))
+    for d in solo:
+        if d["politica_modelo"] != "suelta":
+            continue
+        t = float(d.get("logged_at", 0))
+        ts = claras.get(str(d.get("entity_ip")), [])
+        if sum(1 for x in ts if abs(x - t) <= VENTANA_SOSTENIDA_S) >= MIN_VENTANAS_MODELO:
+            d["politica_modelo"] = "sostenida"
+
+
+def es_marginal(d: dict, margen: float = MARGEN_MARGINAL) -> bool:
+    """ALERT solo del modelo con el score a menos de `margen` por debajo del umbral.
+
+    Es una anomalia real y su LIMIT se publica; el panel solo la agrupa para que
+    no tape las detecciones claras. Una regla disparada nunca es marginal.
+    """
+    if d.get("decision") != "ALERT" or str(d.get("detector_name", "")).endswith("_heuristic"):
+        return False
+    h = d.get("heuristico")
+    if isinstance(h, dict) and h.get("accion") in SEVERIDAD_ACCION:
+        return False
+    s, u = d.get("score"), d.get("threshold")
+    if not isinstance(s, (int, float)) or not isinstance(u, (int, float)):
+        return False
+    return s >= u - margen
+
+
+def estado_escenario(log_path: Path, ip: str, desde: str, ahora: float,
+                     feed_path: Path | None, estado_path: Path | None,
+                     acuse_dir: Path | None = None) -> dict:
+    """Lo que la seccion «Escenario en vivo» necesita de una IP desde un instante.
+
+    Solo lectura y acotado: la cola del registro (4 MiB), las decisiones de esa
+    IP, su entrada del feed firmado y su respuesta vigente. La aplicacion en el
+    host la informa el propio host (acuse que trae el relay); el sensor no la
+    ve por si mismo.
+    """
+    try:
+        ip = str(ipaddress.ip_address(ip.strip()))
+    except ValueError:
+        return {"error": "IP no válida"}
+    try:
+        t0 = float(desde)
+    except (TypeError, ValueError):
+        t0 = ahora - 120
+    t0 = max(t0, ahora - 3 * 3600)
+    decisiones = read_decisions(log_path, limit=50_000, max_bytes=4_194_304)
+    horas = [float(d["logged_at"]) for d in decisiones if isinstance(d.get("logged_at"), (int, float))]
+    recientes = [d for d in decisiones if float(d.get("logged_at", 0)) >= ahora - 60]
+    filas = []
+    for d in decisiones:
+        if d.get("entity_ip") != ip or float(d.get("logged_at", 0)) < t0:
+            continue
+        a = accion_de(d)
+        filas.append({
+            "logged_at": d.get("logged_at"), "window_end_utc": d.get("window_end_utc"),
+            "decision": d.get("decision"), "score": d.get("score"), "threshold": d.get("threshold"),
+            "detector_name": d.get("detector_name"), "heuristico": d.get("heuristico"),
+            "accion": a[0] if a else "PERMIT", "motivo": a[1] if a else "",
+            "origen": a[2] if a else "", "marginal": es_marginal(d), "politica_modelo": d.get("politica_modelo"),
+            "cadena_v2": d.get("cadena_v2"),
+        })
+        if len(filas) >= 400:
+            break
+    feed = None
+    if feed_path is not None:
+        try:
+            f = json.loads(Path(feed_path).read_text(encoding="utf-8"))
+            entradas = f.get("entradas") or []
+            feed = {"generado": f.get("generado"), "entradas": len(entradas),
+                    "entrada": next((e for e in entradas if e.get("ip") == ip), None)}
+        except (OSError, ValueError, AttributeError):
+            feed = None
+    vig = [v for v in acciones_vigentes(decisiones, ahora, feed_path, estado_path) if v.get("ip") == ip]
+    return {
+        "ahora": ahora, "ip": ip, "desde": t0,
+        "ultima_decision": max(horas) if horas else None,
+        "decisiones_60s": len(recientes),
+        "ips_60s": len({d.get("entity_ip") for d in recientes if d.get("entity_ip")}),
+        "decisiones": filas, "feed": feed, "vigente": vig[0] if vig else None,
+        "margen_marginal": MARGEN_MARGINAL,
+        "aplicacion": acuses_de_ip(acuse_dir, ip, t0, ahora) if acuse_dir is not None else None,
+    }
+
+
+# Un acuse mas viejo que esto ya no describe el firewall de ahora (el relay lo
+# trae cada 10 s; tres vueltas perdidas = dato atrasado).
+ACUSE_VIEJO_S = 35
+
+
+DEMO_IPS = ("10.10.20.30", "10.10.20.21")   # Kali (ataques) y cliente legítimo del laboratorio
+PREP_VALIDA_S = 600                          # = LIBERACION_VALIDA_S del agente
+
+
+def pedir_preparacion(ruta: Path, usuario: str, ahora: float) -> dict:
+    """Deja la petición «preparar demo». No toca ningún host: la lleva el feed FIRMADO
+    (publicar_feed la incluye) y el agente de cada host decide si la aplica."""
+    pet = {"id": secrets.token_hex(6), "t": ahora, "ips": list(DEMO_IPS), "por": usuario}
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    tmp = ruta.with_name(ruta.name + ".tmp")
+    tmp.write_text(json.dumps(pet), encoding="utf-8")
+    tmp.replace(ruta)
+    return pet
+
+
+def pedir_limpieza_v2(ctl: Path, usuario: str, ahora: float) -> dict:
+    """«Dejar limpio» en la cadena v2: deja el control D5 (reset_origen de la Kali) que el
+    publicador consume sin reiniciarse. Si ya hay uno pendiente no se pisa."""
+    if ctl.exists():
+        return {"ok": False, "motivo": "ya hay una limpieza pendiente: espera el acuse del publicador"}
+    pet = {"accion": "reset_origen", "id": secrets.token_hex(16), "origen": DEMO_IPS[0],
+           "por": usuario, "t": ahora}
+    tmp = ctl.with_name(ctl.name + ".panel.tmp")
+    tmp.write_text(json.dumps(pet), encoding="utf-8")
+    tmp.replace(ctl)
+    try:   # copia de registro, como las del ejecutor de campañas
+        (ctl.parent / "solicitudes" / (pet["id"] + ".json")).write_text(json.dumps(pet), encoding="utf-8")
+    except OSError:
+        pass
+    return {"ok": True, "id": pet["id"]}
+
+
+def estado_limpieza_v2(ctl: Path, feed_v2: Path, ident: str, ahora: float) -> dict:
+    """Acuse del publicador para ESA petición y si el feed aún restringe la Kali o el cliente."""
+    ack = None
+    try:
+        a = json.loads(ctl.with_name(ctl.name + ".ack").read_text(encoding="utf-8"))
+        if isinstance(a, dict) and a.get("id") == ident:
+            ack = a
+    except (OSError, ValueError):
+        pass
+    kali = None
+    try:
+        feed = json.loads(feed_v2.read_text(encoding="utf-8"))
+        kali = any(isinstance(e, dict) and e.get("ip") in DEMO_IPS and float(e.get("hasta", 0)) > ahora
+                   for e in feed.get("entradas") or [])
+    except (OSError, ValueError, TypeError):
+        pass
+    return {"id": ident, "pendiente": ctl.exists(), "ack": ack, "kali_en_feed": kali}
+
+
+def estado_preparacion(ruta: Path, log_path: Path, feed_path: Path | None, acuse_dir: Path | None,
+                       ahora: float) -> dict:
+    """Lista de comprobación para empezar una demo: motor, feed, agente y cada IP sin regla."""
+    checks = []
+
+    def chk(ok, texto, detalle="", espera=False):
+        checks.append({"estado": "ok" if ok else ("esp" if espera else "mal"), "texto": texto, "detalle": detalle})
+        return ok
+
+    try:
+        pet = json.loads(Path(ruta).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pet = None
+    t_pet = float(pet.get("t", 0)) if isinstance(pet, dict) else 0.0
+    try:
+        edad_m = ahora - Path(log_path).stat().st_mtime
+    except OSError:
+        edad_m = None
+    chk(edad_m is not None and edad_m < 30, "Motor en vivo",
+        "última ventana hace %d s" % edad_m if edad_m is not None else "sin registro")
+    feed = {}
+    if feed_path is not None:
+        try:
+            feed = json.loads(Path(feed_path).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            feed = {}
+    gen = feed.get("generado") if isinstance(feed.get("generado"), (int, float)) else None
+    chk(gen is not None and ahora - gen < 30, "Feed firmado al día",
+        "publicado hace %d s" % (ahora - gen) if gen else "sin feed")
+    if pet:
+        en_feed = any(isinstance(x, dict) and x.get("id") == pet.get("id") for x in feed.get("liberaciones") or [])
+        chk(en_feed or False, "Petición dentro del feed firmado", "id " + str(pet.get("id")), espera=not en_feed)
+    acs = [] if acuse_dir is None else acuses_resumen(acuse_dir, ahora)
+    host = next((a for a in acs if a.get("host") == "srv-dmz"), acs[0] if acs else None)
+    if host is None:
+        chk(False, "Acuse de srv-dmz", "no llega")
+    else:
+        chk(host.get("agente") == "active" and not host.get("atrasado"), "Agente de srv-dmz activo",
+            "acuse hace %d s" % (host.get("edad") or 0))
+    for ip in DEMO_IPS:
+        regla = (host or {}).get("reglas", {}).get(ip) if host else None
+        lib = ((host or {}).get("liberadas") or {}).get(ip) if host else None
+        desde = lib.get("desde") if isinstance(lib, dict) else None
+        fresca = host is not None and (host.get("edad") or 0) < 40 and (ahora - (host.get("edad") or 0)) >= t_pet
+        liberada_ahora = bool(desde and desde >= t_pet - 5) if pet else True
+        ok = host is not None and regla is None and (liberada_ahora or not pet) and fresca
+        det = ("con " + regla.get("accion", "?") + " en nftables") if regla else (
+            "liberada a las " + time.strftime("%H:%M:%S", time.localtime(desde)) if desde and liberada_ahora else "sin regla")
+        chk(ok, "%s sin regla en srv-dmz" % ip, det, espera=not ok and bool(pet) and ahora - t_pet < 120)
+    listo = all(c["estado"] == "ok" for c in checks)
+    return {"listo": listo, "checks": checks, "peticion": pet,
+            "peticion_edad": None if not pet else ahora - t_pet, "ahora": ahora}
+
+
+def acuses_resumen(acuse_dir: Path, ahora: float) -> list[dict]:
+    """Por host protegido: que tiene aplicado, que libero un humano y que dejo fuera de alcance."""
+    out = []
+    try:
+        ficheros = sorted(Path(acuse_dir).glob("*.json"))[:20]
+    except OSError:
+        return out
+    for f in ficheros:
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(d, dict):
+            continue
+        gen = d.get("generado") if isinstance(d.get("generado"), (int, float)) else None
+        pasada = d.get("ultima_pasada") or {}
+        out.append({
+            "host": d.get("host") or f.stem, "edad": None if gen is None else max(0.0, ahora - gen),
+            "atrasado": gen is None or ahora - gen > ACUSE_VIEJO_S, "agente": d.get("agente"),
+            "error": d.get("error"),
+            "reglas": {ip: r for ip, r in (d.get("reglas") or {}).items() if isinstance(r, dict)},
+            "liberadas": d.get("liberadas") or {},
+            "sombra": pasada.get("sombra") if isinstance(pasada.get("sombra"), dict) else {},
+        })
+    return out
+
+
+def acuses_de_ip(acuse_dir: Path, ip: str, t0: float, ahora: float) -> list[dict]:
+    """Paso 5 con datos del host: lo que cada host protegido dice tener en nftables.
+
+    Lee ~/feed/acuses/<host>.json (los deja el relay del bastion). Por host:
+    regla vigente de la IP (BLOCK/LIMIT con caducidad), liberacion humana,
+    eventos de la IP desde t0 (aplicada, cambiada, retirada, liberada) y la
+    edad del acuse. Es un informe del host, no una orden firmada.
+    """
+    out = []
+    try:
+        ficheros = sorted(Path(acuse_dir).glob("*.json"))[:20]
+    except OSError:
+        return out
+    for f in ficheros:
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(d, dict):
+            continue
+        gen = d.get("generado") if isinstance(d.get("generado"), (int, float)) else None
+        regla = (d.get("reglas") or {}).get(ip)
+        lib = (d.get("liberadas") or {}).get(ip)
+        eventos = [e for e in (d.get("eventos") or [])
+                   if isinstance(e, dict) and e.get("ip") == ip and float(e.get("t") or 0) >= t0 - 1]
+        pasada = d.get("ultima_pasada") or {}
+        sombra = pasada.get("sombra") if isinstance(pasada.get("sombra"), dict) else {}
+        out.append({
+            "host": d.get("host") or f.stem, "generado": gen, "fuera_de_alcance": sombra.get(ip),
+            "edad": None if gen is None else max(0.0, ahora - gen),
+            "atrasado": gen is None or ahora - gen > ACUSE_VIEJO_S,
+            "agente": d.get("agente"), "error": d.get("error"),
+            "regla": regla, "liberada": lib, "eventos": eventos[-20:],
+            "ultima_pasada": {"hora": pasada.get("hora"), "estado": pasada.get("estado"),
+                              "errores": pasada.get("errores")} if pasada else None,
+        })
+    return out
 
 
 def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | None = None,
@@ -6634,12 +9580,23 @@ def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | Non
     3600 s (BLOCK, nivel leido de estado.json) + la cadencia del feed. Lo que el
     agente del host aplica es exactamente eso; el sensor no tiene otra forma de
     saberlo, porque el bloqueo ocurre en el host.
+
+    Con la cadena v2 activa la unica fuente es el feed v2 firmado (en sombra: propuestas);
+    no se reconstruye nada desde el registro con la escalera v1.
     """
+    if _CADENA_V2 is not None:
+        return _CADENA_V2.vigentes(ahora)
     vigentes: dict[str, dict] = {}
+    # Tres estados distintos que el panel no debe mezclar: registrada (el motor
+    # la decidio), publicada (esta en el feed firmado) y aplicada en el host
+    # (eso solo lo sabe el agente; aqui nunca se afirma).
+    en_feed: set[str] = set()
     if feed_path is not None:
         try:
             feed = json.loads(Path(feed_path).read_text(encoding="utf-8"))
             for e in feed.get("entradas", []):
+                if e.get("ip"):
+                    en_feed.add(str(e["ip"]))
                 if float(e.get("hasta", 0)) > ahora and e.get("ip"):
                     vigentes[e["ip"]] = {
                         "ip": e["ip"], "accion": e.get("accion"), "motivo": e.get("motivo", ""),
@@ -6689,10 +9646,14 @@ def acciones_vigentes(decisions: list[dict], ahora: float, feed_path: Path | Non
             previo = vigentes.get(ip)
         if previo is not None:
             previo["desde"] = inicio
+            previo["ultima"] = t_ultima
             previo["ofensas"] = len(episodio)
+            previo["registrada"] = True
     salida = []
     for v in vigentes.values():
         v["expira_s"] = max(0, int(v["hasta"] - ahora))
+        v["publicada"] = v["ip"] in en_feed
+        v.setdefault("registrada", False)
         salida.append(v)
     salida.sort(key=lambda v: (-SEVERIDAD_ACCION.get(v["accion"], 0), -v["hasta"]))
     return salida
@@ -6710,7 +9671,7 @@ def historial_acciones(log_path: Path, ahora: float, horas: int = 24,
                        cache_s: float = 30.0) -> dict:
     """Episodios de LIMIT/BLOCK de las ultimas horas, uno por IP y racha.
 
-    «IPs bloqueadas ahora» ensena lo vigente; esto ensena lo que ya paso. Se lee
+    «Respuestas registradas como vigentes» ensena lo vigente; esto, lo que ya paso. Se lee
     la cola del registro y solo se interpretan las lineas que pueden pedir una
     accion (un ALERT o un heuristico), que son muy pocas. `desde` dice hasta
     donde alcanza de verdad el registro leido: si no llega a las horas pedidas,
@@ -6722,22 +9683,13 @@ def historial_acciones(log_path: Path, ahora: float, horas: int = 24,
     if nunca is None:
         nunca = NUNCA_BLOQUEAR
     limite = ahora - horas * 3600
-    lineas = tail_lines(log_path, max_bytes=max_bytes)
-    primera = None
-    for linea in lineas[:50]:
-        try:
-            primera = float(json.loads(linea)["logged_at"])
-            break
-        except (ValueError, KeyError, TypeError):
-            continue
+    # Del almacen incremental (ya con la politica del modelo anotada): antes se
+    # releian y parseaban 32 MiB cada 30 s solo para esta vista.
+    tramo = _decisiones_tramo(log_path, max_bytes)
+    primera = float(tramo[0].get("logged_at", 0)) if tramo else None
     ofensas: dict[str, list[tuple[float, str, str, str]]] = {}
-    for linea in lineas:
-        if '"ALERT"' not in linea and '"accion"' not in linea:
-            continue
-        try:
-            d = json.loads(linea)
-        except ValueError:
-            continue
+    leidas = [d for d in tramo if d.get("decision") == "ALERT" or d.get("heuristico")]
+    for d in leidas:
         t = d.get("logged_at")
         ip = str(d.get("entity_ip", ""))
         if not isinstance(t, (int, float)) or t < limite or not ip or ip in nunca:
@@ -6759,7 +9711,7 @@ def historial_acciones(log_path: Path, ahora: float, horas: int = 24,
             episodios.append({
                 "ip": ip, "accion": peor[1], "motivo": peor[2], "origen": peor[3],
                 "inicio": racha[0][0], "fin": racha[-1][0], "ventanas": len(racha),
-                "vigente": caduca > ahora,
+                "vigente": caduca > ahora, "caduca": caduca,
             })
             if o is not None:
                 racha = [o]
@@ -6842,6 +9794,24 @@ def pulso_ingesta(decisions: list[dict], eve_path: Path | None, dataset: Path | 
         "dataset": ds,
         "feed": feed,
     }
+
+
+def comparaciones_en_vivo(carpeta: Path | None, maximo: int = 12) -> list[dict]:
+    """Resumenes que deja comparar-suricata.sh (uno por escenario de la demo).
+
+    Cada fichero es la evidencia de una comparacion: el mismo PCAP del espejo
+    analizado por Suricata + ET Open en otra VM y las decisiones del motor en el
+    mismo intervalo. El panel solo los lee; la mas reciente primero.
+    """
+    if carpeta is None or not Path(carpeta).is_dir():
+        return []
+    salida = []
+    for f in sorted(Path(carpeta).glob("cmp-*.json"), reverse=True)[:maximo]:
+        try:
+            salida.append(json.loads(f.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue
+    return salida
 
 
 def estado_comparacion(ruta: Path | None) -> dict:
@@ -7051,6 +10021,38 @@ def estado_aprendizaje(config_toml: Path | None, demo: bool = False,
     return e
 
 
+# estado_aprendizaje verifica el sha256 de CADA lote CSV del registro: con los
+# lotes acumulados son minutos de CPU y E/S. Cada pagina abierta lo pedia al
+# cargar, y con varios hilos a la vez el panel dejo de responder (3-nov). El
+# estado cambia una vez al dia (timer de aprendizaje): se calcula una vez y se
+# sirve desde cache hasta APRENDIZAJE_CACHE_S o hasta que el registro cambie.
+APRENDIZAJE_CACHE_S = 600
+_CACHE_APRENDIZAJE: dict = {}
+_CACHE_APRENDIZAJE_LOCK = threading.Lock()
+
+
+def _sello_aprendizaje(config_toml: Path | None) -> tuple | None:
+    """mtime/tamano del directorio de aprendizaje y sus .jsonl (registro, deriva...)."""
+    try:
+        import cyberflow_aprendizaje as ap                      # ya importado por estado_aprendizaje
+        d = Path(ap.cargar_config(config_toml)["dir"])
+        return tuple(sorted((f.name, f.stat().st_mtime_ns, f.stat().st_size)
+                            for f in d.glob("*.jsonl")))
+    except Exception:                                            # noqa: BLE001 - solo invalida antes
+        return None
+
+
+def estado_aprendizaje_cacheado(config_toml: Path | None, demo: bool = False) -> dict:
+    with _CACHE_APRENDIZAJE_LOCK:
+        c = _CACHE_APRENDIZAJE
+        sello = _sello_aprendizaje(config_toml) if c else None
+        if c and time.monotonic() - c["t"] < APRENDIZAJE_CACHE_S and c["sello"] == sello:
+            return c["datos"]
+        datos = estado_aprendizaje(config_toml, demo)
+        c.update(t=time.monotonic(), datos=datos, sello=_sello_aprendizaje(config_toml))
+        return datos
+
+
 # --------------------------------------------------------------- autenticacion
 #
 # Dos cuentas y nada mas: "admin" ve todo, "lector" solo la vista operativa. El
@@ -7072,7 +10074,8 @@ ROLES = ("admin", "lector")
 # nadie lo clasifica, la prueba falla en vez de dejarlo abierto.
 RUTAS_ADMIN = frozenset({"/api/variables", "/api/artefactos", "/api/escenarios", "/api/archivo",
                          "/api/vivo", "/api/vivo/flujo", "/api/trazabilidad",
-                         "/api/aprendizaje", "/api/comparacion", "/api/despliegue"})
+                         "/api/aprendizaje", "/api/comparacion", "/api/despliegue",
+                         "/api/demo/estado", "/api/demo/limpieza"})
 
 # Rutas que se sirven sin sesion. Solo el login y lo que necesita para pintarse.
 RUTAS_PUBLICAS = frozenset({"/login"})
@@ -7230,6 +10233,24 @@ def auditar(ruta: Path | None, evento: str, usuario: str, origen: str,
                   "Revisa ReadWritePaths en la unidad." % (ruta, e))
 
 
+def modo_panel_de(args) -> str:
+    """«v2» salvo seleccion EXPLICITA de la demo historica (--modo-panel v1-historico,
+    --sin-cadena-v2 o --demo). No depende de que existan los ficheros de la cadena v2."""
+    if getattr(args, "demo", False) or getattr(args, "sin_cadena_v2", False):
+        return "v1-historico"
+    return getattr(args, "modo_panel", "v2") or "v2"
+
+
+BOTON_PREPARAR = '<button type="button" class="btn-prep" id="prepBtn">'
+
+
+def html_solo_lectura_v2(html: str) -> str:
+    """En modo v2 el boton «Preparar demo» sale ya oculto y deshabilitado del servidor:
+    no depende de que /api/status responda ni de que las fuentes v2 existan."""
+    return html.replace(BOTON_PREPARAR, BOTON_PREPARAR[:-1] + ' hidden disabled '
+                        'title="Panel de solo lectura en modo v2">')
+
+
 def html_por_rol(plantilla: str, rol: str) -> str:
     """Recorta del HTML lo que el rol no debe ni recibir.
 
@@ -7262,7 +10283,9 @@ LOGIN = """<!doctype html>
          font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
   form { width: min(92vw, 340px); background:var(--surface);
          border:1px solid var(--border); border-radius:14px; padding:1.6rem; }
-  h1 { margin:0 0 0.2rem; font-size:1.15rem; letter-spacing:-0.01em; }
+  h1 { margin:0 0 0.2rem; font-size:1.15rem; letter-spacing:-0.01em; text-align:center; }
+  h1 .logo { display:block; width:100%; max-width:240px; height:auto; margin:0 auto 0.4rem; }
+  p.sub { text-align:center; }
   p.sub { margin:0 0 1.3rem; font-size:0.8rem; color:var(--dim); }
   label { display:block; font-size:0.76rem; color:var(--dim); margin-bottom:0.25rem; }
   input { width:100%; font:inherit; font-size:0.9rem; padding:0.5rem 0.65rem;
@@ -7275,7 +10298,7 @@ LOGIN = """<!doctype html>
   .err { font-size:0.78rem; color:var(--bad); margin:0 0 0.9rem; }
 </style>
 <form method="post" action="/login">
-  <h1>CyberFlow</h1>
+  <h1><img class="logo" src="data:image/png;base64,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" alt="CyberFlow"></h1>
   <p class="sub">Panel de solo lectura del motor</p>
   __ERROR__
   <label for="u">Usuario</label>
@@ -7809,8 +10832,36 @@ def parse_args() -> argparse.Namespace:
         "--feed-path", type=Path, default=Path.home() / "feed" / "feed.json",
         help="feed publicado por publicar_feed.py: caducidad exacta de cada accion")
     parser.add_argument(
+        "--peticion-preparar", type=Path, default=Path.home() / "feed" / "peticiones" / "preparar.json",
+        help="petición «Preparar demo» del panel; publicar_feed la mete en el feed firmado")
+    parser.add_argument(
+        "--comparaciones-dir", type=Path, default=Path.home() / "feed" / "comparaciones",
+        help="resumenes de comparar-suricata.sh (seccion CyberFlow frente a Suricata)")
+    parser.add_argument(
+        "--acuse-dir", type=Path, default=Path.home() / "feed" / "acuses",
+        help="acuses de aplicacion de los hosts protegidos (los deja el relay): paso 5 del escenario")
+    parser.add_argument(
         "--feed-estado", type=Path, default=Path.home() / "feed" / "estado.json",
         help="estado de la escalera del publicador: nivel de reincidencia por IP")
+    parser.add_argument(
+        "--control-d5", type=Path, default=Path.home() / "feed-v2" / "d5" / "control" / "control.json",
+        help="«Dejar limpio» (v2): control D5 que consume publicar_feed_v2_d5 (--control-d5)")
+    parser.add_argument(
+        "--cadena-v2-dir", type=Path, default=Path.home() / "feed-v2",
+        help="salidas del publicador v2 (senales-if.jsonl, traza.jsonl, feed.json) que lee el "
+             "panel en modo v2. Si faltan, el panel sigue en v2 y lo declara como incidencia")
+    parser.add_argument(
+        "--modo-panel", choices=("v2", "v1-historico"), default="v2",
+        help="v2 (por omision, el de la investigacion): la accion es solo la medida que publico el "
+             "publicador v2. v1-historico: la politica v1 del panel, solo para presentar la demo "
+             "historica. Nunca se pasa de v2 a v1 por un fallo de las fuentes (cierre de la 4A)")
+    parser.add_argument(
+        "--sin-cadena-v2", action="store_true",
+        help="equivale a --modo-panel v1-historico (seleccion explicita; solo demo historica)")
+    parser.add_argument(
+        "--modo-respuesta", choices=("sombra", "activo"), default="sombra",
+        help="modo declarado del agente v2: en sombra las medidas son propuestas y su aplicacion "
+             "«no ejecutada»; en activo, sin evidencia del host, «desconocido»")
     parser.add_argument(
         "--eve-path",
         type=Path,
@@ -7932,6 +10983,19 @@ def main() -> int:
     service_names = [name.strip() for name in args.services.split(",") if name.strip()]
     model_summary = load_model_summary(args.manifest_path, args.detector_name)
     model_summary["evaluacion"] = evaluacion_del_vigente(args.detector_name)
+    global _CADENA_V2
+    modo_panel = modo_panel_de(args)
+    if modo_panel == "v2":
+        # Cierre de la 4A: el modo v2 NO depende de que existan sus ficheros. Si faltan al
+        # arrancar (o desaparecen despues), el panel sigue en v2 y lo muestra como incidencia.
+        _CADENA_V2 = cadena_v2.IndiceV2(args.cadena_v2_dir, args.modo_respuesta)
+        inc = _CADENA_V2.resumen(time.time())["incidencias"]
+        print(f"panel: modo v2, cadena desde {args.cadena_v2_dir} (modo {args.modo_respuesta}); "
+              "«Preparar demo» deshabilitado"
+              + ("; INCIDENCIA: " + "; ".join(inc) if inc else ""), file=sys.stderr, flush=True)
+    else:
+        print("panel: modo v1-historico seleccionado explicitamente (politica v1 del panel)",
+              file=sys.stderr, flush=True)
     red_vigilada = None if args.demo else red_analizada(args.entity_network, args.config_toml)
     # Sin --dataset, el que declara el .toml en [rutas]: asi el pulso puede decir
     # cuantas filas se llevan acumuladas sin tocar la unidad del servicio.
@@ -7973,6 +11037,8 @@ def main() -> int:
 
     cerrojo = Cerrojo(args.intentos_max, args.bloqueo_minutos)
     HTML_POR_ROL = {rol: html_por_rol(HTML, rol) for rol in ROLES}
+    if _CADENA_V2 is not None:
+        HTML_POR_ROL = {rol: html_solo_lectura_v2(h) for rol, h in HTML_POR_ROL.items()}
 
     class Handler(BaseHTTPRequestHandler):
         # ---------------------------------------------------------- sesion
@@ -8040,6 +11106,46 @@ def main() -> int:
                 self.end_headers()
                 return
 
+            if path == "/api/demo/limpiar":
+                s = self._sesion()
+                if not s or s.get("rol") != "admin" or self.headers.get("X-CyberFlow") != "1":
+                    self.send_error(403)
+                    return
+                if _CADENA_V2 is None:
+                    self._send_json({"ok": False, "motivo": "solo con la cadena v2 (usa «Preparar demo»)"})
+                    return
+                try:
+                    r = pedir_limpieza_v2(args.control_d5, s["usuario"], time.time())
+                except OSError as ex:
+                    r = {"ok": False, "motivo": "el panel no puede escribir el control D5 (%s)" % ex.__class__.__name__}
+                auditar(args.auditoria, "dejar-limpio", s["usuario"], self._origen(), s["rol"],
+                        "id=%s ok=%s" % (r.get("id"), r.get("ok")))
+                self._send_json(r)
+                return
+
+            if path == "/api/demo/preparar":
+                if _CADENA_V2 is not None:
+                    # 4A: el panel es de solo lectura; la peticion viajaba por el feed v1.
+                    body = json.dumps({"ok": False, "motivo": "panel de solo lectura con la cadena v2: "
+                                       "«Preparar demo» deshabilitado"}).encode("utf-8")
+                    self.send_response(409)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
+                s = self._sesion()
+                # Solo un administrador, y solo desde el propio panel (cabecera propia:
+                # un formulario de otro sitio no puede añadirla sin CORS).
+                if not s or s.get("rol") != "admin" or self.headers.get("X-CyberFlow") != "1":
+                    self.send_error(403)
+                    return
+                pet = pedir_preparacion(args.peticion_preparar, s["usuario"], time.time())
+                auditar(args.auditoria, "preparar-demo", s["usuario"], self._origen(), s["rol"],
+                        ",".join(pet["ips"]) + " id=" + pet["id"])
+                self._send_json({"ok": True, "peticion": pet})
+                return
+
             if path != "/login":
                 self.send_error(404)
                 return
@@ -8084,6 +11190,7 @@ def main() -> int:
 
         def _send_json(self, payload: dict | list) -> None:
             body = json.dumps(payload).encode("utf-8")
+            self._bytes_resp = len(body)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
@@ -8091,6 +11198,18 @@ def main() -> int:
             self.wfile.write(body)
 
         def do_GET(self) -> None:  # noqa: N802
+            # Rendimiento por ruta (3-nov): cuantas, cuanto tardan y cuanto pesan.
+            # Se vuelca cada 30 s a logs/panel_rendimiento.json para ver que
+            # vista carga al sensor sin tener que adivinar.
+            t0 = time.perf_counter()
+            self._bytes_resp = 0
+            try:
+                self._do_get()
+            finally:
+                medir_ruta(self.path.partition("?")[0], time.perf_counter() - t0,
+                           self._bytes_resp, args.log_path.parent / "panel_rendimiento.json")
+
+        def _do_get(self) -> None:
             path, _, query = self.path.partition("?")
 
             if path == "/login":
@@ -8117,6 +11236,14 @@ def main() -> int:
                 self._send_html(pagina)
                 return
             if path == "/api/status":
+                # Todas las pestanas sondean cada 5 s y cada estado lanza systemctl y
+                # sudo: se calcula una vez cada STATUS_CACHE_S y se comparte.
+                with _STATUS_LOCK:
+                    if "datos" in _STATUS_CACHE and \
+                            time.monotonic() - _STATUS_CACHE.get("t", -1e9) < STATUS_CACHE_S:
+                        self._send_json(_STATUS_CACHE["datos"])
+                        return
+                    _STATUS_CACHE["t"] = time.monotonic()
                 decisions = read_decisions(args.log_path, limit=2000)
                 ahora = time.time()
                 servicios = service_status([] if args.demo else service_names)
@@ -8134,7 +11261,7 @@ def main() -> int:
                     captura["drops_estado"] = de
                     _CAPTURA_PREVIA["v"] = {"medido_en": de.get("marca"),
                                             "total": de.get("total")}
-                self._send_json(
+                _STATUS_CACHE["datos"] = datos_status = (
                     {
                         "modo": "demo" if args.demo else "live",
                         "services": servicios,
@@ -8149,6 +11276,12 @@ def main() -> int:
                             decisions, ahora,
                             None if args.demo else args.feed_path,
                             None if args.demo else args.feed_estado),
+                        "acuses": [] if args.demo else acuses_resumen(args.acuse_dir, ahora),
+                        # Con la cadena v2 los acuses del agente v1 son evidencia HISTORICA de
+                        # aplicacion (el agente v1 esta parado), no el estado actual del host.
+                        "acuses_v1_historicos": _CADENA_V2 is not None,
+                        "cadena_v2": _CADENA_V2.resumen(ahora) if _CADENA_V2 is not None
+                        else {"activa": False},
                         "counters": contadores,
                         "activity": bucket_by_minute(decisions),
                         "capture_metrics": captura,
@@ -8161,9 +11294,23 @@ def main() -> int:
                         "calibracion": calibr,
                     }
                 )
+                self._send_json(datos_status)
+                return
+            if path == "/api/escenario":
+                params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+                self._send_json(estado_escenario(
+                    args.log_path, urllib.parse.unquote(params.get("ip", "")),
+                    params.get("desde", ""), time.time(),
+                    None if args.demo else args.feed_path,
+                    None if args.demo else args.feed_estado,
+                    None if args.demo else args.acuse_dir))
                 return
             if path == "/api/acciones":
                 self._send_json(historial_acciones(args.log_path, time.time()))
+                return
+            if path == "/api/lista-blanca":
+                self._send_json(estado_lista_blanca(
+                    LISTA_BLANCA_PATH, None if args.demo else args.cadena_v2_dir / "feed.json", time.time()))
                 return
             if path == "/api/despliegue":
                 self._send_json(inventario_despliegue())
@@ -8225,6 +11372,12 @@ def main() -> int:
                     self._send_json({"error": "falta la red de entidades (--entity-network "
                                               "o [red] red_entidades)"})
                     return
+                if params.get("abierta") != "1":
+                    # Una pestaña con el JS de antes pedía esto aunque la sección
+                    # estuviera cerrada, y cada /api/vivo es ~1 min de CPU con el GIL.
+                    self._send_json({"error": "Versión antigua del panel en esta pestaña: "
+                                              "recárgala con Ctrl+F5."})
+                    return
                 try:
                     if path == "/api/vivo/flujo":
                         # El cursor lo guarda el navegador. Del fichero solo se
@@ -8241,20 +11394,53 @@ def main() -> int:
                             args.eve_path, cfg, cursor, todos=params.get("todos") == "1"))
                         return
                     limite = params.get("limite", "150")
-                    self._send_json(vista_vivo.calcular_con_cache(
-                        args.eve_path, cfg, todos=params.get("todos") == "1",
-                        limite=min(int(limite), 3000) if limite.isdigit() else 150))
+                    # Un solo cálculo a la vez y como mucho uno cada VIVO_MIN_S: si ya
+                    # hay uno en marcha se sirve el último (o se avisa), no se encola.
+                    if not _VIVO_LOCK.acquire(blocking=False):
+                        self._send_json(_VIVO_ULTIMO.get("datos") or {"error": "calculando"})
+                        return
+                    try:
+                        if "datos" in _VIVO_ULTIMO and time.monotonic() - _VIVO_ULTIMO["t"] < VIVO_MIN_S:
+                            datos_vivo = _VIVO_ULTIMO["datos"]
+                        else:
+                            datos_vivo = vista_vivo.calcular_con_cache(
+                                args.eve_path, cfg, todos=params.get("todos") == "1",
+                                limite=min(int(limite), 3000) if limite.isdigit() else 150)
+                            _VIVO_ULTIMO.update(t=time.monotonic(), datos=datos_vivo)
+                    finally:
+                        _VIVO_LOCK.release()
+                    self._send_json(datos_vivo)
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"error": "%s: %s" % (type(exc).__name__, exc)})
                 return
+            if path == "/api/demo/limpieza":
+                params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+                self._send_json(estado_limpieza_v2(args.control_d5, args.cadena_v2_dir / "feed.json",
+                                                   urllib.parse.unquote(params.get("id", ""))[:64], time.time()))
+                return
+            if path == "/api/demo/estado":
+                self._send_json(estado_preparacion(args.peticion_preparar, args.log_path, args.feed_path,
+                                                   None if args.demo else args.acuse_dir, time.time()))
+                return
             if path == "/api/comparacion":
-                self._send_json(estado_comparacion(args.comparacion))
+                datos = estado_comparacion(args.comparacion)
+                datos["en_vivo"] = comparaciones_en_vivo(args.comparaciones_dir)
+                self._send_json(datos)
                 return
             if path == "/api/aprendizaje":
-                self._send_json(estado_aprendizaje(args.config_toml, args.demo))
+                self._send_json(estado_aprendizaje_cacheado(args.config_toml, args.demo))
                 return
             if path == "/api/decisions":
-                params = dict(pair.split("=") for pair in query.split("&") if "=" in pair)
+                params = dict(pair.split("=", 1) for pair in query.split("&") if "=" in pair)
+                if "desde" in params or "hasta" in params:
+                    def _t(v):
+                        try:
+                            return float(v) if v else None
+                        except ValueError:
+                            return None
+                    self._send_json(consultar_periodo(
+                        args.log_path, _t(params.get("desde")), _t(params.get("hasta"))))
+                    return
                 limit = int(params.get("limit", "100"))
                 self._send_json(read_decisions(args.log_path, limit=limit))
                 return

@@ -1,0 +1,123 @@
+titulo: L4 · Escaneo de puertos
+capa: L4 · Transporte
+tipo: ataque
+ip: 10.10.20.30
+origen: kali
+tarjeta_panel: Escaneo de puertos
+panel_id: l4
+pasos:
+- tipo: decir
+  texto: 'Capa de transporte: prueba miles de puertos TCP para ver cuáles están abiertos. Primer paso de una intrusión.'
+  gui: '#s-escenario · tarjeta «Escaneo de puertos»'
+- tipo: ejecutar
+  panel: sensor
+  comando: ~/cf-demo/mira-motor.sh {ip}
+  explica: 'SENSOR1: el motor en vivo para 10.10.20.30, una línea por ventana de 10 s.'
+  procedimiento: 'Lee la cola de ~/cyberflow/logs/motor_decision.log (solo lectura) y muestra por ventana: hora,
+    score frente al umbral, decisión y, si salta, la regla con su motivo.'
+  gui: '#s-escenario · «Ventanas de la IP»'
+- tipo: ejecutar
+  panel: srvdmz
+  comando: ~/cf-demo/mira-agente.sh {ip}
+  explica: 'SRV-DMZ: el servidor protegido por dentro: agente activo, orden recibida y su firewall.'
+  procedimiento: 'Cada 2 s: temporizador ppi-enforce-agent, feed firmado recibido, orden para la IP, liberación
+    humana y los sets de nftables `inet cyberflow` (solo lectura).'
+  gui: '#s-escenario · paso 5 «Host»'
+- tipo: ejecutar
+  panel: origen
+  comando: nmap -n -Pn --max-retries 0 --host-timeout 8s -p80,443 10.10.30.10
+  espera: Nmap done
+  explica: 'ANTES: nmap a los puertos 80 y 443. 80 y 443 deben salir «open».'
+  procedimiento: '`-n` sin DNS; `-Pn` sin ping previo; `--max-retries 0 --host-timeout 8s` una sonda y se rinde
+    en 8 s; `-p80,443` solo web. «open» = el servidor contesta; «filtered» = el firewall lo descarta.'
+  gui: '— solo CLI: la prueba la hace el origen'
+- tipo: panel
+  ruta: '#s-escenario · tarjeta «Escaneo de puertos» → Iniciar seguimiento de 10.10.20.30'
+  explica: 'En el panel: Iniciar. Aparece la barra guiada abajo con los 5 pasos.'
+  gui: '#s-escenario + barra guiada (paso 1 Ataque)'
+  captura: inicio
+- tipo: ataque
+  panel: origen
+  comando: nmap -sT -T4 --max-retries 1 -p 1-3000 --open 10.10.30.10
+  explica: 3000 puertos TCP a ritmo agresivo. El sensor ve una copia del tráfico (espejo).
+  procedimiento: '`-sT` TCP connect (sin root); `-T4` agresivo; `--max-retries 1` un reintento; `-p 1-3000` puertos
+    1–3000; `--open` solo lista los abiertos.'
+  gui: barra guiada · 1 Ataque (reloj en marcha)
+- tipo: esperar
+  hito: deteccion
+  max: 180
+  explica: 'Regla port_scan (muchos puertos distintos) y modelo coinciden: BLOCK.'
+  gui: barra guiada · 2 Actividad
+- tipo: panel
+  ruta: '#s-actividad · fila de 10.10.20.30 (resaltada) → clic'
+  explica: 'ACTIVIDAD: la IP sube entre las entidades con su acción. Clic en ella.'
+  gui: '#s-actividad · tabla de entidades'
+  captura: actividad
+- tipo: panel
+  ruta: '#s-decisiones · filtrada por 10.10.20.30'
+  explica: 'DECISIONES: ventana por ventana, quién lo detecta (modelo, regla o ambos) y por qué.'
+  gui: '#s-decisiones (filtro = la IP)'
+  captura: decisiones
+- tipo: esperar
+  hito: publicacion
+  max: 60
+  explica: El sensor publica la orden en el feed firmado, con caducidad. No toca el servidor.
+  gui: barra guiada · 4 Respuestas
+- tipo: panel
+  ruta: '#s-bloqueos · fila de 10.10.20.30'
+  explica: 'RESPUESTAS: la orden publicada, su detector y cuándo caduca.'
+  gui: '#s-bloqueos'
+  captura: respuestas
+- tipo: esperar
+  hito: aplicacion
+  max: 60
+  explica: El agente de srv-dmz trae el feed, verifica la firma y pone la IP en nftables.
+  gui: barra guiada · 5 Host (acuse de srv-dmz)
+  captura: aplicacion
+- tipo: ejecutar
+  panel: srvdmz
+  si: aplicada
+  comando: ~/cf-demo/en-firewall.sh {ip}
+  espera: ''
+  explica: 'HOST (CLI): la IP está en el set de nftables del servidor.'
+  procedimiento: Consulta los sets `bloqueadas` y `limitadas` de la tabla `inet cyberflow` (solo lectura). Imprime
+    BLOCK, LIMIT o NO.
+  gui: barra guiada · 5 Host
+- tipo: ejecutar
+  panel: origen
+  si: aplicada
+  comando: nmap -n -Pn --max-retries 0 --host-timeout 8s -p80,443 10.10.30.10
+  espera: Nmap done
+  explica: 'CON la regla: 80 y 443 salen «filtered»: el servidor ya no le contesta.'
+  procedimiento: '`-n` sin DNS; `-Pn` sin ping previo; `--max-retries 0 --host-timeout 8s` una sonda y se rinde
+    en 8 s; `-p80,443` solo web. «open» = el servidor contesta; «filtered» = el firewall lo descarta.'
+  gui: — solo CLI
+- tipo: ejecutar
+  panel: srvdmz
+  si: aplicada
+  comando: ~/cf-demo/desbloquear.sh {ip}
+  espera: tras liberar
+  explica: 'Revisión humana: un comando en el servidor libera la IP.'
+  procedimiento: 'Llama al agente con `--liberar IP`: quita la IP de los dos sets y anota la liberación (por detector)
+    con 120 s de gracia para la cola del mismo episodio. Una orden nueva sí se aplica.'
+  gui: '#s-escenario · paso 5 «liberada por revisión humana»'
+  captura: liberacion
+- tipo: ejecutar
+  panel: origen
+  si: aplicada
+  comando: nmap -n -Pn --max-retries 0 --host-timeout 8s -p80,443 10.10.30.10
+  espera: Nmap done
+  explica: 'DESPUÉS de liberar: vuelve a «open».'
+  procedimiento: '`-n` sin DNS; `-Pn` sin ping previo; `--max-retries 0 --host-timeout 8s` una sonda y se rinde
+    en 8 s; `-p80,443` solo web. «open» = el servidor contesta; «filtered» = el firewall lo descarta.'
+  gui: — solo CLI
+- tipo: comparar
+  explica: El mismo tráfico frente a Suricata 7 + ET Open (53 013 firmas). Suricata alerta; CyberFlow decide y responde.
+  procedimiento: 'comparar-suricata.sh: (1) recorta del anillo PCAP del sensor la IP y el intervalo del ataque;
+    (2) lo copia a la VM 10.10.60.13; (3) `suricata -r` con todas las firmas; (4) cuenta las ventanas de CyberFlow
+    del mismo intervalo y el acuse del host. Deja fast.log en la VM y el resumen en sensor1:~/feed/comparaciones/.'
+  gui: '#s-comparacion · tarjeta de esta comparación'
+  captura: suricata
+- tipo: decir
+  texto: 'Detección más fuerte: modelo y regla. BLOCK con caducidad; corta el host, no el sensor.'
+  gui: barra guiada · 5/5 en verde

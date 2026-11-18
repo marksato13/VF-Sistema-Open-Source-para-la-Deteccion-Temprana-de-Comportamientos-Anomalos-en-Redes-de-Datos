@@ -1,0 +1,84 @@
+titulo: Legítimo · Cliente intenso (debe quedar en PERMIT)
+capa: L7 · Aplicación
+tipo: tráfico legítimo
+ip: 10.10.20.21
+origen: clientes
+tarjeta_panel: Cliente legítimo intenso
+panel_id: fp
+pasos:
+- tipo: decir
+  texto: 'Un usuario legítimo que usa mucho la web. No es un ataque: CyberFlow NO debe actuar.'
+  gui: '#s-escenario · tarjeta «Cliente legítimo intenso»'
+- tipo: ejecutar
+  panel: sensor
+  comando: ~/cf-demo/mira-motor.sh {ip}
+  explica: 'SENSOR1: el motor en vivo para 10.10.20.21, una línea por ventana de 10 s.'
+  procedimiento: 'Lee la cola de ~/cyberflow/logs/motor_decision.log (solo lectura) y muestra por ventana: hora,
+    score frente al umbral, decisión y, si salta, la regla con su motivo.'
+  gui: '#s-escenario · «Ventanas de la IP»'
+- tipo: ejecutar
+  panel: srvdmz
+  comando: ~/cf-demo/mira-agente.sh {ip}
+  explica: 'SRV-DMZ: el servidor protegido por dentro: agente activo, orden recibida y su firewall.'
+  procedimiento: 'Cada 2 s: temporizador ppi-enforce-agent, feed firmado recibido, orden para la IP, liberación
+    humana y los sets de nftables `inet cyberflow` (solo lectura).'
+  gui: '#s-escenario · paso 5 «Host»'
+- tipo: ejecutar
+  panel: origen
+  comando: curl -s -o /dev/null -m 4 -w 'HTTP %{http_code} en %{time_total}s\n' --interface 10.10.20.21 http://10.10.30.10/
+  espera: HTTP
+  explica: 'ANTES: una petición web desde el cliente. Debe salir HTTP 200.'
+  procedimiento: '`-m 4` se rinde a los 4 s; `-w` imprime el código HTTP y el tiempo; `--interface` sale con la
+    IP del cliente. HTTP 200 = el servidor le atiende.'
+  gui: '— solo CLI: la prueba la hace el origen'
+- tipo: panel
+  ruta: '#s-escenario · tarjeta «Cliente legítimo intenso» → Iniciar seguimiento de 10.10.20.21'
+  explica: 'En el panel: Iniciar. Aparece la barra guiada abajo con los 5 pasos.'
+  gui: '#s-escenario + barra guiada (paso 1 Ataque)'
+  captura: inicio
+- tipo: ataque
+  panel: origen
+  comando: for i in $(seq 1 60); do curl -s -o /dev/null --interface 10.10.20.21 http://10.10.30.10/; printf .;
+    sleep 2; done; echo fin
+  explica: '60 páginas, una cada 2 s, durante 2 minutos: uso intenso pero humano.'
+  procedimiento: '`for … seq 1 60` repite 60 veces; `curl -s -o /dev/null` pide la página y la descarta; `--interface
+    10.10.20.21` sale con la IP del cliente; `sleep 2` una cada 2 s; `printf .` un punto por petición.'
+  gui: barra guiada · 1 Tráfico (reloj en marcha)
+- tipo: esperar
+  hito: sin_accion
+  max: 130
+  explica: 'Dos minutos observando: la IP debe seguir en PERMIT, fuera del feed y del firewall.'
+  gui: barra guiada · pasos en verde «sin acción»
+- tipo: panel
+  ruta: '#s-actividad · fila de 10.10.20.21 (PERMIT)'
+  explica: 'ACTIVIDAD: la IP aparece con tráfico, pero sin acción.'
+  gui: '#s-actividad'
+  captura: actividad
+- tipo: panel
+  ruta: '#s-decisiones · filtrada por 10.10.20.21'
+  explica: 'DECISIONES: ventanas PERMIT; si el modelo duda, queda como «marginal · sin acción».'
+  gui: '#s-decisiones (filtro = la IP)'
+  captura: decisiones
+- tipo: ejecutar
+  panel: srvdmz
+  comando: ~/cf-demo/en-firewall.sh {ip}
+  espera: ''
+  explica: 'HOST (CLI): la IP NO está en el firewall.'
+  procedimiento: Consulta los sets de `inet cyberflow` (solo lectura). Debe imprimir NO.
+  gui: barra guiada · 5 Host
+- tipo: ejecutar
+  panel: origen
+  comando: curl -s -o /dev/null -m 4 -w 'HTTP %{http_code} en %{time_total}s\n' --interface 10.10.20.21 http://10.10.30.10/
+  espera: HTTP
+  explica: 'El cliente sigue atendido: HTTP 200.'
+  procedimiento: '`-m 4` se rinde a los 4 s; `-w` imprime el código HTTP y el tiempo; `--interface` sale con la
+    IP del cliente. HTTP 200 = el servidor le atiende.'
+  gui: — solo CLI
+- tipo: comparar
+  explica: 'El mismo tráfico frente a Suricata: ¿algún IDS lo habría marcado?'
+  procedimiento: comparar-suricata.sh con el intervalo del tráfico del cliente (mismo método que en los ataques).
+  gui: '#s-comparacion · tarjeta del cliente legítimo'
+  captura: suricata
+- tipo: decir
+  texto: 'Uso intenso no es ataque: ni regla ni modelo sostenido. Así se evitan falsos positivos.'
+  gui: '#s-escenario · tarjeta en verde «PERMIT»'

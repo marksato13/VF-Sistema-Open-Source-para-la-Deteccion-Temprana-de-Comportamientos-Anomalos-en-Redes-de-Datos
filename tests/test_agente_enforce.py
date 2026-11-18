@@ -94,6 +94,115 @@ class PlanNftables(unittest.TestCase):
         self.assertNotIn("sudo", lote)
 
 
+class AlcanceYLiberacion(unittest.TestCase):
+    VIG = {"10.10.20.30": {"accion": "BLOCK", "hasta": 1300, "nivel": 0},
+           "10.10.50.51": {"accion": "LIMIT", "hasta": 1300, "nivel": 0},
+           "10.10.20.24": {"accion": "LIMIT", "hasta": 1300, "nivel": 0}}
+
+    def test_sin_alcance_se_aplica_todo(self):
+        aplicar, sombra = ag.filtrar_alcance(self.VIG, None, None)
+        self.assertEqual(set(aplicar), set(self.VIG))
+        self.assertEqual(sombra, {})
+
+    def test_nunca_por_red(self):
+        aplicar, sombra = ag.filtrar_alcance(self.VIG, {"nunca": ["10.10.50.0/24"]}, None)
+        self.assertNotIn("10.10.50.51", aplicar)
+        self.assertEqual(sombra["10.10.50.51"], "nunca")
+
+    def test_solo_deja_el_resto_en_sombra(self):
+        aplicar, sombra = ag.filtrar_alcance(self.VIG, {"solo": ["10.10.20.30"]}, None)
+        self.assertEqual(list(aplicar), ["10.10.20.30"])
+        self.assertEqual(sombra["10.10.20.24"], "fuera-de-alcance")
+
+    def test_nunca_gana_a_solo(self):
+        aplicar, _ = ag.filtrar_alcance(self.VIG, {"solo": ["10.10.0.0/16"], "nunca": ["10.10.20.30/32"]}, None)
+        self.assertNotIn("10.10.20.30", aplicar)
+
+    @staticmethod
+    def feed(*entradas):
+        return ag.vigentes({"entradas": [{"ip": "10.10.20.30", "nivel": 0, **e} for e in entradas]}, 1000.0, set())
+
+    @staticmethod
+    def lib(v, desde=1000, gracia=0):
+        return {"10.10.20.30": ag.registrar_liberacion(v["10.10.20.30"], desde, gracia)}
+
+    def test_liberada_no_se_reaplica_si_es_la_misma_orden(self):
+        v = self.feed(dict(accion="BLOCK", hasta=1300, detector="port_scan"))
+        aplicar, sombra = ag.filtrar_alcance(v, None, self.lib(v), ahora=1100)
+        self.assertNotIn("10.10.20.30", aplicar)
+        self.assertEqual(sombra["10.10.20.30"], "liberada")
+
+    def test_republicacion_dentro_del_margen_sigue_liberada(self):
+        v = self.feed(dict(accion="BLOCK", hasta=1300, detector="port_scan"))
+        v2 = self.feed(dict(accion="BLOCK", hasta=1310, detector="port_scan"))
+        aplicar, _ = ag.filtrar_alcance(v2, None, self.lib(v), ahora=1100)
+        self.assertNotIn("10.10.20.30", aplicar)
+
+    def test_reincidencia_de_nivel_vuelve_a_aplicar(self):
+        v = self.feed(dict(accion="BLOCK", hasta=1300, detector="port_scan"))
+        v2 = self.feed(dict(accion="BLOCK", hasta=1300, detector="port_scan", nivel=1))
+        aplicar, _ = ag.filtrar_alcance(v2, None, self.lib(v), ahora=1100)
+        self.assertIn("10.10.20.30", aplicar)
+
+    def test_ofensa_nueva_que_renueva_la_orden_vuelve_a_aplicar(self):
+        v = self.feed(dict(accion="LIMIT", hasta=1300, detector="http_abuse"))
+        v2 = self.feed(dict(accion="LIMIT", hasta=1600, detector="http_abuse"))
+        aplicar, _ = ag.filtrar_alcance(v2, None, self.lib(v), ahora=1100)
+        self.assertIn("10.10.20.30", aplicar)
+
+    def test_block_largo_liberado_no_tapa_un_limit_nuevo(self):
+        # caso real del 2-nov: BLOCK de 1 h liberado; 10 min despues, ataque L3 -> LIMIT del modelo
+        v = self.feed(dict(accion="BLOCK", hasta=4600, detector="port_scan"))
+        v2 = self.feed(dict(accion="BLOCK", hasta=4600, detector="port_scan"),
+                       dict(accion="LIMIT", hasta=1900, detector="if_limpio_2026_10"))
+        aplicar, _ = ag.filtrar_alcance(v2, None, self.lib(v), ahora=1600)
+        self.assertEqual(aplicar["10.10.20.30"]["accion"], "LIMIT")     # solo lo nuevo, no el BLOCK liberado
+
+    def test_gracia_absorbe_la_cola_del_mismo_episodio(self):
+        v = self.feed(dict(accion="LIMIT", hasta=1300, detector="http_abuse"))
+        lib = self.lib(v, desde=1000, gracia=120)
+        v2 = self.feed(dict(accion="LIMIT", hasta=1400, detector="http_abuse"),
+                       dict(accion="LIMIT", hasta=1390, detector="if_limpio_2026_10"))   # ventanas tardías
+        aplicar, _ = ag.filtrar_alcance(v2, None, lib, ahora=1050)
+        self.assertNotIn("10.10.20.30", aplicar)
+        lib2 = ag.depurar_liberadas(lib, v2, 1050)
+        self.assertEqual(lib2["10.10.20.30"]["ordenes"]["http_abuse"]["hasta"], 1400)
+        aplicar, _ = ag.filtrar_alcance(v2, None, lib2, ahora=1200)      # tras la gracia, sigue absorbido
+        self.assertNotIn("10.10.20.30", aplicar)
+
+    def test_tras_la_gracia_una_ofensa_nueva_vuelve_a_aplicar(self):
+        v = self.feed(dict(accion="LIMIT", hasta=1300, detector="http_abuse"))
+        lib = self.lib(v, desde=1000, gracia=120)
+        v2 = self.feed(dict(accion="LIMIT", hasta=1500, detector="http_abuse"))
+        aplicar, _ = ag.filtrar_alcance(v2, None, lib, ahora=1200)
+        self.assertIn("10.10.20.30", aplicar)
+
+    def test_liberacion_se_olvida_si_sale_del_feed(self):
+        v = self.feed(dict(accion="BLOCK", hasta=1300, detector="port_scan"))
+        self.assertEqual(ag.depurar_liberadas(self.lib(v), {}, 1100), {})
+
+    def test_en_gracia_la_liberacion_sobrevive_a_salir_del_feed(self):
+        # corrida 3 (3-nov): la IP sale del feed al liberarla y la cola tardia la vuelve a meter
+        v = self.feed(dict(accion="BLOCK", hasta=1300, detector="port_scan"))
+        lib = ag.depurar_liberadas(self.lib(v, desde=1000, gracia=120), {}, 1010)
+        self.assertIn("10.10.20.30", lib)
+        v2 = self.feed(dict(accion="BLOCK", hasta=1340, detector="port_scan"))     # ventanas tardias
+        aplicar, sombra = ag.filtrar_alcance(v2, None, lib, ahora=1034)
+        self.assertNotIn("10.10.20.30", aplicar)
+        self.assertEqual(sombra["10.10.20.30"], "liberada")
+        # pasada la gracia y sin orden, se olvida
+        self.assertEqual(ag.depurar_liberadas(lib, {}, 1200), {})
+
+    def test_vigentes_lleva_el_nivel(self):
+        f = {"entradas": [{"ip": "10.10.20.30", "accion": "BLOCK", "hasta": 1300, "nivel": 2}]}
+        self.assertEqual(ag.vigentes(f, 1000.0, set())["10.10.20.30"]["nivel"], 2)
+
+    def test_plan_liberar_toca_los_dos_sets(self):
+        texto = " ".join(" ".join(c) for c in ag.plan_liberar("10.10.20.30"))
+        self.assertIn(ag.SET_BLOCK + " { 10.10.20.30 }", texto)
+        self.assertIn(ag.SET_LIMIT + " { 10.10.20.30 }", texto)
+
+
 @unittest.skipUnless(TIENE_OPENSSL, "requiere openssl")
 class VerificacionFirma(unittest.TestCase):
     def setUp(self):
