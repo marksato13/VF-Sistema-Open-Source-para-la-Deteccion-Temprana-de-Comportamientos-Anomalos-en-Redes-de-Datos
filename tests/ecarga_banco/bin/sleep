@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# sleep simulado (banco de E-carga): sin $FAKE_DIR/reloj es el sleep real; con él, avanza el reloj sin esperar.
+#   $FAKE_DIR/salto_sleep = "K EPOCH": la K-ésima espera lleva el reloj a EPOCH (retraso o salto de reloj en el bucle).
+#   $FAKE_DIR/reloj_externo: otro proceso mueve el reloj; aquí solo se espera a que llegue (varios procesos a la vez).
+[ -n "${FAKE_DIR:-}" ] && [ -e "$FAKE_DIR/reloj" ] || exec /bin/sleep "$@"
+if [ -e "$FAKE_DIR/reloj_externo" ]; then
+  read -r t < "$FAKE_DIR/reloj"
+  meta=$(awk -v a="$t" -v b="$1" 'BEGIN{printf "%.3f", a+b}')
+  while read -r t < "$FAKE_DIR/reloj"; awk -v a="$t" -v b="$meta" 'BEGIN{exit !(a<b)}'; do /bin/sleep 0.02; done
+  exit 0
+fi
+n=$(( $(cat "$FAKE_DIR/sleep_cuenta" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$FAKE_DIR/sleep_cuenta"
+read -r t < "$FAKE_DIR/reloj"
+nuevo=$(awk -v a="$t" -v b="$1" 'BEGIN{printf "%.3f", a+b}')
+if [ -e "$FAKE_DIR/salto_sleep" ]; then
+  read -r k e < "$FAKE_DIR/salto_sleep"
+  [ "$n" = "$k" ] && nuevo=$e
+fi
+echo "$nuevo" > "$FAKE_DIR/reloj.tmp" && mv -f "$FAKE_DIR/reloj.tmp" "$FAKE_DIR/reloj"

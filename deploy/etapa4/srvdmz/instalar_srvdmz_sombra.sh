@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# [SRV-DMZ adminsrvdmz] Agente v2 perfil dmz en SOMBRA (sin --aplicar), Etapa 4. Lo ejecuta MARK: crea
+# cuentas e instala en /usr/local, /opt, /etc, /var/lib y sudoers. Mismos pasos que el procedimiento
+# revisado de la Etapa 2 (P1–P8, probados en el banco :3), con el código de ec78ca5.
+# El agente v1 (ppi-enforce-agent.timer) y ppi-brute-lab NO se tocan desde aquí.
+#
+# Reconciliación 2026-11-03: el 2-nov el agente v1 estaba disabled/inactive, pero desde el 03-nov 02:50 UTC
+# (preparación de la demo) está enabled/active con --aplicar y la tabla `inet cyberflow` tiene sets en uso.
+# Este guion ya no lo da por supuesto: la fase P0 (PROCEDIMIENTO, la ejecuta Mark con autorización expresa)
+# deja la cadena v1 sin aplicar, y aquí se comprueba antes de cualquier otra cosa. Sin lectura de nft, para.
+#
+#   bash instalar_srvdmz_sombra.sh <RESPALDO_DIR> <DST_PAQUETE> <pub.pem del sensor> <cyberflow-feed-v2-srv.pub>
+set -uo pipefail
+parar() { echo "PARADA $*"; exit 1; }
+ok() { echo "OK    $*"; }
+R="${1:?respaldo}"; DST="${2:?paquete extraído}"; PUB="${3:?pub.pem}"; RELE="${4:?llave pública del relé}"
+v1_ac=$(systemctl is-active ppi-enforce-agent.timer 2>/dev/null); v1_en=$(systemctl is-enabled ppi-enforce-agent.timer 2>/dev/null)
+[ "$v1_ac" = active ] && parar "el agente v1 (ppi-enforce-agent.timer) está activo y aplica con --aplicar: fase P0 pendiente"
+[ "$v1_en" = enabled ] && parar "ppi-enforce-agent.timer sigue enabled: volvería a aplicar al reiniciar (fase P0 pendiente)"
+systemctl is-active --quiet ppi-enforce-agent.service && parar "ppi-enforce-agent.service está en ejecución"
+tablas=$(sudo -n nft list tables 2>/dev/null) || parar "no se pueden leer las tablas nft: no se demuestra la sombra"
+printf '%s\n' "$tablas" | grep -qE '^table [a-z0-9]+ cyberflow$' && parar "queda la tabla nft del agente v1 (cyberflow): fase P0 pendiente"
+ok "condición previa: cadena v1 sin aplicar (timer $v1_ac/$v1_en, sin tabla cyberflow)"
+( cd "$R" && sha256sum -c --quiet SHA256SUMS ) || parar "el respaldo no verifica"
+# Un ruleset vacío es válido si consta que se leyó (ruleset.lectura, rc=0): tras P0 srv-dmz no tiene tablas.
+[ -f "$R/ruleset.nft" ] && { [ -s "$R/ruleset.nft" ] || grep -q '^rc=0 ' "$R/ruleset.lectura" 2>/dev/null; } \
+  || parar "el respaldo no tiene una lectura válida de ruleset.nft (CON_SUDO=1)"
+grep -qiE 'requiretty' "$R/sudoers-defaults.txt" && parar "sudo exige tty: el helper no funcionaría"
+( cd "$DST" && sha256sum -c --quiet SHA256SUMS ) || parar "el paquete no verifica"
+getent passwd cffeed cfagente > /dev/null && parar "las cuentas ya existen"
+python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' || parar "python3 < 3.11"
+read -r tipo _ _ < "$RELE"; [ "$tipo" = ssh-ed25519 ] || parar "la llave del relé no es ed25519"
+openssl pkey -pubin -in "$PUB" -noout 2>/dev/null || parar "pub.pem no es una clave pública"
+ok "fase 0"
+
+E="$DST/deploy/enforcement/candidato-etapa2"
+sudo useradd -r -m -d /var/lib/cyberflow/cffeed-home -s /bin/sh cffeed && sudo passwd -l cffeed
+sudo useradd -r -M -d /nonexistent -s /usr/sbin/nologin cfagente
+sudo usermod -aG cfagente cffeed
+sudo install -d -o root -g root -m 0755 /opt/cyberflow/agente-v2 /etc/cyberflow /var/lib/cyberflow
+sudo install -d -o cffeed -g cfagente -m 2750 /var/lib/cyberflow/feed
+sudo install -d -o cfagente -g cfagente -m 0700 /var/lib/cyberflow/agente
+sudo install -o root -g root -m 0644 "$DST/scripts/enforce/agente_enforce_v2.py" "$DST/scripts/engine/feed.py" /opt/cyberflow/agente-v2/
+sudo install -o root -g root -m 0644 "$PUB" /opt/cyberflow/agente-v2/pub.pem
+sudo install -o root -g root -m 0755 "$DST/scripts/enforce/cf_nft_helper.py" /usr/local/sbin/cf-nft-helper
+sudo install -o root -g root -m 0755 "$E/cf-feed-ssh.sh" /usr/local/bin/cf-feed-ssh.sh
+echo dmz | sudo tee /etc/cyberflow/nft-helper.perfil > /dev/null && sudo chmod 0644 /etc/cyberflow/nft-helper.perfil
+sudo install -o root -g root -m 0440 "$E/cf-nft-helper.sudoers" /etc/sudoers.d/cf-nft-helper
+sudo visudo -c > /dev/null || { sudo rm -f /etc/sudoers.d/cf-nft-helper; parar "visudo -c falla: sudoers retirado"; }
+sudo install -d -o cffeed -g cffeed -m 0700 /var/lib/cyberflow/cffeed-home/.ssh
+printf 'command="/usr/local/bin/cf-feed-ssh.sh recibir /var/lib/cyberflow/feed",restrict %s\n' "$(cut -d' ' -f1,2 "$RELE") cyberflow-feed-v2-rele" \
+  | sudo install -o cffeed -g cffeed -m 0600 /dev/stdin /var/lib/cyberflow/cffeed-home/.ssh/authorized_keys
+ok "fase 1: cuentas, rutas, helper, sudoers y llave del relé (solo 'recibir')"
+
+# El helper NO aplica nada sin petición; en sombra el agente solo pide 'listar'. Antes de arrancar se
+# comprueba que el perfil impuesto por el host rechaza otro perfil.
+# >>> comprobacion-helper (banco: ensayo_helper_rechazo.sh)
+# 4A (2026-11-04): el helper responde al rechazo con rc=1; con pipefail, «… | grep -q» daba fallo aunque el
+# texto estuviera. Se captura la respuesta y se busca el rechazo explícito.
+rech=$(echo '{"perfil":"dns","operaciones":[{"op":"listar"}]}' | sudo -u cfagente sudo -n /usr/local/sbin/cf-nft-helper 2>&1) || true
+printf '%s\n' "$rech" | grep -q '"rechazo": "perfil_no_autorizado"' || parar "el helper no rechaza un perfil ajeno: $rech"
+# <<< comprobacion-helper
+sudo install -o root -g root -m 0644 "$DST/deploy/etapa4/unidades/srvdmz/ppi-enforce-agent-v2-dmz.service" /etc/systemd/system/
+# >>> comprobacion-unidad (banco: ensayo_comprobaciones_4a.sh)
+# 4A (2026-11-04): el grep sobre el fichero entero encontraba el COMENTARIO «SIN --aplicar» y paraba en falso.
+# Se mira solo lo que no es comentario, como argumento suelto (--aplicar o --aplicar=…).
+grep -vE '^[[:space:]]*#' /etc/systemd/system/ppi-enforce-agent-v2-dmz.service \
+  | grep -qE '(^|[[:space:]])--aplicar(=|[[:space:]]|$)' && parar "la unidad lleva --aplicar"
+# <<< comprobacion-unidad
+sudo systemctl daemon-reload
+systemd-analyze verify ppi-enforce-agent-v2-dmz.service 2>&1 | grep . && parar "systemd-analyze verify"
+sudo systemctl enable --now ppi-enforce-agent-v2-dmz.service
+ok "fase 2: agente v2 en SOMBRA arrancado; siguiente: instalar_bastion_sombra.sh instalar y verificar_srvdmz.sh"

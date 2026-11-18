@@ -1,0 +1,22 @@
+[Unit]
+Description=CyberFlow - agente v2 perfil dns (DC1, solo UDP/TCP 53): feed v2 firmado -> helper nft restringido
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Cuenta del agente: shell nologin, sin llaves SSH, solo sudo al helper sin argumentos.
+User=cfagente
+Group=cfagente
+# Codigo y clave publica: root:root en /opt (el agente no los puede modificar).
+# Feed: /var/lib/cyberflow/feed (lo escribe cffeed; cfagente solo lee, grupo).
+# Estado y traza: /var/lib/cyberflow/agente (cfagente 0700).
+# SIN --aplicar = SOMBRA (no llama al helper para cambiar reglas; solo lista si hay sets).
+ExecStart=/usr/bin/python3 -I /opt/cyberflow/agente-v2/agente_enforce_v2.py     --perfil dns     --feed /var/lib/cyberflow/feed/feed.json     --firma /var/lib/cyberflow/feed/feed.sig     --clave-publica /opt/cyberflow/agente-v2/pub.pem     --estado /var/lib/cyberflow/agente/estado.json     --traza /var/lib/cyberflow/agente/traza.jsonl     --helper "sudo -n /usr/local/sbin/cf-nft-helper"     --seguir
+Restart=always
+RestartSec=2
+# Endurecimiento (ProtectSystem, PrivateTmp, NoNewPrivileges) pendiente de ensayo con
+# systemd real: sudo necesita escalar privilegios y NoNewPrivileges lo romperia.
+
+[Install]
+WantedBy=multi-user.target

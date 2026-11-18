@@ -1,0 +1,1401 @@
+"""Banco aislado de la preparación de E-carga v2 (deploy/etapa4/ecarga). SIN acceso al laboratorio: systemctl, sudo, ssh,
+curl, nft y pgrep son dobles (tests/ecarga_banco/bin) y /proc de los generadores es un directorio simulado (CF_PROC).
+Nada de lo que se ejecuta aquí arranca, para ni consulta un host real.
+
+  ECARGA_DIRS=dir1:dir2   versión a probar (por defecto deploy/etapa4/ecarga). Para la versión ANTERIOR:
+                          ECARGA_DIRS=<guiones-c7f24510>:<evaluacion-e83f4be6> pytest -k regresion
+  EVALUADOR=…             evaluar_ecarga.py (por defecto deploy/etapa4/sensor1/evaluar_ecarga.py, 2026-11-06.4)
+  OBS06=…/evidencia/06-observacion   datos de la observación del 06-nov (solo para probar las herramientas)
+
+Las pruebas cuyo nombre contiene «regresion» reproducen un defecto de la versión anterior: deben FALLAR con ella y pasar
+con la corregida. Las que dependen de una herramienta que la versión anterior no tenía se omiten con ese motivo explícito.
+"""
+import datetime as dt
+import hashlib
+import importlib.util
+import inspect
+import json
+import math
+import os
+import shutil
+import stat
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).resolve().parent.parent
+DIRS = [Path(d) for d in (os.environ.get("ECARGA_DIRS") or str(REPO / "deploy" / "etapa4" / "ecarga")).split(":") if d]
+EVAL = os.environ.get("EVALUADOR") or str(REPO / "deploy" / "etapa4" / "sensor1" / "evaluar_ecarga.py")
+BANCO = Path(__file__).resolve().parent / "ecarga_banco" / "bin"
+OBS = Path(os.environ["OBS06"]) if os.environ.get("OBS06") else None
+PERFILES = [("ofimatica", "10.10.20.21"), ("navegacion", "10.10.20.22"), ("descargas", "10.10.20.23"),
+            ("aplicacion", "10.10.20.24"), ("ligero", "10.10.20.25"), ("erratico", "10.10.20.26")]
+D = 1794194100.0            # ventana de la franja propuesta (NO programada): 1794194100–1794197700
+H = D + 3600.0
+BD, BH = D - 1200.0, D - 900.0   # línea base de 300 s (en la franja: los 300 s previos a T_g)
+
+
+def ruta(nombre, obligatorio=True):
+    for d in DIRS:
+        if (d / nombre).is_file():
+            return d / nombre
+    if obligatorio:
+        pytest.skip(f"{nombre} no existe en {':'.join(map(str, DIRS))} (la versión probada no tiene esta herramienta)")
+    return None
+
+
+def modulo(nombre):
+    p = ruta(nombre + ".py")
+    s = importlib.util.spec_from_file_location(nombre + "_" + hashlib.md5(str(p).encode()).hexdigest()[:6], p)
+    m = importlib.util.module_from_spec(s)
+    s.loader.exec_module(m)
+    return m
+
+
+# =============================================================================================== banco de clientes
+class Lab:
+    def __init__(self, tmp):
+        self.tmp = tmp
+        self.fake = tmp / "fake"
+        self.home = tmp / "home"
+        self.bin = tmp / "bin"
+        self.pkg = tmp / "pkg"
+        for d in (self.fake / "units", self.fake / "proc", self.home / "laboratorio", self.bin, self.pkg):
+            d.mkdir(parents=True)
+        self.gen = self.home / "laboratorio" / "clientes_lab.py"
+        self.gen.write_text("# generador simulado del banco\n")
+        self.hash = hashlib.sha256(self.gen.read_bytes()).hexdigest()
+        for f in BANCO.iterdir():
+            shutil.copy(f, self.bin / f.name)
+            (self.bin / f.name).chmod(0o755)
+        for p, ip in PERFILES:
+            exe = (f"{{ path=/usr/bin/python3 ; argv[]=/usr/bin/python3 {self.gen} --perfil {p} --origen {ip} "
+                   "--servidor 10.10.30.10 --dns 10.10.10.20 ; ignore_errors=no ; start_time=[n/a] ; pid=0 }")
+            self.unidad(f"cyberflow-lab-{p}.service", LoadState="loaded", ActiveState="inactive", SubState="dead",
+                        MainPID="0", NRestarts="0", PartOf="cyberflow-lab.target", ExecStart=exe, UnitFileState="static")
+        self.unidad("cyberflow-lab.target", LoadState="loaded", ActiveState="inactive", SubState="dead", MainPID="0",
+                    NRestarts="0", UnitFileState="static", PartOf="", ExecStart="")
+        self.config()
+        # paquete: generadores.sh con el hash del generador simulado (misma longitud que el original), guardia y muestreo
+        for n in ("generadores.sh", "muestreo_bastion.sh", "guardia.py", "arrancar_c1.sh", "puerta_c1.py", "derivar_s7.py",
+                  "s7_post.sh"):
+            src = ruta(n, obligatorio=False)
+            if src is None:
+                continue
+            txt = src.read_text(encoding="utf-8")
+            if n == "generadores.sh":
+                lineas = []
+                for l in txt.splitlines():
+                    if l.startswith("HASH_ESPERADO="):
+                        largo = len(l.split("=", 1)[1].strip())
+                        l = "HASH_ESPERADO=" + self.hash[:largo]
+                    lineas.append(l)
+                txt = "\n".join(lineas) + "\n"
+            (self.pkg / n).write_text(txt, encoding="utf-8")
+        self.env = {"PATH": f"{self.bin}:/usr/local/bin:/usr/bin:/bin", "HOME": str(self.home), "FAKE_DIR": str(self.fake),
+                    "CF_PROC": str(self.fake / "proc"), "CF_ESPERA": "0.2", "CF_ESPERA_MAX": "2", "CF_ESTABLE": "1",
+                    "CF_INTERVALO": "1", "CF_T_PARADA": "40", "LANG": "C.UTF-8", "PYTHONDONTWRITEBYTECODE": "1"}
+
+    def unidad(self, u, **kw):
+        p = self.fake / "units" / (u + ".json")
+        d = json.loads(p.read_text()) if p.exists() else {}
+        d.update(kw)
+        p.write_text(json.dumps(d))
+
+    def leer(self, u):
+        return json.loads((self.fake / "units" / (u + ".json")).read_text())
+
+    def config(self, **kw):
+        (self.fake / "config.json").write_text(json.dumps(kw))
+
+    def marca(self, nombre, contenido="1"):
+        (self.fake / nombre).write_text(contenido)
+
+    def procesos(self):
+        return sorted(p.name for p in (self.fake / "proc").iterdir())
+
+    def gen_sh(self, *args, timeout=120):
+        r = subprocess.run(["bash", str(self.pkg / "generadores.sh"), *args], capture_output=True, text=True,
+                           env=self.env, timeout=timeout)
+        return r.returncode, r.stdout + r.stderr
+
+    def arrancar_directo(self):  # deja los generadores «en marcha» en el doble, sin pasar por el guion
+        r = subprocess.run(["systemctl", "start", "cyberflow-lab.target"], env=self.env, capture_output=True, text=True)
+        assert r.returncode == 0, r.stderr
+        (self.fake / "arrancado").unlink()
+
+    def llamadas(self):
+        p = self.fake / "llamadas.log"
+        return p.read_text() if p.exists() else ""
+
+    def parado(self):
+        return (self.leer("cyberflow-lab.target")["ActiveState"] == "inactive" and not self.procesos()
+                and all(self.leer(f"cyberflow-lab-{p}.service")["MainPID"] == "0" for p, _ in PERFILES))
+
+
+@pytest.fixture
+def lab(tmp_path):
+    ruta("generadores.sh")
+    return Lab(tmp_path)
+
+
+# ------------------------------------------------------------------------------------------------ generadores.sh
+def test_regresion_hash_completo_en_el_guion():
+    txt = ruta("generadores.sh").read_text(encoding="utf-8")
+    h = [l.split("=", 1)[1].strip() for l in txt.splitlines() if l.startswith("HASH_ESPERADO=")]
+    assert len(h) == 1 and len(h[0]) == 64 and all(c in "0123456789abcdef" for c in h[0]), h
+    assert h[0] == "ae5134a778e66d90f5c3fbcd47323e328f3422cf4ba8d5197649f402c1d4cdc3"
+
+
+def test_hash_distinto_aborta_sin_arrancar(lab):
+    lab.gen.write_text("# generador alterado\n")
+    rc, out = lab.gen_sh("arrancar")
+    assert rc == 2 and "ABORTA" in out
+    assert " start " not in lab.llamadas() + " "
+
+
+def test_regresion_arranque_fallido_da_rc_distinto_de_cero(lab):
+    lab.config(start="fail")
+    rc, out = lab.gen_sh("arrancar")
+    assert rc == 3, out
+    assert "ARRANQUE_FALLIDO" in out and "start rc=1" in out
+    assert not lab.procesos()
+
+
+def test_regresion_arranque_parcial(lab):
+    lab.config(start="parcial")
+    rc, out = lab.gen_sh("arrancar")
+    assert rc == 4, out
+    assert "ARRANQUE_PARCIAL" in out and "ligero failed" in out
+
+
+def test_regresion_consulta_fallida_tras_arrancar_es_desconocido(lab):
+    lab.config(fail_show="tras_start")
+    rc, out = lab.gen_sh("arrancar")
+    assert rc == 5, out
+    assert "ARRANQUE_NO_CONFIRMADO" in out and "consulta fallida" in out
+
+
+def test_regresion_argv_de_la_unidad_no_corresponde(lab):
+    lab.config(start="argv_malo")
+    rc, out = lab.gen_sh("arrancar")
+    assert rc == 4, out
+    assert "argv inesperado" in out
+
+
+def test_regresion_sin_partof_no_arranca(lab):
+    lab.unidad("cyberflow-lab-erratico.service", PartOf="")
+    rc, out = lab.gen_sh("arrancar")
+    assert rc == 2, out
+    assert "sin PartOf" in out and "systemctl start" not in lab.llamadas()
+
+
+def test_regresion_no_arranca_con_procesos_previos(lab):
+    d = lab.fake / "proc" / "4242"
+    d.mkdir()
+    (d / "cmdline").write_bytes(b"/usr/bin/python3\0" + str(lab.gen).encode() + b"\0--perfil\0ligero\0")
+    rc, out = lab.gen_sh("arrancar")
+    assert rc == 2 and "parado confirmado" in out, out
+    assert "systemctl start" not in lab.llamadas()
+
+
+def test_arranque_confirmado(lab):
+    rc, out = lab.gen_sh("arrancar")
+    assert rc == 0, out
+    assert "ARRANQUE_CONFIRMADO" in out and len(lab.procesos()) == 6
+    rc, out = lab.gen_sh("estado")
+    assert rc == 0 and "consulta=ok" in out and out.count("active/running") == 6
+
+
+def test_regresion_estado_con_consulta_fallida_no_parece_inactivo(lab):
+    lab.config(fail_show="siempre")
+    rc, out = lab.gen_sh("estado")
+    assert rc == 5, out
+    assert "consulta=ERROR" in out and "ESTADO_DESCONOCIDO" in out
+
+
+def test_parada_confirmada(lab):
+    lab.arrancar_directo()
+    rc, out = lab.gen_sh("parar")
+    assert rc == 0 and "PARADA_CONFIRMADA" in out, out
+    assert lab.parado()
+
+
+def test_regresion_parada_fallida(lab):
+    lab.arrancar_directo()
+    lab.config(stop="fail")
+    rc, out = lab.gen_sh("parar")
+    assert rc == 3, out
+    assert "PARADA_FALLIDA" in out and "confirmado=no" in out
+    assert not lab.parado()
+
+
+def test_regresion_parada_sin_efecto(lab):
+    lab.arrancar_directo()
+    lab.config(stop="sin_efecto")
+    rc, out = lab.gen_sh("parar")
+    assert rc == 4, out
+    assert "PARADA_NO_CONFIRMADA" in out
+
+
+def test_parada_con_error_pero_parado(lab):
+    lab.arrancar_directo()
+    lab.config(stop="fail_pero_para")
+    rc, out = lab.gen_sh("parar")
+    assert rc == 3 and "confirmado=si" in out, out
+    rc, out = lab.gen_sh("comprobar-parado")
+    assert rc == 0 and "PARADO_CONFIRMADO" in out
+
+
+def test_regresion_parada_con_consulta_fallida_no_se_confirma(lab):
+    lab.arrancar_directo()
+    lab.config(fail_show="siempre")
+    rc, out = lab.gen_sh("parar")
+    assert rc == 5, out
+    assert "PARADA_NO_CONFIRMADA" in out
+
+
+def test_regresion_parada_detecta_proceso_huerfano(lab):
+    lab.arrancar_directo()
+    d = lab.fake / "proc" / "4243"           # proceso fuera de las unidades: la parada del target no lo toca
+    d.mkdir()
+    (d / "cmdline").write_bytes(b"/usr/bin/python3\0" + str(lab.gen).encode() + b"\0--perfil\0erratico\0")
+    rc, out = lab.gen_sh("parar")
+    assert rc == 4 and "procesos clientes_lab.py vivos: 4243" in out, out
+
+
+def test_configuracion(lab):
+    rc, out = lab.gen_sh("configuracion")
+    assert rc == 0 and out.count("OK cyberflow-lab-") == 6, out
+    lab.unidad("cyberflow-lab-ligero.service", LoadState="not-found")
+    rc, out = lab.gen_sh("configuracion")
+    assert rc == 4 and "NO_CORRESPONDE cyberflow-lab-ligero.service LoadState=not-found" in out
+    lab.config(fail_show="siempre")
+    rc, out = lab.gen_sh("configuracion")
+    assert rc == 5 and "CONSULTA_FALLIDA" in out
+
+
+# ------------------------------------------------------------------------------------------------ muestreo_bastion.sh
+def muestreo(lab, modo, fin_s, parada_s=-1, **env):
+    ruta("muestreo_bastion.sh")
+    e = dict(lab.env, **{k: str(v) for k, v in env.items()})
+    ahora = int(time.time())
+    o = lab.tmp / "obs"
+    r = subprocess.run(["bash", str(lab.pkg / "muestreo_bastion.sh"), str(o), str(ahora + fin_s), str(ahora + parada_s), modo],
+                       capture_output=True, text=True, env=e, timeout=400)
+    leer = lambda n: (o / n).read_text(encoding="utf-8") if (o / n).exists() else ""
+    jl = [json.loads(l) for l in leer("parada.jsonl").splitlines() if l.strip()]
+    return r.returncode, o, leer, jl, r.stdout + r.stderr
+
+
+def ssh_log(lab):
+    p = lab.fake / "ssh.log"
+    return p.read_text() if p.exists() else ""
+
+
+def test_regresion_ssh_falla_en_parada_agota_sin_confirmar(lab):
+    lab.arrancar_directo()
+    lab.marca("ssh_falla_parar", "99")
+    rc, o, leer, jl, out = muestreo(lab, "real", 2, CF_MAX_INTENTOS=3)
+    assert rc == 4, out
+    assert (o / "PARADA-NO-CONFIRMADA").exists()
+    assert "INTERVENCIÓN NECESARIA" in leer("eventos.log")
+    assert [x["resultado"] for x in jl if x["resultado"] != "solicitada"] == ["fallida", "fallida", "fallida", "agotada"]
+    assert all(x["rc"] == 255 for x in jl if x["resultado"] == "fallida")
+    assert "confirmada" not in {x["resultado"] for x in jl}
+    assert ssh_log(lab).count("bash -s parar") == 3          # acotado: ni uno más
+    assert not lab.parado()
+
+
+def test_regresion_parada_fallida_y_recuperacion(lab):
+    lab.arrancar_directo()
+    lab.marca("ssh_falla_parar", "1")
+    rc, o, leer, jl, out = muestreo(lab, "real", 5)
+    assert rc == 0, out
+    assert [x["resultado"] for x in jl if x["resultado"] not in ("solicitada", "comprobacion_final")] == ["fallida", "confirmada"]
+    assert not (o / "PARADA-NO-CONFIRMADA").exists()
+    assert lab.parado()
+
+
+def test_parada_rc3_confirmada_por_comprobar_parado(lab):
+    lab.arrancar_directo()
+    lab.config(stop="fail_pero_para")
+    rc, o, leer, jl, out = muestreo(lab, "real", 3)
+    assert rc == 0, out
+    conf = [x for x in jl if x["resultado"] == "confirmada"]
+    assert len(conf) == 1 and conf[0]["rc"] == 3 and conf[0]["rc_comprobacion"] == 0
+    assert "comprobar-parado" in ssh_log(lab)
+
+
+def test_regresion_parada_no_confirmada_rc_remoto_4(lab):
+    lab.arrancar_directo()
+    lab.config(stop="sin_efecto")
+    rc, o, leer, jl, out = muestreo(lab, "real", 2, CF_MAX_INTENTOS=2)
+    assert rc == 4, out
+    assert [x["rc"] for x in jl if x["resultado"] == "fallida"] == [4, 4]
+    assert (o / "PARADA-NO-CONFIRMADA").exists()
+
+
+def test_seco_no_muta_nada(lab):
+    lab.arrancar_directo()
+    antes = lab.llamadas()
+    rc, o, leer, jl, out = muestreo(lab, "seco", 3)
+    assert rc == 0, out
+    nuevas = lab.llamadas()[len(antes):]
+    assert " start " not in nuevas and " stop " not in nuevas and "systemctl start" not in nuevas and "systemctl stop" not in nuevas
+    assert "parar" not in ssh_log(lab) and "arrancar" not in ssh_log(lab)
+    assert "SECO: se pararían" in leer("eventos.log") and leer("eventos.log").count("SECO:") == 1
+    assert jl == [] and not lab.parado()
+
+
+def test_regresion_lecturas_fallidas_se_escriben_error(lab):
+    lab.marca("ejecutar_remoto")             # las lecturas de Sensor1 y srv-dmz se ejecutan en el banco
+    lab.marca("sudo_falla")                  # sudo -n sin permiso: nft y grep de la traza fallan
+    lab.unidad("ppi-enforce-agent-v2-dmz.service", LoadState="loaded", ActiveState="active", SubState="running",
+               MainPID="999999", NRestarts="0")   # PID ilegible
+    rc, o, leer, jl, out = muestreo(lab, "seco", 2)   # margen: con FIN = segundo actual, el bucle podía no muestrear nada
+    m = leer("muestras.txt")
+    assert "S ruleset=ERROR" in m, m
+    assert "ruleset=ERROR" in [l for l in m.splitlines() if l.startswith("D aplicacion")][0]
+    assert "D aplicacion=ERROR" in m and "aplicar_cmd=ERROR" in m
+    assert "e3b0c44298fc1c14" not in m       # el hash de la salida vacía ya no aparece como ruleset
+
+
+def test_agente_sin_proceso_da_aplicar_cero(lab):
+    lab.marca("ejecutar_remoto")
+    rc, o, leer, jl, out = muestreo(lab, "seco", 2)   # margen: con FIN = segundo actual, el bucle podía no muestrear nada
+    m = leer("muestras.txt")
+    assert "aplicar_cmd=0" in m and "enforce_aplicar=" in m and "enforce_aplicar=ERROR" not in m, m
+
+
+def test_ssh_caido_en_lectura_se_registra(lab):
+    lab.marca("ssh_falla_clientes")
+    rc, o, leer, jl, out = muestreo(lab, "seco", 2)   # margen: con FIN = segundo actual, el bucle podía no muestrear nada
+    assert "C ERROR rc=255" in leer("muestras.txt")
+
+
+# ------------------------------------------------------------------------------------------------ derivar_bastion
+@pytest.mark.skipif(OBS is None, reason="OBS06 no definido")
+def test_regresion_bastion_lectura_error_no_es_false():
+    import re
+    db = modulo("derivar_bastion")
+    txt = (OBS / "bastion" / "muestras.txt").read_text(encoding="utf-8", errors="replace")
+    D06, H06 = 1793940600.0, 1793944200.0
+    p = txt.split("### ")
+    for i in range(61, len(p)):
+        p[i] = re.sub(r"^S suricata pid=(\d+) nr=(\d+) active$", r"S suricata pid=\1 nr=\2 ERROR", p[i], flags=re.M)
+        p[i] = re.sub(r"^S v1 inactive/inactive", "S v1 ERROR/ERROR", p[i], flags=re.M)
+    r = db.derivar("### ".join(p), D06, H06)
+    vals = {s: r[s]["valor"] for s in ("S1", "S6", "S8", "S9", "S10")}
+    assert False not in vals.values(), vals
+    assert None in vals.values(), vals
+
+
+# ------------------------------------------------------------------------------------------------ derivar_pcap
+def nombre(t):
+    return "live-" + time.strftime("%Y%m%d%H%M%S", time.gmtime(t)) + ".pcap"
+
+
+def serie(t0, t1, pasos=(5,)):
+    ts, t, i = [], t0, 0
+    while t <= t1:
+        ts.append(t)
+        t += pasos[i % len(pasos)]
+        i += 1
+    return ts
+
+
+def pasada(t, paso=5):  # obs_pcap lee cada 30 s los ficheros cerrados (el siguiente ya existe)
+    return math.ceil((t + paso + 1) / 30.0) * 30.0
+
+
+def lineas(ts, leido=pasada, **extra):
+    out = []
+    for t in ts:
+        d = {"fichero": nombre(t), "bytes": 80000, "registros": 800, "primero": t + 0.01, "ultimo": t + 4.9,
+             "leido_en": leido(t)}
+        d.update(extra.get(nombre(t), {}))
+        out.append(json.dumps(d))
+    return out
+
+
+def log_fin(fin):
+    return ['{"inicio": 1}', json.dumps({"terminado_en": fin, "fin_epoch": fin})]
+
+
+def pcap(ls, desde=D, hasta=H, log=None):
+    m = modulo("derivar_pcap")
+    if log is not None and "log" in inspect.signature(m.derivar).parameters:
+        return m.derivar(ls, desde, hasta, log=log)
+    return m.derivar(ls, desde, hasta)
+
+
+def v(r):
+    return r["S2"]["valor"], r["S3"]["valor"]
+
+
+def test_regresion_pcap_dos_ficheros_al_inicio_de_la_hora():
+    ls = lineas([D + 2, D + 7], leido=lambda t: D + 40)
+    r = pcap(ls)
+    assert v(r) != (True, True), r
+    assert r["S3"]["valor"] is not True
+    # con la lectura completa (fin normal pasada la ventana) lo que falta no se escribió: S3 false demostrado
+    r = pcap(ls, log=log_fin(H + 60))
+    assert r["S3"]["valor"] is False and "HASTA" in r["S3"]["motivo"], r["S3"]
+
+
+def test_regresion_pcap_falta_el_inicio():
+    r = pcap(lineas(serie(D + 20, H + 20)))
+    assert r["S3"]["valor"] is False and "DESDE" in r["S3"]["motivo"], r["S3"]
+
+
+def test_regresion_pcap_falta_el_final():
+    ts = serie(D - 3, H - 60)
+    r = pcap(lineas(ts), log=log_fin(H + 60))
+    assert r["S3"]["valor"] is False and "HASTA" in r["S3"]["motivo"], r["S3"]
+    r = pcap(lineas(ts))                     # sin fin normal: la observación pudo truncarse -> sin evidencia
+    assert r["S3"]["valor"] is None and r["S2"]["valor"] is None, r
+
+
+def test_regresion_pcap_observacion_truncada():
+    ts = serie(D - 3, H - 5)                 # obs_pcap se paró a H+5: no consta que el fichero de HASTA se cerrara
+    r = pcap(lineas(ts, leido=lambda t: min(pasada(t), H + 5)))
+    assert v(r) == (None, None), r
+    assert "truncada" in r["S2"]["motivo"]
+
+
+def test_regresion_pcap_primera_pasada_tardia():
+    ts = serie(D - 3, H + 20)
+    r = pcap(lineas(ts, leido=lambda t: max(pasada(t), D + 1000)))
+    assert v(r) == (None, None), r
+
+
+def test_pcap_hueco_interior():
+    ts = [t for t in serie(D - 3, H + 20) if not (D + 1000 < t < D + 1030)]
+    r = pcap(lineas(ts))
+    assert r["S3"]["valor"] is False and "salto" in r["S3"]["motivo"], r["S3"]
+    assert r["S2"]["valor"] is True        # S2 no habla de continuidad
+
+
+def test_regresion_pcap_fichero_ilegible_es_sin_evidencia():
+    ts = serie(D - 3, H + 20)
+    x = nombre(ts[300])
+    r = pcap(lineas(ts, **{x: {"error": "lectura: [Errno 13] Permission denied", "registros": None}}))
+    assert v(r) == (None, None), r
+    assert "no comprobados" in r["S2"]["motivo"]
+
+
+def test_pcap_error_de_formato_es_incumplimiento():
+    ts = serie(D - 3, H + 20)
+    x = nombre(ts[300])
+    r = pcap(lineas(ts, **{x: {"error": "registro truncado en 51234"}}))
+    assert r["S2"]["valor"] is False and r["S3"]["valor"] is True, r
+
+
+def test_pcap_fichero_vacio_es_incumplimiento_de_s3():
+    ts = serie(D - 3, H + 20)
+    r = pcap(lineas(ts, **{nombre(ts[200]): {"registros": 0}}))
+    assert r["S3"]["valor"] is False and "sin registros" in r["S3"]["motivo"], r["S3"]
+
+
+def test_pcap_duplicados_y_desorden_no_ocultan_huecos():
+    ts = serie(D - 3, H + 20)
+    ls = lineas(ts)
+    ls2 = ls[:100] + ls[150:160] + ls[100:] + ls[400:405]          # duplicados idénticos y líneas fuera de orden
+    r = pcap(ls2)
+    assert v(r) == (True, True), r
+    assert any("repetidos" in a for a in r["avisos"]) and any("fuera de orden" in a for a in r["avisos"])
+    sin = [l for l in ls2 if json.loads(l)["fichero"] not in {nombre(t) for t in ts[500:505]}]   # hueco de 25 s
+    sin = sin + [ls[499], ls[505], ls[499]]                       # los vecinos repetidos no tapan el hueco
+    assert pcap(sin)["S3"]["valor"] is False
+
+
+def test_regresion_pcap_duplicado_contradictorio():
+    ts = serie(D - 3, H + 20)
+    ls = lineas(ts)
+    d = json.loads(ls[300])
+    d["registros"] = 1
+    r = pcap(ls + [json.dumps(d)])
+    assert v(r) == (None, None), r
+
+
+def test_pcap_valida_con_variacion_de_rotacion():
+    ts = serie(D - 3, H + 20, pasos=(4, 5, 6, 5, 5, 6, 4))
+    r = pcap(lineas(ts, leido=lambda t: pasada(t, 6)))
+    assert v(r) == (True, True), r
+    c = r["cadena"]
+    assert c["salto_max_s"] == 6.0 and c["cadencia_mediana_s"] == 5.0 and c["inicio_cubierto"] and c["fin_cubierto"]
+    assert r["lectura"]["completa"]
+
+
+@pytest.mark.skipif(OBS is None, reason="OBS06 no definido")
+def test_pcap_reproduce_06nov_con_log():
+    D06, H06 = 1793940600.0, 1793944200.0
+    ls = (OBS / "sensor1" / "pcap.jsonl").read_text(encoding="utf-8").splitlines()
+    lg = (OBS / "sensor1" / "obs_pcap.log").read_text(encoding="utf-8", errors="replace").splitlines()
+    r = pcap(ls, D06, H06, log=lg)
+    assert v(r) == (True, True), {k: r[k] for k in ("S2", "S3", "lectura")}
+    assert r["cadena"]["salto_max_s"] == 6.0
+
+
+# ------------------------------------------------------------------------------------------------ S14
+def s14_muestras(t0, t1, f=None, paso=1.0, quitar=(), extra=None):
+    """Muestras acumuladas a 1 s. f(t) da las tasas del intervalo [t, t+paso): cpu (% ocupada), psi_cpu, softirq (cpu0),
+    hilo (% de un núcleo), disco (% ocupado), psi_io_full, psi_mem, mem_kb, dropped (+), oom (+), pid."""
+    f = f or (lambda t: {})
+    acc = {"cpu": [0] * 8, "cpus": [[0] * 8 for _ in range(4)], "psi": {"cpu_some": 0, "io_some": 0, "io_full": 0,
+           "mem_some": 0, "mem_full": 0}, "disco": [0, 0], "hilo": 0, "dropped": 0, "oom": 0}
+    out, t = [], t0
+    while t <= t1:
+        r = dict({"cpu": 5.0, "psi_cpu": 0.2, "softirq": 2.0, "hilo": 2.0, "disco": 1.0, "psi_io_full": 0.0,
+                  "psi_mem": 0.0, "mem_kb": 5_200_000, "dropped": 0, "oom": 0, "pid": 1351}, **f(t))
+        m = {"t": round(t, 3), "psi": dict(acc["psi"]), "cpu": {"cpu": list(acc["cpu"])},
+             "softnet": {"dropped": acc["dropped"], "time_squeeze": 0}, "disco": {"sda": list(acc["disco"])},
+             "mem_disponible_kb": r["mem_kb"], "vmstat": {"pswpin": 0, "pswpout": 0, "oom_kill": acc["oom"]},
+             "suricata": {"pid": r["pid"], "hilos": {"W#01-ens37#1400": acc["hilo"], "W#02-ens37#1401": 0}},
+             "user_hz": 100}
+        for i in range(4):
+            m["cpu"][f"cpu{i}"] = list(acc["cpus"][i])
+        if extra:
+            extra(t, m)
+        if not any(a <= t < b for a, b in quitar):
+            out.append(json.dumps(m))
+        # avanzar contadores con las tasas de [t, t+paso)
+        tot = 400 * paso
+        idle = round(tot * (1 - r["cpu"] / 100))
+        acc["cpu"][0] += tot - idle
+        acc["cpu"][3] += idle
+        for i in range(4):
+            s = round(100 * paso * (r["softirq"] if i == 0 else 1.0) / 100)
+            acc["cpus"][i][6] += s
+            acc["cpus"][i][3] += round(100 * paso) - s
+        acc["psi"]["cpu_some"] += round(r["psi_cpu"] / 100 * 1e6 * paso)
+        acc["psi"]["io_full"] += round(r["psi_io_full"] / 100 * 1e6 * paso)
+        acc["psi"]["io_some"] += round(r["psi_io_full"] / 100 * 1e6 * paso)
+        acc["psi"]["mem_some"] += round(r["psi_mem"] / 100 * 1e6 * paso)
+        acc["disco"][0] += round(r["disco"] / 100 * 1000 * paso)
+        acc["hilo"] += round(r["hilo"] / 100 * 100 * paso)
+        acc["dropped"] += r["dropped"]
+        acc["oom"] += r["oom"]
+        t += paso
+    return out
+
+
+def s14(ls, base=(BD, BH), desde=D, hasta=H):
+    return modulo("evaluar_s14").evaluar(ls, desde, hasta, base)
+
+
+def completo(f=None, **kw):
+    return s14_muestras(BD - 5, H + 5, f, **kw)
+
+
+def entre(a, b, **tasas):
+    return lambda t: tasas if D + a <= t < D + b else {}
+
+
+def test_s14_carga_normal_cumple():
+    r = s14(completo())
+    assert r["S14"]["valor"] is True, r["S14"]
+    assert all(c["valor"] is True for c in r["componentes"].values())
+
+
+def test_s14_cpu_por_debajo_en_y_por_encima_del_limite():
+    assert s14(completo(entre(100, 130, cpu=94.75, psi_cpu=50)))["componentes"]["cpu"]["valor"] is True   # < 95 %
+    r = s14(completo(entre(100, 130, cpu=95.0, psi_cpu=10.0)))                                         # = límite
+    assert r["componentes"]["cpu"]["valor"] is False and r["S14"]["valor"] is False
+    assert s14(completo(entre(100, 130, cpu=100, psi_cpu=40)))["componentes"]["cpu"]["valor"] is False   # por encima
+    assert s14(completo(entre(100, 130, cpu=99, psi_cpu=9.9)))["componentes"]["cpu"]["valor"] is True    # PSI < 10
+
+
+def test_s14_utilizacion_alta_no_es_saturacion():
+    r = s14(completo(entre(100, 400, cpu=100, psi_cpu=0.5, disco=100, psi_io_full=0.0)))
+    assert r["componentes"]["cpu"]["valor"] is True and r["componentes"]["disco"]["valor"] is True, r["componentes"]
+
+
+def test_s14_duracion_insuficiente_y_suficiente():
+    assert s14(completo(entre(100, 107, cpu=100, psi_cpu=50)))["componentes"]["cpu"]["valor"] is True   # 7 s
+    r = s14(completo(entre(100, 108, cpu=100, psi_cpu=50)))                                            # 8 s
+    assert r["componentes"]["cpu"]["valor"] is False
+    assert r["componentes"]["cpu"]["ventana"]["episodios"][0]["duracion_s"] == 8.0
+
+
+def test_s14_hilo_softirq_disco_memoria():
+    assert s14(completo(entre(50, 70, hilo=100)))["componentes"]["hilos"]["valor"] is False
+    assert s14(completo(entre(50, 70, hilo=94)))["componentes"]["hilos"]["valor"] is True
+    assert s14(completo(entre(50, 70, softirq=96)))["componentes"]["softirq"]["valor"] is False
+    assert s14(completo(entre(50, 70, disco=100, psi_io_full=20)))["componentes"]["disco"]["valor"] is False
+    assert s14(completo(entre(50, 70, psi_mem=15)))["componentes"]["memoria"]["valor"] is False
+    r = s14(completo(entre(50, 51, mem_kb=1_000_000)))
+    assert r["componentes"]["memoria"]["valor"] is False and "1 GiB" in r["componentes"]["memoria"]["motivo"]
+
+
+def test_s14_inmediatos_softnet_y_oom():
+    r = s14(completo(entre(500, 501, dropped=1)))
+    assert r["componentes"]["softnet_dropped"]["valor"] is False and r["componentes"]["softnet_dropped"]["incremento"] == 1
+    assert s14(completo(entre(500, 501, oom=1)))["componentes"]["oom_kill"]["valor"] is False
+
+    def reinicio(t, m):
+        if t >= D + 600:
+            m["softnet"]["dropped"] = -1 + 0 * m["softnet"]["dropped"]
+    assert s14(completo(extra=reinicio))["componentes"]["softnet_dropped"]["valor"] is None
+
+
+def test_s14_datos_ausentes_y_cobertura():
+    r = s14(completo(quitar=[(D + 1000, D + 1010)]))           # hueco de 10 s > 4 s
+    assert r["S14"]["valor"] is None and all(r["componentes"][k]["valor"] is None
+                                             for k in ("cpu", "hilos", "softirq", "disco", "memoria"))
+    r = s14(s14_muestras(BD - 5, H - 120))                       # el muestreador se paró 2 min antes de HASTA
+    assert r["S14"]["valor"] is None and "softnet_dropped" in r["S14"]["sin_medida"]
+    r = s14(completo(quitar=[(D + 1000, D + 1002)]))            # 2 s sueltos: cobertura suficiente
+    assert r["S14"]["valor"] is True, r["S14"]
+
+
+def test_s14_lectura_fallida_dentro_de_una_saturacion_no_da_true():
+    def fallo(t, m):
+        if D + 104 <= t < D + 106:
+            m["psi"] = None
+            m["errores"] = ["psi: [Errno 5]"]
+    r = s14(completo(entre(100, 110, cpu=100, psi_cpu=50), extra=fallo))
+    assert r["componentes"]["cpu"]["valor"] is None, r["componentes"]["cpu"]
+    assert r["S14"]["valor"] is None
+
+
+def test_s14_reinicio_de_suricata_no_inventa_saturacion():
+    r = s14(completo(lambda t: {"pid": 1351 if t < D + 900 else 2222}))
+    assert r["componentes"]["hilos"]["valor"] is True, r["componentes"]["hilos"]
+
+
+def test_s14_base_saturada_o_ausente():
+    f = lambda t: {"cpu": 100, "psi_cpu": 50} if (BD + 10 <= t < BD + 30 or D + 100 <= t < D + 130) else {}
+    r = s14(completo(f))
+    assert r["componentes"]["cpu"]["valor"] is None and "línea base" in r["componentes"]["cpu"]["motivo"]
+    r = s14(completo(entre(100, 130, cpu=100, psi_cpu=50)), base=None)
+    assert r["componentes"]["cpu"]["valor"] is None and "no evaluable" in r["componentes"]["cpu"]["motivo"]
+
+
+# ------------------------------------------------------------------------------------------------ S14: tiempo desconocido
+# Semántica de la serie sintética: la tasa de f(t) vale para el par (t, t+1). Un campo ausente en las muestras
+# t ∈ [a, b) invalida los pares (a-1, a) … (b-1, b): intervalo desconocido U = [a-1, b). Un par válido no saturado (N)
+# es evidencia de que no hubo saturación. Duración posible de un tramo = fin − inicio de la sucesión S/U contigua.
+def falla_en(campo, a, b, valor=None):
+    def g(t, m):
+        if a <= t < b:
+            m[campo] = valor
+    return g
+
+
+def tasas(*tramos, **r):
+    return lambda t: r if any(D + x <= t < D + y for x, y in tramos) else {}
+
+
+SAT_CPU = dict(cpu=100, psi_cpu=50)
+# (id, tramos saturados [x, y) relativos a D, muestras sin psi [a, b) relativas a D, cpu esperado, tramo posible)
+CASOS_TIEMPO = [
+    ("regresion-antes-repro-9s", [(100, 108)], (100, 103), None, "U[99,103)+S[103,108) = 9 s"),
+    ("antes-posible-7s", [(104, 109)], (103, 104), True, "U[102,104)+S[104,109) = 7 s"),
+    ("regresion-antes-posible-8s-exactos", [(104, 109)], (102, 104), None, "U[101,104)+S5 = 8 s"),
+    ("regresion-antes-posible-9s", [(104, 109)], (101, 104), None, "U[100,104)+S5 = 9 s"),
+    ("despues-posible-7s", [(100, 105)], (106, 107), True, "S5+U[105,107) = 7 s"),
+    ("despues-posible-8s", [(100, 106)], (107, 108), None, "S6+U[106,108) = 8 s"),
+    ("despues-posible-9s", [(100, 106)], (107, 109), None, "S6+U[106,109) = 9 s"),
+    ("dentro-posible-6s", [(100, 106)], (102, 103), True, "S1+U2+S3 = 6 s"),
+    ("dentro-posible-8s", [(100, 108)], (103, 104), None, "S2+U[102,104)+S4 = 8 s"),
+    ("dentro-posible-10s", [(100, 110)], (104, 106), None, "S3+U3+S4 = 10 s"),
+    ("dentro-demostrado-14s", [(100, 120)], (115, 116), False, "S[100,114) = 14 s demostrados"),
+    ("separados-por-N", [(100, 105), (106, 111)], (108, 109), True, "S5 | N[105,106) | S1+U2+S2 = 5 s: no se suman"),
+    ("hueco-aislado", [], (500, 502), True, "U[499,502) entre N"),
+    ("completo-sin-saturacion", [], (0, 0), True, "todo N"),
+    ("completo-demostrado-8s", [(100, 108)], (0, 0), False, "S8 sin datos ausentes"),
+]
+
+
+@pytest.mark.parametrize("sat,miss,esperado,explica", [c[1:] for c in CASOS_TIEMPO], ids=[c[0] for c in CASOS_TIEMPO])
+def test_s14_tiempo_desconocido(sat, miss, esperado, explica):
+    ls = completo(tasas(*sat, **SAT_CPU), extra=falla_en("psi", D + miss[0], D + miss[1]))
+    r = s14(ls)
+    c = r["componentes"]["cpu"]
+    assert c["valor"] is esperado, (explica, c["motivo"], c["ventana"])
+    assert c["ventana"]["cobertura"]["ok"], c["ventana"]["cobertura"]       # la cobertura sola no decide
+    assert r["S14"]["valor"] is (False if esperado is False else (None if esperado is None else True))
+    if esperado is None:
+        d = c["ventana"]["dudosos"]
+        assert d and d[0]["duracion_posible_s"] >= 8 and d[0]["desconocido_s"] > 0 and "no se puede negar" in c["motivo"]
+    if esperado is True:
+        assert not c["ventana"].get("dudosos") and not c["ventana"]["episodios"]
+
+
+def test_regresion_s14_borde_inicio_de_la_ventana():
+    # sin muestras en [D-2, D+2): el par (D-3, D+2) dura 5 s (> 4) y queda U; dentro de la ventana U[D, D+2)
+    r = s14(completo(tasas((2, 8), **SAT_CPU), quitar=[(D - 2, D + 2)]))
+    assert r["componentes"]["cpu"]["valor"] is None and r["S14"]["valor"] is None      # U2 + S6 = 8 s
+    r = s14(completo(tasas((1, 7), **SAT_CPU), quitar=[(D - 3, D + 1)]))
+    assert r["componentes"]["cpu"]["valor"] is True                                       # U1 + S6 = 7 s
+
+
+def test_s14_borde_fin_de_la_ventana():
+    # sin muestras en [H-2, H+2): par (H-3, H+2) no válido; dentro de la ventana U[H-3, H)
+    r = s14(completo(tasas((3591, 3597), **SAT_CPU), quitar=[(H - 2, H + 2)]))
+    assert r["componentes"]["cpu"]["valor"] is None                                       # S6 + U3 = 9 s
+    r = s14(completo(tasas((3593, 3597), **SAT_CPU), quitar=[(H - 2, H + 2)]))
+    assert r["componentes"]["cpu"]["valor"] is True                                       # S4 + U3 = 7 s
+
+
+EPISODIO_VENTANA = (100, 120)
+
+
+def _con_base(base_sat, extra=None, quitar=()):
+    f = lambda t: SAT_CPU if (D + EPISODIO_VENTANA[0] <= t < D + EPISODIO_VENTANA[1]
+                              or any(BD + x <= t < BD + y for x, y in base_sat)) else {}
+    return s14(completo(f, extra=extra, quitar=quitar))["componentes"]["cpu"]
+
+
+def test_s14_base_limpia_permite_afirmar_nueva():
+    c = _con_base([])
+    assert c["valor"] is False and "nueva" in c["motivo"]
+
+
+def test_regresion_s14_base_dudosa_por_hueco_antes():
+    # base: U[BD+10, BD+13) + S[BD+13, BD+18) = 8 s posibles; cobertura de la base 297/300 = 99 % (evaluable)
+    c = _con_base([(13, 18)], extra=falla_en("psi", BD + 11, BD + 13))
+    assert c["valor"] is None and "línea base dudosa" in c["motivo"], c["motivo"]
+    assert c["base"]["cobertura"]["ok"] and c["base"]["dudosos"] and not c["base"]["episodios"]
+
+
+def test_s14_base_dudosa_por_hueco_despues():
+    c = _con_base([(10, 15)], extra=falla_en("psi", BD + 16, BD + 18))     # S5 + U[BD+15, BD+18) = 8 s
+    assert c["valor"] is None and "línea base dudosa" in c["motivo"] and c["base"]["cobertura"]["ok"], c["motivo"]
+
+
+def test_regresion_s14_base_dudosa_en_su_borde_de_inicio():
+    c = _con_base([(2, 8)], quitar=[(BD - 2, BD + 2)])                        # U[BD, BD+2) + S6 = 8 s
+    assert c["valor"] is None and "línea base dudosa" in c["motivo"] and c["base"]["cobertura"]["ok"], c["motivo"]
+
+
+def test_s14_base_con_hueco_aislado_sigue_valiendo():
+    c = _con_base([], extra=falla_en("psi", BD + 100, BD + 102))
+    assert c["valor"] is False and not c["base"]["dudosos"]
+
+
+# (componente, campo que se anula, tasas de saturación): todos comparten analizar()
+COMPONENTES_TIEMPO = [
+    ("cpu", "psi", dict(cpu=100, psi_cpu=50)),
+    ("hilos", "suricata", dict(hilo=100)),
+    ("softirq", "cpu", dict(softirq=96)),
+    ("disco", "disco", dict(disco=100, psi_io_full=20)),
+    ("memoria", "psi", dict(psi_mem=15)),
+]
+
+
+@pytest.mark.parametrize("comp,campo,r", COMPONENTES_TIEMPO, ids=[c[0] for c in COMPONENTES_TIEMPO])
+def test_regresion_s14_hueco_antes_en_cada_componente(comp, campo, r):
+    assert s14(completo(tasas((104, 109), **r)))["componentes"][comp]["valor"] is True              # S5: corto
+    assert s14(completo(tasas((104, 112), **r)))["componentes"][comp]["valor"] is False             # S8: demostrado
+    c = s14(completo(tasas((104, 109), **r), extra=falla_en(campo, D + 101, D + 104)))["componentes"][comp]
+    assert c["valor"] is None, (comp, c["motivo"], c["ventana"])                                    # U4 + S5 = 9 s
+
+
+# ------------------------------------------------------------------------------------------------ de punta a punta
+def _cli(script, *args):
+    r = subprocess.run([sys.executable, "-I", str(script), *map(str, args)], capture_output=True, text=True)
+    return r.returncode, r.stdout, r.stderr
+
+
+def s7_trazas(d=None, a=None, entregas=None, feed=None, aceptar=None, feed_fijo=None, paso=30):
+    """Trazas y muestras sintéticas de S7, ventana [d, a). entregas: secuencias; aceptar: las aceptadas (por defecto todas),
+    en el orden dado; feed: función i -> texto de feed_seq de la muestra i; feed_fijo: lista de (t, texto) en vez de la serie."""
+    d = D if d is None else d
+    a = H if a is None else a
+    entregas = list(range(100, 104)) if entregas is None else entregas
+    aceptar = entregas if aceptar is None else aceptar
+    paso_e = (a - d) / (len(entregas) + 1)
+    rele = [{"evento": "reenvio", "secuencia": s, "destinos": {"srv-dmz": {"entregado_en": d + paso_e * (i + 1)}}}
+            for i, s in enumerate(entregas)]
+    agente = [{"evento": "recepcion", "secuencia": s, "estado": "aceptado", "recibido_en": d + paso_e * (i + 1) + 0.1}
+              for i, s in enumerate(aceptar)]
+    if feed_fijo is None:
+        feed = feed or (lambda i: str(500 + i))
+        n = int((a - d + 120) // paso) + 1
+        feed_fijo = [(d - 60 + paso * i, feed(i)) for i in range(n)]
+    muestras = "".join(f"### 2026-11-09T03:15:00Z {t:.0f}\nS feed_seq={v}\n" for t, v in feed_fijo)
+    return "\n".join(map(json.dumps, agente)) + "\n", "\n".join(map(json.dumps, rele)) + "\n", muestras
+
+
+def s7_fuente(tmp, **kw):
+    ag, re_, mu = s7_trazas(**kw)
+    for n, c in (("s7-agente.jsonl", ag), ("s7-rele.jsonl", re_), ("s7-muestras.txt", mu)):
+        (tmp / n).write_text(c)
+    rc, out, err = _cli(ruta("derivar_s7.py"), tmp / "s7-agente.jsonl", tmp / "s7-rele.jsonl", tmp / "s7-muestras.txt", D, H)
+    assert rc == 0, err
+    (tmp / "s7.json").write_text(out)
+    return json.loads(out)
+
+
+def fuentes(tmp, pcap_lineas, s14_lineas=None, pcap_log=None, s7=None):
+    """Escribe fuentes sintéticas coherentes de una ventana C0 con carga suficiente y devuelve los argumentos."""
+    tmp.mkdir(parents=True, exist_ok=True)
+    (tmp / "clas.json").write_text(json.dumps({
+        "periodo": {"desde": D, "hasta": H}, "clase_periodo": "C0", "capturas": {}, "motivo": None,
+        "suricata": {"fuente": "eve_stats", "medida": {"periodo": [D, H], "estado": "cero_explicito",
+                                                       "paquetes": 700_000, "descartes": 0}}}))
+    (tmp / "comp.json").write_text(json.dumps({"desde": D, "hasta": H, "fuente_contadores": "eve stats", "paquetes": 700_000,
+                                               "rafagas_ge_umbral": 12, "umbral_rafaga_paquetes_8s": 5000, "flujos_eve": 900,
+                                               "flujos_grandes": 60, "umbral_flujo_grande": 1000}))
+    (tmp / "perf.json").write_text(json.dumps({"version": "2026-11-06.4", "desde": D, "hasta": H, "K4a": {"cumple": True},
+                                               "K4b": {"estado": "informativo"}}))
+    bas = {"version": "derivar_bastion 2026-11-06.2", "periodo": [D, H]}
+    bas.update({s: {"valor": True} for s in ("S1", "S6", "S8", "S9", "S10")})
+    (tmp / "bas.json").write_text(json.dumps(bas))
+    (tmp / "pcap.jsonl").write_text("\n".join(pcap_lineas) + "\n")
+    args = ["--desde", D, "--hasta", H, "--clasificacion", tmp / "clas.json", "--comparar", tmp / "comp.json",
+            "--perfiles", tmp / "perf.json", "--perfiles-rc", 0, "--bastion", tmp / "bas.json"]
+    pa = ["--log", pcap_log] if pcap_log else []
+    if pcap_log:
+        Path(pcap_log).write_text("\n".join(log_fin(H + 60)) + "\n")
+    rc, out, err = _cli(ruta("derivar_pcap.py"), tmp / "pcap.jsonl", D, H, *(pa if "--log" in ruta("derivar_pcap.py").read_text() else []))
+    assert rc == 0, err
+    (tmp / "pcap.json").write_text(out)
+    args += ["--pcap", tmp / "pcap.json"]
+    ev = tmp / "ev.txt"
+    ev.write_text("evidencia sintética del banco (no es un resultado de E-carga)\n")
+    manual = ["S11", "S15"]
+    ce_txt = ruta("construir_entrada.py").read_text(encoding="utf-8")
+    if "--s7" in ce_txt:
+        s7_fuente(tmp, **(s7 or {}))
+        args += ["--s7", tmp / "s7.json"]
+    else:
+        manual.append("S7")                   # versión anterior: S7 era manual
+    if "--s14" in ce_txt and s14_lineas is not None:
+        (tmp / "s14.jsonl").write_text("\n".join(s14_lineas) + "\n")
+        rc, out, err = _cli(ruta("evaluar_s14.py"), tmp / "s14.jsonl", "--desde", D, "--hasta", H,
+                            "--base-desde", BD, "--base-hasta", BH)
+        assert rc == 0, err
+        (tmp / "s14.json").write_text(out)
+        args += ["--s14", tmp / "s14.json"]
+    elif "--s14" not in ce_txt:
+        manual.append("S14")                  # versión anterior: S14 era manual
+    for s in manual:
+        args += ["--manual", f"{s}=true:{ev}"]
+    args += ["--salida-entrada", tmp / "entrada.json", "--salida-traza", tmp / "traza.json"]
+    return args
+
+
+def e2e(tmp, *a, **kw):
+    args = fuentes(tmp, *a, **kw)
+    rc, out, err = _cli(ruta("construir_entrada.py"), *args)
+    assert rc == 0, err
+    rc, out, err = _cli(EVAL, "veredicto", "--entrada", tmp / "entrada.json")
+    r = json.loads(out)
+    return rc, r, json.loads((tmp / "entrada.json").read_text()), json.loads((tmp / "traza.json").read_text())
+
+
+def test_e2e_evidencia_completa_habilita(tmp_path):
+    rc, r, e, t = e2e(tmp_path, lineas(serie(D - 3, H + 20)), completo(), pcap_log=tmp_path / "obs_pcap.log")
+    assert rc == 0 and r["habilita_condicion_3"] is True, (r, t["sin_medida"])
+    assert e["S"]["S2"] is True and e["S"]["S3"] is True and e["S"]["S14"] is True
+    assert t["campos"]["S.S14"]["fuente"] == "s14" and t["campos"]["S.S3"]["motivo_fuente"]
+
+
+def test_regresion_e2e_dos_pcap_no_habilita(tmp_path):
+    rc, r, e, t = e2e(tmp_path, lineas([D + 2, D + 7], leido=lambda t: D + 40), completo())
+    assert r["habilita_condicion_3"] is False and rc == 1, r
+    assert not (e["S"]["S2"] is True and e["S"]["S3"] is True)
+
+
+def test_regresion_e2e_pcap_falta_el_final_no_habilita(tmp_path):
+    rc, r, e, t = e2e(tmp_path, lineas(serie(D - 3, H - 60)), completo(), pcap_log=tmp_path / "obs_pcap.log")
+    assert r["habilita_condicion_3"] is False and e["S"]["S3"] is False, (r, e["S"])
+    assert r["estabilidad_tecnica"] == "no estable"
+
+
+def test_e2e_s14_incompleto_no_habilita(tmp_path):
+    rc, r, e, t = e2e(tmp_path, lineas(serie(D - 3, H + 20)), s14_muestras(BD - 5, H - 120),
+                      pcap_log=tmp_path / "obs_pcap.log")
+    assert e["S"]["S14"] is None and r["habilita_condicion_3"] is False and r["estabilidad_tecnica"] == "no demostrable", r
+
+
+def test_e2e_s14_saturado_no_habilita(tmp_path):
+    rc, r, e, t = e2e(tmp_path, lineas(serie(D - 3, H + 20)), completo(entre(100, 130, cpu=100, psi_cpu=50)),
+                      pcap_log=tmp_path / "obs_pcap.log")
+    assert e["S"]["S14"] is False and r["habilita_condicion_3"] is False and r["estabilidad_tecnica"] == "no estable", r
+    assert rc == 1                                         # contrato 2026-11-06.4: rc 0 solo si habilita
+
+
+def test_e2e_s14_saturacion_demostrada_de_8s_exactos_no_habilita(tmp_path):
+    rc, r, e, t = e2e(tmp_path, lineas(serie(D - 3, H + 20)), completo(entre(100, 108, cpu=100, psi_cpu=50)),
+                      pcap_log=tmp_path / "obs_pcap.log")
+    assert (e["S"]["S14"], r["estabilidad_tecnica"], r["habilita_condicion_3"], rc) == (False, "no estable", False, 1), r
+
+
+def test_regresion_e2e_s14_hueco_antes_de_la_saturacion_no_habilita(tmp_path):
+    """Reproducción exacta: CPU 100 %/PSI 50 % en [D+100, D+108) y psi ausente en D+100 <= t < D+103.
+    a12deae: S14 true, «estable con carga suficiente», habilita true, rc 0."""
+    rc, r, e, t = e2e(tmp_path, lineas(serie(D - 3, H + 20)),
+                      completo(entre(100, 108, cpu=100, psi_cpu=50), extra=falla_en("psi", D + 100, D + 103)),
+                      pcap_log=tmp_path / "obs_pcap.log")
+    assert e["S"]["S14"] is None, e["S"]
+    assert r["estabilidad_tecnica"] == "no demostrable" and r["habilita_condicion_3"] is False and rc == 1, r
+    assert t["campos"]["S.S14"]["componentes"]["cpu"] is None
+
+
+def test_e2e_pcap_de_version_anterior_queda_sin_medida(tmp_path):
+    ce = ruta("construir_entrada.py").read_text(encoding="utf-8")
+    if "VERSIONES_FUENTE" not in ce:
+        pytest.skip("la versión anterior de construir_entrada no comprueba la versión de las fuentes")
+    args = fuentes(tmp_path, lineas(serie(D - 3, H + 20)), completo(), pcap_log=tmp_path / "obs_pcap.log")
+    p = json.loads((tmp_path / "pcap.json").read_text())
+    p["version"] = "derivar_pcap 2026-11-06.1"
+    (tmp_path / "pcap.json").write_text(json.dumps(p))
+    rc, out, err = _cli(ruta("construir_entrada.py"), *args)
+    e = json.loads((tmp_path / "entrada.json").read_text())
+    assert e["S"]["S2"] is None and e["S"]["S3"] is None
+    rc, out, err = _cli(EVAL, "veredicto", "--entrada", tmp_path / "entrada.json")
+    assert json.loads(out)["habilita_condicion_3"] is False
+
+
+def test_s14_manual_ya_no_se_admite(tmp_path):
+    ce = ruta("construir_entrada.py").read_text(encoding="utf-8")
+    if "--s14" not in ce:
+        pytest.skip("la versión anterior trataba S14 como manual")
+    args = fuentes(tmp_path, lineas(serie(D - 3, H + 20)), None, pcap_log=tmp_path / "obs_pcap.log")
+    i = args.index("--salida-entrada")
+    ev = tmp_path / "ev.txt"
+    args[i:i] = ["--manual", f"S14=true:{ev}"]
+    rc, out, err = _cli(ruta("construir_entrada.py"), *args)
+    assert rc == 2 and "S14" in err
+
+
+# ======================================================== sensor1_muestreadores.sh comprobar no escribe en el paquete
+# Defecto del 06-nov (21:05:27Z, P0 anticipado): con 2026-11-06.2, la consulta de VERSION importaba evaluar_ecarga.py con
+# `python3 -I -c` y CPython guardaba deploy/etapa4/sensor1/__pycache__/evaluar_ecarga.cpython-312.pyc DENTRO del paquete
+# (-I ignora PYTHONDONTWRITEBYTECODE). El paquete del banco es una copia ESCRIBIBLE: si la orden escribiera, se vería.
+FICHEROS_PAQUETE = ["deploy/etapa4/sensor1/evaluar_ecarga.py", "deploy/etapa4/sensor1/obs_pcap.py",
+                    "deploy/etapa4/sensor1/clasificar_periodo.py", "deploy/etapa4/sensor1/comparar_suricata.py",
+                    "deploy/etapa4/sensor1/verificar_sensor1.sh", "deploy/etapa4/cierre/muestreo_fino.py",
+                    "scripts/etapa4/salud_captura.py", "deploy/etapa4/ecarga/muestreo_s14.py",
+                    "deploy/etapa4/ecarga/evaluar_s14.py"]
+SIN_CACHE_ENV = ("PYTHONDONTWRITEBYTECODE", "PYTHONPYCACHEPREFIX")
+
+
+def paquete_escribible(tmp):
+    """Copia mínima y ESCRIBIBLE del paquete con el sensor1_muestreadores.sh de la versión probada y su SHA256SUMS."""
+    pkg = tmp / "cf-e4" / "paquete-banco"
+    for rel in FICHEROS_PAQUETE:
+        (pkg / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(REPO / rel, pkg / rel)
+    guion = pkg / "deploy/etapa4/ecarga/sensor1_muestreadores.sh"
+    shutil.copy(ruta("sensor1_muestreadores.sh"), guion)
+    sumas = [f"{hashlib.sha256((pkg / r).read_bytes()).hexdigest()}  ./{r}"
+             for r in sorted(FICHEROS_PAQUETE + ["deploy/etapa4/ecarga/sensor1_muestreadores.sh"])]
+    (pkg / "SHA256SUMS").write_text("\n".join(sumas) + "\n")
+    herr = tmp / "home" / "cyberflow-e4" / "herramientas-20261106"
+    herr.mkdir(parents=True)
+    shutil.copy(REPO / "scripts/etapa4/salud_captura.py", herr / "salud_captura.py")
+    (herr / "SHA256SUMS").write_text(
+        f"{hashlib.sha256((herr / 'salud_captura.py').read_bytes()).hexdigest()}  salud_captura.py\n")
+    assert os.access(pkg, os.W_OK) and os.access(pkg / "deploy/etapa4/sensor1", os.W_OK)
+    return pkg, guion
+
+
+def inventario(raiz):
+    """Todo lo que hay bajo raiz (ficheros, directorios y enlaces) con tipo, modo, tamaño, mtime_ns y sha256."""
+    inv = {}
+    for dirpath, dirnames, filenames in os.walk(raiz):
+        for n in dirnames + filenames:
+            p = Path(dirpath) / n
+            st = p.lstat()
+            h = hashlib.sha256(p.read_bytes()).hexdigest() if stat.S_ISREG(st.st_mode) else None
+            inv[str(p.relative_to(raiz))] = (stat.S_IFMT(st.st_mode), st.st_mode & 0o7777, st.st_size, st.st_mtime_ns, h)
+    return inv
+
+
+def env_sin_supresores(tmp):
+    env = {k: v for k, v in os.environ.items() if k not in SIN_CACHE_ENV}
+    env.update(HOME=str(tmp / "home"), LANG="C.UTF-8", PATH=f"{BANCO}:/usr/local/bin:/usr/bin:/bin",
+               FAKE_DIR=str(tmp / "fake"))
+    (tmp / "fake" / "proc").mkdir(parents=True, exist_ok=True)
+    return env
+
+
+def test_banco_detecta_escritura_de_cache(tmp_path):
+    """Control: en esta copia escribible, la consulta de 2026-11-06.2 (sin -B) SÍ deja caché; el banco puede verla."""
+    pkg, _ = paquete_escribible(tmp_path)
+    antes = inventario(pkg)
+    r = subprocess.run(["python3", "-I", "-c", "import importlib.util as u,sys;s=u.spec_from_file_location('e',sys.argv[1]);"
+                        "m=u.module_from_spec(s);s.loader.exec_module(m);print(m.VERSION)",
+                        str(pkg / "deploy/etapa4/sensor1/evaluar_ecarga.py")],
+                       env=env_sin_supresores(tmp_path), capture_output=True, text=True)
+    assert r.returncode == 0 and r.stdout.strip() == "2026-11-06.4"
+    nuevos = sorted(set(inventario(pkg)) - set(antes))
+    assert any("__pycache__" in n and n.endswith(".pyc") for n in nuevos), nuevos
+
+
+def test_regresion_comprobar_no_escribe_en_el_paquete(tmp_path):
+    """comprobar, tres veces seguidas sobre la copia escribible: inventario y hashes idénticos y VERSION OK cada vez."""
+    pkg, guion = paquete_escribible(tmp_path)
+    env = env_sin_supresores(tmp_path)
+    antes = inventario(pkg)
+    for i in range(1, 4):
+        r = subprocess.run(["bash", str(guion), "comprobar", str(tmp_path / "ev" / f"e-{i}"), "1794197760",
+                            "2026-11-09T04:16:00Z"], env=env, capture_output=True, text=True, timeout=120)
+        out = r.stdout + r.stderr
+        assert "OK    evaluar_ecarga VERSION 2026-11-06.4" in out, out      # la consulta de versión se conserva
+        assert "OK    evaluar_ecarga.py sha256 = publicado" in out, out
+        despues = inventario(pkg)
+        anadidos = sorted(set(despues) - set(antes))
+        quitados = sorted(set(antes) - set(despues))
+        cambiados = sorted(k for k in set(antes) & set(despues) if antes[k] != despues[k])
+        assert (anadidos, quitados, cambiados) == ([], [], []), f"pasada {i}: {anadidos} {quitados} {cambiados}"
+        assert not (tmp_path / "ev" / f"e-{i}-seco-obs_pcap").exists()
+
+
+# ======================================================== sensor1_muestreadores.sh: identificación de muestreadores (P11)
+# Defecto del 06-nov (23:24Z, P0 r2 anticipado): la .3 buscaba con «pgrep -af PATRÓN», que mira TODA la línea de órdenes;
+# ejecutado como «bash -c "$txt"» (mecanismo sin escritura del P0), el propio intérprete lleva los nombres en su argv y
+# pgrep lo encontraba: «ya hay muestreadores en marcha» sin ninguno. La .4 identifica por argv (programa + guion).
+# Aquí los procesos son REALES (contenedor sin red): muestreadores simulados = python ejecutando un guion con ese nombre.
+import re as _re  # noqa: E402
+
+PATH_REAL = "/usr/local/bin:/usr/bin:/bin"          # pgrep/ps reales (no los dobles del banco de generadores)
+OBJETIVOS = ["muestreo_fino.py", "obs_pcap.py", "muestreo_s14.py", "salud_captura.py muestrear"]
+
+
+def _texto_guion():
+    return ruta("sensor1_muestreadores.sh").read_text(encoding="utf-8")
+
+
+def _codigo_py():
+    m = _re.search(r"^MUESTREADORES_PY='\n(.*?)\n'$", _texto_guion(), _re.S | _re.M)
+    if not m:
+        pytest.skip("la versión probada no tiene MUESTREADORES_PY (identificación por argv nueva en 2026-11-06.4)")
+    return m.group(1)
+
+
+class Procesos:
+    """Lanza procesos reales y los termina al final de la prueba."""
+
+    def __init__(self, tmp):
+        self.tmp, self.ps = tmp, []
+
+    def lanzar(self, argv):
+        p = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.ps.append(p)
+        for _ in range(100):                               # argv visible en /proc (tras el exec)
+            try:
+                if Path(f"/proc/{p.pid}/cmdline").read_bytes().split(b"\0")[0] == argv[0].encode():
+                    break
+            except OSError:
+                pass
+            time.sleep(0.02)
+        assert p.poll() is None, argv
+        return p
+
+    def muestreador(self, nombre, carpeta="paquete-x/deploy"):
+        guion, *resto = nombre.split()
+        d = self.tmp / "procs" / carpeta
+        d.mkdir(parents=True, exist_ok=True)
+        (d / guion).write_text("import time\ntime.sleep(300)\n")
+        return self.lanzar([sys.executable, "-I", "-B", str(d / guion), *resto, "--salida", str(self.tmp / "x.jsonl")])
+
+    def cerrar(self):
+        for p in self.ps:
+            if p.poll() is None:
+                p.kill()
+            p.wait()
+
+
+@pytest.fixture
+def procs(tmp_path):
+    pr = Procesos(tmp_path)
+    yield pr
+    pr.cerrar()
+
+
+def _comprobar(tmp, modo="fichero", env_extra=None):
+    """Ejecuta comprobar de la versión probada (desde fichero o como el P0: «bash -c "$txt" RUTA ...»).
+    Devuelve (rc, salida, línea del veredicto de muestreadores)."""
+    pkg, guion = paquete_escribible(tmp)
+    env = env_sin_supresores(tmp)
+    env["PATH"] = PATH_REAL
+    env.update(env_extra or {})
+    dest = tmp / "ev" / f"e-{time.time_ns()}"
+    args = ["comprobar", str(dest), "1794197760", "2026-11-09T04:16:00Z"]
+    if modo == "fichero":
+        a = ["bash", str(guion), *args]
+    else:
+        a = ["bash", "-c", guion.read_text(encoding="utf-8"), str(guion), *args]
+    r = subprocess.run(a, env=env, capture_output=True, text=True, timeout=120)
+    out = r.stdout + r.stderr
+    v = [l for l in out.splitlines() if _re.match(r"^(OK|FALLO) +(ningún muestreador|ya hay muestreadores|"
+                                                   r"estado de los muestreadores|pgrep falló)", l)]
+    assert len(v) == 1, out
+    assert not dest.exists()
+    return r.returncode, out, v[0]
+
+
+AUSENCIA = "OK    ningún muestreador en marcha"
+PRESENCIA = "FALLO ya hay muestreadores en marcha"
+
+
+def test_regresion_muestreadores_sin_ninguno_por_el_mecanismo_del_p0(tmp_path):
+    """El defecto: sin ningún muestreador, «bash -c "$txt"» daba presencia. Con la .4, ausencia confirmada."""
+    rc, out, v = _comprobar(tmp_path, modo="bash-c")
+    assert v.startswith(AUSENCIA), v
+
+
+def test_muestreadores_sin_ninguno_desde_fichero(tmp_path):
+    rc, out, v = _comprobar(tmp_path, modo="fichero")
+    assert v.startswith(AUSENCIA), v
+
+
+@pytest.mark.parametrize("modo", ["fichero", "bash-c"])
+@pytest.mark.parametrize("nombre", OBJETIVOS)
+def test_cada_muestreador_presente_se_detecta(tmp_path, procs, nombre, modo):
+    p = procs.muestreador(nombre)
+    rc, out, v = _comprobar(tmp_path, modo=modo)
+    assert v.startswith(PRESENCIA) and rc == 1, v
+    if "MUESTREADORES_PY" in _texto_guion():
+        assert f"pid={p.pid} {nombre.split()[0]}" in v, v
+
+
+@pytest.mark.parametrize("modo", ["fichero", "bash-c"])
+def test_varios_muestreadores_simultaneos(tmp_path, procs, modo):
+    ps = [procs.muestreador(n, carpeta=f"c{i}") for i, n in enumerate(OBJETIVOS)]
+    rc, out, v = _comprobar(tmp_path, modo=modo)
+    assert v.startswith(PRESENCIA) and rc == 1, v
+    if "MUESTREADORES_PY" in _texto_guion():
+        for p in ps:
+            assert f"pid={p.pid} " in v, v
+
+
+def test_muestreador_en_ruta_con_espacios_se_detecta(tmp_path, procs):
+    p = procs.muestreador("muestreo_fino.py", carpeta="dir con espacios/y más")
+    rc, out, v = _comprobar(tmp_path, modo="bash-c")
+    assert v.startswith(PRESENCIA), v
+    if "MUESTREADORES_PY" in _texto_guion():
+        assert f"pid={p.pid} muestreo_fino.py" in v and "dir con espacios/y m\\u00e1s/muestreo_fino.py" in out
+
+
+def _ajenos(procs, tmp):
+    """Procesos que NO son muestreadores aunque su línea de órdenes contenga los nombres como texto."""
+    otro = tmp / "procs" / "otro dir"
+    otro.mkdir(parents=True, exist_ok=True)
+    (otro / "otro.py").write_text("import time\ntime.sleep(300)\n")
+    (otro / "muestreo_fino.py.bak").write_text("import time\ntime.sleep(300)\n")
+    (otro / "salud_captura.py").write_text("import time\ntime.sleep(300)\n")
+    procs.lanzar(["bash", "-c", "sleep 300; : salud_captura.py muestrear muestreo_fino.py obs_pcap.py muestreo_s14.py"])
+    procs.lanzar([sys.executable, "-c", "import time; time.sleep(300)", "muestreo_fino.py", "obs_pcap.py"])
+    procs.lanzar([sys.executable, "-I", str(otro / "otro.py"), "muestreo_s14.py", "salud_captura.py", "muestrear"])
+    procs.lanzar([sys.executable, "-I", str(otro / "muestreo_fino.py.bak")])
+    procs.lanzar([sys.executable, "-I", str(otro / "salud_captura.py"), "informe"])     # no es «muestrear»
+    procs.lanzar(["sleep", "300"])
+
+
+@pytest.mark.parametrize("modo", ["fichero", "bash-c"])
+def test_regresion_procesos_ajenos_con_los_nombres_en_el_texto(tmp_path, procs, modo):
+    """bash, python -c, otro guion con los nombres como argumentos, un .bak, salud_captura sin «muestrear»: ausencia."""
+    _ajenos(procs, tmp_path)
+    rc, out, v = _comprobar(tmp_path, modo=modo)
+    assert v.startswith(AUSENCIA), v
+
+
+def test_ajenos_no_ocultan_un_muestreador_real(tmp_path, procs):
+    _ajenos(procs, tmp_path)
+    p = procs.muestreador("obs_pcap.py")
+    rc, out, v = _comprobar(tmp_path, modo="bash-c")
+    assert v.startswith(PRESENCIA), v
+    if "MUESTREADORES_PY" in _texto_guion():
+        assert v.count("pid=") == 1 and f"pid={p.pid} obs_pcap.py" in v, v
+
+
+def _python_que_falla(tmp, cuerpo):
+    """python3 del PATH que falla SOLO en la consulta de muestreadores (el resto de python3 es el real)."""
+    b = tmp / "bin-falla"
+    b.mkdir(exist_ok=True)
+    real = shutil.which("python3", path=PATH_REAL)
+    (b / "python3").write_text("#!/usr/bin/env bash\n"
+                               f'for a in "$@"; do case "$a" in *"def muestreador("*) {cuerpo};; esac; done\n'
+                               f'exec {real} "$@"\n')
+    (b / "python3").chmod(0o755)
+    return {"PATH": f"{b}:{PATH_REAL}"}
+
+
+@pytest.mark.parametrize("cuerpo, rc_py", [
+    ('echo "DESCONOCIDO no se pudo enumerar /proc: [Errno 13] Permission denied"; exit 2', 2),
+    ('echo "Traceback (most recent call last):" >&2; echo "RuntimeError: x" >&2; exit 1', 1),
+    ("kill -9 $$", 137),
+])
+def test_consulta_fallida_es_desconocido_nunca_ausencia_ni_presencia(tmp_path, cuerpo, rc_py):
+    _codigo_py()
+    rc, out, v = _comprobar(tmp_path, modo="bash-c", env_extra=_python_que_falla(tmp_path, cuerpo))
+    assert v.startswith(f"FALLO estado de los muestreadores DESCONOCIDO (rc {rc_py})"), v
+    assert rc == 1                                           # comprobar no aprueba
+    assert "== obs_pcap --en-seco" in out                   # lo posterior se ejecutó y no ocultó el fallo
+    assert "\nfallo=1\n" in out
+
+
+def test_procesos_que_terminan_durante_la_consulta(tmp_path):
+    """Carga real de procesos efímeros mientras se consulta 25 veces: siempre ausencia (rc 0), nunca error."""
+    code = _codigo_py()
+    gen = subprocess.Popen(["bash", "-c", "while :; do /bin/true & /bin/true & wait; done"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        for _ in range(25):
+            r = subprocess.run([sys.executable, "-I", "-B", "-S", "-c", code], capture_output=True, text=True, timeout=30)
+            assert r.returncode == 0, r.stdout + r.stderr
+    finally:
+        gen.kill()
+        gen.wait()
+
+
+# ---- el código de identificación por dentro (fallos inyectados; no dependen de los procesos del contenedor)
+def _modulo():
+    g = {"__name__": "banco"}
+    exec(compile(_codigo_py(), "MUESTREADORES_PY", "exec"), g)
+    return g
+
+
+@pytest.mark.parametrize("argv, esperado", [
+    (["/home/m4rk/cyberflow/.venv/bin/python", "-I", "/h/herr/salud_captura.py", "muestrear", "--intervalo", "10"],
+     "salud_captura.py muestrear"),
+    (["python3", "-I", "/p/deploy/etapa4/cierre/muestreo_fino.py", "--salida", "f"], "muestreo_fino.py"),
+    (["python3.12", "-IB", "/p/x/obs_pcap.py"], "obs_pcap.py"),
+    (["/usr/bin/python3", "-X", "utf8", "-W", "ignore", "/a b/muestreo_s14.py"], "muestreo_s14.py"),
+    (["python3", "-Xutf8", "--", "muestreo_s14.py"], "muestreo_s14.py"),
+    (["python3", "--check-hash-based-pycs", "never", "obs_pcap.py"], "obs_pcap.py"),
+    (["python3", "-c", "import x", "muestreo_fino.py"], None),
+    (["python3", "-Ic", "x", "obs_pcap.py"], None),
+    (["python3", "-m", "muestreo_fino"], None),
+    (["python3", "/p/salud_captura.py", "informe"], None),
+    (["python3", "/p/salud_captura.py"], None),
+    (["python3", "/p/otro.py", "muestreo_fino.py"], None),
+    (["python3", "/p/muestreo_fino.py.bak"], None),
+    (["bash", "-c", "x muestreo_fino.py", "/p/sensor1_muestreadores.sh"], None),
+    (["/usr/bin/grep", "obs_pcap.py"], None),
+    (["vim", "muestreo_s14.py"], None),
+    (["python3-config", "muestreo_fino.py"], None),
+    (["python3"], None),
+    (["python3", "-I"], None),
+    ([], None),
+])
+def test_identificacion_por_argv(argv, esperado):
+    assert _modulo()["muestreador"](argv) == esperado
+
+
+class _Proc:
+    """/proc simulado: {pid: bytes | excepción a lanzar al abrir | ('lectura', excepción) al leer}."""
+
+    def __init__(self, tabla, vivos=None, listar_falla=None):
+        self.t, self.vivos, self.lf = tabla, set(tabla) if vivos is None else vivos, listar_falla
+
+    def listar(self, _):
+        if self.lf:
+            raise self.lf
+        return [str(p) for p in self.t] + ["self", "net", "1x"]
+
+    def abrir(self, ruta, modo):
+        pid = int(ruta.split("/")[-2])
+        v = self.t[pid]
+        if isinstance(v, BaseException):
+            raise v
+        if isinstance(v, tuple):
+            exc = v[1]
+
+            class F:
+                def __enter__(s): return s
+                def __exit__(s, *a): return False
+                def read(s): raise exc
+            return F()
+        import io
+        return io.BytesIO(v)
+
+    def existe(self, ruta):
+        return int(ruta.split("/")[-1]) in self.vivos
+
+
+def _main_con(proc, capsys):
+    m = _modulo()
+    leer = m["leer"]
+    m["leer"] = lambda: leer("/proc", proc.listar, proc.abrir, proc.existe)
+    rc = m["main"]()
+    return rc, capsys.readouterr().out
+
+
+MF = b"python3\0-I\0/p/muestreo_fino.py\0--salida\0x\0"
+BASH = b"bash\0-c\0... muestreo_fino.py obs_pcap.py ...\0/p/sensor1_muestreadores.sh\0"
+
+
+def test_unidad_ausencia(capsys):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 50: BASH, 51: b""}), capsys)
+    assert rc == 0 and "CONSULTA revisados=3 desaparecidos=0 ilegibles=0 presentes=0" in out
+
+
+def test_unidad_presencia(capsys):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 7: MF, 50: BASH}), capsys)
+    assert rc == 10 and "MUESTREADOR pid=7 muestreo_fino.py" in out and "pid=50" not in out
+
+
+def test_unidad_no_se_puede_enumerar_proc(capsys):
+    rc, out = _main_con(_Proc({}, listar_falla=PermissionError(13, "Permission denied")), capsys)
+    assert rc == 2 and out.startswith("DESCONOCIDO no se pudo enumerar /proc")
+
+
+def test_unidad_argv_ilegible_de_proceso_vivo_es_desconocido(capsys):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 9: PermissionError(13, "Permission denied")}), capsys)
+    assert rc == 2 and "ILEGIBLE 9:" in out and "DESCONOCIDO argv ilegible en 1 proceso(s) vivo(s)" in out
+
+
+def test_unidad_lectura_que_falla_a_mitad_en_proceso_vivo(capsys):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 9: ("lectura", OSError(5, "Input/output error"))}), capsys)
+    assert rc == 2 and "ILEGIBLE 9:" in out
+
+
+@pytest.mark.parametrize("v", [FileNotFoundError(2, "x"), ProcessLookupError(3, "x"), ("lectura", ProcessLookupError(3, "x"))])
+def test_unidad_proceso_que_termina_durante_la_lectura(capsys, v):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 9: v}), capsys)
+    assert rc == 0 and "desaparecidos=1" in out and "ilegibles=0" in out
+
+
+def test_unidad_error_de_permiso_de_un_proceso_que_ya_termino(capsys):
+    rc, out = _main_con(_Proc({1: b"/sbin/init\0", 9: PermissionError(13, "x")}, vivos={1}), capsys)
+    assert rc == 0 and "desaparecidos=1" in out
+
+
+def test_unidad_presencia_manda_aunque_haya_ilegibles(capsys):
+    rc, out = _main_con(_Proc({7: MF, 9: PermissionError(13, "x")}), capsys)
+    assert rc == 10 and "MUESTREADOR pid=7" in out and "ILEGIBLE 9:" in out
+
+
+def test_unidad_ningun_proceso_legible_no_es_ausencia(capsys):
+    rc, out = _main_con(_Proc({9: FileNotFoundError(2, "x")}), capsys)
+    assert rc == 2 and "DESCONOCIDO ningun proceso legible" in out
+
+
+def test_unidad_argv_con_bytes_no_utf8_y_espacios(capsys):
+    rc, out = _main_con(_Proc({7: b"python3\0/d\xffir con esp/obs_pcap.py\0"}), capsys)
+    assert rc == 10 and "pid=7 obs_pcap.py" in out and "\\udcff" in out     # se imprime escapado, sin excepción
+
+
+def test_comprobar_repetido_por_el_mecanismo_del_p0_no_escribe(tmp_path):
+    """Tres pasadas «bash -c "$txt"» sobre la copia escribible: ni ficheros nuevos ni cambios en el paquete."""
+    _codigo_py()
+    pkg, guion = paquete_escribible(tmp_path)
+    env = env_sin_supresores(tmp_path)
+    env["PATH"] = PATH_REAL
+    antes = inventario(pkg)
+    for i in range(3):
+        r = subprocess.run(["bash", "-c", guion.read_text(encoding="utf-8"), str(guion), "comprobar",
+                            str(tmp_path / "ev" / f"b-{i}"), "1794197760", "2026-11-09T04:16:00Z"],
+                           env=env, capture_output=True, text=True, timeout=120)
+        assert AUSENCIA in r.stdout, r.stdout
+        assert inventario(pkg) == antes, f"pasada {i}"
+        assert not (tmp_path / "ev" / f"b-{i}").exists()
+
+
+def test_guion_sin_pgrep_en_la_identificacion():
+    t = _texto_guion()
+    _codigo_py()
+    assert "pgrep" not in "\n".join(l.split("#")[0] for l in t.splitlines())
+    assert "VERSION 2026-11-06.4" in t.splitlines()[1]

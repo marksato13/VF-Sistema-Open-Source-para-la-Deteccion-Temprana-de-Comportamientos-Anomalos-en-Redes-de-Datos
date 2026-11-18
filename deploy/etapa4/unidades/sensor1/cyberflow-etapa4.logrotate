@@ -1,0 +1,15 @@
+# /etc/logrotate.d/cyberflow-etapa4  (0644 root:root) — Etapa 4.
+# El resumen de la vía rápida escribe una línea por tic (0,05 s): ~20 líneas/s, ~170 MB/día.
+# copytruncate: los procesos mantienen el fichero abierto y no reabren con señal. Se conservan 14
+# días comprimidos (la evidencia de 4B/4C se archiva aparte antes de que roten).
+/home/m4rk/feed-v2/*.jsonl {
+    su m4rk m4rk
+    daily
+    maxsize 200M
+    rotate 14
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+}

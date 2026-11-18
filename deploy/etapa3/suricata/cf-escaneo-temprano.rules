@@ -1,0 +1,12 @@
+# CyberFlow Etapa 3 - alternativa B de la via rapida de escaneo. SOLO ensayo offline y banco.
+# NO activar en Sensor1 (Sensor1 corre Suricata sin reglas; activar reglas es un cambio de la Etapa 4).
+#
+# Suricata no cuenta puertos DISTINTOS ni intentos sin respuesta: se aproxima con SYN de inicio
+# (flags:S, sin ACK) hacia puertos que el destino NO sirve, umbral por par origen-destino.
+# La lista de puertos servidos es configuracion por host: si cambia el servicio, hay que
+# cambiar la regla (coste de mantenimiento de esta alternativa).
+#
+# srv-dmz (10.10.30.10) sirve 80, 443 y 18081 (puertos abiertos vistos en los escaneos del 3B).
+alert tcp $HOME_NET any -> 10.10.30.10 ![80,443,18081] (msg:"CF port_scan_temprano: SYN a puertos no servidos de srv-dmz"; flags:S,12; threshold: type both, track by_both, count 10, seconds 2; classtype:attempted-recon; sid:9100001; rev:1;)
+# DC1/DC2 (10.10.10.20-21): servicios de AD/DNS. Solo para medir falsas alarmas offline.
+alert tcp $HOME_NET any -> [10.10.10.20,10.10.10.21] ![53,88,135,139,389,445,464,636,3268,3269,49152:65535] (msg:"CF port_scan_temprano: SYN a puertos no servidos de DC"; flags:S,12; threshold: type both, track by_both, count 10, seconds 2; classtype:attempted-recon; sid:9100002; rev:1;)

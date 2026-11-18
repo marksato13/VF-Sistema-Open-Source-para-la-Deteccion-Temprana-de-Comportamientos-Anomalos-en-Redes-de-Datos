@@ -1,0 +1,62 @@
+{
+  "fecha": "2026-11-18",
+  "descripcion": "Que corre en cada equipo del laboratorio y de que commit sale (foto tomada en solo lectura)",
+  "sensor1": {
+    "motor": {
+      "servicio": "ppi-motor",
+      "ruta": "/home/m4rk/cyberflow-e4/ec78ca5",
+      "commit": "ec78ca5",
+      "sellado": "solo lectura (Etapa 4A)",
+      "heuristicos_version": "2026-11-02.1",
+      "icmp_flood": false,
+      "alfa_operativo": 0.01,
+      "umbral": -0.6223889502095352,
+      "detector": "if_limpio_2026_10"
+    },
+    "panel": {
+      "servicio": "ppi-dashboard",
+      "ruta": "/home/m4rk/cyberflow/scripts/engine/dashboard.py",
+      "sha256": "6a74fbd6e5172a9f861ee3997dc37646cbd9184b2c0b2193eb173442ebe94f2c",
+      "commit": "a0df76d (rama panel/cadena-v2-20261104)",
+      "url": "https://10.10.60.11:8788/"
+    },
+    "heuristicos_no_usado_por_motor": {
+      "ruta": "/home/m4rk/cyberflow/scripts/engine/heuristicos.py",
+      "sha256": "bb49ca2f7ddcd6692fdb80c5a2c3dc480ed230ed2f4b7018e2e85d83c7b43554",
+      "nota": "version 2026-11-03.2 con icmp_flood; el motor NO lo importa (usa el arbol ec78ca5)"
+    },
+    "publicador": {
+      "servicio": "ppi-publicar-feed-v2",
+      "ruta": "/home/m4rk/cf-b/d5/publicar_feed_v2_d5_lb.py",
+      "sha256": "c1f230a1e2224d474f82fb92d2ce85fed48cd2daa0cdc55ddbff96e349ebf47a",
+      "copia": "sensor1/d5/"
+    }
+  },
+  "srv_dmz": {
+    "agente": {
+      "servicio": "ppi-enforce-agent-v2-dmz",
+      "ruta": "/opt/cyberflow/agente-v2/agente_enforce_v2.py",
+      "sha256": "e7836c42e4c3a48a58ad0656ac30478ee56272666d70dd6ed7e47d682afb3db7",
+      "fuente": "scripts/enforce/agente_enforce_v2.py de esta rama",
+      "opciones": "--seguir --aplicar --sincronizar",
+      "modo": "APLICANDO (no sombra) por la demo; drop-in aplicar.conf"
+    },
+    "helper": {
+      "ruta": "/usr/local/sbin/cf-nft-helper",
+      "sha256": "3ba6374fea138618699f83d0d9571332a892626b08ff65f8bd2f5b672d3c9c87"
+    }
+  },
+  "validado_hoy": [
+    "L4 escaneo (nmap -sT -p 1-600) -> port_scan BLOCK, Kali HTTP 000, liberada -> 200",
+    "L7 fuerza bruta (150 x curl -u x:x :8081) -> brute_force BLOCK, 000, liberada -> 200",
+    "L7 flood (900 peticiones, -P20) -> http_abuse LIMIT, sigue 200 limitado, liberada",
+    "Trafico legitimo L3 ping -c4, L4 nmap 80,443, L7 5 x curl -> PERMIT en todas las ventanas, 0 alertas",
+    "Agente con --sincronizar instalado (Limpiar del panel libera tambien el firewall)"
+  ],
+  "pendiente": [
+    "icmp_flood no esta en el motor vivo: la tarjeta L3 del panel anuncia BLOCK que no ocurre",
+    "Volver srv-dmz a sombra tras la exposicion: sudo rm .../aplicar.conf && daemon-reload && restart",
+    "Integrar en main (panel/cadena-v2 + recuperacion) despues de la exposicion"
+  ],
+  "secretos": "No se incluye ninguna clave privada (feed) ni contrasena; pub.pem solo por hash"
+}

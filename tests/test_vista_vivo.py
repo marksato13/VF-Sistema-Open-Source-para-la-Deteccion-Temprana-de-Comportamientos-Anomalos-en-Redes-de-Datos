@@ -179,7 +179,13 @@ class VistaVivo(unittest.TestCase):
         self.assertEqual(usos.count("modelo"), 28)
         self.assertEqual(usos.count("solo extractor v3 (capa 2, fuera del scoring)"), 3)
         self.assertIn("port_scan", m["unique_dst_port_ratio_30s"]["heuristicos"])
-        self.assertIn("brute_force", m["http_auth_failure_ratio_60s"]["heuristicos"])
+        # Etapa 3: brute_force/http_abuse leen la vista HTTP (httph_*) y dns_entropy la vista DNS
+        # (dnsh_*), no las columnas del IF; la matriz lo refleja leyendo heuristicos.py.
+        self.assertEqual(m["http_auth_failure_ratio_60s"]["heuristicos"], [])
+        self.assertEqual(m["dns_query_rate_60s"]["heuristicos"], [])
+        h = vista_vivo.heuristicos_por_feature()
+        self.assertIn("brute_force", h["httph_fallo_auth_ratio_60s"])
+        self.assertIn("dns_entropy", h["dnsh_consultas_60s"])
         self.assertEqual(m["dns_query_rate_60s"]["fuente"], "eve.json")
         self.assertTrue(all(f["registro"] for f in m.values()))
 

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# pgrep simulado (banco de E-carga) para la versión anterior de generadores.sh: cuenta los procesos simulados de
+# $FAKE_DIR/proc cuyo argv contiene el patrón. Solo admite -fc PATRÓN.
+p="${@: -1}"; n=0
+for d in "$FAKE_DIR"/proc/[0-9]*; do [ -e "$d/cmdline" ] && tr '\0' ' ' < "$d/cmdline" | grep -q -- "$p" && n=$((n+1)); done
+echo $n; [ $n -gt 0 ]

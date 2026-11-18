@@ -25,7 +25,7 @@ from __future__ import annotations
 
 # Subir esta versión cada vez que cambien los umbrales; queda en el registro y en
 # el feed para poder reproducir por qué se tomó una decisión.
-VERSION_UMBRALES = "2026-10-06.2"
+VERSION_UMBRALES = "2026-11-02.1"
 # 2026-10-06.1: el espejo SPAN duplica cada trama, así que los ratios "todo único"
 # (puertos de un escaneo, nombres de un DGA) topan en ~0,5, no en 1,0. Los umbrales
 # de unicidad se bajan de 0,9/0,5 a 0,45. Validado: dns_entropy en el ataque, con
@@ -56,23 +56,36 @@ UMBRALES_POR_DEFECTO: dict[str, dict] = {
         # unicidad, que el espejo distorsiona). Inequívocamente un escaneo.
         "min_flow_attempt_burst_30s": 200,
         "max_syn_completion_burst_10s": 0.1,
+        # 2026-11-02.1 (Etapa 3): la rama de ráfaga también exige puertos distintos. Sin
+        # esto, tras una inundación o fuerza bruta (miles de intentos a UN puerto) la
+        # ventana siguiente sin SYN tiene syn_completion_ratio_10s = 0 (división segura)
+        # y disparaba port_scan (17 ventanas en el 3B). Escaneo breve: ~0,5 (tope del
+        # espejo); inundación/fuerza bruta: ~0.
+        "min_unique_dst_port_ratio_burst_30s": 0.1,
         "accion": "BLOCK",
     },
     # Abuso HTTP (flood / scraping): volumen alto de peticiones SIN que sea fuerza
     # bruta (poca tasa de fallo de auth). Ambiguo (puede ser uso pesado legítimo)
     # -> LIMIT (degradar, no cortar).
+    # 2026-11-02.1 (Etapa 3): sobre la VISTA HTTP (http_heuristica.py: sin copias ni
+    # registros tardíos de Suricata). 600/60 s = 5,1 x el pico legítimo del 3B
+    # (10.10.20.26, 117), que con 100 recibía LIMIT; una inundación del 3B hace ~18 000.
     "http_abuse": {
-        "min_http_req_60s": 100,
+        "min_http_req_60s": 600,
         "max_auth_fail_ratio_60s": 0.8,
         "accion": "LIMIT",
     },
     # DNS de alta entropía (DGA / túnel): muchas consultas con casi todos los
     # nombres únicos o con mucho NXDOMAIN. Es el hueco donde el modelo sacó 0 %
     # (nota M). Ambiguo -> LIMIT.
+    # 2026-11-02.1 (Etapa 3): se evalúa sobre la VISTA DNS (dns_heuristica.py: sin copias
+    # del espejo y sin los reenvíos de DC1/DC2), no sobre las características del IF.
+    # 30 consultas/60 s = 1,6 x el peor cliente legítimo del 3B (19); los nombres únicos
+    # ya no topan en 0,5 (sin copias), de ahí 0,8. Sensibilidad 20-60 en el informe.
     "dns_entropy": {
-        "min_dns_query_60s": 20,
+        "min_consultas_60s": 30,
         "min_nxdomain_ratio_60s": 0.5,
-        "min_unique_dns_name_ratio_60s": 0.45,
+        "min_nombres_unicos_ratio_60s": 0.8,
         "accion": "LIMIT",
     },
 }
@@ -90,11 +103,14 @@ def _n(row: dict, clave: str) -> float:
 
 
 def _brute_force(row: dict, u: dict) -> str | None:
-    if (_n(row, "http_request_count_60s") >= u["min_http_req_60s"]
-            and _n(row, "http_auth_failure_ratio_60s") >= u["min_auth_fail_ratio_60s"]):
-        return "%.0f req HTTP/60s con %.0f%% de fallo de auth" % (
-            _n(row, "http_request_count_60s"),
-            100 * _n(row, "http_auth_failure_ratio_60s"))
+    # Etapa 3: solo la vista HTTP (campos httph_*); sin ella no dispara.
+    if "httph_peticiones_60s" not in row:
+        return None
+    if (_n(row, "httph_peticiones_60s") >= u["min_http_req_60s"]
+            and _n(row, "httph_fallo_auth_ratio_60s") >= u["min_auth_fail_ratio_60s"]):
+        return "%.0f req HTTP/60s con %.0f%% de fallo de auth (%.0f registros tardíos excluidos)" % (
+            _n(row, "httph_peticiones_60s"), 100 * _n(row, "httph_fallo_auth_ratio_60s"),
+            _n(row, "httph_tardios_excluidos_60s"))
     return None
 
 
@@ -109,31 +125,35 @@ def _port_scan(row: dict, u: dict) -> str | None:
     # Rama OR: ráfaga masiva de baja completitud. No depende del ratio de unicidad
     # (el espejo SPAN lo topa en ~0,5 y lo deja bordeando 0,45, de ahí el 1/3).
     rafaga = (fa >= u.get("min_flow_attempt_burst_30s", 200)
-              and sc <= u.get("max_syn_completion_burst_10s", 0.1))
+              and sc <= u.get("max_syn_completion_burst_10s", 0.1)
+              and up >= u.get("min_unique_dst_port_ratio_burst_30s", 0.0))
     if normal or rafaga:
         return "%.0f intentos/30s a muchos puertos, %.0f%% completados" % (fa, 100 * sc)
     return None
 
 
 def _http_abuse(row: dict, u: dict) -> str | None:
-    if (_n(row, "http_request_count_60s") >= u["min_http_req_60s"]
-            and _n(row, "http_auth_failure_ratio_60s") < u["max_auth_fail_ratio_60s"]):
+    if "httph_peticiones_60s" not in row:
+        return None
+    if (_n(row, "httph_peticiones_60s") >= u["min_http_req_60s"]
+            and _n(row, "httph_fallo_auth_ratio_60s") < u["max_auth_fail_ratio_60s"]):
         return "%.0f req HTTP/60s (volumen alto, sin patrón de fuerza bruta)" % (
-            _n(row, "http_request_count_60s"))
+            _n(row, "httph_peticiones_60s"))
     return None
 
 
 def _dns_entropy(row: dict, u: dict) -> str | None:
-    if _n(row, "dns_query_count_60s") >= u["min_dns_query_60s"] and (
-            _n(row, "dns_nxdomain_ratio_60s") >= u["min_nxdomain_ratio_60s"]
-            or _n(row, "unique_dns_name_ratio_60s") >= u["min_unique_dns_name_ratio_60s"]):
-        # Los ratios son por definicion <=1; el espejo SPAN puede duplicar
-        # respuestas y dejarlos rozando o pasando 1 (se vio "103% NXDOMAIN"),
-        # asi que se acotan a 100% para no mostrar un porcentaje incoherente.
-        return "%.0f consultas DNS/60s, %.0f%% NXDOMAIN, %.0f%% nombres únicos" % (
-            _n(row, "dns_query_count_60s"),
-            100 * min(1.0, _n(row, "dns_nxdomain_ratio_60s")),
-            100 * min(1.0, _n(row, "unique_dns_name_ratio_60s")))
+    # Solo la vista DNS (campos dnsh_*). Sin ella la regla NO dispara: no se vuelve en
+    # silencio a las características del IF, que llevan copias del espejo y reenvíos.
+    if "dnsh_consultas_60s" not in row:
+        return None
+    n = _n(row, "dnsh_consultas_60s")
+    nx = _n(row, "dnsh_nxdomain_ratio_60s")
+    un = _n(row, "dnsh_nombres_unicos_ratio_60s")
+    if n >= u["min_consultas_60s"] and (nx >= u["min_nxdomain_ratio_60s"]
+                                         or un >= u["min_nombres_unicos_ratio_60s"]):
+        return "%.0f consultas DNS propias/60s, %.0f%% NXDOMAIN, %.0f%% nombres únicos (%.0f reenvíos excluidos)" % (
+            n, 100 * nx, 100 * un, _n(row, "dnsh_reenvios_excluidos_60s"))
     return None
 
 
@@ -164,3 +184,23 @@ def evaluar(row: dict, umbrales: dict | None = None) -> dict | None:
         if mejor is None or _SEVERIDAD[accion] > _SEVERIDAD[mejor["accion"]]:
             mejor = {"heuristico": nombre, "accion": accion, "motivo": motivo}
     return mejor
+
+
+def evaluar_todas(row: dict, umbrales: dict | None = None) -> list[dict]:
+    """Todas las reglas que disparan, en el orden de `_REGLAS` (Etapa 2).
+
+    `evaluar()` devuelve solo la más severa, y eso basta cuando hay un único punto
+    de aplicación. Con destinos separados (DNS en DC1, resto en srv-dmz) una
+    ventana puede disparar `dns_entropy` y otra regla a la vez, y las dos acciones
+    deben llegar a su destino: elegir una perdería la otra.
+    """
+    cfg = umbrales or UMBRALES_POR_DEFECTO
+    out = []
+    for nombre, regla in _REGLAS:
+        u = cfg.get(nombre)
+        if not u:
+            continue
+        motivo = regla(row, u)
+        if motivo is not None:
+            out.append({"heuristico": nombre, "accion": u["accion"], "motivo": motivo})
+    return out

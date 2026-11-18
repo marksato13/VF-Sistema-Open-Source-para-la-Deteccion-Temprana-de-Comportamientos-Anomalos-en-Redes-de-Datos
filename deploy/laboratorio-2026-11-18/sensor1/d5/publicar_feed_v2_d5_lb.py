@@ -1,0 +1,565 @@
+#!/usr/bin/env python3
+# DERIVADO 16-nov-2026 de publicar_feed_v2_d5.py (sha256 58e2a0b2b06908922f017199987f6e9b28bc8a808b174962d270832909b25451) por hacer_publicador_lb.py:
+# anade --lista-blanca (IPs que nunca se restringen + retirada de sus medidas vigentes). Sin la opcion = identico.
+"""Publicador candidato del feed v2 (Etapa 2). NO sustituye al desplegado (publicar_feed.py).
+
+Diferencias con el publicador desplegado:
+
+1. Politica D3 ``if_senal`` (por omision): una ALERT del modelo (IF) NO restringe;
+   se registra como senal aparte (``--senales``) con los alfa que supera. Solo
+   restringen los heuristicos. ``--politica actual`` reproduce el mapeo desplegado
+   (IF ALERT -> LIMIT) para comparar.
+2. Destinos separados: ``dns_entropy`` -> (dc1, alcance dns, su accion); el resto de
+   reglas -> (srv-dmz, alcance todo). Usa ``heuristicos`` (todas las reglas que
+   disparan) cuando el registro lo trae; si no, ``heuristico`` (la mas severa).
+   Una misma IP puede tener a la vez una entrada para cada destino.
+3. Sin renovacion por reprocesar: cada accion nace de un ``evento_id`` (decision del
+   motor + regla). Su caducidad se calcula UNA vez, desde la hora de la decision
+   (``logged_at``), y se memoriza; volver a leer la misma decision no la alarga. Solo
+   una decision NUEVA (otra ventana) puede ampliar o escalar la restriccion.
+4. Escalera por (ip, destino), no solo por ip.
+5. Feed v2 (feed.construir_v2): secuencia creciente, ``expira``, ``destino``,
+   ``alcance``, ``id`` y ``evento_id`` firmados.
+6. 10.10.10.21 (DC2) en NUNCA_BLOQUEAR: no se restringe, pero sus ventanas se
+   siguen evaluando (el motor no lo excluye; la lista solo actua aqui y en el agente).
+8. Etapa 3. Vía rápida de escaneo (``--senales-rapidas``): cada ``senal_rapida`` de
+   ``detector_rapido.py`` entra como una acción ``port_scan_temprano`` (BLOCK) cuyo
+   destino es el punto de aplicación que protege al HOST ESCANEADO
+   (``DESTINO_DE_OBJETIVO``); si el escaneado no tiene agente, se registra
+   ``sin_punto_de_aplicacion`` y no se restringe nada en otro sitio.
+9. Etapa 3. Renovación por evidencia reciente. Cada acción lleva su intervalo de
+   evidencia: (A − retrospectiva de la regla, A] en las reglas por ventanas y
+   (primer intento, disparo] en la vía rápida. Con una restricción vigente para el
+   mismo (ip, destino, alcance), una acción nueva:
+     - ESCALA si es más severa;
+     - RENUEVA (amplía ``hasta``) solo si su evidencia empieza cuando termina la
+       evidencia que justificó la vigente: actividad posterior, no la misma releída
+       desde otra ventana solapada;
+     - si no, se MANTIENE la vigente sin cambios: no amplía, no sube la escalera y
+       queda registrada con su motivo (``tipo`` en la traza).
+   Así la vía rápida y la regla por ventanas del mismo escaneo dan UNA restricción y
+   UN peldaño. No depende de ``score``: una decisión heurística sin score del IF
+   renueva igual si su evidencia es nueva.
+7. ``--seguir``: modo por eventos. Lee el registro del motor de forma incremental y
+   publica en cuanto llega una decision que cambia el feed; ademas republica cada
+   ``--refresco`` s para renovar ``expira``. Cada publicacion deja una linea en
+   ``--traza`` con los identificadores y tiempos de cada evento nuevo.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+try:
+    from scripts.engine import escalada, feed, heuristicos
+except ImportError:  # ejecutado desde scripts/engine/
+    import escalada
+    import feed
+    import heuristicos
+
+NUNCA_BLOQUEAR_V2 = frozenset({
+    "10.10.10.30",   # bastion
+    "10.10.60.11",   # sensor
+    "10.10.30.1", "10.10.40.1", "10.10.60.1", "10.10.20.1",  # gateways VLAN
+    "10.10.10.20",   # DC1 (DNS/AD)
+    "10.10.10.21",   # DC2 (DNS/AD) -- Etapa 2
+})
+
+# Regla -> (destino, alcance). Lo no listado va a srv-dmz con alcance "todo".
+DESTINO_DE_REGLA = {"dns_entropy": ("dc1", "dns")}
+DESTINO_POR_OMISION = ("srv-dmz", "todo")
+_SEV = {"BLOCK": 2, "LIMIT": 1}
+# Umbrales alfa del IF (calibracion 2026-10-24, analisis-3b.json "umbrales").
+UMBRALES_ALFA = {"0.05": -0.5694578968203694, "0.03": -0.5898535710336618,
+                 "0.01": -0.6223889502095352}
+RETENCION_EVENTOS_S = 2 * 3600
+# Etapa 3: retrospectiva (s) de la evidencia de cada regla por ventanas: la ventana A usa
+# características de (A − r, A]. port_scan lee 10 y 30 s; el resto, 60 s.
+RETROSPECTIVA_S = {"port_scan": 30, "brute_force": 60, "http_abuse": 60, "dns_entropy": 60,
+                   "auth_failure_heuristic": 60}
+RETROSPECTIVA_POR_OMISION_S = 60
+# Etapa 3: punto de aplicación que protege a cada host escaneado (vía rápida).
+DESTINO_DE_OBJETIVO = {"10.10.30.10": ("srv-dmz", "todo")}
+
+
+AUTH_MIN_PETICIONES_VISTA = 5      # = motor_decision.AUTH_FAILURE_MIN_REQUESTS
+AUTH_MIN_RATIO_VISTA = 0.8         # = motor_decision.AUTH_FAILURE_MIN_RATIO
+
+
+def rechazo_heuristico_motor(d: dict) -> str | None:
+    """Motivo por el que un ALERT de heuristico del motor NO autoriza respuesta (None = autoriza).
+
+    Cierre Etapa 3 (hallazgo 2): ninguna restriccion por fuerza bruta puede apoyarse solo en
+    registros HTTP que la vista descarto (tardios). Se exige la autorizacion del motor
+    corregido (auth_failure.autoriza) o, para registros sin ese campo, la vista HTTP con
+    peticiones validas suficientes. Sin vista no hay forma de comprobarlo: no se restringe.
+    """
+    af = d.get("auth_failure")
+    if isinstance(af, dict) and "autoriza" in af:
+        return None if af.get("autoriza") else "auth_failure sin autorizacion de la vista HTTP"
+    hv = d.get("http_vista")
+    if not isinstance(hv, dict):
+        return "sin vista HTTP: la senal solo consta en columnas que incluyen registros tardios"
+    if (float(hv.get("httph_peticiones_60s") or 0) >= AUTH_MIN_PETICIONES_VISTA
+            and float(hv.get("httph_fallo_auth_ratio_60s") or 0) >= AUTH_MIN_RATIO_VISTA):
+        return None
+    return "vista HTTP sin evidencia valida (%s peticiones validas, %s tardias descartadas)" % (
+        hv.get("httph_peticiones_60s"), hv.get("httph_tardios_excluidos_60s"))
+
+
+def acciones_de(d: dict, politica: str = "if_senal", rechazadas: list | None = None) -> list[dict]:
+    """Acciones (destino, alcance, accion, regla, motivo) que propone una decision.
+
+    ``rechazadas`` (opcional) recibe las acciones que la decision pedia y no se autorizan.
+    """
+    out: list[dict] = []
+    if d.get("event") != "decision":
+        return out
+    det = str(d.get("detector_name", ""))
+    if d.get("decision") == "ALERT":
+        if det.endswith("_heuristic"):
+            # ALERT de heuristico del propio motor (auth_failure_heuristic): fuerza bruta,
+            # solo si la vista HTTP la respalda con evidencia valida.
+            motivo_rechazo = rechazo_heuristico_motor(d)
+            if motivo_rechazo is None:
+                out.append({"regla": det, "accion": "BLOCK", "motivo": det})
+            elif rechazadas is not None:
+                rechazadas.append({"regla": det, "accion": "BLOCK", "motivo_rechazo": motivo_rechazo})
+        elif politica == "actual":
+            out.append({"regla": "modelo:" + det, "accion": "LIMIT", "motivo": "modelo:" + det})
+    lista = d.get("heuristicos")
+    if not isinstance(lista, list):
+        h = d.get("heuristico")
+        lista = [h] if isinstance(h, dict) else []
+    for h in lista:
+        if isinstance(h, dict) and h.get("accion") in _SEV:
+            out.append({"regla": str(h.get("heuristico", "heuristico")), "accion": h["accion"],
+                        "motivo": "%s: %s" % (h.get("heuristico", "?"), h.get("motivo", ""))})
+    for a in out:
+        if a["regla"] == "port_scan_temprano":
+            a["destino"], a["alcance"] = DESTINO_DE_OBJETIVO.get(str(d.get("objetivo")), (None, None))
+        else:
+            a["destino"], a["alcance"] = DESTINO_DE_REGLA.get(a["regla"], DESTINO_POR_OMISION)
+    return out
+
+
+def senal_if(d: dict) -> dict | None:
+    """Senal del IF de una decision puntuada: score y alfas superados (None si no hay score)."""
+    if d.get("event") != "decision" or d.get("score") is None:
+        return None
+    s = float(d["score"])
+    return {"decision_id": d.get("decision_id") or "%s|%s" % (d.get("entity_ip"), d.get("window_end_utc")),
+            "ip": d.get("entity_ip"), "window_end_utc": d.get("window_end_utc"), "score": s,
+            "alfa_superados": [a for a, u in sorted(UMBRALES_ALFA.items(), reverse=True) if s < u],
+            "decision_desplegada": d.get("decision"), "logged_at": d.get("logged_at")}
+
+
+def _ts_iso(s) -> float | None:
+    if not s:
+        return None
+    import datetime as _dt
+    return _dt.datetime.fromisoformat(str(s).replace("Z", "+00:00")).timestamp()
+
+
+def evidencia_de(d: dict, regla: str) -> tuple[float, float]:
+    """Intervalo (desde, hasta] de la actividad que justifica la accion."""
+    ev = d.get("evidencia")
+    if isinstance(ev, (list, tuple)) and len(ev) == 2:
+        return float(ev[0]), float(ev[1])
+    a = _ts_iso(d.get("window_end_utc"))
+    if a is None:
+        t = float(d.get("logged_at") or 0)
+        return t, t
+    return a - RETROSPECTIVA_S.get(regla, RETROSPECTIVA_POR_OMISION_S), a
+
+
+def decision_de_senal_rapida(s: dict) -> dict | None:
+    """Convierte una ``senal_rapida`` en un registro con la forma de una decision."""
+    if s.get("event") != "senal_rapida" or not s.get("origen"):
+        return None
+    t = float(s.get("emitido_en") or s.get("t_evidencia"))
+    desde = s.get("primer_intento_ventana") or s.get("t_evidencia")
+    return {"event": "decision", "entity_ip": s["origen"], "decision_id": "rapida:%s" % s.get("id"),
+            "window_end_utc": None, "logged_at": t, "decidido_en": s.get("t_evidencia"),
+            "detector_name": "via_rapida", "decision": "PERMIT", "score": None,
+            "evidencia": [float(desde), float(s["t_evidencia"])], "objetivo": s.get("destino"),
+            "heuristicos": [{"heuristico": s.get("regla", "port_scan_temprano"), "accion": "BLOCK",
+                             "motivo": "%s puertos sin respuesta en %ss hacia %s" % (
+                                 s.get("puertos_fallidos"), (s.get("parametros") or {}).get("W"),
+                                 s.get("destino"))}],
+            "senal_rapida": {"id": s.get("id"), "t_evidencia": s.get("t_evidencia"),
+                             "disponible_en": s.get("disponible_en"), "emitido_en": s.get("emitido_en")}}
+
+
+def _evento_id(d: dict, regla: str) -> str:
+    base = d.get("decision_id") or "%s|%s" % (d.get("entity_ip"), d.get("window_end_utc"))
+    return "%s|%s" % (base, regla)
+
+
+def incorporar(decisiones: list[dict], estado: dict, nunca: frozenset | set,
+               politica: str = "if_senal", leido_en: float | None = None) -> list[dict]:
+    """Incorpora decisiones al estado y devuelve los eventos NUEVOS (para la traza).
+
+    estado = {"eventos": {evento_id: entrada}, "vigentes": {"ip|destino|alcance": entrada},
+              "escalada": {...}, "secuencia": int}
+    Cada evento nuevo lleva ``tipo``: nueva | renovada | escalada | mantenida |
+    sin_punto_de_aplicacion (Etapa 3, punto 9 de la cabecera) | rechazada (cierre de la
+    Etapa 3: ALERT de heuristico del motor sin evidencia valida en la vista HTTP; sin efecto).
+    """
+    eventos = estado.setdefault("eventos", {})
+    vigentes = estado.setdefault("vigentes", {})
+    esc = estado.setdefault("escalada", {})
+    nuevos = []
+    for d in decisiones:
+        ip = str(d.get("entity_ip", ""))
+        if not ip or ip in nunca:
+            continue
+        rechazadas: list[dict] = []
+        acciones = acciones_de(d, politica, rechazadas)
+        for a in rechazadas:
+            eid = _evento_id(d, a["regla"])
+            if eid in eventos:
+                continue
+            # Trazable y sin efecto: ni entrada nueva ni renovacion de una vigente.
+            eventos[eid] = {"tipo": "rechazada", "hasta": float(d.get("logged_at") or 0)}
+            nuevos.append({"evento_id": eid, "ip": ip, "regla": a["regla"], "tipo": "rechazada",
+                           "accion": a["accion"], "id": None, "hasta": None,
+                           "motivo_rechazo": a["motivo_rechazo"], "decision_id": d.get("decision_id"),
+                           "window_end_utc": d.get("window_end_utc"), "logged_at": d.get("logged_at"),
+                           "leido_en": leido_en})
+        for a in acciones:
+            eid = _evento_id(d, a["regla"])
+            if eid in eventos:
+                continue  # mismo evento releido: no se renueva nada
+            t_ev = float(d.get("logged_at") or d.get("decidido_en") or 0)
+            ev_desde, ev_hasta = evidencia_de(d, a["regla"])
+            base = {"evento_id": eid, "ip": ip, "destino": a["destino"], "regla": a["regla"],
+                    "decision_id": d.get("decision_id"), "window_end_utc": d.get("window_end_utc"),
+                    "decidido_en": d.get("decidido_en"), "logged_at": d.get("logged_at"),
+                    "leido_en": leido_en, "evidencia": [round(ev_desde, 3), round(ev_hasta, 3)]}
+            if d.get("senal_rapida"):
+                base["senal_rapida"] = d["senal_rapida"]
+            if a["destino"] is None:
+                eventos[eid] = {"tipo": "sin_punto_de_aplicacion", "hasta": t_ev, "objetivo": d.get("objetivo")}
+                nuevos.append(dict(base, tipo="sin_punto_de_aplicacion", objetivo=d.get("objetivo"),
+                                   accion=a["accion"], id=None, hasta=None))
+                continue
+            clave = "%s|%s|%s" % (ip, a["destino"], a["alcance"])
+            prev = vigentes.get(clave)
+            if prev is None or prev["hasta"] <= t_ev:
+                tipo = "nueva"
+            elif _SEV[a["accion"]] > _SEV[prev["accion"]]:
+                tipo = "escalada"
+            elif _SEV[a["accion"]] == _SEV[prev["accion"]] and ev_desde >= prev.get("evidencia_hasta", float("inf")):
+                tipo = "renovada"
+            else:
+                tipo = "mantenida"
+            if tipo == "mantenida":
+                eventos[eid] = {"tipo": "mantenida", "hasta": prev["hasta"], "vigente_id": prev["id"]}
+                nuevos.append(dict(base, tipo="mantenida", accion=prev["accion"], id=prev["id"],
+                                   hasta=prev["hasta"], motivo_mantenida=(
+                                       "evidencia solapada con la de la vigente" if _SEV[a["accion"]] == _SEV[prev["accion"]]
+                                       else "accion menos severa que la vigente")))
+                continue
+            r = escalada.procesar(esc, "%s@%s" % (ip, a["destino"]), a["accion"], t_ev, evento_ts=t_ev)
+            hasta = round(t_ev + r["timeout_s"])
+            if tipo == "renovada":
+                hasta = max(hasta, prev["hasta"])
+            entrada = {
+                "ip": ip, "destino": a["destino"], "alcance": a["alcance"], "accion": r["accion"],
+                "hasta": hasta, "evento_id": eid,
+                "motivo": a["motivo"][:160], "detector": a["regla"], "nivel": r["nivel"],
+                "revisar_humano": r["revisar_humano"],
+                "evidencia_desde": round(ev_desde, 3), "evidencia_hasta": round(ev_hasta, 3),
+            }
+            entrada["id"] = feed.id_entrada(ip, a["destino"], a["alcance"], entrada["accion"], eid)
+            eventos[eid] = entrada
+            vigentes[clave] = entrada
+            nuevos.append(dict(base, tipo=tipo, id=entrada["id"], accion=entrada["accion"], hasta=hasta,
+                               nivel=r["nivel"]))
+    return nuevos
+
+
+def entradas_vigentes(estado: dict, ahora: float) -> list[dict]:
+    return [e for e in estado.get("vigentes", {}).values() if e["hasta"] > ahora]
+
+
+def podar(estado: dict, ahora: float) -> None:
+    ev = estado.get("eventos", {})
+    for k in [k for k, e in ev.items() if e["hasta"] < ahora - RETENCION_EVENTOS_S]:
+        del ev[k]
+    vig = estado.get("vigentes", {})
+    for k in [k for k, e in vig.items() if e["hasta"] <= ahora]:
+        del vig[k]
+    escalada.podar(estado.get("escalada", {}), ahora)
+
+
+def publicar(estado: dict, ahora: float, vigencia_s: float, clave_privada: Path,
+             salida_feed: Path, salida_firma: Path) -> dict:
+    estado["secuencia"] = int(estado.get("secuencia", 0)) + 1
+    obj = feed.construir_v2(entradas_vigentes(estado, ahora), estado["secuencia"], ahora,
+                            vigencia_s, umbrales=heuristicos.VERSION_UMBRALES)
+    datos = feed.serializar(obj)
+    firma = feed.firmar(datos, str(clave_privada))
+    # Escritura atomica: firma primero, feed despues, cada uno por rename. Un lector
+    # que coja feed nuevo con firma vieja (o al reves) falla la verificacion y no
+    # aplica nada (fail-safe); en la siguiente lectura ya estan los dos.
+    for ruta, contenido in ((salida_firma, firma), (salida_feed, datos)):
+        tmp = ruta.with_name(ruta.name + ".tmp")
+        tmp.write_bytes(contenido)
+        os.replace(tmp, ruta)
+    return obj
+
+
+class LectorRegistro:
+    """Lee motor_decision.log de forma incremental (con deteccion de rotacion)."""
+
+    def __init__(self, ruta: Path, desde: float, evento: str = "decision", campo_t: str = "logged_at") -> None:
+        self.ruta = ruta
+        self.offset = 0
+        self.inodo = None
+        self.desde = desde
+        self.evento = evento
+        self.campo_t = campo_t
+
+    def leer(self) -> list[dict]:
+        try:
+            st = self.ruta.stat()
+        except FileNotFoundError:
+            return []
+        ino = (st.st_dev, st.st_ino)
+        if self.inodo is not None and (ino != self.inodo or st.st_size < self.offset):
+            self.offset = 0
+        self.inodo = ino
+        out = []
+        with self.ruta.open("rb") as fh:
+            fh.seek(self.offset)
+            datos = fh.read()
+        corte = datos.rfind(b"\n")
+        if corte < 0:
+            return []
+        self.offset += corte + 1
+        for linea in datos[:corte].split(b"\n"):
+            try:
+                d = json.loads(linea)
+            except ValueError:
+                continue
+            if d.get("event") == self.evento and float(d.get(self.campo_t) or 0) >= self.desde:
+                out.append(d)
+        return out
+
+
+def _guardar_estado(ruta: Path, estado: dict) -> None:
+    tmp = ruta.with_name(ruta.name + ".tmp")
+    tmp.write_text(json.dumps(estado, sort_keys=True), encoding="utf-8")
+    os.replace(tmp, ruta)
+
+
+_D5_IDS: set = set()
+
+
+def _auditar_d5(ruta_log, reg: dict) -> None:
+    """Auditoría D5 (JSONL, solo agrega), independiente del acuse. Sin ruta no hace nada; un fallo nunca interrumpe al publicador."""
+    if ruta_log is None:
+        return
+    try:
+        with open(ruta_log, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(reg, sort_keys=True) + "\n")
+    except OSError as ex:
+        print("d5: no se pudo escribir la auditoría (%s)" % ex.__class__.__name__, file=sys.stderr, flush=True)
+
+
+def _escribir_ack_d5(ruta: Path, resp: dict) -> bool:
+    """Acuse atómico (tmp + rename). Un fallo no interrumpe el publicador: devuelve False y lo cuenta en stderr."""
+    ack = ruta.with_name(ruta.name + ".ack")
+    try:
+        tmp = ack.with_name(ack.name + ".tmp")
+        tmp.write_text(json.dumps(resp, sort_keys=True), encoding="utf-8")
+        os.replace(tmp, ack)
+        return True
+    except OSError as ex:
+        print("d5: no se pudo escribir el acuse (%s)" % ex.__class__.__name__, file=sys.stderr, flush=True)
+        return False
+
+
+def _aplicar_control_d5(ruta: Path, estado: dict, origen_permitido: str, ahora: float) -> dict:
+    """D5 sin reinicio (propuesta de banco): consume el control y devuelve la respuesta (ok o error); el acuse de un
+    control válido lo escribe el bucle DESPUÉS de republicar y persistir."""
+    resp = {"t": ahora, "id": None, "ok": False}
+    try:
+        ctl = json.loads(ruta.read_text(encoding="utf-8"))
+        resp["id"] = ctl.get("id") if isinstance(ctl, dict) else None
+        if not isinstance(ctl, dict) or ctl.get("accion") != "reset_origen" or not isinstance(resp["id"], str):
+            resp["error"] = "control mal formado"
+        elif not origen_permitido or ctl.get("origen") != origen_permitido:
+            resp["error"] = "origen no permitido"
+        elif resp["id"] in _D5_IDS:
+            resp.update(ok=True, duplicada=True, quitado={"vigentes": [], "escalada": []})
+        else:
+            o = ctl["origen"]
+            quitado = {"vigentes": [k for k in estado.get("vigentes", {}) if k.split("|", 1)[0] == o],
+                       "escalada": [k for k in estado.get("escalada", {}) if k.split("@", 1)[0] == o]}
+            for k in quitado["vigentes"]:
+                del estado["vigentes"][k]
+            for k in quitado["escalada"]:
+                del estado["escalada"][k]
+            _D5_IDS.add(resp["id"])
+            resp.update(ok=True, duplicada=False, quitado=quitado)
+    except (OSError, ValueError) as ex:
+        resp["error"] = "control ilegible: %s" % ex.__class__.__name__
+    try:
+        ruta.unlink()
+    except OSError:
+        pass
+    return resp
+
+
+class ListaBlanca:
+    """Lista blanca (16-nov-2026): IPs de infraestructura conocida (p. ej. Zabbix) que el publicador no restringe.
+    Mismo fichero que el panel (configs/lista-blanca.json). Se relee al cambiar su mtime. Ilegible o ausente = vacia."""
+
+    def __init__(self, ruta):
+        self.ruta, self.mtime, self.ips = ruta, None, frozenset()
+
+    def actual(self) -> frozenset:
+        if self.ruta is None:
+            return frozenset()
+        try:
+            m = self.ruta.stat().st_mtime
+        except OSError:
+            self.mtime, self.ips = None, frozenset()
+            return self.ips
+        if m != self.mtime:
+            self.mtime = m
+            try:
+                datos = json.loads(self.ruta.read_text(encoding="utf-8"))
+                ips = set()
+                for e in (datos.get("entradas") or []):
+                    ip = str((e or {}).get("ip", "")).strip()
+                    try:
+                        import ipaddress
+                        ipaddress.ip_address(ip)
+                        ips.add(ip)
+                    except ValueError:
+                        pass
+                self.ips = frozenset(ips)
+            except (OSError, ValueError, AttributeError, TypeError):
+                self.ips = frozenset()
+        return self.ips
+
+
+def retirar_lista_blanca(estado: dict, ips: frozenset) -> list[str]:
+    """Quita del estado las medidas vigentes sobre IPs de la lista blanca. Devuelve las claves retiradas."""
+    vig = estado.get("vigentes", {})
+    fuera = [k for k in vig if k.split("|", 1)[0] in ips]
+    for k in fuera:
+        del vig[k]
+    return fuera
+
+
+def main(argv=None, reloj=time.time, dormir=time.sleep) -> int:
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--log", type=Path, required=True, help="motor_decision.log")
+    p.add_argument("--estado", type=Path, required=True)
+    p.add_argument("--clave-privada", type=Path, required=True)
+    p.add_argument("--salida-feed", type=Path, required=True)
+    p.add_argument("--salida-firma", type=Path, required=True)
+    p.add_argument("--senales", type=Path, default=None, help="jsonl de senales del IF (no restringen)")
+    p.add_argument("--senales-rapidas", type=Path, default=None,
+                   help="Etapa 3: jsonl de detector_rapido.py (via rapida de escaneo)")
+    p.add_argument("--traza", type=Path, default=None, help="jsonl de publicaciones (instrumentacion)")
+    p.add_argument("--politica", choices=("if_senal", "actual"), default="if_senal")
+    p.add_argument("--ventana-segundos", type=int, default=120,
+                   help="al arrancar, solo decisiones de los ultimos N s")
+    p.add_argument("--vigencia-segundos", type=float, default=60.0, help="expira = generado + N")
+    p.add_argument("--seguir", action="store_true", help="modo por eventos (proceso continuo)")
+    p.add_argument("--sondeo-segundos", type=float, default=0.25)
+    p.add_argument("--refresco-segundos", type=float, default=20.0,
+                   help="--seguir: republica aunque no haya cambios, para renovar expira")
+    p.add_argument("--max-iteraciones", type=int, default=0, help="pruebas: corta tras N sondeos")
+    p.add_argument("--control-d5", type=Path, default=None, help="B: fichero de control para limpiar el estado de un origen sin reiniciar")
+    p.add_argument("--d5-origen", default="", help="B: único origen que el control puede limpiar")
+    p.add_argument("--d5-auditoria", type=Path, default=None, help="B: JSONL de auditoría del control (consumido/publicado/ack_fallido)")
+    p.add_argument("--lista-blanca", type=Path, default=None,
+                   help="lista blanca (configs/lista-blanca.json): IPs que nunca se restringen; sin la opcion, como siempre")
+    a = p.parse_args(argv)
+    lista_blanca = ListaBlanca(a.lista_blanca)
+
+    try:
+        estado = json.loads(a.estado.read_text(encoding="utf-8"))
+        if not isinstance(estado, dict) or "eventos" not in estado:
+            estado = {"secuencia": int(estado.get("secuencia", 0)) if isinstance(estado, dict) else 0}
+    except (OSError, ValueError):
+        estado = {}
+    ahora = reloj()
+    lector = LectorRegistro(a.log, ahora - a.ventana_segundos)
+    lector_rapido = (LectorRegistro(a.senales_rapidas, ahora - a.ventana_segundos, evento="senal_rapida",
+                                    campo_t="emitido_en") if a.senales_rapidas else None)
+    ultima_pub = None
+    vistos_senal: set[str] = set()
+    it = 0
+    while True:
+        leido_en = reloj()
+        decisiones = lector.leer()
+        if lector_rapido is not None:
+            rapidas = [x for x in map(decision_de_senal_rapida, lector_rapido.leer()) if x]
+        else:
+            rapidas = []
+        lb = lista_blanca.actual()
+        nuevos = incorporar(rapidas + decisiones, estado, NUNCA_BLOQUEAR_V2 | lb, a.politica, leido_en)
+        lb_retiradas = retirar_lista_blanca(estado, lb) if lb else []
+        if lb_retiradas and a.traza is not None:
+            with a.traza.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"evento": "lista_blanca", "t": reloj(), "retiradas": lb_retiradas,
+                                     "lista": sorted(lb)}, sort_keys=True) + "\n")
+        d5_resp = None
+        if a.control_d5 is not None and a.control_d5.exists():
+            d5_resp = _aplicar_control_d5(a.control_d5, estado, a.d5_origen, reloj())
+            _auditar_d5(a.d5_auditoria, dict({"evento": "consumido", "t": d5_resp["t"]}, **{k: d5_resp[k] for k in ("id", "ok", "duplicada", "quitado", "error") if k in d5_resp}))
+            if not d5_resp["ok"]:
+                _escribir_ack_d5(a.control_d5, d5_resp)
+        d5_forzar = bool(d5_resp and d5_resp["ok"])
+        if a.senales is not None:
+            with a.senales.open("a", encoding="utf-8") as fh:
+                for d in decisiones:
+                    s = senal_if(d)
+                    if s and s["alfa_superados"] and s["decision_id"] not in vistos_senal:
+                        vistos_senal.add(s["decision_id"])
+                        s["leido_en"] = leido_en
+                        fh.write(json.dumps(s, sort_keys=True) + "\n")
+        ahora = reloj()
+        podar(estado, ahora)
+        toca = (not a.seguir or nuevos or d5_forzar or lb_retiradas or ultima_pub is None
+                or ahora - ultima_pub >= a.refresco_segundos)
+        if toca:
+            obj = publicar(estado, ahora, a.vigencia_segundos, a.clave_privada, a.salida_feed, a.salida_firma)
+            publicado_en = reloj()
+            ultima_pub = ahora
+            _guardar_estado(a.estado, estado)
+            if d5_forzar:   # el acuse significa: estado limpio, persistido y feed republicado (secuencia N) sin ese origen
+                d5_resp["secuencia"] = obj["secuencia"]
+                _auditar_d5(a.d5_auditoria, {"evento": "publicado", "id": d5_resp["id"], "secuencia": obj["secuencia"], "t": reloj()})
+                if not _escribir_ack_d5(a.control_d5, d5_resp):
+                    _auditar_d5(a.d5_auditoria, {"evento": "ack_fallido", "id": d5_resp["id"], "t": reloj()})
+            reg = {"evento": "publicacion", "secuencia": obj["secuencia"], "generado": obj["generado"],
+                   "publicado_en": publicado_en, "expira": obj["expira"], "politica": a.politica,
+                   "entradas": [e["id"] for e in obj["entradas"]], "nuevos": nuevos}
+            if a.traza is not None:
+                with a.traza.open("a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(reg, sort_keys=True) + "\n")
+            if not a.seguir:
+                print(json.dumps({"secuencia": obj["secuencia"], "entradas": len(obj["entradas"]),
+                                  "nuevos": len(nuevos)}, sort_keys=True))
+                return 0
+        it += 1
+        if a.max_iteraciones and it >= a.max_iteraciones:
+            return 0
+        dormir(a.sondeo_segundos)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
