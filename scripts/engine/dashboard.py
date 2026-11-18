@@ -1497,7 +1497,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
       <summary>Instalación, diagnóstico y mantenimiento</summary>
       <p class="lede-small"><b>Requisitos del sensor</b>: Linux con systemd, interfaz conectada a un puerto espejo (SPAN), Suricata, Python con el entorno del proyecto y espacio para el anillo de PCAP. <b>Por host protegido</b>: nftables, el agente <code>agente_enforce.py</code> con su temporizador y la clave pública del sensor; el agente eleva solo <code>nft</code> con <code>sudo -n</code>.</p>
       <p class="lede-small"><b>Comprobación tras instalar</b>: servicios activos en Resumen · decisiones nuevas en Decisiones · el feed aparece como publicado en Respuestas · en el host, el registro del agente muestra la firma verificada.</p>
-      <p class="lede-small"><b>Diagnóstico</b>: <code>journalctl -u ppi-motor -u ppi-motor-capture -n 100</code> en el sensor; <code>journalctl -u ppi-enforce-agent -n 50</code> en el host. <b>Recuperación</b>: si el agente rechaza la firma no aplica nada; las reglas caducan solas.</p>
+      <p class="lede-small"><b>Diagnóstico</b>: <code>journalctl -u ppi-motor -u ppi-motor-capture -n 100</code> en el sensor; <code>journalctl -u ppi-enforce-agent-v2-dmz -n 50</code> en el host. <b>Recuperación</b>: si el agente rechaza la firma no aplica nada; las reglas caducan solas.</p>
       <p class="lede-small"><b>Mantenimiento</b>: a diario, revisar Resumen (servicios y drops) y Respuestas; cada semana, el espacio del anillo, la deriva en Aprendizaje y las entidades con más respuestas. Guía completa: <code>docs/INSTALACION.md</code>.</p>
     </details>
   </section>
@@ -2030,7 +2030,7 @@ let currentRange = '1h';
 // no esta mirando la tabla justo en ese momento. Solo cambia titulo/favicon
 // del propio navegador, no notificaciones del sistema operativo (mas
 // invasivo e innecesario para un panel de solo lectura).
-const PROTO = { 112: 'VRRP/CARP (latido del cortafuegos)', 240: 'pfsync (sincronización entre cortafuegos)' };
+const PROTO = { 112: 'VRRP/CARP (latido del router)', 240: 'pfsync (sincronización entre routers)' };
 const BASE_TITLE = document.title;
 const BASE_FAVICON = document.getElementById('favicon').href;
 const ALERT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%235eead4'/%3E%3Ccircle cx='24' cy='9' r='7' fill='%23f87171' stroke='%230a0f1a' stroke-width='1.5'/%3E%3C/svg%3E";
@@ -2299,7 +2299,7 @@ function escPaso5(D, activo, ent) {
     const hist = evs.length ? '<br><span class="esc-hist">' + evs.slice(-4).map(e => fmtTime(e.t) + ' ' + (ESC_EVENTO[e.evento] || e.evento)
       + (e.accion ? ' ' + varEsc(e.accion) : '')).join(' · ') + '</span>' : '';
     const quien = '<b>' + varEsc(a.host) + '</b>';
-    if (a.error) return quien + ': no pudo leer su firewall (' + varEsc(a.error) + ').';
+    if (a.error) return quien + ': no pudo leer sus reglas nftables (' + varEsc(a.error) + ').';
     if (a.atrasado) return quien + ': acuse atrasado' + (a.edad != null ? ' (hace ' + Math.round(a.edad) + ' s)' : '') + '.' + hist;
     if (a.agente && a.agente !== 'active') return quien + ': agente EN SOMBRA (' + varEsc(a.agente) + '): recibe la orden, no la aplica.' + hist;
     const liberadaYa = evs.some(e => e.evento === 'liberada') || String(a.fuera_de_alcance || '').startsWith('liberada');
@@ -5183,12 +5183,12 @@ const TOPO_TEXTO = {
     flujoTit: 'Qué corre en el host y cómo bloquea',
     flujo: [
       {paso: 'Servicio web (servidor_lab.py)', fichero: 'HTTP 80 · HTTPS 443', garantia: 'objetivo del tráfico legítimo y de los ataques. Sirve /estatico/<n>k (tamaños) y /api/* — ok, auth→401, perdido→404, fallo→500, lento: cada endpoint alimenta una variable concreta'},
-      {paso: 'Agente de enforcement', fichero: 'ppi-enforce-agent.timer (ciclo 10 s)', garantia: 'trae el feed del relay, verifica la firma ed25519 y aplica nftables'},
-      {paso: 'BLOCK = drop', fichero: 'set cyberflow_bloqueados (con timeout)', garantia: 'ip saddr @bloqueados → drop; caduca solo'},
-      {paso: 'LIMIT = rate-limit', fichero: 'set cyberflow_limitados (con timeout)', garantia: 'limit rate over 100/s burst 5 → drop el exceso'},
+      {paso: 'Agente de enforcement v2', fichero: 'ppi-enforce-agent-v2-dmz.service (ciclo 10 s)', garantia: 'trae el feed del relay, verifica la firma ed25519 y sincroniza nftables a través de cf-nft-helper (único comando con sudo). Hoy corre en SOMBRA: registra lo que haría'},
+      {paso: 'BLOCK = drop', fichero: 'set bloqueados (con timeout)', garantia: 'ip saddr @bloqueados → drop; caduca solo'},
+      {paso: 'LIMIT = rate-limit', fichero: 'set limitados (con timeout)', garantia: 'por origen: más de 100 paquetes/s (ráfaga 100) → drop el exceso. En el DNS (DC1), solo puerto 53: 30/min, ráfaga 18'},
     ],
-    cmd: 'table inet cyberflow {\\n  set cyberflow_bloqueados { type ipv4_addr; flags timeout }\\n  set cyberflow_limitados  { type ipv4_addr; flags timeout }\\n  chain entrada {\\n    type filter hook input priority filter - 10; policy accept;\\n    ip saddr @cyberflow_bloqueados drop\\n    ip saddr @cyberflow_limitados limit rate over 100/second burst 5 packets drop\\n  }\\n}',
-    nota: 'Tabla AISLADA (policy accept): solo cae lo que trae el feed; nunca gateways ni DNS. El sudoers del agente solo permite «nft» sin contraseña, nada más. Fail-safe: si la firma no verifica, no toca la tabla. Aparece con pocos paquetes PROPIOS porque el motor atribuye cada flujo a quien lo inicia, no al destino.',
+    cmd: 'table inet cyberflow_dmz {\\n  set bloqueados { type ipv4_addr; flags timeout; counter; }\\n  set limitados  { type ipv4_addr; flags timeout; counter; }\\n  chain entrada {\\n    type filter hook input priority -10; policy accept;\\n    ip saddr @bloqueados counter drop\\n    ip saddr @limitados update @tasa_origen { ip saddr limit rate over 100/second burst 100 packets } counter drop\\n  }\\n}',
+    nota: 'Tabla AISLADA (policy accept): solo cae lo que trae el feed; nunca gateways ni DNS. El sudoers del agente solo permite el helper cf-nft-helper, que valida cada orden antes de pasarla a nft. Fail-safe: si la firma no verifica, no toca la tabla. Aparece con pocos paquetes PROPIOS porque el motor atribuye cada flujo a quien lo inicia, no al destino.',
   },
   gateway: {
     que: 'El router de la red: enruta entre VLAN y es la puerta de enlace de cada una. En el laboratorio es un pfSense en alta disponibilidad (par A/B con VIP CARP) (VLAN 20 clientes/Kali · 30 DMZ · 60 sensor · 10 gestión). Todo el tráfico entre VLAN cruza el troncal, que es el que se espeja (SPAN) hacia el sensor.',
@@ -5199,7 +5199,7 @@ const TOPO_TEXTO = {
       {paso: 'Sensor sin salida a Internet', fichero: 'VLAN 60 · egress denegado', garantia: 'propiedad de seguridad: nada de bots externos'},
       {paso: 'Troncal espejado', fichero: 'SPAN del trunk → sensor', garantia: 'el sensor ve una COPIA, no está en línea: observa, no corta'},
     ],
-    nota: 'El escaneo de puertos se valida de extremo a extremo porque opera a nivel TCP/flujo, que el sensor observa por el espejo SPAN. En la validación del 14-oct el puerto 80 estaba ABIERTO E2E (Kali→DMZ), así que los ataques HTTP en claro —flood (http_abuse→LIMIT) y fuerza bruta sobre el endpoint de laboratorio (brute_force→BLOCK)— también se validaron de extremo a extremo; sobre 443 Suricata solo ve TLS cifrado. El DNS de alta entropía (DGA) se detecta aunque vaya al resolutor de gestión, no a la DMZ. El cortafuegos es de SOLO LECTURA para CyberFlow: la respuesta la aplica el agente en el host, no aquí. En el ARP spoofing la IP de la puerta de enlace pasa a verse con dos MAC: esa es la anomalía de capa 2 que mueve unique_src_mac_30s.',
+    nota: 'El escaneo de puertos se valida de extremo a extremo porque opera a nivel TCP/flujo, que el sensor observa por el espejo SPAN. En la validación del 14-oct el puerto 80 estaba ABIERTO E2E (Kali→DMZ), así que los ataques HTTP en claro —flood (http_abuse→LIMIT) y fuerza bruta sobre el endpoint de laboratorio (brute_force→BLOCK)— también se validaron de extremo a extremo; sobre 443 Suricata solo ve TLS cifrado. El DNS de alta entropía (DGA) se detecta aunque vaya al resolutor de gestión, no a la DMZ. El router es de SOLO LECTURA para CyberFlow: la respuesta la aplica el agente en el host, no aquí. En el ARP spoofing la IP de la puerta de enlace pasa a verse con dos MAC: esa es la anomalía de capa 2 que mueve unique_src_mac_30s.',
   },
   reentrenamiento: {
     que: 'El modelo envejece: la normalidad cambia con el tiempo. Cada noche el sistema sanea un lote, mide la deriva y, cuando toca, entrena y evalúa un candidato. Desplegarlo lo decide una persona: un modelo que se cambia solo podría aprender un ataque lento como normal.',
@@ -5373,14 +5373,14 @@ const TOPO_TEXTO = {
       {paso: 'Aplica', fichero: 'nftables', garantia: 'set con timeout nativo → caduca solo'},
     ],
     codigo: {
-      archivo: 'scripts/enforce/agente_enforce.py   (corre en el host protegido)',
+      archivo: '/opt/cyberflow/agente-v2/agente_enforce_v2.py   (corre en el host protegido)',
       pseudo: [
         'cada 10 s:',
         '  feed ← traer del relay (bastión)',
         '  si la firma ed25519 no verifica: no tocar nada (fail-safe)',
         '  sincronizar nftables: LIMIT=rate-limit, BLOCK=drop con timeout',
       ],
-      editar: 'nano ~/enforce/agente_enforce.py && sudo systemctl restart ppi-enforce-agent.timer   (en srv-dmz)',
+      editar: 'sudo nano /opt/cyberflow/agente-v2/agente_enforce_v2.py && sudo systemctl restart ppi-enforce-agent-v2-dmz   (en srv-dmz)',
     },
   },
   wazuh: {
@@ -5416,7 +5416,7 @@ const TOPO_TEXTO = {
   },
   panel: {
     que: 'Lee el registro del motor, el estado de los servicios y la tabla nftables. No ejecuta ninguna acción.',
-    nota: 'Solo lectura a propósito. Un panel que pudiera desbloquear una IP sería otro camino hacia el cortafuegos, y con su propia superficie de ataque.',
+    nota: 'Solo lectura a propósito. Un panel que pudiera desbloquear una IP sería otro camino hacia las reglas de los hosts, y con su propia superficie de ataque.',
   },
   relay: {
     que: 'El bastión copia el feed firmado del sensor a la red interna. Los hosts lo traen de aquí: nunca hablan con el sensor.',
@@ -5432,7 +5432,7 @@ const TOPO_TEXTO = {
       {paso: 'Por qué hace falta', fichero: 'red segmentada por VLAN', garantia: 'el host de la DMZ no habla con el sensor directamente; el bastión alcanza a los dos y hace de puente'},
       {paso: 'Por qué es seguro', fichero: 'relay TONTO', garantia: 'solo copia bytes: la firma la pone el sensor y la verifica el host, así que el bastión no puede forjar ni alterar un bloqueo'},
     ],
-    nota: 'Modelo «un feed / N agentes (pull)»: el sensor NO tiene credenciales de los hosts; publica una lista firmada y cada host la trae y la verifica. Por eso el bastión, aunque administre, no es un camino hacia el cortafuegos. Está en la lista «nunca bloquear» (como los gateways y el DNS) para que un falso positivo no corte la propia vía de gestión. La VM también expone el panel al exterior por Tailscale (vm-gestion.tail83bf9c.ts.net).',
+    nota: 'Modelo «un feed / N agentes (pull)»: el sensor NO tiene credenciales de los hosts; publica una lista firmada y cada host la trae y la verifica. Por eso el bastión, aunque administre, no es un camino hacia las reglas de los hosts. Está en la lista «nunca bloquear» (como los gateways y el DNS) para que un falso positivo no corte la propia vía de gestión. La VM también expone el panel al exterior por Tailscale (vm-gestion.tail83bf9c.ts.net).',
   },
   r_dns: {
     que: 'El DNS y directorio de la red. Las consultas DNS de las pruebas van contra esta máquina.',
@@ -5565,7 +5565,7 @@ const TOPO_TEXTO = {
     archivos: [
       { n: 'instalar / desplegar',       host: 'sensor',   d: 'levanta el sensor desde cero' },
       { n: 'relay-feed.sh',              host: 'bastion',  d: 'copia el feed firmado a los hosts' },
-      { n: 'ppi-enforce-agent (unidad)', host: 'servidor', d: 'temporizador del agente, ciclo 10 s' },
+      { n: 'ppi-enforce-agent-v2-dmz (unidad)', host: 'servidor', d: 'servicio del agente v2, ciclo 10 s' },
     ],
   },
   cf_mas: {
@@ -5661,7 +5661,7 @@ const TOPO_TEXTO = {
     nota: 'Total usado para el IF vigente: 335 202 ventanas normales (204 148 + 65 633 + 65 421). Sin ataques: los de la Kali se reservaron para medir detección después.',
   },
   c_limpia: {
-    que: 'Limpieza = acotar la ENTRADA, no tocar fórmulas. Se quitan el plano de control del cortafuegos (CARP 112, pfsync 240), la segunda copia de cada trama que el espejo enseña dos veces y las entidades declaradas fuera de alcance.',
+    que: 'Limpieza = acotar la ENTRADA, no tocar fórmulas. Se quitan el plano de control del router (CARP 112, pfsync 240), la segunda copia de cada trama que el espejo enseña dos veces y las entidades declaradas fuera de alcance.',
     flujoTit: 'Qué se quita y dónde',
     flujo: [
       {paso: 'Plano de control', fichero: 'motor_decision.py', garantia: '--excluir-protocolos 112,240'},
@@ -5785,7 +5785,6 @@ const TOPO_TEXTO = {
   a_hum: {
     que: 'Aprobación humana: el modelo en uso solo cambia con «promover», que lanza una persona. Deja copia del .toml y apunta motor y panel al candidato; «revertir» lo deshace. Se conservan 3 modelos de respaldo.',
     nota: 'Por qué no es automático: un modelo que se despliega solo puede aprender un ataque lento como normal. Todo lo automático ocurre fuera del modelo en uso.',
-    enlace: { href: '#s-aprendizaje', txt: 'Ver el estado en «Aprendizaje»' },
   },
 };
 
@@ -8282,7 +8281,7 @@ const SESION = JSON.parse(document.getElementById('datosSesion').textContent);
 // lo necesita quien opera, no solo quien desarrolla.
 // G1 (validacion externa, D5): el Mapa pasa a la vista operativa, porque es
 // donde se sigue el flujo de una IP.
-const DEV_SECS = ['s-variables', 's-vivo', 's-modelo', 's-comparacion', 's-simulacion', 's-aprendizaje'];
+const DEV_SECS = ['s-variables', 's-vivo', 's-modelo', 's-comparacion', 's-simulacion'];
 // G1: en operativo el MENU se queda en cinco entradas (Resumen, Escenario,
 // Alertas, Respuestas, Mapa). Estas secciones NO se ocultan: el recorrido
 // guiado, «Ver Actividad →», «Ver decisiones →» y las vistas relacionadas
