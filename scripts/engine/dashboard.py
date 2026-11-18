@@ -106,8 +106,11 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
      columna mas que la pantalla y el documento desborda en movil: el min-width:0
      deja que la pista encoja por debajo del contenido y la barra scrollee dentro. */
   .shell > * { min-width: 0; }
+  /* 18-nov: la barra es FIJA (no sticky): con sticky, al llegar al final de la página se quedaba
+     donde terminaba .shell y debajo asomaba el fondo. */
+  .shell { display: block; padding-left: 224px; }
   .side {
-    position: sticky; top: 0; align-self: start; height: 100vh;
+    position: fixed; left: 0; top: 0; bottom: 0; width: 224px; box-sizing: border-box; z-index: 30;
     border-right: 1px solid var(--border); background: var(--surface);
     padding: 1.3rem 0.9rem; display: flex; flex-direction: column; gap: 1rem;
     overflow-y: auto;
@@ -188,9 +191,9 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
        hijos, .wrap caia en una columna implicita 'auto' dimensionada al
        contenido (~827 px) y desbordaba a la derecha. Como bloques, cada hijo
        toma el ancho de la pantalla y la barra scrollea dentro de si. */
-    .shell { display: block; }
+    .shell { display: block; padding-left: 0; }
     .side {
-      position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border);
+      position: static; height: auto; width: auto; border-right: none; border-bottom: 1px solid var(--border);
       flex-direction: row; align-items: center; gap: 0.8rem; padding: 0.7rem 0.9rem; overflow-x: auto;
     }
     .side .brand small, .side .foot, .side-state span { display: none; }
