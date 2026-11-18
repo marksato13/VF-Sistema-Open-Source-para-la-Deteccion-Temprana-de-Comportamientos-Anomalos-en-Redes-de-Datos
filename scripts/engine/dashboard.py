@@ -454,6 +454,7 @@ catch (e) { document.documentElement.dataset.tema = 'claro'; }</script>
   .topo-pkt { filter: drop-shadow(0 0 4px var(--accent)); }
   .topo-pkt rect { fill: var(--accent); stroke: #fff; stroke-width: 1; }
   .topo-pkt path { fill: none; stroke: #0b1220; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+  .topo-pkt .pkt-ficha { stroke: #0b1220; stroke-width: 1.2; opacity: 0.5; }
   @media (prefers-reduced-motion: reduce) { .topo-pkt { display: none; } }
   .topo-cmd { background: #0b1220; border: 1px solid var(--border); border-radius: 7px;
     padding: 0.5rem 0.6rem; margin: 0.5rem 0; font: 11px var(--mono); color: var(--text-dim);
@@ -4726,9 +4727,13 @@ const TOPO_VISTAS = {
     // Flujo HORIZONTAL de izquierda a derecha: cada fase es una columna
     // (Hosts | Adquisicion | Analisis | Decision | Observabilidad) y el paquete
     // avanza de izquierda a derecha. Un punto lo recorre en vivo.
-    // El sobre recorre el flujo y BAJA por la columna de adquisición, pasando por tcpdump,
-    // el pcap, Suricata y eve.json (las dos ramas), antes de seguir al análisis.
-    packet: 'M374,99 L374,275 L628,139 L628,379 L894,139 L894,249 L1148,187 L1424,187 L1680,183',
+    // Dos sobres, uno por cada rama de adquisición (tcpdump y Suricata), que se UNIFICAN en
+    // Variables / 10 s y de ahí un tercer sobre sigue ordenado por el tronco hasta la salida.
+    packets: [
+      { d: 'M374,99 L374,275 L628,139 L628,215 L894,139 L894,249', dur: '5s', begin: '0s' },     // rama tcpdump (L2·L3·L4)
+      { d: 'M374,99 L374,275 L628,303 L628,379 L894,359 L894,249', dur: '5s', begin: '-2.5s' },   // rama Suricata (L7)
+      { d: 'M894,249 L1148,187 L1424,187 L1680,183', dur: '4s', begin: '0s' },                    // tronco ya unificado
+    ],
     grupos: [
       { x: 12,   y: 32, w: 200, h: 456, txt: 'Hosts · VLAN 20/30' },
       { x: 272,  y: 32, w: 460, h: 456, txt: 'Adquisición',          n: 1 },
@@ -6084,12 +6089,16 @@ function renderTopologia(status) {
     return `<path class="topo-edge ${vivo ? 'live' : 'dim'}" d="${e.d}"${PUNTA}/>` + label;
   }).join('');
 
-  // Un sobre (paquete de datos) recorre la tuberia en bucle: hace visible que el dato fluye.
-  const packet = v.packet
-    ? `<g class="topo-pkt"><rect x="-12" y="-8" width="24" height="16" rx="3"/>`
-      + `<path d="M-12,-6.5 L0,2 L12,-6.5"/>`
-      + `<animateMotion dur="9s" repeatCount="indefinite" calcMode="linear" path="${v.packet}"/></g>`
-    : '';
+  // Sobres (paquetes de datos) que recorren la tuberia en bucle: hacen visible que el dato
+  // fluye. Una vista puede tener varios (v.packets) para mostrar ramas que se unifican, o uno
+  // solo (v.packet). Cada sobre lleva una ficha doblada dentro para que se lea como "mensaje".
+  const sobre = (d, dur, begin) =>
+    `<g class="topo-pkt"><rect x="-12" y="-8.5" width="24" height="17" rx="3.5"/>`
+    + `<path d="M-12,-7 L0,2 L12,-7"/><path class="pkt-ficha" d="M-6,0.5 h12 M-6,3.4 h8"/>`
+    + `<animateMotion dur="${dur}" begin="${begin}" repeatCount="indefinite" calcMode="linear" path="${d}"/></g>`;
+  const packet = v.packets
+    ? v.packets.map(p => sobre(p.d, p.dur || '7s', p.begin || '0s')).join('')
+    : (v.packet ? sobre(v.packet, '9s', '0s') : '');
 
   // Los hosts no pasan por topoEstado: se dibujan con su IP y su rol.
   const hosts = v.nodos.filter(n => n.host).map(n => {
