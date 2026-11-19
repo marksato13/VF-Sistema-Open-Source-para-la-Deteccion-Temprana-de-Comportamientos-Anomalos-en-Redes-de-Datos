@@ -16,14 +16,14 @@
     "panel": {
       "servicio": "ppi-dashboard",
       "ruta": "/home/m4rk/cyberflow/scripts/engine/dashboard.py",
-      "sha256": "6a74fbd6e5172a9f861ee3997dc37646cbd9184b2c0b2193eb173442ebe94f2c",
-      "commit": "main (integracion 18-nov); tarjeta L3 corregida a 'sin regla ICMP' respecto de a0df76d. Desplegado: a0df76d (sha 6a74fbd6, con CRLF); falta redesplegar desde main",
+      "sha256": "1b93ecea971b80a341b2e6c39818f9c75032851b161ce1ada1c9a4222f33b72b",
+      "commit": "main (etiqueta estado-lab-2026-11-18); redesplegado desde main el 18-nov con tools/despliegue/desplegar_panel.py; tarjeta L3 'sin regla ICMP'",
       "url": "https://10.10.60.11:8788/"
     },
     "heuristicos_no_usado_por_motor": {
       "ruta": "/home/m4rk/cyberflow/scripts/engine/heuristicos.py",
-      "sha256": "bb49ca2f7ddcd6692fdb80c5a2c3dc480ed230ed2f4b7018e2e85d83c7b43554",
-      "nota": "version 2026-11-03.2 con icmp_flood copiada el 18-nov; el motor NO la importa (PYTHONPATH = arbol ec78ca5). En main heuristicos.py = ec78ca5 (2026-11-02.1). Al redesplegar el panel se devuelve esta copia a la de main"
+      "sha256": "5d30ffe6a8156c07954f39752e175becb7bfa0fd21a6119e1e6537b2a1217f68",
+      "nota": "copia en ~/cyberflow para el visor de codigo del panel; desde el 18-nov es la misma que la del motor (ec78ca5, 2026-11-02.1) y la de main"
     },
     "publicador": {
       "servicio": "ppi-publicar-feed-v2",
@@ -55,7 +55,6 @@
   ],
   "pendiente": [
     "icmp_flood no esta en el motor vivo ni en main (archivada en la etiqueta archivo/panel/cadena-v2-20261104); la tarjeta L3 de main dice 'sin regla ICMP'",
-    "Redesplegar el panel desde main (tools/despliegue/desplegar_panel.py) cuando Sensor1 vuelva",
     "Volver srv-dmz a sombra tras la exposicion: sudo rm .../aplicar.conf && daemon-reload && restart"
   ],
   "secretos": "No se incluye ninguna clave privada (feed) ni contrasena; pub.pem solo por hash",
