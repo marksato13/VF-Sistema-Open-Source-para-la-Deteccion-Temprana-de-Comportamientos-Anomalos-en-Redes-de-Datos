@@ -5,7 +5,6 @@ import unittest
 from pathlib import Path
 
 from scripts.engine import dashboard as db
-from scripts.engine import publicar_feed as pf
 from scripts.enforce import agente_enforce as ag
 
 
@@ -19,18 +18,9 @@ class Peticion(unittest.TestCase):
         self.assertEqual(json.loads(self.ruta.read_text())["id"], pet["id"])
         self.assertEqual(pet["ips"], ["10.10.20.30", "10.10.20.21"])
 
-    def test_el_publicador_la_mete_en_el_feed(self):
-        pet = db.pedir_preparacion(self.ruta, "admin", 1000.0)
-        lib = pf.liberaciones_pedidas(self.ruta, 1010.0)
-        self.assertEqual([(x["id"], x["ip"]) for x in lib],
-                         [(pet["id"], "10.10.20.30"), (pet["id"], "10.10.20.21")])
-
-    def test_una_peticion_vieja_no_viaja(self):
-        db.pedir_preparacion(self.ruta, "admin", 1000.0)
-        self.assertEqual(pf.liberaciones_pedidas(self.ruta, 1000.0 + 601), [])
-
-    def test_sin_peticion_no_hay_liberaciones(self):
-        self.assertEqual(pf.liberaciones_pedidas(self.dir / "no.json", 1000.0), [])
+    # 18-nov: las pruebas de publicar_feed.liberaciones_pedidas (publicador v1) se quitaron:
+    # el v1 esta deshabilitado en el laboratorio y main lleva el publicar_feed.py de ec78ca5,
+    # que no tiene esa funcion. En la cadena v2 la liberacion es «Dejar limpio» (control D5).
 
 
 class Agente(unittest.TestCase):
