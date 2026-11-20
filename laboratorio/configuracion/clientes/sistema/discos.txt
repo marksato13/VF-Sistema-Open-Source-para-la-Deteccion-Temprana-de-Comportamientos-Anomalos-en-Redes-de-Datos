@@ -1,0 +1,7 @@
+NAME                       SIZE TYPE FSTYPE      MOUNTPOINT
+sda                         30G disk             
+|-sda1                       1G part vfat        /boot/efi
+|-sda2                       2G part ext4        /boot
+`-sda3                    26.9G part LVM2_member 
+  `-ubuntu--vg-ubuntu--lv 13.5G lvm  ext4        /
+sr0                       1024M rom              

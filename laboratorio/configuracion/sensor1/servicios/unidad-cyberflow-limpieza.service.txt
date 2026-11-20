@@ -1,0 +1,17 @@
+# /etc/systemd/system/cyberflow-limpieza.service
+# Generado por scripts/setup/cyberflow_config.py desde configs/cyberflow.toml
+# NO editar a mano: cualquier cambio se pierde en la siguiente generacion.
+# Para cambiar algo, edita el .toml y vuelve a ejecutar el generador.
+
+[Unit]
+Description=CyberFlow - poda el anillo de PCAP
+# tcpdump -G rota por tiempo, pero con un nombre con fecha NO reutiliza
+# nombres, asi que nadie borra y el "anillo" crece para siempre. Medido en el
+# sensor de referencia: 6707 ficheros y 403 MB en un dia. Esta es la unica
+# poda que hay -por eso -W no hace falta, ver la unidad de captura-. El motor
+# ya ignora los ficheros viejos por su mtime, asi que esto no cambia lo que
+# analiza: solo impide que el disco se llene.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/find /var/lib/ppi-motor-capture -maxdepth 1 -name 'live-*.pcap' -mmin +15 -delete

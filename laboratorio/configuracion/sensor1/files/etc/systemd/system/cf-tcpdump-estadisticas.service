@@ -1,0 +1,17 @@
+[Unit]
+# Etapa 4. Pide a los dos tcpdump del Sensor1 sus contadores acumulados con SIGUSR1. NO para ni
+# reinicia ninguna captura: tcpdump escribe "N packets captured, M packets received by filter,
+# K packets dropped by kernel" en su stderr (journal de su unidad) y sigue (banco:
+# deploy/etapa4/banco/ensayo_tcpdump_estadisticas.sh, E1 anillo -G con -Z y E2 tubería).
+#   - anillo (ppi-motor-capture): el proceso principal ES tcpdump y corre como 'tcpdump' tras -Z,
+#     por eso hace falta root -> --kill-whom=main.
+#   - vía rápida (ppi-via-rapida@ens37): el proceso principal es bash y en la tubería hay un python;
+#     SIGUSR1 los MATARÍA (acción por defecto). Se señala SOLO el tcpdump hijo de ese bash.
+# Una unidad inactiva se salta sin error.
+Description=CyberFlow - estadisticas de tcpdump (SIGUSR1, sin parar la captura)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'systemctl is-active --quiet ppi-motor-capture.service && systemctl kill --kill-whom=main --signal=SIGUSR1 ppi-motor-capture.service; exit 0'
+# ($$ = $ literal para la shell; systemd expandiría $p como variable de entorno)
+ExecStart=/bin/sh -c 'p=$$(systemctl show -p MainPID --value ppi-via-rapida@ens37.service); [ "$${p:-0}" -gt 0 ] || exit 0; t=$$(pgrep -x -P "$$p" tcpdump) || exit 0; [ "$$(echo "$$t" | wc -l)" -eq 1 ] && kill -USR1 "$$t"; exit 0'

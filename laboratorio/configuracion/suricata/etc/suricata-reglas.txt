@@ -1,0 +1,8 @@
+total 135036
+drwxr-xr-x 2 root root     4096 Nov 20 09:42 .
+drwxr-xr-x 4 root root     4096 Nov 14 07:34 ..
+-rw-r--r-- 1 root root     3228 Nov 20 09:42 classification.config
+-rw-r--r-- 1 root root 46220011 Nov 20 09:42 suricata.rules
+-rw-r----- 1 root root 46211503 Nov 19 09:36 suricata.rules.anterior
+-rw-r--r-- 1 root root 45819731 Oct  2 01:39 suricata.rules.antes-S03
+69492 /var/lib/suricata/rules/suricata.rules

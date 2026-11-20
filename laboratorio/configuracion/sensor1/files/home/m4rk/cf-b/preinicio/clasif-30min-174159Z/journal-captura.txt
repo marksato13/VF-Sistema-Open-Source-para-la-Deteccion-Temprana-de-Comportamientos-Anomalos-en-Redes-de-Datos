@@ -1,0 +1,120 @@
+2026-11-10T17:12:00.440864+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:12:00.441229+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8438282 packets captured, 8438368 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:12:30.371283+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:12:30.371816+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8449648 packets captured, 8449715 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:13:00.255466+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:13:00.256645+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8465045 packets captured, 8465155 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:13:30.437048+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:13:30.437284+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8487593 packets captured, 8487690 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:14:00.431209+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:14:00.431715+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8508948 packets captured, 8509005 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:14:30.436836+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:14:30.437422+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8524871 packets captured, 8524871 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:15:00.444518+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:15:00.445154+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8545818 packets captured, 8546027 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:15:30.442006+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:15:30.442220+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8562155 packets captured, 8562201 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:16:00.070361+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:16:00.070597+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8579383 packets captured, 8580810 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:16:30.422893+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8589431 packets captured, 8589499 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:16:30.422907+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:17:00.441165+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:17:00.441405+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8599213 packets captured, 8600255 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:17:30.438460+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:17:30.438695+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8624883 packets captured, 8625025 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:18:00.039042+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:18:00.041392+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8646260 packets captured, 8646317 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:18:30.344377+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8666900 packets captured, 8667051 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:18:30.344402+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:19:00.439810+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:19:00.440739+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8681101 packets captured, 8681680 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:19:30.434039+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:19:30.434587+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8699237 packets captured, 8699352 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:20:00.445542+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:20:00.446676+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8714690 packets captured, 8714710 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:20:30.131712+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:20:30.131928+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8730737 packets captured, 8730893 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:21:00.126551+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:21:00.126768+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8755730 packets captured, 8756930 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:21:30.370095+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:21:30.370308+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8770801 packets captured, 8770841 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:22:00.371034+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:22:00.371569+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8790371 packets captured, 8790371 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:22:30.122659+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:22:30.122857+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8801379 packets captured, 8802009 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:23:00.171764+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:23:00.172100+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8822218 packets captured, 8822401 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:23:30.441514+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:23:30.441750+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8839708 packets captured, 8839785 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:24:00.438257+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:24:00.438783+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8849575 packets captured, 8849601 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:24:30.439004+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:24:30.439538+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8874379 packets captured, 8875027 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:25:00.450924+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8891961 packets captured, 8891963 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:25:00.450953+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:25:30.439347+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:25:30.439568+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8912713 packets captured, 8912716 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:26:00.434653+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:26:00.435226+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8935495 packets captured, 8935497 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:26:30.442402+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:26:30.442580+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8950639 packets captured, 8950801 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:27:00.443213+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:27:00.443427+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8977985 packets captured, 8978084 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:27:30.440332+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:27:30.440870+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 8994612 packets captured, 8994678 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:28:00.438950+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:28:00.439966+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9021284 packets captured, 9021299 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:28:30.438187+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:28:30.439069+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9040027 packets captured, 9040142 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:29:00.439872+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:29:00.440662+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9061184 packets captured, 9061310 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:29:30.433648+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:29:30.434704+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9067616 packets captured, 9067685 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:30:00.091577+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:30:00.093400+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9089465 packets captured, 9089497 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:30:30.120629+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9101949 packets captured, 9102019 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:30:30.121153+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:31:00.369849+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:31:00.371276+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9119516 packets captured, 9119557 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:31:30.126078+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:31:30.128078+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9137318 packets captured, 9137466 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:32:00.381854+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9158436 packets captured, 9158994 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:32:00.380929+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:32:30.368948+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:32:30.369495+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9182659 packets captured, 9182891 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:33:00.123538+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9197196 packets captured, 9197377 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:33:00.123511+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:33:30.438698+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:33:30.438900+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9216833 packets captured, 9216833 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:34:00.434890+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:34:00.435167+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9233790 packets captured, 9233916 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:34:30.441247+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:34:30.442000+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9258052 packets captured, 9258200 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:35:00.437836+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:35:00.438328+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9286406 packets captured, 9286489 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:35:30.083161+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:35:30.083501+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9294260 packets captured, 9294298 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:36:00.394179+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:36:00.396112+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9310275 packets captured, 9310286 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:36:30.434061+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:36:30.434252+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9323578 packets captured, 9323737 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:37:00.227980+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9335455 packets captured, 9335573 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:37:00.227998+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:37:30.438630+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:37:30.438831+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9355626 packets captured, 9355835 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:38:00.440291+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:38:00.441033+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9369823 packets captured, 9370099 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:38:30.435762+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:38:30.436448+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9391064 packets captured, 9391725 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:39:00.434039+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:39:00.434251+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9410948 packets captured, 9410951 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:39:30.437688+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:39:30.437878+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9430005 packets captured, 9430019 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:40:00.451875+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:40:00.452317+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9454181 packets captured, 9454195 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:40:30.122527+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:40:30.123187+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9475096 packets captured, 9475104 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:41:00.126901+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:41:00.128181+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9492524 packets captured, 9492526 packets received by filter, 0 packets dropped by kernel
+2026-11-10T17:41:30.135983+00:00 cyberflow-sensor systemd[1]: ppi-motor-capture.service: Sent signal SIGUSR1 to main process 1441 (tcpdump) on client request.
+2026-11-10T17:41:30.136211+00:00 cyberflow-sensor tcpdump[1441]: tcpdump: 9513192 packets captured, 9513192 packets received by filter, 0 packets dropped by kernel

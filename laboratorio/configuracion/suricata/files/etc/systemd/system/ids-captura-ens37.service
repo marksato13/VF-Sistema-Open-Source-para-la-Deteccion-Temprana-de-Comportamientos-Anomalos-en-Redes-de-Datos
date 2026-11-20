@@ -1,0 +1,15 @@
+[Unit]
+Description=Franco's SAC - ens37 en promiscuo y sin offloads (IDS pasivo)
+After=network-online.target
+Wants=network-online.target
+Before=suricata.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/ip link set ens37 up promisc on
+ExecStart=/usr/sbin/ethtool -K ens37 gro off lro off tso off gso off
+ExecStop=/usr/sbin/ip link set ens37 promisc off
+
+[Install]
+WantedBy=multi-user.target

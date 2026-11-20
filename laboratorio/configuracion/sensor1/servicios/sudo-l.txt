@@ -1,0 +1,38 @@
+Matching Defaults entries for m4rk on cyberflow-sensor:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User m4rk may run the following commands on cyberflow-sensor:
+    (ALL : ALL) ALL
+    (root) NOPASSWD: /usr/bin/systemctl is-active *, /usr/bin/systemctl
+        is-enabled *, /usr/bin/systemctl is-failed *, /usr/bin/systemctl show
+        *, /usr/bin/systemctl list-timers --no-pager *, /usr/bin/systemctl
+        status --no-pager *, /usr/bin/journalctl --no-pager *, /usr/sbin/nft
+        list *, /usr/bin/systemctl restart cyberflow-capture-nic
+        ppi-motor-capture ppi-motor ppi-dashboard cyberflow-panel-acceso
+        suricata, /usr/bin/systemctl restart ppi-motor, /usr/bin/systemctl
+        restart ppi-motor-capture, /usr/bin/systemctl restart ppi-dashboard,
+        /usr/bin/systemctl restart cyberflow-panel-acceso, /usr/bin/systemctl
+        restart cyberflow-capture-nic, /usr/bin/systemctl restart suricata,
+        /usr/bin/systemctl start cyberflow-limpieza.service, /usr/bin/systemctl
+        reset-failed *, /usr/bin/wc -l /var/log/suricata/eve.json,
+        /usr/bin/tail /var/log/suricata/eve.json, /usr/bin/tail -n [0-9]*
+        /var/log/suricata/eve.json, /usr/bin/grep * /var/log/suricata/eve.json,
+        /usr/bin/ls -la /var/lib/ppi-motor-capture/, /usr/bin/ls -l
+        /var/lib/ppi-motor-capture/, /usr/bin/du -sh
+        /var/lib/ppi-motor-capture/, /usr/bin/find /var/lib/ppi-motor-capture
+        -maxdepth 1 -name live-*.pcap*
+    (root) NOPASSWD: /usr/local/sbin/cf-capturar
+    (root) NOPASSWD: /usr/bin/systemctl daemon-reload
+    (root) NOPASSWD: /usr/bin/systemctl enable ppi-motor ppi-motor-capture
+        ppi-dashboard cyberflow-limpieza.timer cyberflow-capture-nic
+        cyberflow-panel-acceso
+    (root) NOPASSWD: /usr/bin/systemctl disable ppi-motor ppi-motor-capture
+        ppi-dashboard cyberflow-limpieza.timer cyberflow-capture-nic
+        cyberflow-panel-acceso
+    (root) NOPASSWD: /usr/bin/systemctl start cyberflow-acumular.service,
+        /usr/bin/systemctl enable cyberflow-acumular.timer, /usr/bin/systemctl
+        disable cyberflow-acumular.timer, /usr/bin/systemctl start
+        cyberflow-acumular.timer, /usr/bin/systemctl stop
+        cyberflow-acumular.timer

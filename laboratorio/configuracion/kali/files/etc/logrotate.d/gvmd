@@ -1,0 +1,10 @@
+/var/log/gvm/gvmd.log {
+	compress
+	missingok
+	notifempty
+	sharedscripts
+	copytruncate
+	su _gvm _gvm
+	create 0640 _gvm _gvm
+}
+

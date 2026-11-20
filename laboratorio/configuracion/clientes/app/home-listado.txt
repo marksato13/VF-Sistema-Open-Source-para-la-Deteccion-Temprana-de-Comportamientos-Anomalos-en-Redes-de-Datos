@@ -1,0 +1,19 @@
+total 64
+drwxr-x--- 11 adminclientes adminclientes 4096 Nov 13 17:34 .
+drwxr-xr-x  3 root          root          4096 Sep 23 05:13 ..
+-rw-------  1 adminclientes adminclientes 3530 Nov  3 11:34 .bash_history
+-rw-r--r--  1 adminclientes adminclientes  220 Mar 31  2024 .bash_logout
+-rw-r--r--  1 adminclientes adminclientes 3771 Mar 31  2024 .bashrc
+drwx------  2 adminclientes adminclientes 4096 Sep 23 05:24 .cache
+drwx------  3 adminclientes adminclientes 4096 Sep 23 18:32 .local
+-rw-r--r--  1 adminclientes adminclientes  807 Mar 31  2024 .profile
+drwx------  2 adminclientes adminclientes 4096 Sep 23 05:22 .ssh
+-rw-r--r--  1 adminclientes adminclientes    0 Sep 23 18:32 .sudo_as_admin_successful
+drwxrwxr-x  3 adminclientes adminclientes 4096 Nov  1 10:37 cf-3b-20261101T0721Z
+drwxrwxr-x  4 adminclientes adminclientes 4096 Nov 11 03:23 cf-b
+drwxrwxr-x  4 adminclientes adminclientes 4096 Nov 13 17:54 cf-dns
+drwxrwxr-x 11 adminclientes adminclientes 4096 Nov 11 17:39 cf-e4
+drwxrwxr-x  3 adminclientes adminclientes 4096 Nov  1 04:19 cf-paso2-20261101T0254Z
+-rw-rw-r--  1 adminclientes adminclientes  943 Nov 13 17:29 control_dns.sh
+drwxrwxr-x  3 adminclientes adminclientes 4096 Oct 28 23:17 laboratorio
+[rc=1] bash -c ls -la ~; for d in ~/cyberflow ~/cyberflow-e4; do [ -d "$d" ] && { echo "### $d"; ls -la "$d"; }; done

@@ -1,0 +1,2 @@
+Vmid                                       Name                                                                File                               Guest OS       Version   Annotation
+6      ------------------------------------------------------------SRV-DMZ-CYBERFLOW   [datastore1] SRV-DMZ-CYBERFLOW/SRV-DMZ-CYBERFLOW.vmx   ubuntu64Guest      vmx-21              

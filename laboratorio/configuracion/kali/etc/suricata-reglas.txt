@@ -1,0 +1,1 @@
+[sin sudo -n] bash -c ls -la /var/lib/suricata/rules/ 2>/dev/null; wc -l /var/lib/suricata/rules/*.rules 2>/dev/null | tail -1

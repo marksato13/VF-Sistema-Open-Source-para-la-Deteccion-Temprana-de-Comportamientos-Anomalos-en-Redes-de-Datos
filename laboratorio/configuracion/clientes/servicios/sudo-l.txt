@@ -1,0 +1,16 @@
+Matching Defaults entries for adminclientes on clientesadmin:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User adminclientes may run the following commands on clientesadmin:
+    (ALL : ALL) ALL
+    (root) NOPASSWD: /usr/bin/systemctl daemon-reload
+    (root) NOPASSWD: /usr/bin/systemctl start cyberflow-lab.target
+    (root) NOPASSWD: /usr/bin/systemctl stop cyberflow-lab.target
+    (root) NOPASSWD: /usr/bin/systemctl restart cyberflow-lab.target
+    (root) NOPASSWD: /usr/bin/systemctl is-active *
+    (root) NOPASSWD: /usr/bin/systemctl is-enabled *
+    (root) NOPASSWD: /usr/bin/systemctl show *
+    (root) NOPASSWD: /usr/bin/systemctl status --no-pager *
+    (root) NOPASSWD: /usr/bin/journalctl --no-pager *

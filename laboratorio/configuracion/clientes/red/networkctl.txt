@@ -1,0 +1,24 @@
+* Interfaces: 2, 3, 1
+       State: routable
+Online state: online
+     Address: 10.10.20.20 on ens34
+              10.10.20.21 on ens34
+              10.10.20.22 on ens34
+              10.10.20.23 on ens34
+              10.10.20.24 on ens34
+              10.10.20.25 on ens34
+              10.10.20.26 on ens34
+              fe80::20c:29ff:fef4:637 on ens34
+     Gateway: 10.10.20.1 on ens34
+         DNS: 10.10.10.20
+
+Nov 18 22:58:55 clientesadmin systemd-networkd[641]: lo: Link UP
+Nov 18 22:58:55 clientesadmin systemd-networkd[641]: lo: Gained carrier
+Nov 18 22:58:55 clientesadmin systemd-networkd[641]: Enumeration completed
+Nov 18 22:58:55 clientesadmin systemd[1]: Started systemd-networkd.service - Network Configuration.
+Nov 18 22:58:55 clientesadmin systemd-networkd[641]: ens34: Configuring with /run/systemd/network/10-netplan-ens34.network.
+Nov 18 22:58:55 clientesadmin systemd[1]: Starting systemd-networkd-wait-online.service - Wait for Network to be Configured...
+Nov 18 22:58:55 clientesadmin systemd-networkd[641]: ens34: Link UP
+Nov 18 22:58:55 clientesadmin systemd-networkd[641]: ens34: Gained carrier
+Nov 18 22:58:56 clientesadmin systemd-networkd[641]: ens34: Gained IPv6LL
+Nov 18 22:58:56 clientesadmin systemd[1]: Finished systemd-networkd-wait-online.service - Wait for Network to be Configured.

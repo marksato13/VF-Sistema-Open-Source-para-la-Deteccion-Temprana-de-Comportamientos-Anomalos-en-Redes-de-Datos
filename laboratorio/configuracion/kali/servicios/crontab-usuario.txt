@@ -1,0 +1,2 @@
+no crontab for adminatacante
+[rc=1] crontab -l

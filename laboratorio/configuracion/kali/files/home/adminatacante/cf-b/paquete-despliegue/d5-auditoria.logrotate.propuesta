@@ -1,0 +1,19 @@
+# PROPUESTA PARA REVISIÓN (NO instalada, NO desplegada). Sensor1: el publicador corre como m4rk (User=m4rk, UMask=0022 verificado en solo lectura el 10-nov).
+# Ruta propuesta (nueva, separada del ~/feed-v2/d5-auditoria existente de la D5 antigua):
+#   /home/m4rk/feed-v2/d5/control/     (canal de control; 0700 m4rk:m4rk)
+#   /home/m4rk/feed-v2/d5/auditoria/   (auditoría;      0750 m4rk:m4rk; ficheros 0640 m4rk:m4rk)
+# Quién escribe: el publicador (m4rk). Quién lee: el subcomando forzado sensor_control_d5.py (m4rk) y, si hace falta analizar, m4rk o root (archivadora). No hay grupo de lectura propio.
+# Sin `copytruncate` (el publicador abre el fichero por nombre en cada escritura), sin `dateext`, solo gzip: el lector reconoce `ruta`, `ruta.N` y `ruta.N.gz`.
+# `su m4rk m4rk` es necesario porque logrotate corre como root y el directorio es de m4rk. Probado en banco con logrotate 3.22.0 real forzado (-f), como usuario 1001.
+# Retención: 30 generaciones diarias como punto de partida (≥ campaña + análisis); fuera de retención el id queda «publicación sin confirmar». Ejecución diaria SIN verificar.
+/home/m4rk/feed-v2/d5/auditoria/d5-auditoria.jsonl {
+    su m4rk m4rk
+    daily
+    rotate 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    nocopytruncate
+    create 0640 m4rk m4rk
+}

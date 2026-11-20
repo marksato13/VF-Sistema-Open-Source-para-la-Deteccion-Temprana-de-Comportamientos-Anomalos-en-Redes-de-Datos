@@ -1,0 +1,4 @@
+default via 10.10.10.1 dev ens224 metric 100 
+default via 172.17.25.121 dev ens192 proto dhcp src 172.17.25.34 metric 1002 
+10.10.10.0/24 dev ens224 proto kernel scope link src 10.10.10.30 
+172.17.25.0/24 dev ens192 proto dhcp scope link src 172.17.25.34 metric 1002 

@@ -1,0 +1,1 @@
+adminclientes:1000:/home/adminclientes:/bin/bash

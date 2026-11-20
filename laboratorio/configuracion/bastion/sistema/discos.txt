@@ -1,0 +1,6 @@
+NAME    SIZE TYPE FSTYPE MOUNTPOINT
+sda      20G disk        
+|-sda1 18.9G part ext4   /
+|-sda2    1K part        
+`-sda5  1.1G part swap   [SWAP]
+sr0    1024M rom         

@@ -1,0 +1,14 @@
+
+
+
+
+Session 1
+---------
+Type                     : Local Session
+Source Ports             : 
+    Both                 : Gi1/0/23,Gi2/0/23
+Destination Ports        : Gi2/0/19
+    Encapsulation        : Replicate
+          Ingress        : Disabled
+
+Connection to 10.10.99.10 closed by remote host.

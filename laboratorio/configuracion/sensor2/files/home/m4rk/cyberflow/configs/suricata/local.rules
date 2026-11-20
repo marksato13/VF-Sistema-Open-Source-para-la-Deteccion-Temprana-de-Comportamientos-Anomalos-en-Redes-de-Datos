@@ -1,0 +1,2 @@
+# SID 1000001 se reserva para validar el laboratorio; no representa un ataque.
+alert icmp 10.20.0.0/24 any -> 10.30.0.10 any (msg:"PPI LAB ICMP TEST"; itype:8; sid:1000001; rev:1;)

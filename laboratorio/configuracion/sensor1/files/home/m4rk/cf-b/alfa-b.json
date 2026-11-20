@@ -1,0 +1,24 @@
+{
+ "alfa_experimento": 0.01,
+ "aplicacion": "se\u00f1ales del IF (senales-if.jsonl: score y alfa_superados) y su an\u00e1lisis; el IF no restringe con la pol\u00edtica if_senal",
+ "errores": [],
+ "motor": {
+  "alpha": 0.05,
+  "detector": "if_limpio_2026_10",
+  "distinto_a_proposito": true,
+  "umbral": -0.5693969936322356
+ },
+ "ok": true,
+ "registrado_en": 1794304399.218248,
+ "sha256": {
+  "manifiesto": "b3ad680595128189574527208e53058f613822f56f542f914faef6495aa2a9e7",
+  "modelo": "df547da098e51171aa267c8466edc6624bc1bd5c6b602639cc00bd4711a2fd60",
+  "publicador": "5733f17d39bfa5fe667ee13aecd133ea4859834899c5f4f6ea21360ebe4002a2"
+ },
+ "umbral_alfa_experimento": -0.6223889502095352,
+ "umbrales_publicador": {
+  "0.01": -0.6223889502095352,
+  "0.03": -0.5898535710336618,
+  "0.05": -0.5694578968203694
+ }
+}

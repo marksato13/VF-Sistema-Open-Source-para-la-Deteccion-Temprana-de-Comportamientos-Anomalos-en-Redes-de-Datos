@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly PATH=/usr/sbin:/usr/bin:/sbin:/bin
+readonly EVE_FILE=/var/log/suricata/eve.json
+
+if (( $# != 0 )); then
+  echo "Este comando no acepta argumentos" >&2
+  exit 64
+fi
+
+timestamp="$(/usr/bin/date --iso-8601=seconds)"
+service_state="$(/usr/bin/systemctl is-active suricata 2>/dev/null || true)"
+pid="$(/usr/bin/pgrep -o -x Suricata-Main || /usr/bin/pgrep -o -f '^/usr/bin/suricata ' || true)"
+
+eve_inode=0
+eve_lines=0
+eve_size=0
+if [[ -f "$EVE_FILE" ]]; then
+  eve_inode="$(/usr/bin/stat -c '%i' "$EVE_FILE")"
+  eve_lines="$(/usr/bin/wc -l < "$EVE_FILE")"
+  eve_size="$(/usr/bin/stat -c '%s' "$EVE_FILE")"
+fi
+
+cpu_percent=0
+memory_percent=0
+rss_kib=0
+if [[ -n "$pid" ]]; then
+  read -r cpu_percent memory_percent rss_kib < <(
+    /usr/bin/ps -p "$pid" -o %cpu=,%mem=,rss= | /usr/bin/awk 'NR == 1 {print $1, $2, $3}'
+  )
+fi
+
+/usr/bin/suricatasc -c dump-counters | /usr/bin/jq \
+  --arg timestamp "$timestamp" \
+  --arg service_state "$service_state" \
+  --argjson pid "${pid:-0}" \
+  --argjson cpu_percent "${cpu_percent:-0}" \
+  --argjson memory_percent "${memory_percent:-0}" \
+  --argjson rss_kib "${rss_kib:-0}" \
+  --argjson eve_inode "$eve_inode" \
+  --argjson eve_lines "$eve_lines" \
+  --argjson eve_size "$eve_size" '
+    .message as $counter |
+    {
+      schema_version: 1,
+      timestamp: $timestamp,
+      suricata: {
+        service_state: $service_state,
+        pid: $pid,
+        capture: {
+          kernel_packets: ($counter.capture.kernel_packets // 0),
+          kernel_drops: ($counter.capture.kernel_drops // 0),
+          kernel_ifdrops: ($counter.capture.kernel_ifdrops // 0)
+        },
+        decoder_invalid: ($counter.decoder.invalid // 0),
+        alert_queue_overflow: ($counter.detect.alert_queue_overflow // 0),
+        process: {
+          cpu_percent_lifetime: $cpu_percent,
+          memory_percent: $memory_percent,
+          rss_kib: $rss_kib
+        }
+      },
+      eve: {
+        path: "/var/log/suricata/eve.json",
+        inode: $eve_inode,
+        lines: $eve_lines,
+        size_bytes: $eve_size
+      }
+    }
+  '

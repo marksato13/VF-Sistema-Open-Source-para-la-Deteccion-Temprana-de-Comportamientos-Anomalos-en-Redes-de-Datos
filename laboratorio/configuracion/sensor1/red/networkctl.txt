@@ -1,0 +1,17 @@
+* Interfaces: 1, 3, 2
+       State: routable
+Online state: partial
+     Address: 10.10.60.11 on ens34
+              fe80::20c:29ff:fe3d:f944 on ens34
+     Gateway: 10.10.60.1 on ens34
+
+Nov 18 22:55:22 cyberflow-sensor systemd[1]: Starting systemd-networkd-wait-online.service - Wait for Network to be Configured...
+Nov 18 22:55:22 cyberflow-sensor systemd-networkd[704]: ens34: Link UP
+Nov 18 22:55:22 cyberflow-sensor systemd-networkd[704]: ens34: Gained carrier
+Nov 18 22:55:22 cyberflow-sensor systemd-networkd[704]: ens37: Link UP
+Nov 18 22:55:22 cyberflow-sensor systemd-networkd[704]: ens37: Gained carrier
+Nov 18 22:55:24 cyberflow-sensor systemd-networkd[704]: ens37: Gained IPv6LL
+Nov 18 22:55:24 cyberflow-sensor systemd-networkd[704]: ens34: Gained IPv6LL
+Nov 18 22:57:23 cyberflow-sensor systemd[1]: systemd-networkd-wait-online.service: Main process exited, code=exited, status=1/FAILURE
+Nov 18 22:57:23 cyberflow-sensor systemd[1]: systemd-networkd-wait-online.service: Failed with result 'exit-code'.
+Nov 18 22:57:23 cyberflow-sensor systemd[1]: Failed to start systemd-networkd-wait-online.service - Wait for Network to be Configured.

@@ -1,0 +1,2 @@
+bash: line 16: docker: orden no encontrada
+[rc=127] docker ps -a --format {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}

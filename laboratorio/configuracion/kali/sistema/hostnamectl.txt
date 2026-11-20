@@ -1,0 +1,17 @@
+  Static hostname: kali
+        Icon name: computer-vm
+          Chassis: vm 🖴
+Chassis Asset Tag: No Asset Tag
+       Machine ID: 7e571077aaa24751ae9504fb41d39909
+          Boot ID: 52e74330bb4d4b529d03ba966946ddc6
+     AF_VSOCK CID: 3169172043
+   Virtualization: vmware
+ Operating System: Kali GNU/Linux Rolling
+           Kernel: Linux 6.16.8+kali-amd64
+     Architecture: x86-64
+  Hardware Vendor: VMware, Inc.
+   Hardware Model: VMware Virtual Platform
+ Hardware Version: None
+ Firmware Version: 6.00
+    Firmware Date: Thu 2020-11-12
+     Firmware Age: 6y 1w

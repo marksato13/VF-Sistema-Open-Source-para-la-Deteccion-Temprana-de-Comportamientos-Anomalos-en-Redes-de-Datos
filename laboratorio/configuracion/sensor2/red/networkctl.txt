@@ -1,0 +1,19 @@
+* Interfaces: 3, 1, 2
+       State: routable
+Online state: online
+     Address: 10.10.60.12 on ens34
+              fe80::20c:29ff:fe35:255e on ens34
+     Gateway: 10.10.60.1 on ens34
+         DNS: 8.8.8.8
+              1.1.1.1
+
+Nov 18 22:55:15 cyberflow-sensor2 systemd-networkd[684]: Enumeration completed
+Nov 18 22:55:15 cyberflow-sensor2 systemd[1]: Started systemd-networkd.service - Network Configuration.
+Nov 18 22:55:15 cyberflow-sensor2 systemd-networkd[684]: ens34: Configuring with /run/systemd/network/10-netplan-ens34.network.
+Nov 18 22:55:15 cyberflow-sensor2 systemd[1]: Starting systemd-networkd-wait-online.service - Wait for Network to be Configured...
+Nov 18 22:55:15 cyberflow-sensor2 systemd-networkd[684]: ens34: Link UP
+Nov 18 22:55:15 cyberflow-sensor2 systemd-networkd[684]: ens34: Gained carrier
+Nov 18 22:55:25 cyberflow-sensor2 systemd-networkd[684]: ens34: Gained IPv6LL
+Nov 18 22:55:25 cyberflow-sensor2 systemd[1]: Finished systemd-networkd-wait-online.service - Wait for Network to be Configured.
+Nov 18 22:55:25 cyberflow-sensor2 systemd-networkd[684]: ens37: Link UP
+Nov 18 22:55:25 cyberflow-sensor2 systemd-networkd[684]: ens37: Gained carrier

@@ -1,0 +1,43 @@
+
+
+
+NAME: "c93xxL Stack", DESCR: "c93xxL Stack"
+PID: C9300L-24T-4G     , VID: V05  , SN: FVH2737L5JU
+
+NAME: "Switch 1", DESCR: "C9300L-24T-4G"
+PID: C9300L-24T-4G     , VID: V05  , SN: FVH2737L5JU
+
+NAME: "StackPort1/1", DESCR: "StackPort1/1"
+PID: STACK-T3-50CM     , VID: V01  , SN: LCC2726G9GT
+
+NAME: "StackPort1/2", DESCR: "StackPort1/2"
+PID: STACK-T3-50CM     , VID: V01  , SN: LCC2726G9HR
+
+NAME: "StackAdapter1/1", DESCR: "StackAdapter1/1"
+PID: C9300L-STACK      , VID: V02  , SN: FVH27101CTP
+
+NAME: "StackAdapter1/2", DESCR: "StackAdapter1/2"
+PID: C9300L-STACK      , VID: V02  , SN: FVH27100ZUB
+
+NAME: "Switch 1 - Power Supply B", DESCR: "Switch 1 - Power Supply B"
+PID: PWR-C1-350WAC-P   , VID: V02  , SN: ART2728SFML
+
+NAME: "Switch 2", DESCR: "C9300L-24T-4G"
+PID: C9300L-24T-4G     , VID: V05  , SN: FVH2737L5M5
+
+NAME: "StackPort2/1", DESCR: "StackPort2/1"
+PID: STACK-T3-50CM     , VID: V01  , SN: LCC2726G9HR
+
+NAME: "StackPort2/2", DESCR: "StackPort2/2"
+PID: STACK-T3-50CM     , VID: V01  , SN: LCC2726G9GT
+
+NAME: "StackAdapter2/1", DESCR: "StackAdapter2/1"
+PID: C9300L-STACK      , VID: V02  , SN: FVH27100ZHL
+
+NAME: "StackAdapter2/2", DESCR: "StackAdapter2/2"
+PID: C9300L-STACK      , VID: V02  , SN: FVH27101D7R
+
+NAME: "Switch 2 - Power Supply B", DESCR: "Switch 2 - Power Supply B"
+PID: PWR-C1-350WAC-P   , VID: V02  , SN: ART2728SBPU
+
+Connection to 10.10.99.10 closed by remote host.

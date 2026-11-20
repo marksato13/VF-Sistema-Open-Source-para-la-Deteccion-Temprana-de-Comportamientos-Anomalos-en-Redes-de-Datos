@@ -1,0 +1,3 @@
+* fwupd-refresh.service loaded failed failed Refresh fwupd metadata and update motd
+* sssd-nss.socket       loaded failed failed SSSD NSS Service responder socket
+* sssd-pam-priv.socket  loaded failed failed SSSD PAM Service responder private socket

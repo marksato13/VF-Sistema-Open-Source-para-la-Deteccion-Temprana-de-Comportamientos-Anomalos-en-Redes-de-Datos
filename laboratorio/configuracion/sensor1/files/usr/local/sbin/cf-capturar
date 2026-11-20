@@ -1,0 +1,2 @@
+#!/bin/bash
+exec /usr/bin/timeout "${2:-1800}" /usr/bin/tcpdump -i ens37 -w "$1" host 10.10.20.30

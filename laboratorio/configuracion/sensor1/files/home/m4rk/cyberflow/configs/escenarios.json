@@ -1,0 +1,57 @@
+{
+  "_nota": "Catalogo de escenarios para el panel. El panel NO ejecuta nada: muestra la explicacion, el comando exacto (para copiar y pegar en tu propia terminal SSH) y las variables que deberia mover, y luego visualiza la respuesta del modelo desde el registro. Cada comando es uno que ya se probo en el laboratorio.",
+  "normal": [
+    {
+      "id": "clientes",
+      "nombre": "Tráfico legítimo (6 perfiles)",
+      "donde": "VM clientes · adminclientes@10.10.20.20",
+      "entidades": "10.10.20.21-.26",
+      "explica": "Los seis perfiles (ofimática, navegación, descargas, aplicación, ligero, errático) golpean al servidor con patrones realistas y una curva diaria. Es lo que el modelo aprende como normal.",
+      "comando": "sudo systemctl start cyberflow-lab.target",
+      "variables": ["packet_rate_10s", "http_request_rate_60s", "dns_query_rate_60s", "tls_session_rate_60s"],
+      "responde": "El modelo NO debe alertar: son las ventanas dentro de la norma con la que se calibro el umbral."
+    }
+  ],
+  "anomalo": [
+    {
+      "id": "escaneo",
+      "nombre": "Escaneo de puertos",
+      "donde": "Kali · adminatacante@10.10.20.30",
+      "entidades": "10.10.20.30",
+      "explica": "Barrido TCP de todos los puertos del servidor. Muchos intentos de flujo a puertos cerrados en poco tiempo.",
+      "comando": "nmap -sT -sV -T4 -p- --open 10.10.30.10",
+      "variables": ["syn_rate_10s", "flow_attempt_rate_10s", "rst_ratio_10s", "unique_dst_port_ratio_30s"],
+      "responde": "Detectado (medido: 79% de las ventanas). syn_rate y flow_attempt_rate se disparan."
+    },
+    {
+      "id": "web",
+      "nombre": "Escaneo de vulnerabilidades web",
+      "donde": "Kali · adminatacante@10.10.20.30",
+      "entidades": "10.10.20.30",
+      "explica": "nikto prueba cientos de rutas contra el servidor HTTP: muchas peticiones y muchos 404 en rafaga.",
+      "comando": "nikto -h http://10.10.30.10 -maxtime 120s",
+      "variables": ["http_request_rate_60s", "http_error_ratio_60s", "http_method_entropy_60s"],
+      "responde": "Detectado (medido: 87%). http_request_rate y http_error_ratio se disparan."
+    },
+    {
+      "id": "fuerzabruta",
+      "nombre": "Fuerza bruta / flood HTTP",
+      "donde": "Kali · adminatacante@10.10.20.30",
+      "entidades": "10.10.20.30",
+      "explica": "20 procesos en paralelo lanzando POST /login durante 2 min: cientos de conexiones cortas por segundo desde una IP.",
+      "comando": "DUR=120; F=$(($(date +%s)+DUR)); for i in $(seq 20); do (while [ $(date +%s) -lt $F ]; do curl -s -o /dev/null -m2 --data user=admin&pass=x$RANDOM http://10.10.30.10/login; done) & done; wait",
+      "variables": ["flow_attempt_rate_10s", "http_request_rate_60s", "syn_rate_10s"],
+      "responde": "Detectado (medido: 87%). ~16000 peticiones en 2 min desde una sola IP."
+    },
+    {
+      "id": "arpspoof",
+      "nombre": "ARP spoofing (capa 2)",
+      "donde": "Kali · adminatacante@10.10.20.30 · NECESITA sudo",
+      "entidades": "10.10.20.30 · 10.10.20.1 · 10.10.20.20",
+      "explica": "La Kali dice ser la puerta de enlace 10.10.20.1. El espejo ve esa IP de pronto con dos MAC: la señal de suplantacion de capa 2.",
+      "comando": "sudo sysctl -w net.ipv4.ip_forward=1; sudo timeout 90 arpspoof -i eth0 -t 10.10.20.20 10.10.20.1",
+      "variables": ["unique_src_mac_30s", "mac_ip_binding_changes_60s", "arp_request_rate_10s"],
+      "responde": "NO detectado por el modelo global (0%): la señal L2 es real (unique_src_mac sube) pero se diluye entre 31 variables. Es el caso que pide una regla determinista, no ML. La deteccion de esto es trabajo futuro."
+    }
+  ]
+}

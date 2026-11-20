@@ -1,0 +1,21 @@
+NEXT                             LEFT LAST                              PASSED UNIT                             ACTIVATES
+Fri 2026-11-20 10:05:01 UTC        9s Thu 2026-11-19 16:06:17 UTC      17h ago motd-news.timer                  motd-news.service
+Fri 2026-11-20 10:09:25 UTC  4min 33s Fri 2026-11-20 10:04:25 UTC      26s ago francos-zbx-suricata-salud.timer francos-zbx-suricata-salud.service
+Fri 2026-11-20 10:10:00 UTC      5min Fri 2026-11-20 10:00:42 UTC  4min 9s ago sysstat-collect.timer            sysstat-collect.service
+Fri 2026-11-20 11:50:32 UTC  1h 45min Fri 2026-11-20 10:03:42 UTC  1min 9s ago fwupd-refresh.timer              fwupd-refresh.service
+Fri 2026-11-20 15:42:26 UTC  5h 37min Fri 2026-11-20 04:33:42 UTC 5h 31min ago apt-daily.timer                  apt-daily.service
+Fri 2026-11-20 22:07:55 UTC       12h Thu 2026-11-19 22:07:55 UTC      11h ago update-notifier-download.timer   update-notifier-download.service
+Fri 2026-11-20 22:17:51 UTC       12h Thu 2026-11-19 22:17:51 UTC      11h ago systemd-tmpfiles-clean.timer     systemd-tmpfiles-clean.service
+Sat 2026-11-21 00:00:00 UTC       13h Fri 2026-11-20 00:00:42 UTC      10h ago dpkg-db-backup.timer             dpkg-db-backup.service
+Sat 2026-11-21 00:00:00 UTC       13h Fri 2026-11-20 00:00:42 UTC      10h ago logrotate.timer                  logrotate.service
+Sat 2026-11-21 00:07:00 UTC       14h Fri 2026-11-20 00:07:42 UTC       9h ago sysstat-summary.timer            sysstat-summary.service
+Sat 2026-11-21 06:34:52 UTC       20h Fri 2026-11-20 06:27:42 UTC 3h 37min ago apt-daily-upgrade.timer          apt-daily-upgrade.service
+Sat 2026-11-21 08:12:24 UTC       22h Fri 2026-11-20 04:32:42 UTC 5h 32min ago man-db.timer                     man-db.service
+Sun 2026-11-22 03:10:06 UTC 1 day 17h Sun 2026-11-15 04:51:01 UTC            - e2scrub_all.timer                e2scrub_all.service
+Mon 2026-11-23 00:41:36 UTC    2 days Mon 2026-11-16 00:32:19 UTC            - fstrim.timer                     fstrim.service
+Mon 2026-11-23 01:17:20 UTC    2 days Tue 2026-11-10 08:35:01 UTC            - update-notifier-motd.timer       update-notifier-motd.service
+-                                   - -                                      - apport-autoreport.timer          apport-autoreport.service
+-                                   - -                                      - snapd.snap-repair.timer          snapd.snap-repair.service
+-                                   - -                                      - ua-timer.timer                   ua-timer.service
+
+18 timers listed.

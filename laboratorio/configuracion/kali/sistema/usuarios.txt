@@ -1,0 +1,1 @@
+adminatacante:1000:/home/adminatacante:/usr/bin/zsh

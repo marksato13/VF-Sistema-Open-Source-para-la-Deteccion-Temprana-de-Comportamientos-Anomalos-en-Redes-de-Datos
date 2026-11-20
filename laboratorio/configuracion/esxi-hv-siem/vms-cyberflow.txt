@@ -1,0 +1,4 @@
+Vmid                                       Name                                                                    File                                   Guest OS       Version   Annotation
+3      ------------------------------------------------------------SENSOR1-CYBERFLOW   [datastore1] SENSOR1-CYBERFLOW/SENSOR1-CYBERFLOW.vmx           ubuntu64Guest      vmx-21              
+4      ------------------------------------------------------------SENSOR2-CYBERFLOW   [datastore1] SENSOR2-CYBERFLOW/SENSOR2-CYBERFLOW.vmx           ubuntu64Guest      vmx-21              
+8      VM-SURICATA                                                                     [datastore1] VM-SURICATA-CYBERFLOW/VM-SURICATA-CYBERFLOW.vmx   ubuntu64Guest      vmx-21              

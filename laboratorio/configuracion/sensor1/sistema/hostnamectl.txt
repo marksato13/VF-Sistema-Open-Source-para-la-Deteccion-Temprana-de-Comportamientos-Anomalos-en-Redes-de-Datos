@@ -1,0 +1,14 @@
+ Static hostname: cyberflow-sensor
+       Icon name: computer-vm
+         Chassis: vm 🖴
+      Machine ID: 55c8994bde4b44318aa8221dbdc8c77a
+         Boot ID: 7b2b81fd018b45bd98b8c5fdde12420b
+  Virtualization: vmware
+Operating System: Ubuntu 24.04.2 LTS
+          Kernel: Linux 6.8.0-53-generic
+    Architecture: x86-64
+ Hardware Vendor: VMware, Inc.
+  Hardware Model: VMware20,1
+Firmware Version: VMW201.00V.24224532.B64.2408191502
+   Firmware Date: Mon 2024-08-19
+    Firmware Age: 2y 3month 1d

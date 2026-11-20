@@ -1,0 +1,103 @@
+### cpu
+   CPU Packages: 1
+   CPU Cores: 6
+   CPU Threads: 6
+   Hyperthreading Active: false
+   Hyperthreading Supported: false
+   Hyperthreading Enabled: true
+   HV Support: 3
+### memoria
+   Physical Memory: 33960333312 Bytes
+   Reliable Memory: 0 Bytes
+   NUMA Node Count: 1
+### plataforma
+Platform Information
+   UUID: 0x4c 0x4c 0x45 0x44 0x0 0x44 0x32 0x10 0x80 0x38 0xb1 0xc0 0x4f 0x31 0x56 0x33
+   Product Name: Precision 7920 Tower
+   Vendor Name: Dell Inc.
+   Serial Number: 1D281V3
+   Enclosure Serial Number: 1D281V3
+   BIOS Asset Tag: 
+   IPMI Supported: false
+### nics
+Name    PCI Device    Driver  Admin Status  Link Status  Speed  Duplex  MAC Address         MTU  Description
+------  ------------  ------  ------------  -----------  -----  ------  -----------------  ----  -----------
+vmnic0  0000:00:1f.6  ne1000  Up            Up             100  Full    cc:96:e5:13:78:e8  1500  Intel Corporation Ethernet Connection (3) I219-LM
+vmnic1  0000:02:00.0  igbn    Up            Up            1000  Full    cc:96:e5:13:76:30  1500  Intel Corporation I210 Gigabit Network Connection
+vmnic2  0000:65:00.0  igbn    Up            Up             100  Full    50:7c:6f:35:77:c5  1500  Intel Corporation Ethernet Server Adapter I210-T1
+### vmk
+Name  IPv4 Address  IPv4 Netmask   IPv4 Broadcast  Address Type  Gateway        DHCP DNS
+----  ------------  -------------  --------------  ------------  -------------  --------
+vmk0  172.17.25.2   255.255.255.0  172.17.25.255   STATIC        172.17.25.121     false
+### vswitch
+vSwitch0
+   Name: vSwitch0
+   Class: cswitch
+   Num Ports: 2970
+   Used Ports: 4
+   Configured Ports: 128
+   MTU: 1500
+   CDP Status: listen
+   Beacon Enabled: false
+   Beacon Interval: 1
+   Beacon Threshold: 3
+   Beacon Required By: 
+   Uplinks: vmnic0
+   Portgroups: VM Network, Management Network
+
+vSwitch1
+   Name: vSwitch1
+   Class: cswitch
+   Num Ports: 2970
+   Used Ports: 8
+   Configured Ports: 128
+   MTU: 1500
+   CDP Status: listen
+   Beacon Enabled: false
+   Beacon Interval: 1
+   Beacon Threshold: 3
+   Beacon Required By: 
+   Uplinks: vmnic1
+   Portgroups: LAN, VLAN30, VLAN20, VLAN10, VLAN60
+
+vSwitch2
+   Name: vSwitch2
+   Class: cswitch
+   Num Ports: 2970
+   Used Ports: 6
+   Configured Ports: 128
+   MTU: 1500
+   CDP Status: listen
+   Beacon Enabled: false
+   Beacon Interval: 1
+   Beacon Threshold: 3
+   Beacon Required By: 
+   Uplinks: vmnic2
+   Portgroups: PG-CYBERFLOW-SPAN
+### portgroup
+Name                Virtual Switch  Active Clients  VLAN ID
+------------------  --------------  --------------  -------
+LAN                 vSwitch1                     0        0
+Management Network  vSwitch0                     1        0
+PG-CYBERFLOW-SPAN   vSwitch2                     3     4095
+VLAN10              vSwitch1                     0       10
+VLAN20              vSwitch1                     0       20
+VLAN30              vSwitch1                     0       30
+VLAN60              vSwitch1                     5       60
+VM Network          vSwitch0                     0        0
+### almacen
+Mount Point                                        Volume Name                                 UUID                                 Mounted  Type            Size          Free
+-------------------------------------------------  ------------------------------------------  -----------------------------------  -------  ------  ------------  ------------
+/vmfs/volumes/6ae4a146-7abddfde-0e14-cc96e5137630  datastore1                                  6ae4a146-7abddfde-0e14-cc96e5137630     true  VMFS-6  374467461120   96017055744
+/vmfs/volumes/6ae4a146-67497378-a68a-cc96e5137630  OSDATA-6ae4a146-67497378-a68a-cc96e5137630  6ae4a146-67497378-a68a-cc96e5137630     true  VMFSOS  128580583424  125355163648
+/vmfs/volumes/235fb885-0f48e41e-5fad-c7e9c372e3a4  BOOTBANK1                                   235fb885-0f48e41e-5fad-c7e9c372e3a4     true  vfat      4293591040    4022861824
+/vmfs/volumes/ac929b04-f04204d5-7d87-34bbaee93e92  BOOTBANK2                                   ac929b04-f04204d5-7d87-34bbaee93e92     true  vfat      4293591040    4293525504
+### ntp
+   Enabled: false
+   Loglevel: warning
+   PID: 0
+   Runtime Seconds: 0
+   Servers: 
+   Service Providing Kernel Time: 
+   Time Service Enabled: false
+   Time Synchronized: false

@@ -1,0 +1,1 @@
+adminsuricata:1000:/home/adminsuricata:/bin/bash

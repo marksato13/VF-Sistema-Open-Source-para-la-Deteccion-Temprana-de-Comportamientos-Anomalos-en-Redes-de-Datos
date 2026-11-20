@@ -1,0 +1,3 @@
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP> 
+ens34            UP             00:0c:29:bb:0f:d5 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+ens37            UP             00:0c:29:bb:0f:df <BROADCAST,MULTICAST,PROMISC,UP,LOWER_UP> 

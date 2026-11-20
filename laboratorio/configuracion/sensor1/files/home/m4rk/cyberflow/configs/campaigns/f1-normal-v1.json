@@ -1,0 +1,50 @@
+{
+  "schema_version": "f1-normal-v1",
+  "feature_schema": "multilayer-v1",
+  "default_repetitions": 5,
+  "partition_by_repetition": {
+    "1": "train",
+    "2": "train",
+    "3": "train",
+    "4": "validation",
+    "5": "test"
+  },
+  "warmup_seconds": 60,
+  "settle_seconds": 9,
+  "cooldown_seconds": 30,
+  "minimum_free_after_plan_bytes": 21474836480,
+  "profiles": [
+    {"id":"DNS-VALID-10","scenario":"dns-valid","args":["10"],"estimated_pcap_bytes":100000,"stratum":"light","feature_coverage":["packet_rate_10s","byte_rate_10s","mean_ip_len_10s","flow_attempt_rate_10s","unique_dst_ip_ratio_30s","unique_dst_port_ratio_30s","dns_nxdomain_ratio_60s"]},
+    {"id":"DNS-VALID-200","scenario":"dns-valid","args":["200"],"estimated_pcap_bytes":150000,"stratum":"burst","feature_coverage":["packet_rate_10s","byte_rate_10s","flow_attempt_rate_10s","dns_nxdomain_ratio_60s"]},
+    {"id":"DNS-MIXED-20-2","scenario":"dns-mixed","args":["20","2"],"estimated_pcap_bytes":100000,"stratum":"legitimate-error","feature_coverage":["dns_nxdomain_ratio_60s"]},
+    {"id":"DNS-MIXED-50-10","scenario":"dns-mixed","args":["50","10"],"estimated_pcap_bytes":150000,"stratum":"legitimate-error","feature_coverage":["dns_nxdomain_ratio_60s"]},
+    {"id":"PING-10","scenario":"ping","args":["10","1"],"estimated_pcap_bytes":100000,"stratum":"light","feature_coverage":["icmp_ratio_10s"]},
+    {"id":"PING-100","scenario":"ping","args":["100","0.2"],"estimated_pcap_bytes":150000,"stratum":"burst","feature_coverage":["icmp_ratio_10s","packet_rate_10s"]},
+    {"id":"HTTP-10MB","scenario":"http","args":["10MB","2M"],"estimated_pcap_bytes":12000000,"stratum":"small-transfer","feature_coverage":["packet_rate_10s","byte_rate_10s","mean_ip_len_10s","large_ip_ratio_10s","syn_rate_10s","syn_completion_ratio_10s","http_error_ratio_60s"]},
+    {"id":"HTTP-100MB","scenario":"http","args":["100MB","10M"],"estimated_pcap_bytes":115000000,"stratum":"medium-transfer","feature_coverage":["byte_rate_10s","large_ip_ratio_10s"]},
+    {"id":"HTTP-500MB","scenario":"http","args":["500MB","20M"],"estimated_pcap_bytes":575000000,"stratum":"heavy-transfer","feature_coverage":["byte_rate_10s","large_ip_ratio_10s"]},
+    {"id":"HTTP-1GB","scenario":"http","args":["1GB","20M"],"estimated_pcap_bytes":1150000000,"stratum":"heavy-transfer","feature_coverage":["byte_rate_10s","large_ip_ratio_10s"]},
+    {"id":"HTTPS-10MB","scenario":"https","args":["10MB","2M"],"estimated_pcap_bytes":12000000,"stratum":"small-transfer","feature_coverage":["large_ip_ratio_10s","tls_session_rate_60s"]},
+    {"id":"HTTPS-100MB","scenario":"https","args":["100MB","10M"],"estimated_pcap_bytes":115000000,"stratum":"medium-transfer","feature_coverage":["byte_rate_10s","large_ip_ratio_10s","tls_session_rate_60s"]},
+    {"id":"HTTPS-500MB","scenario":"https","args":["500MB","20M"],"estimated_pcap_bytes":575000000,"stratum":"heavy-transfer","feature_coverage":["byte_rate_10s","large_ip_ratio_10s","tls_session_rate_60s"]},
+    {"id":"HTTPS-1GB","scenario":"https","args":["1GB","20M"],"estimated_pcap_bytes":1150000000,"stratum":"heavy-transfer","feature_coverage":["byte_rate_10s","large_ip_ratio_10s","tls_session_rate_60s"]},
+    {"id":"HTTP-404-5","scenario":"http-missing","args":["5"],"estimated_pcap_bytes":200000,"stratum":"legitimate-error","feature_coverage":["http_error_ratio_60s","syn_rate_10s","syn_completion_ratio_10s"]},
+    {"id":"TLS-SESSIONS-20","scenario":"https-sessions","args":["20"],"estimated_pcap_bytes":1000000,"stratum":"session-churn","feature_coverage":["tls_session_rate_60s","flow_attempt_rate_10s","syn_rate_10s"]},
+    {"id":"HTTP-C2","scenario":"http-concurrent","args":["2","100MB","10M"],"estimated_pcap_bytes":230000000,"stratum":"concurrent","feature_coverage":["flow_attempt_rate_10s","byte_rate_10s","large_ip_ratio_10s"]},
+    {"id":"HTTP-C4","scenario":"http-concurrent","args":["4","100MB","5M"],"estimated_pcap_bytes":460000000,"stratum":"concurrent","feature_coverage":["flow_attempt_rate_10s","byte_rate_10s","large_ip_ratio_10s"]},
+    {"id":"HTTP-C8","scenario":"http-concurrent","args":["8","100MB","2M"],"estimated_pcap_bytes":920000000,"stratum":"concurrent","feature_coverage":["flow_attempt_rate_10s","byte_rate_10s","large_ip_ratio_10s"]},
+    {"id":"TCP-REFUSED-5","scenario":"tcp-refused","args":["5"],"estimated_pcap_bytes":100000,"stratum":"legitimate-error","feature_coverage":["syn_rate_10s","syn_completion_ratio_10s","rst_ratio_10s"]},
+    {"id":"TCP-50M","scenario":"iperf-tcp","args":["50M","20"],"estimated_pcap_bytes":140000000,"stratum":"throughput","feature_coverage":["packet_rate_10s","byte_rate_10s","large_ip_ratio_10s","syn_completion_ratio_10s"]},
+    {"id":"TCP-100M","scenario":"iperf-tcp","args":["100M","20"],"estimated_pcap_bytes":280000000,"stratum":"throughput","feature_coverage":["packet_rate_10s","byte_rate_10s","large_ip_ratio_10s"]},
+    {"id":"TCP-200M","scenario":"iperf-tcp","args":["200M","20"],"estimated_pcap_bytes":560000000,"stratum":"throughput-ceiling","feature_coverage":["packet_rate_10s","byte_rate_10s","large_ip_ratio_10s"]},
+    {"id":"UDP-10M","scenario":"iperf-udp","args":["10M","20"],"estimated_pcap_bytes":28000000,"stratum":"throughput","feature_coverage":["packet_rate_10s","byte_rate_10s","large_ip_ratio_10s","flow_attempt_rate_10s"]},
+    {"id":"UDP-25M","scenario":"iperf-udp","args":["25M","20"],"estimated_pcap_bytes":70000000,"stratum":"throughput","feature_coverage":["packet_rate_10s","byte_rate_10s","large_ip_ratio_10s"]},
+    {"id":"UDP-50M","scenario":"iperf-udp","args":["50M","20"],"estimated_pcap_bytes":140000000,"stratum":"throughput-ceiling","feature_coverage":["packet_rate_10s","byte_rate_10s","large_ip_ratio_10s"]},
+    {"id":"MIXED-LIGHT","scenario":"mixed-light","args":[],"estimated_pcap_bytes":200000000,"stratum":"mixed-legitimate","feature_coverage":["packet_rate_10s","byte_rate_10s","large_ip_ratio_10s","flow_attempt_rate_10s","syn_rate_10s","syn_completion_ratio_10s","dns_nxdomain_ratio_60s"]}
+  ],
+  "known_gaps": [
+    "SSH/SFTP requiere una identidad técnica exclusiva antes de incorporarse.",
+    "La topología posee un único destino DMZ; falta variación legítima alta de unique_dst_ip_ratio_30s.",
+    "No ejecutar la matriz completa sin respaldo o ampliación de almacenamiento en VM01."
+  ]
+}

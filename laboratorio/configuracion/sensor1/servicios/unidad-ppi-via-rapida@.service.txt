@@ -1,0 +1,27 @@
+# /etc/systemd/system/ppi-via-rapida@.service
+[Unit]
+# Etapa 4 (SOMBRA). Igual que deploy/enforcement/candidato-etapa3/ppi-via-rapida@.service (filtro VLAN
+# del cierre de la Etapa 3), con la ruta ABSOLUTA del detector candidato. Instancia: ens37.
+# tcpdump corre como m4rk (sin -Z): m4rk puede pedirle estadísticas con SIGUSR1 sin sudo; la
+# línea "captured / received by filter / dropped by kernel" va al journal de esta unidad.
+Description=CyberFlow - via rapida de escaneo en %i (Etapa 4, sombra)
+After=network-online.target ppi-motor-capture.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=m4rk
+Group=m4rk
+WorkingDirectory=/home/m4rk/cyberflow
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+ExecStart=/bin/bash -c 'set -o pipefail; \
+  /usr/bin/tcpdump -i %i -n -U --immediate-mode -s 128 -w - "tcp or (vlan and tcp)" \
+  | /home/m4rk/cyberflow/.venv/bin/python /home/m4rk/cyberflow-e4/ec78ca5/scripts/engine/detector_rapido.py --flujo \
+      --salida /home/m4rk/feed-v2/senales-rapidas.jsonl \
+      --resumen /home/m4rk/feed-v2/via-rapida-resumen.jsonl'
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

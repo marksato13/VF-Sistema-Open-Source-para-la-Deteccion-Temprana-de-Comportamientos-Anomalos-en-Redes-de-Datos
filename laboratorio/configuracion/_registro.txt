@@ -1,0 +1,21 @@
+10:04:21 inicio: salida /tmp/cf-ext
+10:04:25 bastion: OK (338 ficheros)
+10:04:33 sensor1: OK (335 ficheros)
+10:04:38 sensor2: OK (139 ficheros)
+10:04:38 srvdmz: SIN ACCESO: ssh: connect to host 10.10.30.10 port 22: No route to host
+10:04:43 kali: OK (130 ficheros)
+10:04:48 clientes: OK (108 ficheros)
+10:04:54 suricata: OK (175 ficheros)
+10:05:11 sw-core-stack: OK (switch)
+10:05:30 sw-dist-stack: OK (switch)
+10:05:52 sw-access-sw5: OK (switch)
+10:06:15 sw-access-sw7: OK (switch)
+10:06:37 sw-access-sw8: OK (switch)
+10:06:42 esxi-hv-backup: OK (esxi, 5 vmx)
+10:06:51 esxi-hv-siem: OK (esxi, 5 vmx)
+10:06:59 esxi-hv-datos: OK (esxi, 5 vmx)
+10:07:07 esxi-hv-borde-a: OK (esxi, 1 vmx)
+10:07:14 esxi-hv-local3: OK (esxi, 2 vmx)
+10:07:22 esxi-hv-servicios: OK (esxi, 6 vmx)
+10:07:30 esxi-hv-borde-b: OK (esxi, 2 vmx)
+10:07:30 fin: listo

@@ -1,0 +1,16 @@
+/var/log/gvm/openvas.log {
+  missingok
+  notifempty
+  create 640 _gvm _gvm
+  daily
+  rotate 7
+  compress
+  postrotate
+    openvaslogs=`ls /var/log/gvm/openvas.log.*`
+    if [ -n "$openvaslogs" ]; then
+        chown _gvm:_gvm $openvaslogs
+        chmod 640 $openvaslogs
+    fi
+  endscript
+}
+

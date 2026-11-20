@@ -1,0 +1,22 @@
+  accounts-daemon.service   loaded active running Accounts Service
+  colord.service            loaded active running Manage, Install and Generate Color Profiles
+  cron.service              loaded active running Regular background program processing daemon
+  dbus.service              loaded active running D-Bus System Message Bus
+  getty@tty1.service        loaded active running Getty on tty1
+  haveged.service           loaded active running Entropy Daemon based on the HAVEGE algorithm
+  lightdm.service           loaded active running Light Display Manager
+  ModemManager.service      loaded active running Modem Manager
+  NetworkManager.service    loaded active running Network Manager
+  open-vm-tools.service     loaded active running Service for virtual machines hosted on VMware
+  polkit.service            loaded active running Authorization Manager
+  rtkit-daemon.service      loaded active running RealtimeKit Scheduling Policy Service
+  ssh.service               loaded active running OpenBSD Secure Shell server
+  systemd-hostnamed.service loaded active running Hostname Service
+  systemd-journald.service  loaded active running Journal Service
+  systemd-logind.service    loaded active running User Login Management
+  systemd-timedated.service loaded active running Time & Date Service
+  systemd-timesyncd.service loaded active running Network Time Synchronization
+  systemd-udevd.service     loaded active running Rule-based Manager for Device Events and Files
+  udisks2.service           loaded active running Disk Manager
+  upower.service            loaded active running Daemon for power management
+  user@1000.service         loaded active running User Manager for UID 1000

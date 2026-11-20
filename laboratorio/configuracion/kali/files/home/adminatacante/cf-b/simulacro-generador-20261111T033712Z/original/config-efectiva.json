@@ -1,0 +1,113 @@
+{
+ "_nota": "Config congelada de la campana. Parametros numericos y de texto SEPARADOS. Los campos pendientes (zona_dns, brute_puerto, brute_ruta) valen null y su escenario queda 'habilitado': false hasta resolverlos. generar_campana.py valida y ABORTA si un escenario habilitado tiene valores sin resolver o marcadores (<...>). Las variables de entorno NO pueden cambiar estos valores. No se ejecuta nada en preparacion.",
+ "version_esquema": 2,
+ "origen": "10.10.20.30",
+ "lista_blanca_destinos": [
+  "10.10.10.20",
+  "10.10.30.10"
+ ],
+ "semilla": 20261102,
+ "repeticiones": 5,
+ "tiempos_s": {
+  "calentamiento_inicial": 60,
+  "contexto_antes": 120,
+  "observacion_despues": 90
+ },
+ "_tiempos_nota": "Entre episodios: al terminar uno se espera 'observacion_despues' (cola del ataque) y luego 'contexto_antes' (historia previa del siguiente) antes de iniciar el siguiente. El primero ademas lleva 'calentamiento_inicial'. No se inicia un episodio hasta cumplir la observacion del anterior.",
+ "escenarios": [
+  {
+   "id": "dns_inusual",
+   "habilitado": true,
+   "verificado_27oct": "zona local 'lab-ppi' (DC1, comodin * -> 10.10.30.10); resuelve local, egress 0 (infra-2026-10-27/). Telemetria de PREPARACION confirmada: eve event_type:dns de 10.10.20.30->10.10.10.20 con nombres *.lab-ppi y, en el acumulador, dns_query_count_60s y unique_dns_name_ratio>0 (p. ej. ventana 07:36:50 =22/0.50 y 2026-10-27T07:53:00 =6/0.50; evidencia-entorno-2026-10-27/03-telemetria.txt). Con comodin nxdomain_ratio=0; la senal va por unicidad de nombres. La DETECCION se mide en la campana, no se anticipa aqui.",
+   "destino": "10.10.10.20",
+   "servicio": "UDP/53",
+   "herramienta": "dig",
+   "duracion_objetivo_s": 90,
+   "duracion_descripcion": "90 s de consultas a ritmo controlado",
+   "timeout_s": 150,
+   "params": {
+    "sleep_entre_consultas_s": 0.4,
+    "ritmo_aprox_por_s": 2.3,
+    "zona_dns": "lab-ppi"
+   },
+   "accion_prevista": "LIMIT (dns_entropy); 10.10.10.20 en NUNCA_BLOQUEAR -> solo deteccion",
+   "evidencia_actividad": "consultas en marcas y eventos dns en eve.json"
+  },
+  {
+   "id": "inundacion_http",
+   "habilitado": true,
+   "destino": "10.10.30.10",
+   "servicio": "TCP/80",
+   "herramienta": "curl",
+   "duracion_objetivo_s": 90,
+   "duracion_descripcion": "90 s de peticiones con concurrencia fija 8",
+   "timeout_s": 150,
+   "params": {
+    "concurrencia": 8,
+    "max_time_s": 2,
+    "recurso": "http://10.10.30.10/"
+   },
+   "accion_prevista": "LIMIT (http_abuse) o anomalia del modelo",
+   "evidencia_actividad": "peticiones en marcas y eventos http en eve.json"
+  },
+  {
+   "id": "escaneo_breve",
+   "habilitado": true,
+   "destino": "10.10.30.10",
+   "servicio": "TCP 1-1000",
+   "herramienta": "nmap",
+   "duracion_objetivo_s": null,
+   "duracion_descripcion": "duracion natural del barrido; no se prolonga",
+   "timeout_s": 180,
+   "params": {
+    "rango": "1-1000",
+    "timing": "-T4",
+    "max_retries": 1
+   },
+   "accion_prevista": "BLOCK (port_scan) si la actividad cruza el espejo",
+   "evidencia_actividad": "salida de nmap + SYN en el PCAP; se registra duracion del comando y SYN efectivos"
+  },
+  {
+   "id": "escaneo_sostenido",
+   "habilitado": true,
+   "destino": "10.10.30.10",
+   "servicio": "TCP 1-65535",
+   "herramienta": "nmap",
+   "duracion_objetivo_s": null,
+   "duracion_descripcion": "definida por alcance (1-65535) y ritmo (max-rate 1500)",
+   "timeout_s": 900,
+   "params": {
+    "rango": "1-65535",
+    "timing": "-T4",
+    "max_retries": 0,
+    "max_rate": 1500
+   },
+   "accion_prevista": "BLOCK (port_scan rama rafaga, >=200 intentos/30s)",
+   "evidencia_actividad": "salida de nmap + SYN en el PCAP; duracion del comando y SYN efectivos"
+  },
+  {
+   "id": "fuerza_bruta_http",
+   "habilitado": true,
+   "verificado_27oct": "cadena completa confirmada (PREPARACION): regla pfSense por encima del deny (A/B) -> Kali alcanza srv-dmz:18081 -> endpoint 401/401/200 -> Suricata con detection-ports dp '80,18081' emite event_type:http (401/200) -> extractor: acumulador muestra http_request_count_60s y http_auth_failure_ratio_60s>0 (p. ej. ventana 07:29:20 =18/0.667 y 2026-10-27T07:53:00 =12/0.50; evidencia-entorno-2026-10-27/03-telemetria.txt). La verificacion mezclo 401 y 200; la campana A medira los valores reales. La DETECCION se mide en la campana, no se anticipa aqui.",
+   "destino": "10.10.30.10",
+   "servicio": "TCP/HTTP endpoint de prueba :18081",
+   "herramienta": "curl",
+   "duracion_objetivo_s": 90,
+   "duracion_descripcion": "90 s de intentos con credenciales ficticias",
+   "timeout_s": 150,
+   "params": {
+    "brute_puerto": 18081,
+    "brute_ruta": "/auth",
+    "usuario_ficticio": "fake",
+    "max_time_s": 2,
+    "credencial_control_valida": "control:control123 (para el cliente legitimo, da 200)"
+   },
+   "accion_prevista": "BLOCK (brute_force: >=5 req/60s y >=80% 401/403)",
+   "evidencia_actividad": "conteo de 401 en marcas y en eve.json / access log del endpoint (/opt/brute-lab/brute.log)"
+  }
+ ],
+ "_campana": "etapa4-campana-A-4c",
+ "_nota_4c": "Etapa 4, campaña A nueva (4C). Igual que escenarios/escenarios.json (escenarios, parámetros, tiempos 60/120/90, origen y lista blanca) salvo la SEMILLA, fijada por regla antes de calcular el orden: la fecha de la preparación, 20261102 (la 3B usó 20261026). El orden se publica en ORDEN-4C.md antes de ejecutar; no se cambia la semilla a la vista del orden.",
+ "_efectiva_utc": "2026-11-11T03:37:12.870659+00:00",
+ "_autorizado": false
+}

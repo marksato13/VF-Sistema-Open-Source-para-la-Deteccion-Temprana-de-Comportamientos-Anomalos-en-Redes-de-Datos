@@ -1,0 +1,17 @@
+Failed to query product UUID, ignoring: Access denied
+Failed to query hardware serial, ignoring: Access denied
+ Static hostname: VM-GESTION
+       Icon name: computer-vm
+         Chassis: vm 🖴
+      Machine ID: 2fd98fa26241412cbe2d3fa5e0fec9c4
+         Boot ID: 1caba528bb6948e5a22662afbb8fd8c2
+    AF_VSOCK CID: 1732413196
+  Virtualization: vmware
+Operating System: Debian GNU/Linux 13 (trixie)
+          Kernel: Linux 6.12.96+deb13-amd64
+    Architecture: x86-64
+ Hardware Vendor: VMware, Inc.
+  Hardware Model: VMware Virtual Platform
+Firmware Version: 6.00
+   Firmware Date: Thu 2020-11-12
+    Firmware Age: 6y 1w

@@ -1,0 +1,2 @@
+no crontab for adminsuricata
+[rc=1] crontab -l

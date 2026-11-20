@@ -1,0 +1,28 @@
+### /etc/netplan/50-cloud-init.yaml
+network:
+  version: 2
+  ethernets:
+    ens34:
+      addresses:
+      - "10.10.60.13/24"
+      routes:
+      - to: "default"
+        via: "10.10.60.1"
+### /etc/netplan/60-ens37-captura.yaml
+# Franco's SAC - IDS (S01, 2026-11-14). ens37 = destino de la SPAN. Sin direccion.
+network:
+  version: 2
+  ethernets:
+    ens37:
+      dhcp4: false
+      dhcp6: false
+      accept-ra: false
+      link-local: []
+### /etc/netplan/70-francos-dns.yaml
+network:
+  version: 2
+  ethernets:
+    ens34:
+      nameservers:
+        addresses: [10.10.10.20, 10.10.10.21]
+        search: [ad.francos-sac.com]

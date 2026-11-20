@@ -1,0 +1,31 @@
+# /usr/lib/systemd/system/suricata.service
+[Unit]
+Description=Suricata IDS/IDP daemon
+After=network.target network-online.target
+Requires=network-online.target
+Documentation=man:suricata(8) man:suricatasc(8)
+Documentation=https://suricata.io/documentation/
+
+[Service]
+Type=forking
+#Environment=LD_PRELOAD=/usr/lib/libtcmalloc_minimal.so.4
+PIDFile=/run/suricata.pid
+ExecStart=/usr/bin/suricata -D --af-packet -c /etc/suricata/suricata.yaml --pidfile /run/suricata.pid
+ExecReload=/usr/bin/suricatasc -c reload-rules ; /bin/kill -HUP $MAINPID
+ExecStop=/usr/bin/suricatasc -c shutdown
+Restart=on-failure
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
+
+# /etc/systemd/system/suricata.service.d/francos.conf
+# S03 2026-11-14: IDS pasivo en ens37, en primer plano para systemd.
+[Service]
+Type=simple
+PIDFile=
+ExecStart=
+ExecStart=/usr/bin/suricata -c /etc/suricata/suricata.yaml --af-packet=ens37
+Restart=on-failure
+RestartSec=5s

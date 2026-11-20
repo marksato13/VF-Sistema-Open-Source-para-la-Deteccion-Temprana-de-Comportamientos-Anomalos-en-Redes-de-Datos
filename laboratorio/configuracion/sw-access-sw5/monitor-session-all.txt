@@ -1,0 +1,4 @@
+
+
+ No SPAN configuration is present in the system. 
+Connection to 10.10.99.5 closed by remote host.

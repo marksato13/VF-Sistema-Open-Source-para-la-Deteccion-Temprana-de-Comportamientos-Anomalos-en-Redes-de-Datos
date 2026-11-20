@@ -1,0 +1,27 @@
+total 22848
+drwxr-x--- 10 adminsuricata adminsuricata     4096 Nov 14 06:15 .
+drwxr-xr-x  6 root          root              4096 Nov 14 07:06 ..
+drwx------  3 adminsuricata adminsuricata     4096 Nov 14 06:15 .ansible
+-rw-------  1 adminsuricata adminsuricata      739 Nov 14 03:50 .bash_history
+-rw-r--r--  1 adminsuricata adminsuricata      220 Mar 31  2024 .bash_logout
+-rw-r--r--  1 adminsuricata adminsuricata     3771 Mar 31  2024 .bashrc
+drwx------  2 adminsuricata adminsuricata     4096 Oct  1 23:13 .cache
+-rw-r--r--  1 adminsuricata adminsuricata      807 Mar 31  2024 .profile
+drwx------  2 adminsuricata adminsuricata     4096 Oct  1 23:13 .ssh
+-rw-r--r--  1 adminsuricata adminsuricata        0 Oct  2 00:32 .sudo_as_admin_successful
+-rw-rw-r--  1 adminsuricata adminsuricata     2331 Oct  2 00:36 06-configurar-captura.sh
+-rw-rw-r--  1 adminsuricata adminsuricata     1954 Oct  2 00:43 07-activar-promisc.sh
+-rw-rw-r--  1 adminsuricata adminsuricata     1403 Oct  2 00:45 08-probar-ntp.py
+-rw-rw-r--  1 adminsuricata adminsuricata     1314 Oct  2 01:11 10-simular-apt-offline.sh
+-rw-rw-r--  1 adminsuricata adminsuricata     2548 Oct  2 01:13 11-instalar-suricata-offline.sh
+-rw-rw-r--  1 adminsuricata adminsuricata     3274 Oct  2 01:28 13-preparar-prueba.py
+-rw-rw-r--  1 adminsuricata adminsuricata     3543 Oct  2 01:30 14-aplicar-config-suricata.sh
+-rw-rw-r--  1 adminsuricata adminsuricata     2727 Oct  2 01:41 15-piloto-pasivo-suricata.sh
+drwxrwxr-x  5 adminsuricata adminsuricata     4096 Nov 11 20:58 cf-4.3
+drwxrwxr-x 56 adminsuricata adminsuricata     4096 Nov  3 13:07 cf-demo
+-rw-rw-r--  1 adminsuricata adminsuricata  3809280 Oct  2 01:25 et-open-20261002.tar.gz
+drwxrwxr-x  4 adminsuricata adminsuricata     4096 Oct  2 01:12 suricata-apt-state-20261002
+drwx------  3 adminsuricata adminsuricata     4096 Oct  2 01:28 suricata-compare-trial-20261002
+drwxr-xr-x  2 adminsuricata adminsuricata     4096 Oct  2 01:12 suricata-debs-20261002
+-rw-rw-r--  1 adminsuricata adminsuricata 19493868 Oct  2 01:09 suricata-offline-20261002.tar.gz
+[rc=1] bash -c ls -la ~; for d in ~/cyberflow ~/cyberflow-e4; do [ -d "$d" ] && { echo "### $d"; ls -la "$d"; }; done

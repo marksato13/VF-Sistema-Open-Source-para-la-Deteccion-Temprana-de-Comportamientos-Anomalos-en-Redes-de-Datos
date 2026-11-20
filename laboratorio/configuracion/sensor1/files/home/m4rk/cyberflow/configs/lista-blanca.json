@@ -1,0 +1,12 @@
+{
+  "_nota": "Lista blanca: IPs de infraestructura conocida. El panel agrupa sus alertas aparte. El publicador solo deja de emitir medidas sobre ellas si corre publicar_feed_v2_d5_lb.py con --lista-blanca apuntando a este fichero (drop-in zz-lista-blanca.conf). Campos: ip, nombre, motivo, alta (fecha).",
+  "version": 1,
+  "entradas": [
+    {
+      "ip": "10.10.60.45",
+      "nombre": "Zabbix (zabbix.ad.francos-sac.com)",
+      "motivo": "Monitoreo: sondea 172.17.25.x:443, DC (53/88/389/636/3268), 445 y 5432 cada ~1 min; dispara port_scan (falso positivo) desde el 13-nov-2026. No envía tráfico a srv-dmz.",
+      "alta": "2026-11-16"
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+no crontab for adminclientes
+[rc=1] crontab -l

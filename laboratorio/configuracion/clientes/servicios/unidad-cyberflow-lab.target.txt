@@ -1,0 +1,17 @@
+# /etc/systemd/system/cyberflow-lab.target
+# Generado por scripts/laboratorio/clientes_config.py
+# NO editar a mano: cualquier cambio se pierde en la siguiente generacion.
+[Unit]
+Description=CyberFlow laboratorio - los seis perfiles de trafico
+# Wants= explicito, y no solo el WantedBy= de cada servicio. Ese WantedBy solo
+# crea el enlace en .wants/ cuando el servicio se habilita, asi que "systemctl
+# start cyberflow-lab.target" arrancaba el target con NADA colgando: active,
+# los seis perfiles parados y ningun error. Medido asi la primera vez.
+#
+# Sin Requires= a proposito: que un perfil falle no debe tumbar a los otros
+# cinco. La linea base sobrevive perdiendo una entidad; no sobrevive a un
+# arranque parcial que nadie mira.
+Wants=cyberflow-lab-ofimatica.service cyberflow-lab-navegacion.service cyberflow-lab-descargas.service cyberflow-lab-aplicacion.service cyberflow-lab-ligero.service cyberflow-lab-erratico.service
+
+[Install]
+WantedBy=multi-user.target

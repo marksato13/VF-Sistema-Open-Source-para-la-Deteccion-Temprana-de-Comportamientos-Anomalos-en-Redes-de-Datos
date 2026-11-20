@@ -1,0 +1,28 @@
+[Unit]
+# Etapa 4 (SOMBRA). Igual que deploy/enforcement/candidato-etapa3/ppi-publicar-feed-v2.service, con la
+# ruta ABSOLUTA del código candidato (Sensor1 no tiene checkout: ~/cyberflow es el despliegue anterior).
+# publicar_feed_v2.py importa escalada/feed/heuristicos de su propio directorio (el de ec78ca5).
+# Publicar el feed v2 no aplica nada: solo un agente con --aplicar lo haría, y no hay ninguno.
+Description=CyberFlow - publicador v2 por eventos (Etapa 4, sombra)
+After=ppi-motor.service
+
+[Service]
+Type=simple
+User=m4rk
+Group=m4rk
+WorkingDirectory=/home/m4rk/cyberflow
+ExecStart=/home/m4rk/cyberflow/.venv/bin/python /home/m4rk/cyberflow-e4/ec78ca5/scripts/engine/publicar_feed_v2.py \
+    --log /home/m4rk/cyberflow/logs/motor_decision.log \
+    --estado /home/m4rk/feed-v2/estado.json \
+    --clave-privada /home/m4rk/cyberflow/artifacts/feed-keys/priv.pem \
+    --salida-feed /home/m4rk/feed-v2/feed.json \
+    --salida-firma /home/m4rk/feed-v2/feed.sig \
+    --senales /home/m4rk/feed-v2/senales-if.jsonl \
+    --senales-rapidas /home/m4rk/feed-v2/senales-rapidas.jsonl \
+    --traza /home/m4rk/feed-v2/traza.jsonl \
+    --politica if_senal --vigencia-segundos 60 --refresco-segundos 20 --seguir
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

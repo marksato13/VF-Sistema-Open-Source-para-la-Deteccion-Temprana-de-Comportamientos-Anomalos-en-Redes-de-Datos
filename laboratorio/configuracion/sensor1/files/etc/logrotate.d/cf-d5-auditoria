@@ -1,0 +1,11 @@
+/home/m4rk/feed-v2/d5/auditoria/d5-auditoria.jsonl {
+    su m4rk m4rk
+    daily
+    rotate 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    nocopytruncate
+    create 0640 m4rk m4rk
+}

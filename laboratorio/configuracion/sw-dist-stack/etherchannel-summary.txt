@@ -1,0 +1,31 @@
+
+
+
+
+Flags:  D - down        P - bundled in port-channel
+        I - stand-alone s - suspended
+        H - Hot-standby (LACP only)
+        R - Layer3      S - Layer2
+        U - in use      f - failed to allocate aggregator
+
+        M - not in use, minimum links not met
+        u - unsuitable for bundling
+        w - waiting to be aggregated
+        d - default port
+
+        A - formed by Auto LAG
+
+
+Number of channel-groups in use: 4
+Number of aggregators:           4
+
+Group  Port-channel  Protocol    Ports
+------+-------------+-----------+-----------------------------------------------
+1      Po1(SU)         LACP        Gi1/0/1(P)      Gi1/0/2(P)      
+                                   Gi1/0/3(P)      Gi1/0/4(P)      
+                                   Gi2/0/5(P)      Gi2/0/6(P)      
+                                   Gi2/0/7(P)      Gi2/0/8(P)      
+5      Po5(SU)         LACP        Gi1/0/9(P)      Gi2/0/12(P)     
+7      Po7(SU)         LACP        Gi1/0/10(P)     Gi2/0/13(P)     
+8      Po8(SU)         LACP        Gi1/0/11(D)     Gi2/0/14(P)     
+Connection to 10.10.99.2 closed by remote host.

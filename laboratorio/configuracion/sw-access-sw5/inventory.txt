@@ -1,0 +1,5 @@
+
+NAME: "1", DESCR: "C1000-24P-4G-L"
+PID: C1000-24P-4G-L    , VID: V02  , SN: FOC2702Y10M
+
+Connection to 10.10.99.5 closed by remote host.

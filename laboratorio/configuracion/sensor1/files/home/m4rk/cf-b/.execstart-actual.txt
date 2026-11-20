@@ -1,0 +1,16 @@
+ExecStart=/home/m4rk/cyberflow/.venv/bin/python \
+    /home/m4rk/cyberflow-e4/ec78ca5/scripts/engine/motor_decision.py \
+    --eve-path /var/log/suricata/eve.json \
+    --capture-dir /var/lib/ppi-motor-capture \
+    --model-path /home/m4rk/cyberflow/artifacts/preliminar/limpio-2026-10/if_limpio_2026_10_desplegable.joblib \
+    --manifest-path /home/m4rk/cyberflow/artifacts/preliminar/limpio-2026-10/manifest-if-limpio-2026-10.json \
+    --detector-name if_limpio_2026_10 \
+    --schema /home/m4rk/cyberflow/configs/features/multilayer-v2.json \
+    --entity-network 10.10.0.0/16 \
+    --excluir 10.10.60.11/32,10.10.10.30/32,10.10.60.2/32,10.10.60.3/32,10.10.60.10/32,10.10.60.20/32,10.10.60.21/32,10.10.60.30/32,10.10.60.40/32,10.10.60.41/32,10.10.60.50/32 \
+    --excluir-protocolos 112,240 \
+    --log-path /home/m4rk/cyberflow/logs/motor_decision.log \
+    --state-dir /home/m4rk/cyberflow/logs/_state-e4 \
+    --step-seconds 10 \
+    --history-seconds 230 \
+    --disparo eventos

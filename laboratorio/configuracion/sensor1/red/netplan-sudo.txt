@@ -1,0 +1,1 @@
+[sin sudo -n] bash -c for f in /etc/netplan/*.yaml; do echo "### $f"; cat "$f"; done

@@ -1,0 +1,20 @@
+i: suricata: This is Suricata version 7.0.3 RELEASE running in USER mode
+W: unix-manager: Unix socket: UNIX socket bind(/var/run/suricata-command.socket) error: Permission denied
+W: unix-manager: Unable to create unix command socket
+E: pcap: failed to get first packet timestamp. pcap_next_ex(): -2
+W: pcap: Failed to init pcap file pcap/live-20261103022305.pcap, skipping
+E: pcap: failed to get first packet timestamp. pcap_next_ex(): -2
+W: pcap: Failed to init pcap file pcap/live-20261103022420.pcap, skipping
+E: pcap: failed to get first packet timestamp. pcap_next_ex(): -2
+W: pcap: Failed to init pcap file pcap/live-20261103022320.pcap, skipping
+E: pcap: failed to get first packet timestamp. pcap_next_ex(): -2
+W: pcap: Failed to init pcap file pcap/live-20261103022335.pcap, skipping
+E: pcap: failed to get first packet timestamp. pcap_next_ex(): -2
+W: pcap: Failed to init pcap file pcap/live-20261103022435.pcap, skipping
+E: pcap: failed to get first packet timestamp. pcap_next_ex(): -2
+W: pcap: Failed to init pcap file pcap/live-20261103022405.pcap, skipping
+E: pcap: failed to get first packet timestamp. pcap_next_ex(): -2
+W: pcap: Failed to init pcap file pcap/live-20261103022350.pcap, skipping
+i: threads: Threads created -> W: 1 FM: 1 FR: 1   Engine started.
+i: suricata: Signal Received.  Stopping engine.
+i: pcap: read 0 files, 0 packets, 0 bytes

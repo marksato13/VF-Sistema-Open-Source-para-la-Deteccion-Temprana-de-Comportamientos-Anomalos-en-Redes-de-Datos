@@ -1,0 +1,3 @@
+Vmid                                     Name                                                        File                          Guest OS       Version   Annotation
+5      ------------------------------------------------------------LAB-ATACANTE   [datastore1] LAB-ATACANTE/LAB-ATACANTE.vmx   debian12_64Guest   vmx-21              
+6      ------------------------------------------------------------LAB-CLIENTES   [datastore1] LAB-CLIENTES/LAB-CLIENTES.vmx   ubuntu64Guest      vmx-21              

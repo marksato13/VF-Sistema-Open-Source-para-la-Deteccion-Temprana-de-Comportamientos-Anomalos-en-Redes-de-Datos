@@ -1,0 +1,12 @@
+[Match]
+MACAddress=00:0c:29:c8:ad:ec
+
+[Link]
+Promiscuous=yes
+RequiredForOnline=no
+
+[Network]
+DHCP=no
+LinkLocalAddressing=no
+IPv6AcceptRA=no
+ConfigureWithoutCarrier=yes

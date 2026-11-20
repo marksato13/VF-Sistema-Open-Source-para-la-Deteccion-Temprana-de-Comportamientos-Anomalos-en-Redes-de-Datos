@@ -1,0 +1,8 @@
+# Gestionado por Ansible (resolutor_miembros.yml). Los cambios a mano
+# se pierden en la siguiente ejecucion.
+#
+# Los dos controladores del dominio, en orden. Si el primero no
+# responde, glibc pasa al segundo. Ver F16 del plan de ejecucion.
+search ad.francos-sac.com
+nameserver 10.10.10.20
+nameserver 10.10.10.21

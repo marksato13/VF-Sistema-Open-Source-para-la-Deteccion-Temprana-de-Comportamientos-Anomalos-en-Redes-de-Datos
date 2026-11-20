@@ -1,0 +1,22 @@
+{
+  "schema_version": "multilayer-v1",
+  "observation_unit": "initiator_ip_at_causal_window_end",
+  "emission_step_seconds": 10,
+  "maximum_history_seconds": 60,
+  "features": [
+    {"order": 1, "name": "packet_rate_10s", "layer": "L3", "window_seconds": 10, "unit": "packets_per_second"},
+    {"order": 2, "name": "byte_rate_10s", "layer": "L3", "window_seconds": 10, "unit": "ip_bytes_per_second"},
+    {"order": 3, "name": "mean_ip_len_10s", "layer": "L3", "window_seconds": 10, "unit": "bytes"},
+    {"order": 4, "name": "large_ip_ratio_10s", "layer": "L3", "window_seconds": 10, "unit": "ratio"},
+    {"order": 5, "name": "unique_dst_ip_ratio_30s", "layer": "L3", "window_seconds": 30, "unit": "ratio"},
+    {"order": 6, "name": "icmp_ratio_10s", "layer": "L3", "window_seconds": 10, "unit": "ratio"},
+    {"order": 7, "name": "flow_attempt_rate_10s", "layer": "L4", "window_seconds": 10, "unit": "attempts_per_second"},
+    {"order": 8, "name": "syn_rate_10s", "layer": "L4", "window_seconds": 10, "unit": "syn_per_second"},
+    {"order": 9, "name": "syn_completion_ratio_10s", "layer": "L4", "window_seconds": 10, "unit": "ratio"},
+    {"order": 10, "name": "rst_ratio_10s", "layer": "L4", "window_seconds": 10, "unit": "ratio"},
+    {"order": 11, "name": "unique_dst_port_ratio_30s", "layer": "L4", "window_seconds": 30, "unit": "ratio"},
+    {"order": 12, "name": "http_error_ratio_60s", "layer": "L7", "window_seconds": 60, "unit": "ratio"},
+    {"order": 13, "name": "dns_nxdomain_ratio_60s", "layer": "L7", "window_seconds": 60, "unit": "ratio"},
+    {"order": 14, "name": "tls_session_rate_60s", "layer": "L7", "window_seconds": 60, "unit": "sessions_per_second"}
+  ]
+}

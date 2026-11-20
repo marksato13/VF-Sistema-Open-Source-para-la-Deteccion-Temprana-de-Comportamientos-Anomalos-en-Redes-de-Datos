@@ -1,0 +1,87 @@
+### cpu
+   CPU Packages: 1
+   CPU Cores: 6
+   CPU Threads: 6
+   Hyperthreading Active: false
+   Hyperthreading Supported: false
+   Hyperthreading Enabled: true
+   HV Support: 3
+### memoria
+   Physical Memory: 33986547712 Bytes
+   Reliable Memory: 0 Bytes
+   NUMA Node Count: 1
+### plataforma
+Platform Information
+   UUID: 0x4c 0x4c 0x45 0x44 0x0 0x43 0x32 0x10 0x80 0x38 0xb4 0xc0 0x4f 0x31 0x56 0x33
+   Product Name: Precision 7920 Tower
+   Vendor Name: Dell Inc.
+   Serial Number: 4C281V3
+   Enclosure Serial Number: 4C281V3
+   BIOS Asset Tag: 
+   IPMI Supported: false
+### nics
+Name    PCI Device    Driver  Admin Status  Link Status  Speed  Duplex  MAC Address         MTU  Description
+------  ------------  ------  ------------  -----------  -----  ------  -----------------  ----  -----------
+vmnic0  0000:00:1f.6  ne1000  Up            Up             100  Full    cc:96:e5:11:fd:29  1500  Intel Corporation Ethernet Connection (3) I219-LM
+vmnic1  0000:02:00.0  igbn    Up            Up            1000  Full    cc:96:e5:11:fc:27  1500  Intel Corporation I210 Gigabit Network Connection
+vmnic2  0000:65:00.0  igbn    Up            Up            1000  Full    50:7c:6f:35:81:29  1500  Intel Corporation Ethernet Server Adapter I210-T1
+### vmk
+Name  IPv4 Address  IPv4 Netmask   IPv4 Broadcast  Address Type  Gateway        DHCP DNS
+----  ------------  -------------  --------------  ------------  -------------  --------
+vmk0  172.17.25.7   255.255.255.0  172.17.25.255   STATIC        172.17.25.121     false
+### vswitch
+vSwitch-ID-FILE
+   Name: vSwitch-ID-FILE
+   Class: cswitch
+   Num Ports: 2970
+   Used Ports: 10
+   Configured Ports: 128
+   MTU: 1500
+   CDP Status: listen
+   Beacon Enabled: false
+   Beacon Interval: 1
+   Beacon Threshold: 3
+   Beacon Required By: 
+   Uplinks: vmnic2, vmnic1
+   Portgroups: PG-VLAN30-DMZ, PG-VLAN20-USUARIOS, PG-VLAN10-ADMIN, PG-VLAN40-SERVICIOS, PG-VLAN60-GESTION
+
+vSwitch0
+   Name: vSwitch0
+   Class: cswitch
+   Num Ports: 2970
+   Used Ports: 8
+   Configured Ports: 128
+   MTU: 1500
+   CDP Status: listen
+   Beacon Enabled: false
+   Beacon Interval: 1
+   Beacon Threshold: 3
+   Beacon Required By: 
+   Uplinks: vmnic0
+   Portgroups: VM Network, Management Network
+### portgroup
+Name                 Virtual Switch   Active Clients  VLAN ID
+-------------------  ---------------  --------------  -------
+Management Network   vSwitch0                      1        0
+PG-VLAN10-ADMIN      vSwitch-ID-FILE               2       10
+PG-VLAN20-USUARIOS   vSwitch-ID-FILE               0       20
+PG-VLAN30-DMZ        vSwitch-ID-FILE               0       30
+PG-VLAN40-SERVICIOS  vSwitch-ID-FILE               1       40
+PG-VLAN60-GESTION    vSwitch-ID-FILE               2       60
+VM Network           vSwitch0                      4        0
+### almacen
+Mount Point                                        Volume Name                                 UUID                                 Mounted  Type            Size          Free
+-------------------------------------------------  ------------------------------------------  -----------------------------------  -------  ------  ------------  ------------
+/vmfs/volumes/6ae4a872-48bfbf90-0c6c-cc96e511fc27  datastore1                                  6ae4a872-48bfbf90-0c6c-cc96e511fc27     true  VMFS-6  374467461120  320864256000
+/vmfs/volumes/6ae4a872-2ec47eb2-1309-cc96e511fc27  OSDATA-6ae4a872-2ec47eb2-1309-cc96e511fc27  6ae4a872-2ec47eb2-1309-cc96e511fc27     true  VMFSOS  128580583424  125343629312
+/vmfs/volumes/facfe68f-7741941d-4e8d-7c25135a7a8e  BOOTBANK1                                   facfe68f-7741941d-4e8d-7c25135a7a8e     true  vfat      4293591040    4022861824
+/vmfs/volumes/e0d7a3f2-1c4a6fa4-b5a8-9d6bc90e9d42  BOOTBANK2                                   e0d7a3f2-1c4a6fa4-b5a8-9d6bc90e9d42     true  vfat      4293591040    4293525504
+### ntp
+   Enabled: false
+   Loglevel: warning
+   PID: 0
+   Runtime Seconds: 0
+   Servers: 
+   Service Providing Kernel Time: 
+   Time Service Enabled: false
+   Time Synchronized: false

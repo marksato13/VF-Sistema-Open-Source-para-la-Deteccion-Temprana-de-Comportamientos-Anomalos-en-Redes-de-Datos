@@ -1,0 +1,13 @@
+nmap /usr/bin/nmap Nmap version 7.95 ( https://nmap.org )
+hping3 /usr/sbin/hping3 hping3 version 3.0.0-alpha-2 ($Id: release.h,v 1.4 2004/04/09 23:38:56 antirez Exp $)
+curl /usr/bin/curl curl 8.17.0 (x86_64-pc-linux-gnu) libcurl/8.17.0 OpenSSL/3.5.4 zlib/1.3.1 brotli/1.1.0 zstd/1.5.7 libidn2/2.3.8 libpsl/0.21.2 libssh2/1.11.1 nghttp2/1.64.0 ngtcp2/1.16.0 nghttp3/1.12.0 librtmp/2.3 mit-krb5/1.21.3 OpenLDAP/2.6.10
+wget /usr/bin/wget GNU Wget 1.25.0 built on linux-gnu.
+dig /usr/bin/dig Invalid option: --version
+tcpdump /usr/bin/tcpdump tcpdump version 4.99.5
+python3 /usr/bin/python3 Python 3.13.9
+nft /usr/sbin/nft nftables v1.1.5 (Commodore Bullmoose #6)
+iptables /usr/sbin/iptables iptables v1.8.11 (nf_tables)
+nginx /usr/sbin/nginx nginx: invalid option: "-"
+apache2 /usr/sbin/apache2 [Fri Nov 20 05:04:41.058336 2026] [core:warn] [pid 762704:tid 762704] AH00111: Config variable ${APACHE_RUN_DIR} is not defined
+smbd /usr/sbin/smbd Version 4.23.3-Debian-4.23.3+dfsg-1+b1
+[rc=1] bash -c for t in nmap hping3 curl wget dig tcpdump suricata zeek python3 nft iptables docker chronyc nginx apache2 named smbd samba zabbix_agentd zabbix_agent2 wazuh-agentd; do p=$(command -v $t) && echo "$t $p $($t --version 2>&1 | head -1)"; done

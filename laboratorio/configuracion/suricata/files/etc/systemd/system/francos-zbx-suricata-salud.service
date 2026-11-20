@@ -1,0 +1,9 @@
+# Gestionado por Ansible (zabbix_salud_suricata.yml, S07)
+[Unit]
+Description=Franco's - salud del sensor IDS para Zabbix (solo lectura)
+After=suricata.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/francos-zbx-suricata-salud
+Nice=10
+IOSchedulingClass=idle

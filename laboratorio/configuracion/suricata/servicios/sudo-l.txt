@@ -1,0 +1,8 @@
+Matching Defaults entries for adminsuricata on vm-ids-suricata:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User adminsuricata may run the following commands on vm-ids-suricata:
+    (ALL : ALL) ALL
+    (ALL) NOPASSWD: ALL

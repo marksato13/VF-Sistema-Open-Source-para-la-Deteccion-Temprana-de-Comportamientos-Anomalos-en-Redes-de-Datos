@@ -1,0 +1,11 @@
+/home/m4rk/cyberflow/artifacts/dataset/multilayer-v2-audit-report.json 2344
+/home/m4rk/cyberflow/artifacts/dataset/partition-map-normal-v2.json 1898
+/home/m4rk/cyberflow/artifacts/model/candidates/if_uniform.joblib 1097981
+/home/m4rk/cyberflow/artifacts/model/candidates/if_exact_collapsed.joblib 1097981
+/home/m4rk/cyberflow/artifacts/model/candidates/if_scaled_weighted.joblib 1327419
+/home/m4rk/cyberflow/artifacts/model/candidates/if_primary_weighted.joblib 1332434
+/home/m4rk/cyberflow/artifacts/model/candidates/ocsvm_scaled.joblib 7244
+/home/m4rk/cyberflow/artifacts/model/candidates/lof_scaled.joblib 167656
+/home/m4rk/cyberflow/artifacts/model/candidates/elliptic_envelope_scaled.joblib 18664
+/home/m4rk/cyberflow/artifacts/model/manifest.json 29811
+/home/m4rk/cyberflow/artifacts/model/ocsvm_scaled.joblib 7244

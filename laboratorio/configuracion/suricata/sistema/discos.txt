@@ -1,0 +1,8 @@
+NAME                           SIZE TYPE FSTYPE      MOUNTPOINT
+sda                             40G disk             
+|-sda1                           1G part vfat        /boot/efi
+|-sda2                           2G part ext4        /boot
+`-sda3                        36.9G part LVM2_member 
+  |-ubuntu--vg-ubuntu--lv     18.5G lvm  ext4        /
+  `-ubuntu--vg-suricata--logs   15G lvm  ext4        /var/log/suricata
+sr0                           1024M rom              

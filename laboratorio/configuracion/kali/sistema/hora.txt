@@ -1,0 +1,7 @@
+               Local time: Fri 2026-11-20 05:04:39 -05
+           Universal time: Fri 2026-11-20 10:04:39 UTC
+                 RTC time: Fri 2026-11-20 10:04:38
+                Time zone: America/Lima (-05, -0500)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no

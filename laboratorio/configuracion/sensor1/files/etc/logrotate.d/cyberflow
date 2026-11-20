@@ -1,0 +1,20 @@
+# Generado por scripts/setup/cyberflow_config.py. NO editar a mano.
+# El motor escribe una linea JSON por decision y puede producir cientos por
+# minuto. Sin tope, este fichero llena la raiz, y un / lleno tumba la maquina
+# entera, incluido el SSH de gestion.
+#
+# Sin copytruncate a proposito: el motor abre el fichero en modo append en
+# cada escritura y lo cierra, asi que tras renombrarlo escribe en el nuevo sin
+# necesidad de senales ni de reiniciar el servicio. Lo mismo vale para
+# _state/ciclos.jsonl, el registro por ciclo del motor (~0,9 kB por ciclo,
+# ~8 MB al dia con paso de 10 s).
+/home/m4rk/cyberflow/logs/motor_decision.log /home/m4rk/cyberflow/logs/_state/ciclos.jsonl {
+    daily
+    maxsize 200M
+    rotate 14
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0640 m4rk m4rk
+}

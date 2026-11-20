@@ -1,0 +1,1 @@
+[sin sudo -n] bash -c cat /etc/sudoers.d/* 2>/dev/null

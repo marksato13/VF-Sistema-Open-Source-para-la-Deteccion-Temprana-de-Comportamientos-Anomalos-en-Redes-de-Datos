@@ -1,0 +1,2 @@
+* fwupd-refresh.service loaded failed failed Refresh fwupd metadata and update motd
+* logrotate.service     loaded failed failed Rotate log files

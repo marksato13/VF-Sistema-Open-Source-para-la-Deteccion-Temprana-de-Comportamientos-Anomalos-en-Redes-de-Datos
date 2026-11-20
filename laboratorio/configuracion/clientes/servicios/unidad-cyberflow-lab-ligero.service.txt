@@ -1,0 +1,34 @@
+# /etc/systemd/system/cyberflow-lab-ligero.service
+# Generado por scripts/laboratorio/clientes_config.py
+# NO editar a mano: cualquier cambio se pierde en la siguiente generacion.
+[Unit]
+Description=CyberFlow laboratorio - perfil ligero desde 10.10.20.25
+After=network-online.target
+Wants=network-online.target
+PartOf=cyberflow-lab.target
+
+[Service]
+Type=simple
+User=adminclientes
+Group=adminclientes
+WorkingDirectory=/home/adminclientes/laboratorio
+ExecStart=/usr/bin/python3 /home/adminclientes/laboratorio/clientes_lab.py \
+    --perfil ligero \
+    --origen 10.10.20.25 \
+    --servidor 10.10.30.10 \
+    --dns 10.10.10.20
+Restart=always
+RestartSec=5
+# El generador imprime una linea por accion: a 1,9 acciones/s son ~272.000
+# lineas en 72 h, que llenarian el journal sin aportar nada -- lo que de
+# verdad hay que analizar sale del espejo, no de aqui. Los errores si se
+# conservan: un perfil que muere en silencio durante tres dias es el peor
+# fallo posible de esta fase.
+StandardOutput=null
+StandardError=journal
+NoNewPrivileges=true
+ProtectSystem=strict
+PrivateTmp=true
+
+[Install]
+WantedBy=cyberflow-lab.target

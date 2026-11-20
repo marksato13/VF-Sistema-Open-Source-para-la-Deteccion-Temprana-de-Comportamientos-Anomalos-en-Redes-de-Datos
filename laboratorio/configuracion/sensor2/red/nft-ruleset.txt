@@ -1,0 +1,1 @@
+[sin sudo -n] nft list ruleset

@@ -1,0 +1,2 @@
+sudo: a password is required
+[rc=1] sudo -n -l

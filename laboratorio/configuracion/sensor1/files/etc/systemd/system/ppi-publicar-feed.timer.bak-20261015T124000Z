@@ -1,0 +1,12 @@
+[Unit]
+Description=CyberFlow - publicar el feed cada minuto
+
+[Timer]
+# OnCalendar (no OnUnitActiveSec): este ultimo se quedaba con NextElapse=infinity
+# en este despliegue. 'minutely' = cada minuto en punto.
+OnCalendar=minutely
+AccuracySec=5s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

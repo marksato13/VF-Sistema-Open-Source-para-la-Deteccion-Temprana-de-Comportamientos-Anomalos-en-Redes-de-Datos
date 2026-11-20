@@ -1,0 +1,2 @@
+* fwupd-refresh.service                loaded failed failed Refresh fwupd metadata and update motd
+* systemd-networkd-wait-online.service loaded failed failed Wait for Network to be Configured

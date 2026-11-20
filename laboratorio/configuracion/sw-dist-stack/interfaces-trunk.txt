@@ -1,0 +1,28 @@
+
+
+
+
+
+Port           Mode             Encapsulation  Status        Native vlan  
+Po1            on               802.1q         trunking      999
+Po5            on               802.1q         trunking      999
+Po7            on               802.1q         trunking      999
+Po8            on               802.1q         trunking      999
+
+Port           Vlans allowed on trunk
+Po1            10,20,30,40,50,60,70,80,85,88,90,95,99-100
+Po5            20,80,85,88,95,99
+Po7            20,80,85,88,95,99
+Po8            20,80,85,88,95,99
+
+Port           Vlans allowed and active in management domain
+Po1            10,20,30,40,50,60,70,80,85,88,90,95,99-100
+Po5            20,80,85,88,95,99
+Po7            20,80,85,88,95,99
+Po8            20,80,85,88,95,99
+
+Port           Vlans in spanning tree forwarding state and not pruned
+Po1            10,20,30,40,50,60,70,80,85,88,90,95,99-100
+Po5            20,80,85,88,95,99
+Po7            20,80,85,88,95,99
+Po8            20,80,85,88,95,99Connection to 10.10.99.2 closed by remote host.

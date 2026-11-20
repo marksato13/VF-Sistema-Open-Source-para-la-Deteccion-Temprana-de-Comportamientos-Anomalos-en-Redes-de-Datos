@@ -1,0 +1,1 @@
+{"duplicada": false, "id": "f7b151feb1031961867f3b52fd4536c9", "ok": true, "quitado": {"escalada": ["10.10.20.30@srv-dmz"], "vigentes": ["10.10.20.30|srv-dmz|todo"]}, "secuencia": 46598, "t": 1795033066.1072683}
