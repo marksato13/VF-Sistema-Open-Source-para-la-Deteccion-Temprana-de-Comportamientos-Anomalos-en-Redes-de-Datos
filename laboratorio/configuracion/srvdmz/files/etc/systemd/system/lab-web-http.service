@@ -1,0 +1,19 @@
+[Unit]
+Description=Laboratorio CyberFlow - servidor web HTTP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=adminsrvdmz
+# Escucha solo en la IP de la DMZ: por ens34 (172.17.25.0/24) hay un camino
+# que NO pasa por pfSense y no seria observable en el espejo.
+ExecStart=/usr/bin/python3 /home/adminsrvdmz/laboratorio/servidor_lab.py --direccion 10.10.30.10 --puerto 80
+Restart=always
+RestartSec=3
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

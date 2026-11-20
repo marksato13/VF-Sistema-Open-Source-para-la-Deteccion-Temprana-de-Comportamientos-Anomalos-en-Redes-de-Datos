@@ -110,10 +110,10 @@ llegando a la PC.
 
 ## Lo que falta o no está aquí, a propósito
 
-- **SRV-DMZ no se extrajo:** la VM estaba apagada (`Powered off` en hv-servicios). Están su
-  `.vmx`, y su unidad systemd y sus scripts en `deploy/laboratorio-2026-11-18/`. Para
-  completarlo, encenderla y ejecutar: `bash extraer_laboratorio.sh /tmp/x srvdmz`.
-- **Firewall de cada host (nftables) y netplan de algunos equipos:** solo se leen con sudo con
+- **SRV-DMZ** se extrajo aparte, el 20-nov a las 10:31 UTC, al volver a encenderse. Allí sudo
+  no pide contraseña, así que su `red/nft-ruleset.txt` (tabla `cyberflow_dmz`) es el firewall
+  real. Se quitó su `clave.pem`, que es privada.
+- **Firewall de los demás hosts (nftables) y algunos netplan:** solo se leen con sudo con
   contraseña. Donde no se pudo, el fichero dice `[sin sudo -n]`.
 - **Secretos:** no se copian claves privadas, `.env` ni `shadow`. `sanear.py` cambia
   contraseñas, claves y comunidades SNMP por «REDACTADO» y falla si queda algo sospechoso.

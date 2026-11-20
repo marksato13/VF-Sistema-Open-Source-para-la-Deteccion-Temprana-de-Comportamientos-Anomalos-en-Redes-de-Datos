@@ -1,0 +1,11 @@
+[Unit]
+Description=CyberFlow - agente de enforcement cada 10 segundos
+
+[Timer]
+# Tercer paso, tres segundos despues del relay.
+OnCalendar=*-*-* *:*:06/10
+AccuracySec=1s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

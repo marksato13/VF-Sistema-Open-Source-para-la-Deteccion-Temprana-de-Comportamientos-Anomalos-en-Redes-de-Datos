@@ -1,0 +1,17 @@
+[Unit]
+Description=Laboratorio CyberFlow - servidor web HTTPS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=adminsrvdmz
+ExecStart=/usr/bin/python3 /home/adminsrvdmz/laboratorio/servidor_lab.py --direccion 10.10.30.10 --puerto 443 --cert /home/adminsrvdmz/laboratorio/cert.pem --clave /home/adminsrvdmz/laboratorio/clave.pem
+Restart=always
+RestartSec=3
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

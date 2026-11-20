@@ -23,9 +23,9 @@ copia() { # copia <ruta> -> la copia bajo etc/ o app/ si es legible y no es secr
   local p
   for p in "$@"; do
     [ -e "$p" ] || continue
-    case "$p" in *.key|*priv*.pem|*id_rsa*|*id_ed25519*|*id_ecdsa*|*/shadow*|*gshadow*|*.env|*secret*|*token*|*.p12|*.pfx|*.kdbx) continue;; esac
+    case "$p" in *.key|*.pem|*id_rsa*|*id_ed25519*|*id_ecdsa*|*/shadow*|*gshadow*|*.env|*secret*|*token*|*.p12|*.pfx|*.kdbx) continue;; esac
     if [ -d "$p" ]; then
-      find "$p" -xdev \( -name '*.key' -o -name '*priv*.pem' -o -name 'id_*' -o -name '*.env' -o -name '*secret*' \
+      find "$p" -xdev \( -name '*.key' -o \( -name '*.pem' ! -name 'pub*.pem' \) -o -name 'id_*' -o -name '*.env' -o -name '*secret*' \
             -o -name '*token*' -o -name '__pycache__' -o -name '*.pyc' -o -name '*.joblib' -o -name '*.pkl' \
             -o -name '*.pcap*' -o -name '*.log' -o -name '*.gz' -o -name '*.csv' -o -name '.git' -o -name '.venv' \) -prune \
            -o -type f -size -2M -readable -print 2>/dev/null | while read -r f; do

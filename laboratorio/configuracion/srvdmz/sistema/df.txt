@@ -1,0 +1,5 @@
+Filesystem                        Type      Size  Used Avail Use% Mounted on
+efivarfs                          efivarfs  256K   64K  187K  26% /sys/firmware/efi/efivars
+/dev/mapper/ubuntu--vg-ubuntu--lv ext4       17G  6.6G  9.6G  41% /
+/dev/sda2                         ext4      1.7G  105M  1.5G   7% /boot
+/dev/sda1                         vfat      952M  6.2M  945M   1% /boot/efi

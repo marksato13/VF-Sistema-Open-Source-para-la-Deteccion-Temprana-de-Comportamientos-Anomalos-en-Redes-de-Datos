@@ -59,6 +59,8 @@ def main() -> int:
             t = f.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             f.unlink(); borrados += 1; print("borrado (binario):", rel); continue
+        if "PRIVATE KEY-----" in t:   # 20-nov: una clave.pem paso el filtro por nombre
+            f.unlink(); borrados += 1; print("borrado (clave privada):", rel); continue
         n = t
         for pat, rep in REGLAS:
             n = pat.sub(rep, n)

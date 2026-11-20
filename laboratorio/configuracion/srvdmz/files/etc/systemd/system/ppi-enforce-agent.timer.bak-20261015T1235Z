@@ -1,0 +1,10 @@
+[Unit]
+Description=CyberFlow - agente de enforcement cada minuto
+
+[Timer]
+OnCalendar=minutely
+AccuracySec=5s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,14 @@
+ Static hostname: srv-dmz
+       Icon name: computer-vm
+         Chassis: vm 🖴
+      Machine ID: 86fe6af609c94795876c7ea69e63b006
+         Boot ID: a7560f6f3c3a4b95a404d7324bffe28b
+  Virtualization: vmware
+Operating System: Ubuntu 24.04.5 LTS
+          Kernel: Linux 6.8.0-139-generic
+    Architecture: x86-64
+ Hardware Vendor: VMware, Inc.
+  Hardware Model: VMware20,1
+Firmware Version: VMW201.00V.24224532.B64.2408191502
+   Firmware Date: Mon 2024-08-19
+    Firmware Age: 2y 3month 1d

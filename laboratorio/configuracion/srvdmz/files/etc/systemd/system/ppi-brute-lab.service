@@ -1,0 +1,17 @@
+[Unit]
+Description=Endpoint de prueba (fuerza bruta HTTP) - laboratorio aislado CyberFlow
+After=network.target
+
+[Service]
+User=adminsrvdmz
+Environment=USUARIO=control
+Environment=CLAVE=control123
+Environment=PUERTO=18081
+Environment=RUTA=/auth
+Environment=LOG=/opt/brute-lab/brute.log
+ExecStart=/usr/bin/python3 /opt/brute-lab/app.py
+Restart=no
+# Servicio de laboratorio: se detiene y se elimina tras la campaña B (ver README).
+
+[Install]
+WantedBy=multi-user.target

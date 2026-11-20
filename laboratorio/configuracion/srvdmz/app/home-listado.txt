@@ -1,0 +1,24 @@
+total 96
+drwxr-x--- 13 adminsrvdmz adminsrvdmz  4096 Nov 10 08:46 .
+drwxr-xr-x  3 root        root         4096 Sep 20 03:40 ..
+-rw-------  1 adminsrvdmz adminsrvdmz 13785 Nov 18 23:31 .bash_history
+-rw-r--r--  1 adminsrvdmz adminsrvdmz   220 Mar 31  2024 .bash_logout
+-rw-r--r--  1 adminsrvdmz adminsrvdmz  3771 Mar 31  2024 .bashrc
+drwx------  2 adminsrvdmz adminsrvdmz  4096 Sep 20 03:50 .cache
+-rw-r--r--  1 adminsrvdmz adminsrvdmz   807 Mar 31  2024 .profile
+drwx------  2 adminsrvdmz adminsrvdmz  4096 Sep 20 03:49 .ssh
+-rw-r--r--  1 adminsrvdmz adminsrvdmz     0 Sep 20 03:55 .sudo_as_admin_successful
+drwxrwxr-x  7 adminsrvdmz adminsrvdmz  4096 Nov 11 17:39 cf-b
+drwxrwxr-x  3 adminsrvdmz adminsrvdmz  4096 Oct 28 07:33 cf-campana
+drwxrwxr-x  3 adminsrvdmz adminsrvdmz  4096 Oct 29 10:40 cf-campana-A-20261029
+drwxrwxr-x  3 adminsrvdmz adminsrvdmz  4096 Nov 18 20:13 cf-demo
+drwxrwxr-x 20 adminsrvdmz adminsrvdmz  4096 Nov  6 19:50 cf-e4
+-rw-rw-r--  1 adminsrvdmz adminsrvdmz  2994 Oct 15 04:23 endpoint_401.py
+drwxrwxr-x  3 adminsrvdmz adminsrvdmz  4096 Nov  4 06:12 enforce
+drwxrwxr-x  3 adminsrvdmz adminsrvdmz  4096 Nov  6 04:39 evidencia-etapa4
+drwxrwxr-x  3 adminsrvdmz adminsrvdmz  4096 Sep 20 21:22 laboratorio
+-rw-rw-r--  1 adminsrvdmz adminsrvdmz   981 Oct  6 06:07 ppi-enforce-agent.service
+-rw-rw-r--  1 adminsrvdmz adminsrvdmz   160 Oct  6 06:07 ppi-enforce-agent.timer
+-rw-rw-r--  1 adminsrvdmz adminsrvdmz   416 Nov  4 01:38 respaldo-cyberflow-v1-20261104T0138Z.nft
+drwx------  9 adminsrvdmz adminsrvdmz  4096 Nov  9 07:20 respaldos-etapa4
+[rc=1] bash -c ls -la ~; for d in ~/cyberflow ~/cyberflow-e4; do [ -d "$d" ] && { echo "### $d"; ls -la "$d"; }; done

@@ -1,0 +1,9 @@
+Matching Defaults entries for adminsrvdmz on srv-dmz:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User adminsrvdmz may run the following commands on srv-dmz:
+    (ALL : ALL) ALL
+    (ALL) NOPASSWD: ALL
+    (root) NOPASSWD: /usr/local/sbin/cf-nft-mostrar

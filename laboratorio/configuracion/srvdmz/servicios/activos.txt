@@ -1,0 +1,24 @@
+  cron.service                     loaded active running Regular background program processing daemon
+  dbus.service                     loaded active running D-Bus System Message Bus
+  getty@tty1.service               loaded active running Getty on tty1
+  lab-web-http.service             loaded active running Laboratorio CyberFlow - servidor web HTTP
+  lab-web-https.service            loaded active running Laboratorio CyberFlow - servidor web HTTPS
+  ModemManager.service             loaded active running Modem Manager
+  multipathd.service               loaded active running Device-Mapper Multipath Device Controller
+  open-vm-tools.service            loaded active running Service for virtual machines hosted on VMware
+  polkit.service                   loaded active running Authorization Manager
+  ppi-enforce-agent-v2-dmz.service loaded active running CyberFlow - agente v2 perfil dmz (srv-dmz), SOMBRA (Etapa 4)
+  rsyslog.service                  loaded active running System Logging Service
+  ssh.service                      loaded active running OpenBSD Secure Shell server
+  systemd-hostnamed.service        loaded active running Hostname Service
+  systemd-journald.service         loaded active running Journal Service
+  systemd-logind.service           loaded active running User Login Management
+  systemd-networkd.service         loaded active running Network Configuration
+  systemd-resolved.service         loaded active running Network Name Resolution
+  systemd-timedated.service        loaded active running Time & Date Service
+  systemd-timesyncd.service        loaded active running Network Time Synchronization
+  systemd-udevd.service            loaded active running Rule-based Manager for Device Events and Files
+  udisks2.service                  loaded active running Disk Manager
+  user@1000.service                loaded active running User Manager for UID 1000
+  user@999.service                 loaded active running User Manager for UID 999
+  vgauth.service                   loaded active running Authentication service for virtual machines hosted on VMware

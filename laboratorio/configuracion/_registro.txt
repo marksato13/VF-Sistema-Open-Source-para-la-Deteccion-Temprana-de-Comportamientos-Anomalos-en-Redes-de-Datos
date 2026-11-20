@@ -19,3 +19,4 @@
 10:07:22 esxi-hv-servicios: OK (esxi, 6 vmx)
 10:07:30 esxi-hv-borde-b: OK (esxi, 2 vmx)
 10:07:30 fin: listo
+10:31:01 srvdmz: OK (150 ficheros) - extraccion aparte tras encender la VM; clave.pem privada retirada

@@ -1,0 +1,19 @@
+* Interfaces: 3, 2, 1
+       State: routable
+Online state: online
+     Address: 10.10.30.10 on ens35
+              fe80::20c:29ff:fe87:7e9f on ens35
+     Gateway: 10.10.30.1 on ens35
+         DNS: 8.8.8.8
+              1.1.1.1
+
+Nov 20 10:26:32 srv-dmz systemd-networkd[597]: lo: Gained carrier
+Nov 20 10:26:32 srv-dmz systemd-networkd[597]: Enumeration completed
+Nov 20 10:26:32 srv-dmz systemd[1]: Started systemd-networkd.service - Network Configuration.
+Nov 20 10:26:32 srv-dmz systemd-networkd[597]: ens34: Configuring with /run/systemd/network/10-netplan-ens34.network.
+Nov 20 10:26:32 srv-dmz systemd-networkd[597]: ens35: Configuring with /run/systemd/network/10-netplan-ens35.network.
+Nov 20 10:26:32 srv-dmz systemd[1]: Starting systemd-networkd-wait-online.service - Wait for Network to be Configured...
+Nov 20 10:26:32 srv-dmz systemd-networkd[597]: ens35: Link UP
+Nov 20 10:26:32 srv-dmz systemd-networkd[597]: ens35: Gained carrier
+Nov 20 10:26:34 srv-dmz systemd-networkd[597]: ens35: Gained IPv6LL
+Nov 20 10:26:34 srv-dmz systemd[1]: Finished systemd-networkd-wait-online.service - Wait for Network to be Configured.

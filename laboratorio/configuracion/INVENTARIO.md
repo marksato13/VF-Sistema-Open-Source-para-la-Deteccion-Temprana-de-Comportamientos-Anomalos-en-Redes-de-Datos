@@ -87,7 +87,14 @@ Generado de la extracción `configuracion` (`_registro.txt` = hora y resultado p
 ## srvdmz
 *Servidor DMZ atacado: web/servicios + agente de enforcement v2 (nftables)*
 
-- **No extraído:** sin acceso en el momento de la extracción (ssh: connect to host 10.10.30.10 port 22: No route to host)
+- **Hostname:** `srv-dmz` · **SO:** Ubuntu 24.04.5 LTS · **Virtualización:** vmware
+- **CPU:** 1 vCPU (Intel(R) Xeon(R) Bronze 3204 CPU @ 1.90GHz) · **RAM:** 1.9Gi
+- **Discos:** efivarfs 256K /sys/firmware/efi/efivars; /dev/mapper/ubuntu--vg-ubuntu--lv 17G /; /dev/sda2 1.7G /boot; /dev/sda1 952M /boot/efi
+- **Red:**
+  - `ens34            DOWN           `
+  - `ens35            UP             10.10.30.10/24 fe80::20c:29ff:fe87:7e9f/64`
+- **Servicios relevantes activos:** `ppi-enforce-agent-v2-dmz.service`
+- **Paquetes instalados:** 698 (lista en `paquetes/dpkg.txt`)
 
 ## suricata
 *IDS comparador: Suricata con reglas ET Open (replay de PCAP)*
