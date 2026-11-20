@@ -1,0 +1,79 @@
+{
+  "tipo": "manifiesto-desplegable",
+  "generado": "2026-10-19T05:53:52.944510+00:00",
+  "detectors": {
+    "if_limpio_2026_10": {
+      "kind": "isolation_forest_pipeline",
+      "model_path": "/home/m4rk/cyberflow/artifacts/preliminar/limpio-2026-10/if_limpio_2026_10_desplegable.joblib",
+      "model_sha256": "df547da098e51171aa267c8466edc6624bc1bd5c6b602639cc00bd4711a2fd60",
+      "schema": "multilayer-v2.json",
+      "n_features": 28,
+      "features": [
+        "packet_rate_10s",
+        "byte_rate_10s",
+        "mean_ip_len_10s",
+        "large_ip_ratio_10s",
+        "unique_dst_ip_ratio_30s",
+        "icmp_ratio_10s",
+        "flow_attempt_rate_10s",
+        "syn_rate_10s",
+        "syn_completion_ratio_10s",
+        "rst_ratio_10s",
+        "unique_dst_port_ratio_30s",
+        "http_error_ratio_60s",
+        "dns_nxdomain_ratio_60s",
+        "tls_session_rate_60s",
+        "ttl_mean_10s",
+        "fragment_ratio_10s",
+        "protocol_diversity_30s",
+        "tcp_retransmission_ratio_10s",
+        "flow_duration_mean_30s",
+        "tx_rx_byte_ratio_30s",
+        "http_request_rate_60s",
+        "http_method_entropy_60s",
+        "http_auth_failure_ratio_60s",
+        "dns_query_rate_60s",
+        "unique_dns_name_ratio_60s",
+        "tls_handshake_failure_ratio_60s",
+        "tls_version_ratio_60s",
+        "http_status_5xx_ratio_60s"
+      ],
+      "calibration": {
+        "threshold": -0.5693969936322356,
+        "comparison": "score < threshold",
+        "score_function": "score_samples",
+        "threshold_decision_function": -0.06939699363223557,
+        "offset": -0.5,
+        "alpha": 0.05
+      },
+      "origen": {
+        "paquete": "/home/m4rk/cyberflow/artifacts/preliminar/limpio-2026-10/if_limpio_2026_10.joblib",
+        "paquete_sha256": "fb6b8ed2b677056f0c23d267a1d38a988d7d1d993f980b050f0a63665543bbf4",
+        "informe": "/home/m4rk/cyberflow/artifacts/preliminar/limpio-2026-10/if_limpio_2026_10.json",
+        "informe_sha256": "9211e041ec6d01508c3a6fe5cf99e221e897a0c24e5f9aa92e5c62365dcffd35"
+      }
+    }
+  },
+  "evaluation": {
+    "if_limpio_2026_10": {
+      "threshold_used": -0.5693969936322356,
+      "validation": {
+        "fpr": 0.050005
+      },
+      "test": {
+        "fpr": 0.045261,
+        "rows": 65421
+      },
+      "anomalies": {
+        "detection_rate": null,
+        "kali_real_detection_rate": null,
+        "fuente": null
+      }
+    }
+  },
+  "runtime": {
+    "python": "3.14.4",
+    "scikit_learn": "1.9.0",
+    "numpy": "2.5.1"
+  }
+}

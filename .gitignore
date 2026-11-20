@@ -24,6 +24,15 @@ artifacts/model/*
 !artifacts/model/ocsvm_scaled.joblib
 !artifacts/model/candidates/
 !artifacts/model/candidates/*.joblib
+# 20-nov: modelo de PRODUCCION (el que carga ppi-motor en el laboratorio, alfa 0,01)
+!artifacts/preliminar/
+artifacts/preliminar/*
+!artifacts/preliminar/limpio-2026-10/
+artifacts/preliminar/limpio-2026-10/*
+!artifacts/preliminar/limpio-2026-10/if_limpio_2026_10_desplegable.joblib
+!artifacts/preliminar/limpio-2026-10/manifest-if-limpio-2026-10.json
+!artifacts/preliminar/limpio-2026-10/if_limpio_2026_10.json
+!artifacts/preliminar/limpio-alfa001-B/
 
 # Biblioteca personal exportada de Mendeley: material del autor, no del proyecto
 docs/entregables/05-ppi/biblioteca.bib

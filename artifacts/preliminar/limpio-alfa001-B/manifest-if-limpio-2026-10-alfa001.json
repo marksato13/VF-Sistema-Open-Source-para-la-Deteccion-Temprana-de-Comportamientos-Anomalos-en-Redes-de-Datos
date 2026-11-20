@@ -1,0 +1,85 @@
+{
+  "detectors": {
+    "if_limpio_2026_10": {
+      "calibration": {
+        "_alfa_B": {
+          "alfa_original": 0.05,
+          "origen": "umbral congelado de α=0,01 (UMBRALES_ALFA del publicador, calibración 2026-10-24)",
+          "sha256_manifiesto_original": "b3ad680595128189574527208e53058f613822f56f542f914faef6495aa2a9e7",
+          "umbral_original": -0.5693969936322356
+        },
+        "alpha": 0.01,
+        "comparison": "score < threshold",
+        "offset": -0.5,
+        "score_function": "score_samples",
+        "threshold": -0.6223889502095352,
+        "threshold_decision_function": -0.06939699363223557
+      },
+      "features": [
+        "packet_rate_10s",
+        "byte_rate_10s",
+        "mean_ip_len_10s",
+        "large_ip_ratio_10s",
+        "unique_dst_ip_ratio_30s",
+        "icmp_ratio_10s",
+        "flow_attempt_rate_10s",
+        "syn_rate_10s",
+        "syn_completion_ratio_10s",
+        "rst_ratio_10s",
+        "unique_dst_port_ratio_30s",
+        "http_error_ratio_60s",
+        "dns_nxdomain_ratio_60s",
+        "tls_session_rate_60s",
+        "ttl_mean_10s",
+        "fragment_ratio_10s",
+        "protocol_diversity_30s",
+        "tcp_retransmission_ratio_10s",
+        "flow_duration_mean_30s",
+        "tx_rx_byte_ratio_30s",
+        "http_request_rate_60s",
+        "http_method_entropy_60s",
+        "http_auth_failure_ratio_60s",
+        "dns_query_rate_60s",
+        "unique_dns_name_ratio_60s",
+        "tls_handshake_failure_ratio_60s",
+        "tls_version_ratio_60s",
+        "http_status_5xx_ratio_60s"
+      ],
+      "kind": "isolation_forest_pipeline",
+      "model_path": "/home/m4rk/cyberflow/artifacts/preliminar/limpio-2026-10/if_limpio_2026_10_desplegable.joblib",
+      "model_sha256": "df547da098e51171aa267c8466edc6624bc1bd5c6b602639cc00bd4711a2fd60",
+      "n_features": 28,
+      "origen": {
+        "informe": "/home/m4rk/cyberflow/artifacts/preliminar/limpio-2026-10/if_limpio_2026_10.json",
+        "informe_sha256": "9211e041ec6d01508c3a6fe5cf99e221e897a0c24e5f9aa92e5c62365dcffd35",
+        "paquete": "/home/m4rk/cyberflow/artifacts/preliminar/limpio-2026-10/if_limpio_2026_10.joblib",
+        "paquete_sha256": "fb6b8ed2b677056f0c23d267a1d38a988d7d1d993f980b050f0a63665543bbf4"
+      },
+      "schema": "multilayer-v2.json"
+    }
+  },
+  "evaluation": {
+    "if_limpio_2026_10": {
+      "anomalies": {
+        "detection_rate": null,
+        "fuente": null,
+        "kali_real_detection_rate": null
+      },
+      "test": {
+        "fpr": 0.045261,
+        "rows": 65421
+      },
+      "threshold_used": -0.5693969936322356,
+      "validation": {
+        "fpr": 0.050005
+      }
+    }
+  },
+  "generado": "2026-10-19T05:53:52.944510+00:00",
+  "runtime": {
+    "numpy": "2.5.1",
+    "python": "3.14.4",
+    "scikit_learn": "1.9.0"
+  },
+  "tipo": "manifiesto-desplegable"
+}
