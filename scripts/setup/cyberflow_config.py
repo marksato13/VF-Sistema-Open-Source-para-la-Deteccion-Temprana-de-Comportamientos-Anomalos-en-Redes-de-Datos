@@ -114,13 +114,13 @@ ExecStart={python} \\
     --eve-path {eve} \\
     --capture-dir {directorio} \\
     --model-path {raiz}/{modelo} \\
-    --manifest-path {raiz}/{manifiesto} \\
+    --manifest-path {raiz}/{manifiesto_motor} \\
     --detector-name {detector} \\
     --schema {raiz}/{esquema} \\
     --entity-network {red_entidades} \\{exclusiones}
     --log-path {raiz}/{registro} \\
     --step-seconds {paso_segundos} \\
-    --history-seconds {historia_segundos}{enforce}
+    --history-seconds {historia_segundos}{disparo}{enforce}
 Restart=always
 RestartSec=5
 # Las decisiones ya van a su fichero rotado. Dejarlas tambien en stdout las
@@ -440,7 +440,9 @@ def comprobar(cfg: dict) -> list[str]:
     fallos += comprobar_politica(cfg.get("reentrenamiento", {}))
 
     raiz = Path(rut["raiz"])
-    for clave in ("modelo", "manifiesto", "esquema"):
+    for clave in ("modelo", "manifiesto", "manifiesto_motor", "esquema"):
+        if clave not in rut:
+            continue
         # Solo se comprueba si el generador corre en la propia maquina destino.
         destino = raiz / rut[clave]
         if raiz.exists() and not destino.exists():
@@ -490,6 +492,10 @@ def render(cfg: dict) -> dict[str, str]:
         modo=mot["modo"], anillo_segundos=cap["anillo_segundos"],
         anillo_archivos=cap["anillo_archivos"], filtro=filtro_linea, enforce=enforce,
         exclusiones=exclusiones(red),
+        # 20-nov: el motor del laboratorio usa el manifiesto de alfa 0,01 y el panel
+        # el original; sin [rutas] manifiesto_motor ambos usan el mismo, como antes.
+        manifiesto_motor=rut.get("manifiesto_motor", rut["manifiesto"]),
+        disparo=(" \\\n    --disparo %s" % mot["disparo"]) if mot.get("disparo") else "",
     )
 
     unidades = {

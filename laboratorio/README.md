@@ -56,6 +56,58 @@ red del host (vSwitch y portgroups, entre ellos `PG-CYBERFLOW-SPAN`, VLAN 4095).
 `ansible/` automatiza parte de los pasos 3–5 sobre un inventario anterior a esta extracción;
 las IPs vigentes son las de esta carpeta.
 
+## Instalar CyberFlow en otra PC (comprobado el 20-nov)
+
+El repo trae todo lo que el motor y el panel necesitan para arrancar:
+
+| Pieza | Dónde |
+|---|---|
+| Código del motor, publicador y panel | `scripts/engine/` (idéntico al árbol `ec78ca5` que corre en el sensor) |
+| Modelo de producción | `artifacts/preliminar/limpio-2026-10/if_limpio_2026_10_desplegable.joblib` (sha256 `df547da0…`) |
+| Punto operativo α 0,01 (umbral −0,6223889502) | `artifacts/preliminar/limpio-alfa001-B/manifest-if-limpio-2026-10-alfa001.json` |
+| Esquema de variables, escenarios, lista blanca | `configs/` |
+| Configuración del laboratorio | `configs/cyberflow.local.toml` (genera unidades iguales a las del sensor) |
+| Versiones exactas de Python | `requirements-model.txt` y `laboratorio/configuracion/sensor1/paquetes/venv-*.txt` |
+
+**Prueba hecha.** Se copió `main` a una carpeta limpia de Sensor1 y se arrancaron desde ahí
+el motor y el panel. Solo se aprovechó el venv del sensor; ninguna otra pieza de la
+instalación vieja. Resultado:
+- El motor procesó 592 ventanas de tráfico real en 75 s, con el umbral de producción.
+- El panel respondió HTTP 200.
+
+**Pasos en la PC nueva** (Ubuntu 24.04, una NIC de gestión y otra que reciba el espejo, sin IP):
+
+```bash
+git clone <este repo> ~/cyberflow && cd ~/cyberflow
+# ajustar configs/cyberflow.local.toml: interfaz/MAC del espejo, usuario, raiz y red
+sudo bash scripts/setup/instalar.sh          # venv, dependencias, Suricata, comprobación del modelo
+sudo python3 scripts/setup/cyberflow_config.py --config configs/cyberflow.local.toml --escribir
+sudo python3 scripts/setup/cyberflow_usuarios.py --crear admin --rol admin   # usuario del panel
+sudo python3 scripts/setup/cyberflow_usuarios.py --clave-sesion              # firma de cookies
+sudo python3 scripts/setup/cyberflow_usuarios.py --certificado --nombre <IP>  # TLS del panel
+bash scripts/setup/doctor.sh                 # verificación
+```
+
+Lo que se **genera en cada instalación** y nunca va al repo:
+- Contraseñas del panel, clave de sesión y certificado TLS.
+- Par de claves ed25519 que firma el feed (`artifacts/feed-keys/`, con `feed.generar_claves`).
+  El agente de SRV-DMZ necesita la `pub.pem` nueva.
+
+Guía larga, con capturas del SPAN: `docs/INSTALACION.md`.
+
+**Solo el panel, sin sensor ni red:**
+
+```bash
+python scripts/engine/dashboard.py --demo --port 8788 \
+  --manifest-path artifacts/preliminar/limpio-2026-10/manifest-if-limpio-2026-10.json \
+  --detector-name if_limpio_2026_10 --log-path logs/demo.log
+# abrir http://127.0.0.1:8788/  (probado en Windows y en Linux)
+```
+
+Arranca con datos de ejemplo y un aviso de que no son reales. Sirve para enseñar la interfaz,
+pero **no detecta nada**: para detectar hacen falta el motor, Suricata y tráfico espejado
+llegando a la PC.
+
 ## Lo que falta o no está aquí, a propósito
 
 - **SRV-DMZ no se extrajo:** la VM estaba apagada (`Powered off` en hv-servicios). Están su

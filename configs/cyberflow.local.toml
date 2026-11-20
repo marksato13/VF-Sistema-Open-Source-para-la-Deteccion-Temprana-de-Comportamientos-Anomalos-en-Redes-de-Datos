@@ -75,6 +75,8 @@ modo = "observacion"
 
 paso_segundos = 10
 historia_segundos = 230
+# Como en el laboratorio desde el 2-nov: el ciclo empieza al cerrarse un PCAP nuevo.
+disparo = "eventos"
 umbral = 1.8126087939765134
 
 # false = el umbral viene de otra red. El panel lo advierte y pide tratar las
@@ -98,6 +100,8 @@ entorno = ".venv"
 eve = "/var/log/suricata/eve.json"
 modelo = "artifacts/preliminar/limpio-2026-10/if_limpio_2026_10_desplegable.joblib"
 manifiesto = "artifacts/preliminar/limpio-2026-10/manifest-if-limpio-2026-10.json"
+# El motor usa el punto operativo alfa 0,01 (umbral -0,6223889502); el panel, el manifiesto de arriba.
+manifiesto_motor = "artifacts/preliminar/limpio-alfa001-B/manifest-if-limpio-2026-10-alfa001.json"
 esquema = "configs/features/multilayer-v2.json"
 registro = "logs/motor_decision.log"
 
